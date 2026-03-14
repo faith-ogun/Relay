@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+*.egg
+
+# Node
+node_modules/
+dist/
+
+# Generated config artifacts
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+deployments.txt
+HACKATHON.md
+CLAUDE.md
+
+# Folders
+screenshots/
+submission/
+tasks/
+

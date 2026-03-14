@@ -1,0 +1,278 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --relay-yellow: #f3e515;
+  --relay-yellow-hover: #e8db11;
+  --relay-yellow-soft: #fffde8;
+  --relay-black: #0a0a0a;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #070707;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Relay workspace animations */
+@keyframes relay-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes relay-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes relay-slide-right {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes relay-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 229, 21, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(243, 229, 21, 0); }
+}
+@keyframes relay-streak-flame {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.15) rotate(-4deg); }
+  75% { transform: scale(1.1) rotate(4deg); }
+}
+@keyframes relay-edge-flow {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes relay-xp-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+@keyframes relay-heart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes relay-node-breathe {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 8px currentColor); }
+}
+@keyframes relay-count-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.relay-fade-in { animation: relay-fade-in 0.4s ease-out both; }
+.relay-scale-in { animation: relay-scale-in 0.35s ease-out both; }
+.relay-slide-right { animation: relay-slide-right 0.3s ease-out both; }
+.relay-pulse-glow { animation: relay-pulse-glow 2s ease-in-out infinite; }
+.relay-streak-flame { animation: relay-streak-flame 1.5s ease-in-out infinite; }
+.relay-xp-pop { animation: relay-xp-pop 0.4s ease-out; }
+.relay-heart-pop { animation: relay-heart-pop 0.3s ease-out; }
+
+.relay-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.relay-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.relay-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.relay-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.relay-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.relay-stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+.relay-edge-flow {
+  stroke-dasharray: 6 8;
+  animation: relay-edge-flow 2s linear infinite;
+}
+.relay-count-up { animation: relay-count-up 0.5s ease-out both; }
+
+/* Chat scrollbar */
+.relay-chat-scroll::-webkit-scrollbar { width: 4px; }
+.relay-chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.relay-chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* Active nav pill */
+.relay-nav-active {
+  background: var(--relay-yellow);
+  color: var(--relay-black);
+  box-shadow: 0 0 0 2px var(--relay-black), 0 4px 12px rgba(0,0,0,0.15);
+  transform: scale(1.02);
+}
+
+/* Podium leaderboard */
+.relay-podium-1 { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+.relay-podium-2 { background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%); }
+.relay-podium-3 { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+
+/* ── Holographic achievement card ── */
+
+/* Idle hue shift — card IS the holographic material */
+@keyframes relay-holo-drift {
+  0%   { --holo-hue: 0deg; }
+  50%  { --holo-hue: 30deg; }
+  100% { --holo-hue: 0deg; }
+}
+
+/* The card itself — full iridescent background */
+.relay-holo-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.3s ease;
+  /* transform has NO transition — tilt must be instant */
+  will-change: transform;
+  /* The card IS the gradient — not a white card with overlay */
+  background: var(--card-bg);
+}
+
+/* Iridescent rainbow layer — covers entire card */
+.relay-holo-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      var(--holo-angle, 135deg),
+      #c084fc 0%,
+      #818cf8 15%,
+      #60a5fa 30%,
+      #34d399 45%,
+      #fbbf24 60%,
+      #f472b6 75%,
+      #c084fc 90%,
+      #818cf8 100%
+    );
+  background-size: 250% 250%;
+  background-position: var(--bg-x, 50%) var(--bg-y, 50%);
+  mix-blend-mode: color-dodge;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+  transition: opacity 0.3s ease;
+}
+.relay-holo-card:hover::before {
+  opacity: 0.55;
+}
+
+/* Specular highlight — follows mouse */
+.relay-holo-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 55%
+  );
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.relay-holo-card:hover::after,
+.relay-holo-card.inspecting::after {
+  opacity: 1;
+}
+
+/* Earned glow */
+.relay-holo-card.earned {
+  box-shadow:
+    0 4px 20px -4px var(--holo-glow, rgba(160, 120, 255, 0.35)),
+    0 0 40px -8px var(--holo-glow, rgba(160, 120, 255, 0.15)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Locked */
+.relay-holo-card.locked {
+  opacity: 0.35;
+  filter: grayscale(0.8) brightness(0.6);
+  cursor: default;
+}
+.relay-holo-card.locked::before,
+.relay-holo-card.locked::after {
+  display: none;
+}
+
+/* Frosted info bar at bottom of card */
+.relay-card-info {
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Inspect mode (card pops out to center) ── */
+.relay-card-inspect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  animation: relay-fade-in 0.2s ease-out both;
+}
+.relay-card-inspect-wrapper {
+  perspective: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Tilt layer — instant response, no transition */
+.relay-card-inspect-tilt {
+  width: min(320px, 80vw);
+  aspect-ratio: 3/4;
+  transform-style: preserve-3d;
+  /* NO transition here — tilt must be instant */
+}
+/* Flip layer — smooth 0.6s transition, lives inside tilt */
+.relay-card-inspect-flip {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.relay-card-inspect-flip.flipped {
+  transform: rotateY(180deg);
+}
+.relay-card-inspect-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.relay-card-inspect-back {
+  transform: rotateY(180deg);
+}
+
+/* ── Circuit diagram interactions ── */
+@keyframes circuit-pulse-ring {
+  0%, 100% { stroke-dashoffset: 0; opacity: 0.8; }
+  50% { stroke-dashoffset: 12; opacity: 1; }
+}
+.circuit-pulse {
+  animation: circuit-pulse-ring 1.5s ease-in-out infinite;
+}
+.circuit-highlight {
+  filter: drop-shadow(0 0 4px rgba(243, 229, 21, 0.5));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relay-fade-in, .relay-scale-in, .relay-slide-right,
+  .relay-pulse-glow, .relay-streak-flame, .relay-xp-pop,
+  .relay-heart-pop, .relay-edge-flow, .relay-count-up,
+  .circuit-pulse { animation: none !important; }
+}
