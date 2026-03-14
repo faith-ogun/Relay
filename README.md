@@ -22,8 +22,8 @@ Relay watches your physical workspace through a webcam and guides you through el
 | Tab | What it does |
 |-----|-------------|
 | **Build** | Live workspace — camera feed, voice interaction, step-by-step guidance |
-| **Learn** | AI-generated adaptive quizzes with wrong-answer requeue and review history |
-| **Sandbox** | 3D breadboard playground — place components, edit wires, write code, simulate |
+| **Learn** | AI-generated adaptive quizzes, drawing exercises with Gemini Vision assessment, wrong-answer requeue, and review history |
+| **Sandbox** | 3D breadboard workspace — place components, edit wires, write Arduino code in Monaco, run circuit validation and simulation with buzzer audio |
 | **Community** | Share builds, react, comment — persisted via Firestore |
 | **Library** | Starter projects with 3D Twin presets for the sandbox |
 
@@ -37,6 +37,7 @@ One voice session, multiple models working behind the scenes:
 | Quick checks (component ID) | `gemini-3.1-flash-preview` |
 | Code generation (Arduino) | `gemini-3.1-pro-preview` |
 | Deep reasoning (debugging) | `gemini-2.5-pro` |
+| Drawing assessment (vision) | `gemini-3.1-pro-preview` |
 
 ## Architecture
 
@@ -206,6 +207,6 @@ These are hard API limits. Ending a session and starting a new one gives fresh l
 
 ## Known limitations
 
-- The sandbox uses lightweight visual simulation, not a full circuit solver
+- The sandbox validates circuit structure (component presence, wiring, connections) but does not compute voltages/currents like a SPICE simulator
 - Firestore persistence requires a configured Firebase web API key
-- Some community content uses demo data for presentation purposes
+- Gemini Live API imposes hard session limits (15 min audio, 2 min video)
