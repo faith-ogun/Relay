@@ -1461,7 +1461,7 @@ export default function SandboxScene(props: SandboxSceneProps) {
     <div className={props.className} style={{ minHeight: 420 }}>
       <Canvas
         camera={{ position: CAMERA_PRESETS.fit.position, fov: 34 }}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: true }}
         dpr={[1, 1.75]}
         shadows
         onPointerMissed={() => {

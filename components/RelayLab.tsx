@@ -32,6 +32,7 @@ import {
   X,
   Zap,
   Cpu,
+  Download,
   PenTool,
   Upload,
 } from 'lucide-react';
@@ -137,8 +138,8 @@ const FOCUS_STEPS: Array<{ label: string; stage: Stage; unlocked: boolean; icon:
   { label: 'Find Components', stage: 'inventory', unlocked: true, icon: Camera },
   { label: 'Wire The Board', stage: 'wiring', unlocked: true, icon: Zap },
   { label: 'Generate Sketch', stage: 'code', unlocked: true, icon: Sparkles },
-  { label: 'Run + Validate', stage: 'run', unlocked: false, icon: Play },
-  { label: 'Wrap & Save Twin', stage: 'report', unlocked: false, icon: CheckCircle2 },
+  { label: 'Run + Validate', stage: 'run', unlocked: true, icon: Play },
+  { label: 'Wrap & Save Twin', stage: 'report', unlocked: true, icon: CheckCircle2 },
 ];
 
 const XP_ACTIONS: Array<{
@@ -2416,6 +2417,72 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         <div className="px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300/80 max-h-[140px] overflow-y-auto">
                           <p className="text-white/30">--- Relay Serial Monitor ---</p>
                           <SerialOutput />
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Save Twin — visible during 'report' stage */}
+                    {focusStage === 'report' && (
+                      <section className={`overflow-hidden rounded-2xl ${dark ? 'bg-white/[0.03] ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200'}`}>
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <Cpu className={`h-4 w-4 ${dark ? 'text-teal-400' : 'text-teal-600'}`} />
+                            <span className={`text-[11px] font-black ${dark ? 'text-teal-400' : 'text-teal-700'}`}>3D Digital Twin</span>
+                          </div>
+                        </div>
+                        <SceneErrorBoundary fallback={<div className="h-[200px] flex items-center justify-center text-xs text-slate-400">3D preview unavailable</div>}>
+                          <React.Suspense fallback={<div className="h-[200px] flex items-center justify-center text-xs text-slate-400">Loading 3D...</div>}>
+                            <SandboxScene
+                              className="h-[200px] w-full"
+                              components={SANDBOX_PRESETS['Light-Activated Alarm']?.components || []}
+                              selectedTool="select"
+                              onPlaceComponent={() => {}}
+                              onRemoveComponent={() => {}}
+                              onStartWire={() => {}}
+                              onEndWire={() => {}}
+                              onSelectEntity={() => {}}
+                              onMoveEntity={() => {}}
+                              onMoveSelectedEntity={() => {}}
+                              wireStart={null}
+                              selectedEntity={null}
+                              simState={{ running: false, ledStates: {}, buzzerOn: false, serialOutput: [], analogValues: {} }}
+                              cameraPreset="fit"
+                              cameraTick={0}
+                            />
+                          </React.Suspense>
+                        </SceneErrorBoundary>
+                        <div className="flex items-center gap-2 p-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const canvas = document.querySelector('#twin-export canvas') as HTMLCanvasElement
+                                || document.querySelector('canvas');
+                              if (!canvas) return;
+                              const link = document.createElement('a');
+                              link.download = `relay-twin-${(activeBuild?.title || 'build').replace(/\s+/g, '-').toLowerCase()}.png`;
+                              link.href = canvas.toDataURL('image/png');
+                              link.click();
+                            }}
+                            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black transition-all active:scale-95 ${
+                              dark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                            }`}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Export as PNG
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSandboxPreset(SANDBOX_PRESETS['Light-Activated Alarm'] || null);
+                              setActiveTab('sandbox');
+                            }}
+                            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black transition-all active:scale-95 ${
+                              dark ? 'bg-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            <Cpu className="h-3.5 w-3.5" />
+                            Open in Sandbox
+                          </button>
                         </div>
                       </section>
                     )}
