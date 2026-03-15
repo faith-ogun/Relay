@@ -2228,7 +2228,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                                   </span>
                                 </button>
                                 <p className={`max-w-xs text-[11px] leading-relaxed ${dark ? 'text-white/50' : 'text-slate-500'}`}>
-                                  Try Demo Mode to experience the full build flow without an Arduino. Hold up any object to see Relay's live vision.
+                                  Try Demo Mode to experience the full build flow without electronics components. Hold up any object to see Relay's live vision.
                                 </p>
                               </div>
                             )}
