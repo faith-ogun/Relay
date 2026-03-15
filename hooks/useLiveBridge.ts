@@ -330,7 +330,7 @@ export function useLiveBridge({
     try {
       // Request camera at reasonable resolution — don't force square or oversized
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
       });
       camStreamRef.current = stream;
 
