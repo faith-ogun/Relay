@@ -123,13 +123,6 @@ async def websocket_endpoint(
     run_config = _build_run_config(current_stage)
     live_queue = LiveRequestQueue()
 
-    # Send initial stage context to the model
-    stage_prompt = types.Content(
-        role="user",
-        parts=[types.Part(text=f"[stage={current_stage}] Session started. Awaiting user input.")],
-    )
-    live_queue.send_content(stage_prompt)
-
     # ── Upstream: client → Gemini ──────────────────────────────────────────────
 
     async def upstream() -> None:
@@ -260,42 +253,39 @@ async def text_fallback(payload: dict) -> dict:
             app_name=APP_NAME, user_id=user_id, session_id=session_id,
         )
 
-    # Use standard (non-live) run for text
-    from google.genai import types as genai_types
-    message = genai_types.Content(
-        role="user",
-        parts=[genai_types.Part(text=f"[stage={stage}] {text}")],
-    )
+    # The live agent uses a native-audio model that only works with run_live().
+    # For text-only chat, call Gemini directly via google-genai SDK.
+    from google import genai
+    from relay_live_agent.agent import RELAY_INSTRUCTION
 
-    chunks: list[str] = []
-    events = runner.run(
-        user_id=user_id,
-        session_id=session_id,
-        new_message=message,
-    )
-
-    if hasattr(events, "__aiter__"):
-        async for event in events:
-            content = getattr(event, "content", None)
-            if content and hasattr(content, "parts"):
-                for part in content.parts:
-                    if hasattr(part, "text") and part.text:
-                        chunks.append(part.text)
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+    if use_vertex:
+        client = genai.Client(
+            vertexai=True,
+            project=os.getenv("GOOGLE_CLOUD_PROJECT", "relay-gemini"),
+            location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+        )
     else:
-        import inspect
-        result = events
-        if inspect.isawaitable(result):
-            result = await result
-        for event in result:
-            content = getattr(event, "content", None)
-            if content and hasattr(content, "parts"):
-                for part in content.parts:
-                    if hasattr(part, "text") and part.text:
-                        chunks.append(part.text)
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+
+    text_model = os.getenv("RELAY_FLASH_MODEL", "gemini-2.5-flash")
+
+    try:
+        response = client.models.generate_content(
+            model=text_model,
+            contents=f"[stage={stage}] {text}",
+            config=genai.types.GenerateContentConfig(
+                system_instruction=RELAY_INSTRUCTION,
+            ),
+        )
+        reply = response.text.strip() if response.text else "No response generated."
+    except Exception as e:
+        logger.error("Text fallback failed: %s", e)
+        reply = f"Sorry, I hit an error: {e}"
 
     return {
         "session_id": session_id,
         "stage": stage,
-        "reply": "\n".join(chunks).strip() or "No response generated.",
+        "reply": reply,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
