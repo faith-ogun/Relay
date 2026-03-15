@@ -241,3 +241,9 @@ These are hard API limits. Ending a session and starting a new one gives fresh l
 - The sandbox validates circuit structure (component presence, wiring, connections) but does not compute voltages/currents like a SPICE simulator
 - Firestore persistence requires a configured Firebase web API key
 - Gemini Live API imposes hard session limits (15 min audio, 2 min video)
+
+## Links
+
+- **Blog:** [I Built a Real-Time AI Lab Partner for Electronics Learning with Gemini Live](https://medium.com/@faith-ogun/i-built-a-real-time-ai-lab-partner-for-electronics-learning-with-gemini-live-8b450a6b4f2a?postPublishedType=repub)
+- **GDG Profile:** [developers.google.com/profile/u/faithogundimu](https://developers.google.com/profile/u/faithogundimu)
+- **Deployment automation:** [`deploy.sh`](./deploy.sh)
