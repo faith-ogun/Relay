@@ -41,7 +41,7 @@ import { useRelayUserState } from '../hooks/useRelayUserState';
 import { generateQuizQuestions, assessDrawing, type QuizQuestion, type SkillProfilePayload } from '../services/quizEngineClient';
 import CircuitDiagram, { CircuitDrawingCanvas } from './CircuitDiagram';
 import type { CircuitId } from './CircuitDiagram';
-const ArduinoScene = React.lazy(() => import('./ArduinoScene'));
+const SandboxScene = React.lazy(() => import('./SandboxScene'));
 const Sandbox = React.lazy(() => import('./Sandbox'));
 import type { SandboxPreset } from './sandboxPresets';
 import { SANDBOX_PRESETS } from './sandboxPresets';
@@ -2080,7 +2080,23 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       }
                     >
                       <React.Suspense fallback={<div className="flex h-[220px] items-center justify-center text-xs text-slate-400">Loading 3D preview...</div>}>
-                        <ArduinoScene className="h-[220px] w-full" />
+                        <SandboxScene
+                          className="h-[220px] w-full"
+                          components={SANDBOX_PRESETS['Light-Activated Alarm']?.components || []}
+                          selectedTool="select"
+                          onPlaceComponent={() => {}}
+                          onRemoveComponent={() => {}}
+                          onStartWire={() => {}}
+                          onEndWire={() => {}}
+                          onSelectEntity={() => {}}
+                          onMoveEntity={() => {}}
+                          onMoveSelectedEntity={() => {}}
+                          wireStart={null}
+                          selectedEntity={null}
+                          simState={{ running: false, ledStates: {}, buzzerOn: false, serialOutput: [], analogValues: {} }}
+                          cameraPreset="fit"
+                          cameraTick={0}
+                        />
                       </React.Suspense>
                     </SceneErrorBoundary>
                     <div className={`flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold ${dark ? 'bg-white/[0.03] text-white/30' : 'bg-slate-50 text-slate-400'}`}>
