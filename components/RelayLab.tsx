@@ -128,10 +128,10 @@ type AdaptiveHistoryEntry = {
 
 const APP_TABS: Array<{ id: AppTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'build', label: 'Build', icon: Compass },
-  { id: 'learn', label: 'Learn', icon: BrainCircuit },
-  { id: 'sandbox', label: 'Sandbox', icon: Cpu },
-  { id: 'community', label: 'Community', icon: Users },
   { id: 'library', label: 'Library', icon: Layers3 },
+  { id: 'sandbox', label: 'Sandbox', icon: Cpu },
+  { id: 'learn', label: 'Learn', icon: BrainCircuit },
+  { id: 'community', label: 'Community', icon: Users },
 ];
 
 const FOCUS_STEPS: Array<{ label: string; stage: Stage; unlocked: boolean; icon: React.ComponentType<{ className?: string }> }> = [
