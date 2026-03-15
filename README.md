@@ -1,5 +1,17 @@
 # Relay
 
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-r170-000000?logo=threedotjs&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-Run-4285F4?logo=googlecloud&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-Live_API-8E75B2?logo=googlegemini&logoColor=white)
+![Firestore](https://img.shields.io/badge/Firestore-Realtime-FFCA28?logo=firebase&logoColor=black)
+![Google ADK](https://img.shields.io/badge/Google_ADK-Bidi_Streaming-4285F4?logo=google&logoColor=white)
+
 **A real-time multimodal lab assistant for learning electronics.**
 
 Built for the [Gemini Live Agent Challenge](https://devpost.com/) — **Live Agents** category.
