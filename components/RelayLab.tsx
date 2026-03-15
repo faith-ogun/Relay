@@ -2423,7 +2423,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
                     {/* Save Twin — visible during 'report' stage */}
                     {focusStage === 'report' && (
-                      <section className={`overflow-hidden rounded-2xl ${dark ? 'bg-white/[0.03] ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200'}`}>
+                      <section id="twin-export" className={`overflow-hidden rounded-2xl ${dark ? 'bg-white/[0.03] ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200'}`}>
                         <div className="flex items-center justify-between px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <Cpu className={`h-4 w-4 ${dark ? 'text-teal-400' : 'text-teal-600'}`} />
@@ -2455,13 +2455,16 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           <button
                             type="button"
                             onClick={() => {
-                              const canvas = document.querySelector('#twin-export canvas') as HTMLCanvasElement
-                                || document.querySelector('canvas');
+                              const section = document.getElementById('twin-export');
+                              const canvas = section?.querySelector('canvas') as HTMLCanvasElement | null;
                               if (!canvas) return;
-                              const link = document.createElement('a');
-                              link.download = `relay-twin-${(activeBuild?.title || 'build').replace(/\s+/g, '-').toLowerCase()}.png`;
-                              link.href = canvas.toDataURL('image/png');
-                              link.click();
+                              // Wait one frame so the canvas has rendered content
+                              requestAnimationFrame(() => {
+                                const link = document.createElement('a');
+                                link.download = `relay-twin-${(activeBuild?.title || 'build').replace(/\s+/g, '-').toLowerCase()}.png`;
+                                link.href = canvas.toDataURL('image/png');
+                                link.click();
+                              });
                             }}
                             className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black transition-all active:scale-95 ${
                               dark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
