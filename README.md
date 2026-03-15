@@ -176,6 +176,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload
 
 ## Google Cloud deployment
 
+Deployment is automated via [`deploy.sh`](./deploy.sh):
+
+```bash
+./deploy.sh              # Deploy all services (live-bridge + quiz-engine + frontend build)
+./deploy.sh live-bridge  # Deploy live-bridge only
+./deploy.sh quiz-engine  # Deploy quiz-engine only
+./deploy.sh frontend     # Build frontend only
+./deploy.sh verify       # Health-check deployed services
+```
+
+The script handles project configuration, deploys both backend microservices to Cloud Run, builds the frontend, and verifies service health — all in a single command.
+
+**Configuration** is via environment variables (defaults to production):
+
+```bash
+export GOOGLE_CLOUD_PROJECT=relay-gemini   # GCP project ID
+export GOOGLE_CLOUD_REGION=europe-west1    # Cloud Run region
+```
+
+**Manual deployment** (if preferred):
+
 ```bash
 gcloud run deploy relay-live-bridge \
   --source=backend/live-bridge \
@@ -189,8 +210,6 @@ gcloud run deploy relay-quiz-engine \
   --allow-unauthenticated \
   --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1
 ```
-
-Full deployment commands are also in [`deployments.txt`](./deployments.txt).
 
 ## Build verification
 
