@@ -179,7 +179,7 @@ async def generate_questions(req: GenerateRequest):
                     + "."
                 )
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.5-pro",
                 contents=prompt,
             )
             raw = response.text.strip()
@@ -239,7 +239,7 @@ Return JSON: {{"correct": bool, "feedback": str, "identified_components": [str],
 
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-pro",
             contents=[
                 types.Content(
                     role="user",

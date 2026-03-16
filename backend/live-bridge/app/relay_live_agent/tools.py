@@ -9,8 +9,8 @@ import os
 from google import genai
 
 # Model routing
-FLASH_MODEL = os.getenv("RELAY_FLASH_MODEL", "gemini-3.1-flash-preview")
-PRO_MODEL = os.getenv("RELAY_PRO_MODEL", "gemini-3.1-pro-preview")
+FLASH_MODEL = os.getenv("RELAY_FLASH_MODEL", "gemini-2.5-flash")
+PRO_MODEL = os.getenv("RELAY_PRO_MODEL", "gemini-2.5-pro")
 REASONING_MODEL = os.getenv("RELAY_REASONING_MODEL", "gemini-2.5-pro")
 
 

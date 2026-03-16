@@ -77,6 +77,12 @@ def _build_run_config(stage: str = "inventory") -> RunConfig:
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
             session_resumption=types.SessionResumptionConfig(),
+            realtime_input_config=types.RealtimeInputConfig(
+                automaticActivityDetection=types.AutomaticActivityDetection(
+                    startOfSpeechSensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
+                ),
+                activityHandling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+            ),
         )
     # Fallback for non-native-audio models: text responses
     return RunConfig(

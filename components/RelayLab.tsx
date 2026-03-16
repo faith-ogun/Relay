@@ -841,41 +841,6 @@ const themes = {
   },
 };
 
-// Simulated serial output for demo mode
-const SERIAL_LINES = [
-  'Light level: 847 → OK',
-  'Light level: 823 → OK',
-  'Light level: 651 → OK',
-  'Light level: 342 → ALARM ON',
-  'Light level: 289 → ALARM ON',
-  'Light level: 156 → ALARM ON',
-  'Light level: 412 → ALARM ON',
-  'Light level: 687 → OK',
-  'Light level: 812 → OK',
-  'Light level: 791 → OK',
-];
-
-function SerialOutput() {
-  const [lines, setLines] = useState<string[]>([]);
-  useEffect(() => {
-    let idx = 0;
-    const interval = setInterval(() => {
-      setLines((prev) => [...prev.slice(-12), SERIAL_LINES[idx % SERIAL_LINES.length]]);
-      idx++;
-    }, 800);
-    return () => clearInterval(interval);
-  }, []);
-  return (
-    <>
-      {lines.map((line, i) => (
-        <p key={i} className={line.includes('ALARM ON') ? 'text-rose-400 font-bold' : ''}>
-          {line}
-        </p>
-      ))}
-    </>
-  );
-}
-
 class SceneErrorBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
 
@@ -1554,10 +1519,9 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
       // Wait briefly for WS to connect, then send the demo prompt
       setTimeout(() => {
         live.sendText(
-          `[SIMULATION MODE] You are being evaluated by a hackathon judge who does not have Arduino hardware. ` +
-          `Run a guided demo of the Light-Activated Alarm build. Walk through each stage (inventory, wiring, code, run, report) conversationally. ` +
-          `Since the judge has no components, ask them to hold up everyday objects (pen, phone, hand, etc.) to the camera so you can demonstrate your vision capabilities by identifying what you see. ` +
-          `Keep responses short and spoken naturally. Start by greeting the judge, explaining you're in demo mode, and asking them to turn on their camera so you can show what you can do.`,
+          `[SIMULATION MODE] You are being evaluated by a hackathon judge. They do NOT have electronics hardware. ` +
+          `Greet them briefly with personality, then ask them to turn on their camera and hold up everyday objects so you can demonstrate your live vision. ` +
+          `Focus on identifying what they show you and riffing on it — connect everyday objects to electronics knowledge naturally. Keep it conversational and fun.`,
           'inventory'
         );
       }, 1500);
@@ -2155,6 +2119,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       <p className={`text-xs font-black ${dark ? 'text-[#f3e515]' : 'text-[#0a0a0a]'}`}>Demo Mode Active</p>
                       <p className={`text-[11px] ${dark ? 'text-white/50' : 'text-slate-500'}`}>
                         No hardware needed. Turn on your camera and hold up any object — Relay will identify it in real time.
+                        <span className={`ml-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${dark ? 'bg-white/10 text-white/60' : 'bg-slate-200 text-slate-600'}`}>🎧 Best with headphones</span>
                       </p>
                     </div>
                     <button
@@ -2403,23 +2368,6 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         </button>
                       </div>
                     </section>
-
-                    {/* Serial Monitor — visible during 'run' stage */}
-                    {focusStage === 'run' && (
-                      <section className={`overflow-hidden rounded-2xl ${dark ? 'bg-[#0a0a0a] ring-1 ring-white/10' : 'bg-[#1a1a2e] ring-1 ring-slate-700/30'}`}>
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-black/30">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-emerald-400 relay-pulse-glow" />
-                            <span className="text-[11px] font-bold text-emerald-400">Serial Monitor</span>
-                          </div>
-                          <span className="text-[10px] text-white/30 font-mono">9600 baud</span>
-                        </div>
-                        <div className="px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300/80 max-h-[140px] overflow-y-auto">
-                          <p className="text-white/30">--- Relay Serial Monitor ---</p>
-                          <SerialOutput />
-                        </div>
-                      </section>
-                    )}
 
                     {/* Save Twin — visible during 'report' stage */}
                     {focusStage === 'report' && (
