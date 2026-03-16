@@ -23,7 +23,10 @@ LIVE_BRIDGE_SOURCE="backend/live-bridge"
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
-RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio"
+RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
+RELAY_FLASH_MODEL=gemini-2.5-flash,\
+RELAY_PRO_MODEL=gemini-2.5-pro,\
+RELAY_REASONING_MODEL=gemini-2.5-pro"
 
 QUIZ_ENGINE_SERVICE="relay-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"

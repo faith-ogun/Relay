@@ -46,10 +46,10 @@ One voice session, multiple models working behind the scenes:
 | Role | Model |
 |------|-------|
 | Live tutor (voice + vision) | `gemini-2.5-flash-native-audio` |
-| Quick checks (component ID) | `gemini-3.1-flash-preview` |
-| Code generation (Arduino) | `gemini-3.1-pro-preview` |
+| Quick checks (component ID) | `gemini-2.5-flash` |
+| Code generation (Arduino) | `gemini-2.5-pro` |
 | Deep reasoning (debugging) | `gemini-2.5-pro` |
-| Drawing assessment (vision) | `gemini-3.1-pro-preview` |
+| Drawing assessment (vision) | `gemini-2.5-pro` |
 
 ## Architecture
 
@@ -85,8 +85,7 @@ One voice session, multiple models working behind the scenes:
    │  (Vertex AI)          │
    │                       │
    │  • Flash Native Audio │
-   │  • Flash 3.1          │
-   │  • Pro 3.1            │
+   │  • Flash 2.5          │
    │  • Pro 2.5            │
    └───────────────────────┘
 ```
@@ -158,8 +157,8 @@ GOOGLE_GENAI_USE_VERTEXAI=TRUE
 GOOGLE_CLOUD_PROJECT=relay-gemini
 GOOGLE_CLOUD_LOCATION=europe-west1
 RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio
-RELAY_FLASH_MODEL=gemini-3.1-flash-preview
-RELAY_PRO_MODEL=gemini-3.1-pro-preview
+RELAY_FLASH_MODEL=gemini-2.5-flash
+RELAY_PRO_MODEL=gemini-2.5-pro
 RELAY_REASONING_MODEL=gemini-2.5-pro
 ```
 
@@ -202,7 +201,7 @@ gcloud run deploy relay-live-bridge \
   --source=backend/live-bridge \
   --region=europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1,RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio
+  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1,RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio,RELAY_FLASH_MODEL=gemini-2.5-flash,RELAY_PRO_MODEL=gemini-2.5-pro,RELAY_REASONING_MODEL=gemini-2.5-pro
 
 gcloud run deploy relay-quiz-engine \
   --source=backend/quiz-engine \
