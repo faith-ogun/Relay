@@ -185,6 +185,8 @@ Deployment is automated via [`deploy.sh`](./deploy.sh):
 ./deploy.sh verify       # Health-check deployed services
 ```
 
+https://github.com/user-attachments/assets/63ae69ee-c304-4a5c-8503-d5791534aea4
+
 The script handles project configuration, deploys both backend microservices to Cloud Run, builds the frontend, and verifies service health — all in a single command.
 
 **Configuration** is via environment variables (defaults to production):
