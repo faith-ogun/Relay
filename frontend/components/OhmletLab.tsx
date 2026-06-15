@@ -70,6 +70,7 @@ import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
 import { useTour } from './ohmlet/hooks/useTour';
 import { useDrawExercise } from './ohmlet/hooks/useDrawExercise';
 import { useSkillGraph } from './ohmlet/hooks/useSkillGraph';
+import { useXp } from './ohmlet/hooks/useXp';
 import { LEADERBOARD_WEEKLY, LEADERBOARD_ALL_TIME, AVATAR_COLORS } from './ohmlet/data/leaderboard';
 import {
   APP_TABS,
@@ -503,33 +504,13 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
     setError((prev) => prev || `Persistence warning: ${persistError}`);
   }, [persistError]);
 
-  // ── XP fully derived from persisted events ──
-  const xp = xpEvents.reduce((sum, e) => sum + e.xp, 0);
-  const level = Math.max(1, Math.floor(xp / 140));
-  const streakCount = weekProgress.filter(Boolean).length;
-
-  const pushXpEvent = useCallback((type: XpEvent['type'], xpValue: number, detail?: string) => {
-    const event: XpEvent = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      type,
-      xp: xpValue,
-      timestamp: new Date().toISOString(),
-      detail,
-    };
-    setXpEvents((prev) => [event, ...prev].slice(0, 500)); // cap at 500 events
-
-    // Mark today as active for streak
-    const today = todayISO();
-    const dayIndex = new Date().getDay(); // 0=Sun, 1=Mon ... 6=Sat
-    // weekProgress is [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
-    const idx = dayIndex === 0 ? 6 : dayIndex - 1;
-    setWeekProgress((prev) => {
-      const next = [...prev];
-      next[idx] = true;
-      return next;
-    });
-    setLastActiveDate(today);
-  }, []);
+  const { xp, level, streakCount, pushXpEvent } = useXp({
+    xpEvents,
+    weekProgress,
+    setXpEvents,
+    setWeekProgress,
+    setLastActiveDate,
+  });
   const leaderboard = leagueView === 'weekly' ? LEADERBOARD_WEEKLY : LEADERBOARD_ALL_TIME;
 
   const pushTurn = (role: Turn['role'], text: string) => {
