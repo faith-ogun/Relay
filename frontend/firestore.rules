@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Ohmlet Firestore security rules.
+//
+// All persistence goes through the backend (live-bridge `/v1/state/...`), which
+// uses the service account / Admin SDK — and the Admin SDK bypasses these rules
+// entirely. So no browser client should ever read or write Firestore directly.
+// Deny everything at the client edge. If a direct-client feature is ever added,
+// scope it here per authenticated user; never open this up globally.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
