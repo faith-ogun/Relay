@@ -24,6 +24,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from ohmlet_live_agent import agent
+from state_store import router as state_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
@@ -40,6 +41,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# User-state persistence (Firestore via service account). Self-contained router.
+app.include_router(state_router)
 
 session_service = InMemorySessionService()
 runner = Runner(

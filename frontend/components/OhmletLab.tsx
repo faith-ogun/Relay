@@ -67,6 +67,10 @@ import { LESSON_CONTENT, type LessonStep } from './ohmlet/data/lessons';
 import { RARITY_LABELS, ACHIEVEMENTS, CardShape } from './ohmlet/data/achievements';
 import { QUICK_PROMPTS, BUILD_LIBRARY } from './ohmlet/data/library';
 import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
+import { useTour } from './ohmlet/hooks/useTour';
+import { useDrawExercise } from './ohmlet/hooks/useDrawExercise';
+import { useSkillGraph } from './ohmlet/hooks/useSkillGraph';
+import { useXp } from './ohmlet/hooks/useXp';
 import { LEADERBOARD_WEEKLY, LEADERBOARD_ALL_TIME, AVATAR_COLORS } from './ohmlet/data/leaderboard';
 import {
   APP_TABS,
@@ -414,19 +418,20 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   const [dragCorrect, setDragCorrect] = useState<boolean | null>(null);
   const [spotErrorRegion, setSpotErrorRegion] = useState<string | null>(null);
   const [drawingComplete, setDrawingComplete] = useState(false);
-  const [drawExerciseActive, setDrawExerciseActive] = useState(false);
-  const [drawExerciseLoading, setDrawExerciseLoading] = useState(false);
-  const [drawExerciseFeedback, setDrawExerciseFeedback] = useState<{ correct: boolean; feedback: string; components: string[]; confidence: number } | null>(null);
-  const [drawPenColor, setDrawPenColor] = useState('#000000');
-  const [drawIsEraser, setDrawIsEraser] = useState(false);
-  const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [profileTab, setProfileTab] = useState<'stats' | 'achievements'>('stats');
   const [inspectCard, setInspectCard] = useState<Achievement | null>(null);
   const [inspectFlipped, setInspectFlipped] = useState(false);
-  const [tourOpen, setTourOpen] = useState(false);
-  const [tourStep, setTourStep] = useState(0);
-  const [spotlightRect, setSpotlightRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const {
+    tourOpen,
+    setTourOpen,
+    tourStep,
+    setTourStep,
+    spotlightRect,
+    advanceTour,
+    retreatTour,
+    getPopoverStyle,
+  } = useTour(activeTab, setActiveTab);
   const [twinPrefs, setTwinPrefs] = useState<TwinPreferences>({ twin3d: true, shareToCommunity: false });
   const [weekProgress, setWeekProgress] = useState<boolean[]>(DEFAULT_WEEK_PROGRESS);
   const [xpEvents, setXpEvents] = useState<XpEvent[]>(DEFAULT_XP_EVENTS);
@@ -462,10 +467,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   });
   const hasHydratedPersistedState = useRef(false);
 
-  const graphRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
-  const dragFrameRef = useRef<number | null>(null);
-  const pendingPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const { graphRef, beginNodeDrag } = useSkillGraph(skillNodes, setSkillNodes);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -502,33 +504,13 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
     setError((prev) => prev || `Persistence warning: ${persistError}`);
   }, [persistError]);
 
-  // ── XP fully derived from persisted events ──
-  const xp = xpEvents.reduce((sum, e) => sum + e.xp, 0);
-  const level = Math.max(1, Math.floor(xp / 140));
-  const streakCount = weekProgress.filter(Boolean).length;
-
-  const pushXpEvent = useCallback((type: XpEvent['type'], xpValue: number, detail?: string) => {
-    const event: XpEvent = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      type,
-      xp: xpValue,
-      timestamp: new Date().toISOString(),
-      detail,
-    };
-    setXpEvents((prev) => [event, ...prev].slice(0, 500)); // cap at 500 events
-
-    // Mark today as active for streak
-    const today = todayISO();
-    const dayIndex = new Date().getDay(); // 0=Sun, 1=Mon ... 6=Sat
-    // weekProgress is [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
-    const idx = dayIndex === 0 ? 6 : dayIndex - 1;
-    setWeekProgress((prev) => {
-      const next = [...prev];
-      next[idx] = true;
-      return next;
-    });
-    setLastActiveDate(today);
-  }, []);
+  const { xp, level, streakCount, pushXpEvent } = useXp({
+    xpEvents,
+    weekProgress,
+    setXpEvents,
+    setWeekProgress,
+    setLastActiveDate,
+  });
   const leaderboard = leagueView === 'weekly' ? LEADERBOARD_WEEKLY : LEADERBOARD_ALL_TIME;
 
   const pushTurn = (role: Turn['role'], text: string) => {
@@ -554,133 +536,27 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   }, [lessonProgress, skillNodes]);
 
   // ── Drawing exercise ──
-
-  const DRAW_EXERCISES = [
-    { type: 'draw_circuit' as const, title: 'Draw a voltage divider', expected: ['resistor', 'resistor', 'power_source', 'ground'], hint: 'Two resistors in series between 5V and GND, with the output taken from the middle node.' },
-    { type: 'draw_circuit' as const, title: 'Draw an LED circuit', expected: ['led', 'resistor', 'power_source', 'ground'], hint: 'An LED in series with a current-limiting resistor, connected to a power source.' },
-    { type: 'circle_component' as const, title: 'Circle the LDR in this circuit', expected: ['ldr'], hint: 'The LDR (light-dependent resistor) looks like a resistor with arrows pointing at it.' },
-    { type: 'draw_circuit' as const, title: 'Draw the Light-Activated Alarm circuit', expected: ['ldr', 'resistor', 'led', 'arduino', 'buzzer'], hint: 'Voltage divider (LDR + 10k resistor) feeding Arduino A0. LED/buzzer on a digital pin.' },
-  ];
-
-  const [currentDrawExercise, setCurrentDrawExercise] = useState(0);
-
-  const initDrawCanvas = useCallback(() => {
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = canvas.offsetHeight * 2;
-    ctx.scale(2, 2);
-    ctx.fillStyle = dark ? '#1a1a2e' : '#ffffff';
-    ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
-    // Grid dots
-    ctx.fillStyle = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    for (let x = 20; x < canvas.offsetWidth; x += 20) {
-      for (let y = 20; y < canvas.offsetHeight; y += 20) {
-        ctx.beginPath();
-        ctx.arc(x, y, 1, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }, [dark]);
-
-  const startDrawExercise = () => {
-    setDrawExerciseActive(true);
-    setDrawExerciseFeedback(null);
-    setDrawExerciseLoading(false);
-    setTimeout(initDrawCanvas, 100);
-  };
-
-  const clearDrawCanvas = () => {
-    setDrawExerciseFeedback(null);
-    initDrawCanvas();
-  };
-
-  const submitDrawing = async () => {
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return;
-    setDrawExerciseLoading(true);
-    setDrawExerciseFeedback(null);
-    try {
-      const dataUrl = canvas.toDataURL('image/png');
-      const base64 = dataUrl.split(',')[1];
-      const exercise = DRAW_EXERCISES[currentDrawExercise];
-      const result = await assessDrawing(quizApiRoot, {
-        image_base64: base64,
-        expected_components: exercise.expected,
-        exercise_type: exercise.type,
-      });
-      setDrawExerciseFeedback({
-        correct: result.correct,
-        feedback: result.feedback,
-        components: result.identified_components,
-        confidence: result.confidence,
-      });
-      pushXpEvent(result.correct ? 'quiz_correct' : 'quiz_incorrect', result.correct ? 15 : 3, 'drawing_exercise');
-      // Update mastery
-      setSkillNodes((prev) =>
-        prev.map((node) =>
-          node.id === 'logic'
-            ? { ...node, mastery: clamp(node.mastery + (result.correct ? 5 : 1), 0, 100) }
-            : node
-        )
-      );
-    } catch (err) {
-      setDrawExerciseFeedback({
-        correct: false,
-        feedback: err instanceof Error ? err.message : 'Failed to assess drawing.',
-        components: [],
-        confidence: 0,
-      });
-    } finally {
-      setDrawExerciseLoading(false);
-    }
-  };
-
-  // Canvas drawing handlers
-  const isDrawingRef = useRef(false);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-
-  const getCanvasPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  };
-
-  const onDrawStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    isDrawingRef.current = true;
-    lastPosRef.current = getCanvasPos(e);
-  };
-
-  const onDrawMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current || !lastPosRef.current) return;
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const pos = getCanvasPos(e);
-    ctx.save();
-    ctx.setTransform(2, 0, 0, 2, 0, 0);
-    ctx.strokeStyle = drawIsEraser ? (dark ? '#1a1a2e' : '#ffffff') : drawPenColor;
-    ctx.lineWidth = drawIsEraser ? 16 : 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    ctx.restore();
-    lastPosRef.current = pos;
-  };
-
-  const onDrawEnd = () => {
-    isDrawingRef.current = false;
-    lastPosRef.current = null;
-  };
+  const {
+    DRAW_EXERCISES,
+    currentDrawExercise,
+    setCurrentDrawExercise,
+    drawExerciseActive,
+    setDrawExerciseActive,
+    drawExerciseLoading,
+    drawExerciseFeedback,
+    setDrawExerciseFeedback,
+    drawPenColor,
+    setDrawPenColor,
+    drawIsEraser,
+    setDrawIsEraser,
+    drawCanvasRef,
+    startDrawExercise,
+    clearDrawCanvas,
+    submitDrawing,
+    onDrawStart,
+    onDrawMove,
+    onDrawEnd,
+  } = useDrawExercise({ dark, quizApiRoot, pushXpEvent, setSkillNodes });
 
   const startAdaptiveDrill = async () => {
     setAdaptiveLoading(true);
@@ -1067,62 +943,6 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
     setJoinedChallenges((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const beginNodeDrag = (event: React.PointerEvent<HTMLButtonElement>, nodeId: string) => {
-    const root = graphRef.current;
-    if (!root) return;
-    const rect = root.getBoundingClientRect();
-    const node = skillNodes.find((item) => item.id === nodeId);
-    if (!node) return;
-    const nodeX = rect.left + (node.x / 100) * rect.width;
-    const nodeY = rect.top + (node.y / 100) * rect.height;
-    dragRef.current = { id: nodeId, offsetX: event.clientX - nodeX, offsetY: event.clientY - nodeY };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  useEffect(() => {
-    const flushDrag = () => {
-      dragFrameRef.current = null;
-      const drag = dragRef.current;
-      const root = graphRef.current;
-      const pending = pendingPointerRef.current;
-      if (!drag || !root || !pending) return;
-      const rect = root.getBoundingClientRect();
-      const x = ((pending.x - rect.left - drag.offsetX) / rect.width) * 100;
-      const y = ((pending.y - rect.top - drag.offsetY) / rect.height) * 100;
-      setSkillNodes((prev) =>
-        prev.map((node) => (node.id === drag.id ? { ...node, x: clamp(x, 8, 92), y: clamp(y, 12, 88) } : node))
-      );
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      const drag = dragRef.current;
-      const root = graphRef.current;
-      if (!drag || !root) return;
-      pendingPointerRef.current = { x: event.clientX, y: event.clientY };
-      if (dragFrameRef.current === null) {
-        dragFrameRef.current = window.requestAnimationFrame(flushDrag);
-      }
-    };
-    const onPointerUp = () => {
-      dragRef.current = null;
-      pendingPointerRef.current = null;
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-    };
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-    };
-  }, []);
-
   const nodeById = useMemo(
     () => Object.fromEntries(skillNodes.map((node) => [node.id, node])) as Record<string, SkillNode>,
     [skillNodes]
@@ -1143,118 +963,6 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
       live.sendStageUpdate(focusStage);
     }
   }, [focusStage, live.state]);
-
-  // ── Tour spotlight positioning ──
-  const measureTarget = useCallback((target: string) => {
-    const el = document.querySelector(`[data-tour="${target}"]`);
-    if (!el) { setSpotlightRect(null); return; }
-    const rect = el.getBoundingClientRect();
-    const pad = 8;
-    // Cap height so huge elements (like library grid) don't push popover off screen
-    const maxH = window.innerHeight * 0.5;
-    setSpotlightRect({
-      top: rect.top - pad,
-      left: rect.left - pad,
-      width: rect.width + pad * 2,
-      height: Math.min(rect.height + pad * 2, maxH),
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!tourOpen) { setSpotlightRect(null); return; }
-    const step = TOUR_STEPS[tourStep];
-    if (!step) return;
-
-    // Switch tab if the step requires it
-    if (step.tab && step.tab !== activeTab) {
-      setActiveTab(step.tab);
-    }
-
-    // Single short delay to let tab render, then measure
-    const timer = requestAnimationFrame(() => {
-      setTimeout(() => {
-        const el = document.querySelector(`[data-tour="${step.target}"]`);
-        if (el) el.scrollIntoView({ behavior: 'instant', block: 'nearest' });
-        // Measure immediately after scroll
-        requestAnimationFrame(() => measureTarget(step.target));
-      }, 50);
-    });
-
-    return () => cancelAnimationFrame(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tourOpen, tourStep, activeTab, measureTarget]);
-
-  // Recalculate spotlight on resize
-  useEffect(() => {
-    if (!tourOpen) return;
-    const recalc = () => measureTarget(TOUR_STEPS[tourStep]?.target);
-    window.addEventListener('resize', recalc);
-    return () => window.removeEventListener('resize', recalc);
-  }, [tourOpen, tourStep, measureTarget]);
-
-  const advanceTour = useCallback(() => {
-    setTourStep((prev) => {
-      if (prev < TOUR_STEPS.length - 1) return prev + 1;
-      setTourOpen(false);
-      return prev;
-    });
-  }, []);
-
-  const retreatTour = useCallback(() => {
-    setTourStep((prev) => Math.max(0, prev - 1));
-  }, []);
-
-  // Keyboard navigation for tour
-  useEffect(() => {
-    if (!tourOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setTourOpen(false);
-      if (e.key === 'ArrowRight' || e.key === 'Enter') advanceTour();
-      if (e.key === 'ArrowLeft') retreatTour();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [tourOpen, advanceTour, retreatTour]);
-
-  // Compute popover position — smart flip if it would go off screen
-  const getPopoverStyle = (): React.CSSProperties => {
-    if (!spotlightRect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-    const step = TOUR_STEPS[tourStep];
-    const gap = 12;
-    const popW = 320;
-    const popH = 210;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const margin = 12;
-
-    // Try preferred position, flip if it doesn't fit
-    let pos = step.position;
-    const spaceBottom = vh - (spotlightRect.top + spotlightRect.height);
-    const spaceTop = spotlightRect.top;
-    const spaceRight = vw - (spotlightRect.left + spotlightRect.width);
-    const spaceLeft = spotlightRect.left;
-
-    if (pos === 'bottom' && spaceBottom < popH + gap) pos = spaceTop > popH + gap ? 'top' : 'right';
-    if (pos === 'top' && spaceTop < popH + gap) pos = spaceBottom > popH + gap ? 'bottom' : 'right';
-    if (pos === 'right' && spaceRight < popW + gap) pos = spaceLeft > popW + gap ? 'left' : 'bottom';
-    if (pos === 'left' && spaceLeft < popW + gap) pos = spaceRight > popW + gap ? 'right' : 'bottom';
-
-    const clampX = (x: number) => Math.max(margin, Math.min(vw - popW - margin, x));
-    const clampY = (y: number) => Math.max(margin, Math.min(vh - popH - margin, y));
-
-    switch (pos) {
-      case 'bottom':
-        return { top: clampY(spotlightRect.top + spotlightRect.height + gap), left: clampX(spotlightRect.left + spotlightRect.width / 2 - popW / 2) };
-      case 'top':
-        return { top: clampY(spotlightRect.top - popH - gap), left: clampX(spotlightRect.left + spotlightRect.width / 2 - popW / 2) };
-      case 'right':
-        return { top: clampY(spotlightRect.top + spotlightRect.height / 2 - popH / 2), left: clampX(spotlightRect.left + spotlightRect.width + gap) };
-      case 'left':
-        return { top: clampY(spotlightRect.top + spotlightRect.height / 2 - popH / 2), left: clampX(spotlightRect.left - popW - gap) };
-      default:
-        return { top: clampY(spotlightRect.top + spotlightRect.height + gap), left: clampX(spotlightRect.left) };
-    }
-  };
 
   const currentStepIndex = FOCUS_STEPS.findIndex((s) => s.stage === focusStage);
 
