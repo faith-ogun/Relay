@@ -69,6 +69,7 @@ import { QUICK_PROMPTS, BUILD_LIBRARY } from './ohmlet/data/library';
 import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
 import { useTour } from './ohmlet/hooks/useTour';
 import { useDrawExercise } from './ohmlet/hooks/useDrawExercise';
+import { useSkillGraph } from './ohmlet/hooks/useSkillGraph';
 import { LEADERBOARD_WEEKLY, LEADERBOARD_ALL_TIME, AVATAR_COLORS } from './ohmlet/data/leaderboard';
 import {
   APP_TABS,
@@ -465,10 +466,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   });
   const hasHydratedPersistedState = useRef(false);
 
-  const graphRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
-  const dragFrameRef = useRef<number | null>(null);
-  const pendingPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const { graphRef, beginNodeDrag } = useSkillGraph(skillNodes, setSkillNodes);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -963,62 +961,6 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   const toggleChallenge = (id: string) => {
     setJoinedChallenges((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
-  const beginNodeDrag = (event: React.PointerEvent<HTMLButtonElement>, nodeId: string) => {
-    const root = graphRef.current;
-    if (!root) return;
-    const rect = root.getBoundingClientRect();
-    const node = skillNodes.find((item) => item.id === nodeId);
-    if (!node) return;
-    const nodeX = rect.left + (node.x / 100) * rect.width;
-    const nodeY = rect.top + (node.y / 100) * rect.height;
-    dragRef.current = { id: nodeId, offsetX: event.clientX - nodeX, offsetY: event.clientY - nodeY };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  useEffect(() => {
-    const flushDrag = () => {
-      dragFrameRef.current = null;
-      const drag = dragRef.current;
-      const root = graphRef.current;
-      const pending = pendingPointerRef.current;
-      if (!drag || !root || !pending) return;
-      const rect = root.getBoundingClientRect();
-      const x = ((pending.x - rect.left - drag.offsetX) / rect.width) * 100;
-      const y = ((pending.y - rect.top - drag.offsetY) / rect.height) * 100;
-      setSkillNodes((prev) =>
-        prev.map((node) => (node.id === drag.id ? { ...node, x: clamp(x, 8, 92), y: clamp(y, 12, 88) } : node))
-      );
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      const drag = dragRef.current;
-      const root = graphRef.current;
-      if (!drag || !root) return;
-      pendingPointerRef.current = { x: event.clientX, y: event.clientY };
-      if (dragFrameRef.current === null) {
-        dragFrameRef.current = window.requestAnimationFrame(flushDrag);
-      }
-    };
-    const onPointerUp = () => {
-      dragRef.current = null;
-      pendingPointerRef.current = null;
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-    };
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-    };
-  }, []);
 
   const nodeById = useMemo(
     () => Object.fromEntries(skillNodes.map((node) => [node.id, node])) as Record<string, SkillNode>,
