@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 
-const STORAGE_KEY = 'relay-user-id';
+const STORAGE_KEY = 'ohmlet-user-id';
 
 const makeGuestId = () => {
   return `guest-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 };
 
-export function useRelayIdentity(defaultUserId?: string) {
+export function useOhmletIdentity(defaultUserId?: string) {
   return useMemo(() => {
     const explicit = (defaultUserId || '').trim();
     if (explicit) return explicit;

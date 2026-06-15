@@ -29,14 +29,14 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tour-camera',
     tab: 'build',
     title: 'Live Camera Feed',
-    body: 'Point your webcam at your breadboard and Relay watches in real time via the Gemini Live API — it sees your components, wiring, and corrects mistakes as you go. Sessions last up to 15 min (audio) or 2 min (with video) per Gemini API limits. If it disconnects, it will auto-reconnect.',
+    body: 'Point your webcam at your breadboard and Ohmlet watches in real time via the Gemini Live API — it sees your components, wiring, and corrects mistakes as you go. Sessions last up to 15 min (audio) or 2 min (with video) per Gemini API limits. If it disconnects, it will auto-reconnect.',
     position: 'right',
   },
   {
     target: 'tour-chat',
     tab: 'build',
-    title: 'Relay Assistant',
-    body: 'Chat with Relay using voice or text. It responds with spoken audio and text transcripts. Multiple AI models work behind the scenes — Flash for real-time voice, Pro for code generation, and 2.5-Pro for deep reasoning.',
+    title: 'Ohmlet Assistant',
+    body: 'Chat with Ohmlet using voice or text. It responds with spoken audio and text transcripts. Multiple AI models work behind the scenes — Flash for real-time voice, Pro for code generation, and 2.5-Pro for deep reasoning.',
     position: 'left',
   },
   {
@@ -78,7 +78,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: 'tour-leaderboard',
     tab: 'community',
-    title: 'Relay League',
+    title: 'Ohmlet League',
     body: 'Compete with other builders for the top spot. Switch between weekly and all-time rankings. Join challenges to earn bonus XP and badges.',
     position: 'right',
   },

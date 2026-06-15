@@ -3,19 +3,19 @@ import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
 import { MissionPage } from './components/MissionPage';
-import { RelayLab } from './components/RelayLab';
+import { OhmletLab } from './components/OhmletLab';
 import { TechnologyPage } from './components/TechnologyPage';
 
-type AppRoute = 'landing' | 'mission' | 'technology' | 'relay-app';
+type AppRoute = 'landing' | 'mission' | 'technology' | 'ohmlet-app';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
   landing: '/',
   mission: '/mission',
   technology: '/technology',
-  'relay-app': '/relay-app',
+  'ohmlet-app': '/ohmlet-app',
 };
 
-const APP_ROUTE_PATHS = new Set(['/relay-app', '/app', '/relay', '/lab']);
+const APP_ROUTE_PATHS = new Set(['/ohmlet-app', '/app', '/ohmlet', '/lab']);
 
 const NAV_ITEMS = [
   { route: 'mission', label: 'Mission' },
@@ -31,7 +31,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   const normalized = normalizePath(pathname);
 
   if (APP_ROUTE_PATHS.has(normalized)) {
-    return 'relay-app';
+    return 'ohmlet-app';
   }
 
   if (normalized === '/mission') {
@@ -59,8 +59,8 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
-  const openRelayApp = useCallback(() => {
-    navigate('relay-app');
+  const openOhmletApp = useCallback(() => {
+    navigate('ohmlet-app');
   }, [navigate]);
 
   const backToLanding = useCallback(() => {
@@ -80,8 +80,8 @@ const App: React.FC = () => {
     };
   }, []);
 
-  if (route === 'relay-app') {
-    return <RelayLab onBackToLanding={backToLanding} />;
+  if (route === 'ohmlet-app') {
+    return <OhmletLab onBackToLanding={backToLanding} />;
   }
 
   const darkShell = route === 'technology';
@@ -110,7 +110,7 @@ const App: React.FC = () => {
           navItems={NAV_ITEMS}
           darkRoute={darkShell}
           onNavigate={navigate}
-          onOpenRelayApp={openRelayApp}
+          onOpenOhmletApp={openOhmletApp}
         />
         <main>
           {route === 'landing' && <Home onNavigate={navigate} />}

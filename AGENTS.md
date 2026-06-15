@@ -1,10 +1,10 @@
-# AGENTS.md — Relay
+# AGENTS.md — Ohmlet
 
-## What Relay Is
+## What Ohmlet Is
 
-Relay is a real-time multimodal lab agent for learning electronics, mechatronics, and robotics. It uses Gemini Live API (bidirectional audio/video streaming) to watch a user's physical workspace — breadboard, Arduino, components — and guide them through builds with voice + vision. It is being submitted to the **Gemini Live Agent Challenge** hackathon (deadline: March 16, 2026 5pm PT) under the **Live Agents** category.
+Ohmlet is a real-time multimodal lab agent for learning electronics, mechatronics, and robotics. It uses Gemini Live API (bidirectional audio/video streaming) to watch a user's physical workspace — breadboard, Arduino, components — and guide them through builds with voice + vision. It is being submitted to the **Gemini Live Agent Challenge** hackathon (deadline: March 16, 2026 5pm PT) under the **Live Agents** category.
 
-Relay is NOT a chatbot with a text box. It is a live, voice-driven, camera-on workspace. The user talks to it, it sees their bench, it corrects them mid-action.
+Ohmlet is NOT a chatbot with a text box. It is a live, voice-driven, camera-on workspace. The user talks to it, it sees their bench, it corrects them mid-action.
 
 ### Core loop
 
@@ -16,7 +16,7 @@ Relay is NOT a chatbot with a text box. It is a live, voice-driven, camera-on wo
 6. Session ends → agent produces a 3D twin of the completed build
 7. XP earned, streak updated, build shared to community if opted in
 
-### What Relay is NOT building (removed from scope)
+### What Ohmlet is NOT building (removed from scope)
 
 - Jupyter/Colab notebook generation
 - Chart/plot generation
@@ -37,7 +37,7 @@ The only post-session artifact is the **3D digital twin** of the build.
 | AI models | Multi-model: Flash for real-time voice, Pro for code gen/reasoning (see below) |
 | State | Firestore (session state, user profiles, build progress) |
 | Storage | Google Cloud Storage (session clips, serial logs, 3D assets) |
-| Project ID | `relay-gemini` |
+| Project ID | `ohmlet-app` |
 | Region | To be set per deploy |
 
 ---
@@ -45,7 +45,7 @@ The only post-session artifact is the **3D digital twin** of the build.
 ## Project Structure
 
 ```
-Relay/
+Ohmlet/
 ├── AGENTS.md                     ← you are here
 ├── .env                          ← local env vars (never commit secrets)
 ├── package.json
@@ -54,21 +54,21 @@ Relay/
 ├── tailwind.config.js
 ├── src/
 │   ├── index.tsx                 ← React entry
-│   ├── App.tsx                   ← routing (landing vs /relay-app)
+│   ├── App.tsx                   ← routing (landing vs /ohmlet-app)
 │   ├── styles.css                ← global Tailwind + custom CSS
 │   └── components/
 │       ├── Home.tsx              ← landing page (yellow, marketing)
 │       ├── Header.tsx            ← landing nav bar
 │       ├── Footer.tsx            ← landing footer
-│       ├── Logo.tsx              ← Relay wordmark
-│       ├── RelayLab.tsx          ← the actual app workspace
+│       ├── Logo.tsx              ← Ohmlet wordmark
+│       ├── OhmletLab.tsx          ← the actual app workspace
 │       ├── Mission.tsx
 │       ├── Technology.tsx
 │       └── ...
 ├── backend/                         ← modular microservices, each its own Cloud Run service
 │   ├── live-bridge/                 ← real-time bidi streaming (WebSocket ↔ Gemini Live API via ADK)
 │   │   ├── app/main.py             ← FastAPI + WebSocket endpoint
-│   │   ├── app/relay_live_agent/   ← ADK agent with multi-model tool dispatch
+│   │   ├── app/ohmlet_live_agent/   ← ADK agent with multi-model tool dispatch
 │   │   ├── requirements.txt
 │   │   └── Dockerfile
 │   ├── code-crafter/                ← (planned) Arduino sketch gen + self-correct
@@ -87,9 +87,9 @@ Relay/
 ### Brand identity
 
 - **Landing page**: Electric yellow `#f3e515` background, black text, bold uppercase headings. This is the marketing face.
-- **App workspace** (`/relay-app`): White/light slate background. The yellow is used ONLY for accent buttons, active states, and progress indicators. The workspace must feel calm, focused, and professional.
+- **App workspace** (`/ohmlet-app`): White/light slate background. The yellow is used ONLY for accent buttons, active states, and progress indicators. The workspace must feel calm, focused, and professional.
 - **Font**: Use the same font stack across landing and app. No separate custom font for the workspace. Currently using system defaults via Tailwind — if upgrading, pick ONE distinctive font pair (display + body) and use it everywhere.
-- **Logo**: Black square with yellow "R", plus "RELAY" wordmark in black uppercase. Consistent everywhere.
+- **Logo**: Black square with yellow "R", plus "OHMLET" wordmark in black uppercase. Consistent everywhere.
 
 ### Anti-slop principles — READ THIS BEFORE WRITING ANY UI CODE
 
@@ -126,17 +126,17 @@ The current UI has been described by the user as looking "fake", "mocked up", an
 ### Color tokens (use these, not arbitrary hex)
 
 ```css
---relay-yellow: #f3e515;
---relay-yellow-hover: #e8db11;
---relay-yellow-soft: #fffde8;
---relay-black: #0a0a0a;
---relay-white: #ffffff;
---relay-slate-50: #f8fafc;
---relay-slate-100: #f1f5f9;
---relay-slate-200: #e2e8f0;
---relay-slate-500: #64748b;
---relay-slate-700: #334155;
---relay-slate-900: #0f172a;
+--ohmlet-yellow: #f3e515;
+--ohmlet-yellow-hover: #e8db11;
+--ohmlet-yellow-soft: #fffde8;
+--ohmlet-black: #0a0a0a;
+--ohmlet-white: #ffffff;
+--ohmlet-slate-50: #f8fafc;
+--ohmlet-slate-100: #f1f5f9;
+--ohmlet-slate-200: #e2e8f0;
+--ohmlet-slate-500: #64748b;
+--ohmlet-slate-700: #334155;
+--ohmlet-slate-900: #0f172a;
 ```
 
 ### Anti-slop technical rules (from research — enforce these strictly)
@@ -239,7 +239,7 @@ When the user corrects you:
 ## What the User Cares About (Priority Order)
 
 1. **The frontend must look like a real product, not a hackathon prototype.** This is the #1 priority. The user will not move to backend work until the frontend feels right. Take design seriously. Every pixel matters.
-2. **The live session experience (Build tab) is the heart of Relay.** Camera feed + voice + real-time guidance. This is what judges will see in the demo video.
+2. **The live session experience (Build tab) is the heart of Ohmlet.** Camera feed + voice + real-time guidance. This is what judges will see in the demo video.
 3. **Gamification and community must feel alive**, not bolted on. These are differentiators vs generic Arduino tutors.
 4. **The knowledge graph / learning progression must be genuinely interactive**, not decorative.
 5. **Backend services are modular** — each feature is its own folder under `backend/` and deploys as its own Cloud Run service. `live-bridge` is the core real-time service; others (code-crafter, vision-verifier, reporter) are separate microservices.
@@ -252,7 +252,7 @@ When the user corrects you:
 ### In scope (for hackathon submission)
 
 - Landing page (done, may need polish)
-- Relay workspace with Build, Learn, Community, Library tabs
+- Ohmlet workspace with Build, Learn, Community, Library tabs
 - Live voice + video session via Gemini Live API
 - Component inventory verification via camera
 - Step-by-step wiring guidance with error correction
@@ -281,12 +281,12 @@ When the user corrects you:
 
 | File | Purpose | Notes |
 |------|---------|-------|
-| `src/App.tsx` | Route controller | Landing (`/`) vs workspace (`/relay-app`) |
+| `src/App.tsx` | Route controller | Landing (`/`) vs workspace (`/ohmlet-app`) |
 | `src/components/Home.tsx` | Landing page | Yellow bg, marketing sections, animations |
-| `src/components/RelayLab.tsx` | The app workspace | White bg, tabs, live session, gamification — **this is where most work happens** |
-| `src/components/Header.tsx` | Landing nav | Sticky, has "Open Relay App" CTA on right |
-| `src/components/Footer.tsx` | Landing footer | Links, social, "Open Relay App" |
-| `src/components/Logo.tsx` | Relay wordmark | Used in header, footer, sidebar |
+| `src/components/OhmletLab.tsx` | The app workspace | White bg, tabs, live session, gamification — **this is where most work happens** |
+| `src/components/Header.tsx` | Landing nav | Sticky, has "Open Ohmlet App" CTA on right |
+| `src/components/Footer.tsx` | Landing footer | Links, social, "Open Ohmlet App" |
+| `src/components/Logo.tsx` | Ohmlet wordmark | Used in header, footer, sidebar |
 | `.env` | Environment variables | API URLs, project ID, defaults |
 
 ---
@@ -294,9 +294,9 @@ When the user corrects you:
 ## Environment Variables
 
 ```env
-VITE_RELAY_API_BASE_URL=http://localhost:8081
-VITE_RELAY_DEFAULT_USER_ID=faith
-GOOGLE_CLOUD_PROJECT=relay-gemini
+VITE_OHMLET_API_BASE_URL=http://localhost:8081
+VITE_OHMLET_DEFAULT_USER_ID=faith
+GOOGLE_CLOUD_PROJECT=ohmlet-app
 GOOGLE_CLOUD_REGION=us-central1
 ```
 
@@ -319,11 +319,11 @@ PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
 python3 -m py_compile backend/live-bridge/app/main.py
 
 # Deploy to Cloud Run (no API key needed — Vertex AI uses service account)
-gcloud run deploy relay-live-bridge \
+gcloud run deploy ohmlet-live-bridge \
   --source backend/live-bridge \
   --region europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1"
+  --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=ohmlet-app,GOOGLE_CLOUD_LOCATION=europe-west1"
 ```
 
 ---

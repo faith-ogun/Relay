@@ -13,13 +13,13 @@ import {
 type IconType = React.ComponentType<{ className?: string }>;
 
 interface MissionPageProps {
-  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'relay-app') => void;
+  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'ohmlet-app') => void;
 }
 
 const missionPillars: Array<{ title: string; body: string; icon: IconType }> = [
   {
     title: 'Teach the why',
-    body: 'Relay should explain what each component and pin is doing, not just provide a list of steps to copy.',
+    body: 'Ohmlet should explain what each component and pin is doing, not just provide a list of steps to copy.',
     icon: MessageSquare,
   },
   {
@@ -52,7 +52,7 @@ export const MissionPage: React.FC<MissionPageProps> = ({ onNavigate }) => {
               Teach electronics in a world already shaped by AI.
             </h1>
             <p className="mt-6 max-w-3xl text-lg font-medium leading-relaxed text-black/70 md:text-2xl">
-              Relay exists to help people understand circuits as they build them. The goal is not to hide the hardware
+              Ohmlet exists to help people understand circuits as they build them. The goal is not to hide the hardware
               behind automation. The goal is to make breadboards, sensors, wiring, and microcontroller logic easier to
               learn, easier to debug, and easier to talk about.
             </p>
@@ -105,7 +105,7 @@ export const MissionPage: React.FC<MissionPageProps> = ({ onNavigate }) => {
               Confidence that survives outside the demo.
             </h2>
             <p className="mt-5 text-lg font-medium leading-relaxed text-black/70">
-              Relay should help someone move from “I copied a tutorial” to “I understand what the circuit is doing, and
+              Ohmlet should help someone move from “I copied a tutorial” to “I understand what the circuit is doing, and
               I can try the next variation myself.”
             </p>
           </div>

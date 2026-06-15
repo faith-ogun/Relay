@@ -1,12 +1,12 @@
 import React from 'react';
 
-interface RelayLogoProps {
+interface OhmletLogoProps {
   className?: string;
   tone?: 'light' | 'dark';
   showTagline?: boolean;
 }
 
-export const RelayLogo: React.FC<RelayLogoProps> = ({
+export const OhmletLogo: React.FC<OhmletLogoProps> = ({
   className = '',
   tone = 'light',
   showTagline = false,
@@ -20,7 +20,7 @@ export const RelayLogo: React.FC<RelayLogoProps> = ({
         className={`${textClass} font-black tracking-[-0.06em] uppercase`}
         style={{ fontSize: 'clamp(1.4rem, 2vw, 2.05rem)' }}
       >
-        RELAY
+        OHMLET
       </span>
       {showTagline && (
         <span className={`mt-1 text-[10px] font-bold uppercase tracking-[0.28em] ${subClass}`}>

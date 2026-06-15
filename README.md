@@ -1,4 +1,4 @@
-# Relay
+# Ohmlet
 
 ![React](https://img.shields.io/badge/React-18-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
@@ -16,18 +16,18 @@
 
 Built for the [Gemini Live Agent Challenge](https://devpost.com/) — **Live Agents** category.
 
-Relay watches your physical workspace through a webcam and guides you through electronics builds with live voice and vision. Instead of reading tutorials, you talk to Relay while it sees your breadboard, components, and wiring — correcting mistakes as they happen.
+Ohmlet watches your physical workspace through a webcam and guides you through electronics builds with live voice and vision. Instead of reading tutorials, you talk to Ohmlet while it sees your breadboard, components, and wiring — correcting mistakes as they happen.
 
 ## How it works
 
 1. Pick a build from the library (e.g. Light-Activated Alarm)
-2. Show your components — Relay verifies inventory via camera
-3. Wire step-by-step — Relay guides and corrects in real time
-4. Generate Arduino code — Relay writes and debugs sketches
-5. Run and validate — Relay watches serial output and confirms
+2. Show your components — Ohmlet verifies inventory via camera
+3. Wire step-by-step — Ohmlet guides and corrects in real time
+4. Generate Arduino code — Ohmlet writes and debugs sketches
+5. Run and validate — Ohmlet watches serial output and confirms
 6. Get a 3D digital twin of the completed build in the sandbox
 
-**No hardware?** Demo Mode lets judges experience the full live session without an Arduino. Turn on your camera and hold up any object — Relay identifies it in real time.
+**No hardware?** Demo Mode lets judges experience the full live session without an Arduino. Turn on your camera and hold up any object — Ohmlet identifies it in real time.
 
 ## What's in the app
 
@@ -55,7 +55,7 @@ One voice session, multiple models working behind the scenes:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   Relay Frontend                     │
+│                   Ohmlet Frontend                     │
 │        React + TypeScript + Three.js + Monaco        │
 │                                                      │
 │  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌───────────┐ │
@@ -69,7 +69,7 @@ One voice session, multiple models working behind the scenes:
         │             │                   │
    ┌────▼────┐   ┌────▼─────┐    ┌───────▼──────┐
    │  Live   │   │  Quiz    │    │   Firestore  │
-   │ Bridge  │   │ Engine   │    │  (relay-     │
+   │ Bridge  │   │ Engine   │    │  (ohmlet-     │
    │(Cloud   │   │(Cloud    │    │   gemini)    │
    │  Run)   │   │  Run)    │    └──────────────┘
    └────┬────┘   └────┬─────┘
@@ -99,7 +99,7 @@ One voice session, multiple models working behind the scenes:
 - **Quiz backend:** FastAPI + google-genai SDK
 - **Persistence:** Firestore REST API
 - **Deployment:** Google Cloud Run
-- **GCP Project:** `relay-gemini`
+- **GCP Project:** `ohmlet-app`
 
 ## Google Cloud services used
 
@@ -119,27 +119,28 @@ One voice session, multiple models working behind the scenes:
 ### 1. Frontend
 
 ```bash
+cd frontend
 npm install
 ```
 
-Create `.env.local`:
+Create `frontend/.env.local`:
 
 ```env
-VITE_RELAY_API_BASE_URL=http://localhost:8082
-VITE_RELAY_WS_URL=ws://localhost:8082
-VITE_RELAY_QUIZ_API_BASE_URL=http://localhost:8083
-VITE_RELAY_DEFAULT_USER_ID=faith
+VITE_OHMLET_API_BASE_URL=http://localhost:8082
+VITE_OHMLET_WS_URL=ws://localhost:8082
+VITE_OHMLET_QUIZ_API_BASE_URL=http://localhost:8083
+VITE_OHMLET_DEFAULT_USER_ID=faith
 
 # Firestore persistence (optional)
 VITE_FIREBASE_API_KEY=your_firebase_web_api_key
-VITE_FIREBASE_PROJECT_ID=relay-gemini
+VITE_FIREBASE_PROJECT_ID=ohmlet-app
 ```
 
 ```bash
 npm run dev
 ```
 
-Opens at `http://localhost:3000`. The app workspace is at `/relay-app`.
+Run from `frontend/`. Opens at `http://localhost:3000`. The app workspace is at `/ohmlet-app`.
 
 ### 2. Live bridge backend
 
@@ -154,12 +155,12 @@ Environment variables:
 
 ```env
 GOOGLE_GENAI_USE_VERTEXAI=TRUE
-GOOGLE_CLOUD_PROJECT=relay-gemini
+GOOGLE_CLOUD_PROJECT=ohmlet-app
 GOOGLE_CLOUD_LOCATION=europe-west1
-RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio
-RELAY_FLASH_MODEL=gemini-2.5-flash
-RELAY_PRO_MODEL=gemini-2.5-pro
-RELAY_REASONING_MODEL=gemini-2.5-pro
+OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio
+OHMLET_FLASH_MODEL=gemini-2.5-flash
+OHMLET_PRO_MODEL=gemini-2.5-pro
+OHMLET_REASONING_MODEL=gemini-2.5-pro
 ```
 
 If not using Vertex AI locally, set `GOOGLE_API_KEY` instead.
@@ -192,30 +193,30 @@ The script handles project configuration, deploys both backend microservices to 
 **Configuration** is via environment variables (defaults to production):
 
 ```bash
-export GOOGLE_CLOUD_PROJECT=relay-gemini   # GCP project ID
+export GOOGLE_CLOUD_PROJECT=ohmlet-app   # GCP project ID
 export GOOGLE_CLOUD_REGION=europe-west1    # Cloud Run region
 ```
 
 **Manual deployment** (if preferred):
 
 ```bash
-gcloud run deploy relay-live-bridge \
+gcloud run deploy ohmlet-live-bridge \
   --source=backend/live-bridge \
   --region=europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1,RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio,RELAY_FLASH_MODEL=gemini-2.5-flash,RELAY_PRO_MODEL=gemini-2.5-pro,RELAY_REASONING_MODEL=gemini-2.5-pro
+  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=ohmlet-app,GOOGLE_CLOUD_LOCATION=europe-west1,OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,OHMLET_FLASH_MODEL=gemini-2.5-flash,OHMLET_PRO_MODEL=gemini-2.5-pro,OHMLET_REASONING_MODEL=gemini-2.5-pro
 
-gcloud run deploy relay-quiz-engine \
+gcloud run deploy ohmlet-quiz-engine \
   --source=backend/quiz-engine \
   --region=europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1
+  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=ohmlet-app,GOOGLE_CLOUD_LOCATION=europe-west1
 ```
 
 ## Build verification
 
 ```bash
-npm run build                                          # Frontend (must pass)
+cd frontend && npm run build                           # Frontend (must pass)
 python3 -m py_compile backend/live-bridge/app/main.py  # Backend syntax check
 python3 -m py_compile backend/quiz-engine/app/main.py
 ```

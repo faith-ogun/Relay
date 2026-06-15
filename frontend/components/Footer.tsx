@@ -1,13 +1,13 @@
 import React from 'react';
 import { Github, Linkedin } from 'lucide-react';
-import { RelayLogo } from './Logo';
+import { OhmletLogo } from './Logo';
 
 export const Footer: React.FC = () => {
   return (
     <footer className="border-t border-white/10 bg-[#090c12] px-6 py-12 text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <RelayLogo showTagline />
+          <OhmletLogo showTagline />
           <p className="mt-2 max-w-md text-sm text-white/60">
             AI-guided electronics learning for breadboards, components, and microcontrollers.
           </p>

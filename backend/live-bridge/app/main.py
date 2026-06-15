@@ -1,6 +1,6 @@
-"""Relay Live Bridge — WebSocket server for bidi audio+video streaming with Gemini.
+"""Ohmlet Live Bridge — WebSocket server for bidi audio+video streaming with Gemini.
 
-This service accepts WebSocket connections from the Relay frontend, receives
+This service accepts WebSocket connections from the Ohmlet frontend, receives
 audio (PCM 16kHz) and video (JPEG frames) from the user's mic and webcam,
 pipes them to the Gemini Live API via ADK, and streams audio responses back.
 """
@@ -23,16 +23,16 @@ from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from relay_live_agent import agent
+from ohmlet_live_agent import agent
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("relay.live-bridge")
+logger = logging.getLogger("ohmlet.live-bridge")
 
 # ── App setup ──────────────────────────────────────────────────────────────────
 
-APP_NAME = os.getenv("RELAY_APP_NAME", "relay-live-bridge")
+APP_NAME = os.getenv("OHMLET_APP_NAME", "ohmlet-live-bridge")
 
-app = FastAPI(title="Relay Live Bridge", version="0.1.0")
+app = FastAPI(title="Ohmlet Live Bridge", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,14 +57,14 @@ def health() -> dict[str, str]:
         "status": "ok",
         "service": "live-bridge",
         "runtime": "google-adk-bidi",
-        "model": os.getenv("RELAY_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
+        "model": os.getenv("OHMLET_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
     }
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _is_native_audio_model() -> bool:
-    model = os.getenv("RELAY_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025")
+    model = os.getenv("OHMLET_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025")
     return "native-audio" in model
 
 
@@ -262,26 +262,26 @@ async def text_fallback(payload: dict) -> dict:
     # The live agent uses a native-audio model that only works with run_live().
     # For text-only chat, call Gemini directly via google-genai SDK.
     from google import genai
-    from relay_live_agent.agent import RELAY_INSTRUCTION
+    from ohmlet_live_agent.agent import OHMLET_INSTRUCTION
 
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
     if use_vertex:
         client = genai.Client(
             vertexai=True,
-            project=os.getenv("GOOGLE_CLOUD_PROJECT", "relay-gemini"),
+            project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
             location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
         )
     else:
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
 
-    text_model = os.getenv("RELAY_FLASH_MODEL", "gemini-2.5-flash")
+    text_model = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
 
     try:
         response = client.models.generate_content(
             model=text_model,
             contents=f"[stage={stage}] {text}",
             config=genai.types.GenerateContentConfig(
-                system_instruction=RELAY_INSTRUCTION,
+                system_instruction=OHMLET_INSTRUCTION,
             ),
         )
         reply = response.text.strip() if response.text else "No response generated."

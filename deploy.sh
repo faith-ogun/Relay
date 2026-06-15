@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy.sh — Automated Cloud Run deployment for Relay
+# deploy.sh — Automated Cloud Run deployment for Ohmlet
 #
 # Usage:
 #   ./deploy.sh              Deploy all services
@@ -9,26 +9,26 @@
 #
 # Prerequisites:
 #   - gcloud CLI installed and authenticated
-#   - Project set: gcloud config set project relay-gemini
+#   - Project set: gcloud config set project ohmlet-app
 
 set -euo pipefail
 
 # ── Configuration ──
-PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-relay-gemini}"
+PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-ohmlet-app}"
 REGION="${GOOGLE_CLOUD_REGION:-europe-west1}"
 
 # Service definitions
-LIVE_BRIDGE_SERVICE="relay-live-bridge"
+LIVE_BRIDGE_SERVICE="ohmlet-live-bridge"
 LIVE_BRIDGE_SOURCE="backend/live-bridge"
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
-RELAY_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
-RELAY_FLASH_MODEL=gemini-2.5-flash,\
-RELAY_PRO_MODEL=gemini-2.5-pro,\
-RELAY_REASONING_MODEL=gemini-2.5-pro"
+OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
+OHMLET_FLASH_MODEL=gemini-2.5-flash,\
+OHMLET_PRO_MODEL=gemini-2.5-pro,\
+OHMLET_REASONING_MODEL=gemini-2.5-pro"
 
-QUIZ_ENGINE_SERVICE="relay-quiz-engine"
+QUIZ_ENGINE_SERVICE="ohmlet-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"
 QUIZ_ENGINE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
@@ -80,10 +80,10 @@ deploy_quiz_engine() {
 
 deploy_frontend() {
   info "Building frontend..."
-  npm run build
+  ( cd frontend && npm run build )
 
-  info "Frontend built successfully in dist/"
-  ok "Deploy dist/ to your hosting provider (e.g. Firebase Hosting, Cloud Storage, Vercel)"
+  info "Frontend built successfully in frontend/dist/"
+  ok "Deploy frontend/dist/ to your hosting provider (e.g. Firebase Hosting, Cloud Storage, Vercel)"
 }
 
 verify_services() {

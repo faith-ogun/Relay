@@ -22,17 +22,17 @@ import {
 type IconType = React.ComponentType<{ className?: string }>;
 
 interface HomeProps {
-  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'relay-app') => void;
+  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'ohmlet-app') => void;
 }
 
 const uiStyles = `
-@keyframes relay-marquee {
+@keyframes ohmlet-marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
-.relay-marquee { animation: relay-marquee 24s linear infinite; }
+.ohmlet-marquee { animation: ohmlet-marquee 24s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .relay-marquee { animation: none !important; }
+  .ohmlet-marquee { animation: none !important; }
 }
 `;
 
@@ -73,7 +73,7 @@ const steps: Array<{ number: string; title: string; body: string; icon: IconType
   {
     number: '01',
     title: 'Show the Bench',
-    body: 'Relay watches your breadboard, components, and hands in real time so the session starts from what is physically in front of you.',
+    body: 'Ohmlet watches your breadboard, components, and hands in real time so the session starts from what is physically in front of you.',
     icon: Camera,
     tone: 'dark',
   },
@@ -87,7 +87,7 @@ const steps: Array<{ number: string; title: string; body: string; icon: IconType
   {
     number: '03',
     title: 'Keep Practicing',
-    body: 'Relay extends the learning loop with chat context, lessons, circuit diagrams, serial feedback, and sandbox tools.',
+    body: 'Ohmlet extends the learning loop with chat context, lessons, circuit diagrams, serial feedback, and sandbox tools.',
     icon: FileText,
     tone: 'dark',
   },
@@ -193,7 +193,7 @@ const HeroFlow: React.FC = () => {
   return (
     <div className="mt-16 w-full max-w-4xl overflow-hidden rounded-[2.4rem] border-[3px] border-black bg-white p-6 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:p-8">
       <div className="flex flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-bold uppercase tracking-[0.26em] text-black/50">Relay flow</p>
+        <p className="text-xs font-bold uppercase tracking-[0.26em] text-black/50">Ohmlet flow</p>
         <p className="text-sm font-medium text-black/60">From physical build to supported practice</p>
       </div>
 
@@ -247,7 +247,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg font-medium leading-relaxed text-black/75 md:text-2xl">
-              Relay helps learners explore breadboards, components, and microcontrollers in real time, with voice,
+              Ohmlet helps learners explore breadboards, components, and microcontrollers in real time, with voice,
               vision, correction, and practice tools that support the build.
             </p>
 
@@ -269,7 +269,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </section>
 
       <section className="overflow-hidden border-y-4 border-black bg-black text-[#f3e515]">
-        <div className="relay-marquee flex min-w-max items-center gap-6 px-6 py-5 text-xl font-black tracking-tight md:text-2xl">
+        <div className="ohmlet-marquee flex min-w-max items-center gap-6 px-6 py-5 text-xl font-black tracking-tight md:text-2xl">
           {[...marqueeItems, ...marqueeItems].map((item, index) => (
             <div key={`${item}-${index}`} className="inline-flex items-center gap-4">
               <span>{item}</span>
@@ -287,7 +287,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               Teach electronics with grounded AI guidance.
             </h2>
             <p className="mt-5 text-lg font-medium text-black/70 md:text-2xl">
-              Relay is built to help people understand components, wiring, and simple code while they build. In the
+              Ohmlet is built to help people understand components, wiring, and simple code while they build. In the
               age of AI, that understanding should become easier to access, not easier to skip.
             </p>
           </div>
@@ -330,7 +330,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 Built for learning, not just one-off demos.
               </h2>
               <p className="mt-4 text-lg font-medium text-black/65 md:text-xl">
-                Relay combines the live build experience with tools that learners can actually navigate while they work.
+                Ohmlet combines the live build experience with tools that learners can actually navigate while they work.
               </p>
             </div>
             <button
@@ -377,7 +377,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <h3 className="text-2xl font-black tracking-tight md:text-3xl">Designed for teachable bench builds</h3>
               </div>
               <p className="mt-4 text-lg font-medium leading-relaxed text-black/70">
-                Relay works best when the circuit responds clearly on camera, produces readable data, and gives the
+                Ohmlet works best when the circuit responds clearly on camera, produces readable data, and gives the
                 learner obvious moments where explanation and correction matter.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -393,7 +393,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <div className="rounded-[2rem] border-2 border-black bg-black p-7 text-white shadow-[8px_8px_0px_0px_rgba(243,229,21,0.4)]">
               <div className="flex items-center gap-3">
                 <Zap className="h-6 w-6 text-[#f3e515]" />
-                <h3 className="text-2xl font-black tracking-tight md:text-3xl">What Relay feels like</h3>
+                <h3 className="text-2xl font-black tracking-tight md:text-3xl">What Ohmlet feels like</h3>
               </div>
               <ul className="mt-5 space-y-3 text-base font-medium text-white/80">
                 <li className="flex gap-3"><Check className="mt-0.5 h-5 w-5 text-[#f3e515]" />Interruptions handled naturally while building</li>
@@ -423,7 +423,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <span className="block text-[#f3e515]">Grounded practice tools.</span>
               </h2>
               <p className="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-white/70 md:text-2xl">
-                Relay pairs a live multimodal session with orchestration, circuit diagrams, serial feedback, lessons,
+                Ohmlet pairs a live multimodal session with orchestration, circuit diagrams, serial feedback, lessons,
                 and sandbox tooling so the experience stays grounded while you build.
               </p>
 
@@ -452,7 +452,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               <div className="w-full max-w-[540px] rounded-[2rem] border-2 border-white/15 bg-[#0b0b0b] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.45)]">
                 <div className="rounded-[1.5rem] border border-white/10 bg-[#111] p-5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold uppercase tracking-wide text-white/60">Relay Architecture</p>
+                    <p className="text-sm font-bold uppercase tracking-wide text-white/60">Ohmlet Architecture</p>
                     <button
                       type="button"
                       onClick={() => onNavigate('technology')}
@@ -496,16 +496,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      <section id="why-relay" className="bg-[#f3e515] px-6 py-24 text-black">
+      <section id="why-ohmlet" className="bg-[#f3e515] px-6 py-24 text-black">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-black/60">Why Relay</p>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-black/60">Why Ohmlet</p>
               <h2 className="mt-4 text-4xl font-black tracking-tight md:text-6xl">
                 A better learning loop than static tutorials.
               </h2>
               <p className="mt-5 max-w-2xl text-lg font-medium leading-relaxed text-black/70">
-                Relay is meant to close the gap between watching electronics content and actually understanding your own
+                Ohmlet is meant to close the gap between watching electronics content and actually understanding your own
                 build while your hands are on the breadboard.
               </p>
 
@@ -522,15 +522,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               <div className="grid grid-cols-3 border-b-2 border-black bg-black px-5 py-4 text-sm font-black uppercase tracking-wide text-[#f3e515]">
                 <span>Category</span>
                 <span>Typical flow</span>
-                <span>Relay</span>
+                <span>Ohmlet</span>
               </div>
 
               <div>
-                {comparisonRows.map(([label, typical, relay]) => (
+                {comparisonRows.map(([label, typical, ohmlet]) => (
                   <div key={label} className="grid grid-cols-3 border-b border-black/10 px-5 py-4 text-sm last:border-b-0">
                     <div className="font-black text-black">{label}</div>
                     <div className="pr-4 text-black/65">{typical}</div>
-                    <div className="font-medium text-black/80">{relay}</div>
+                    <div className="font-medium text-black/80">{ohmlet}</div>
                   </div>
                 ))}
               </div>

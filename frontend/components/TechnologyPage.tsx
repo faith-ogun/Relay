@@ -16,13 +16,13 @@ import {
 type IconType = React.ComponentType<{ className?: string }>;
 
 interface TechnologyPageProps {
-  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'relay-app') => void;
+  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'ohmlet-app') => void;
 }
 
 const systemLayers: Array<{ title: string; body: string; icon: IconType }> = [
   {
     title: 'Bench context',
-    body: 'Relay connects camera, voice, and session state so guidance stays tied to the physical build.',
+    body: 'Ohmlet connects camera, voice, and session state so guidance stays tied to the physical build.',
     icon: Camera,
   },
   {
@@ -76,7 +76,7 @@ export const TechnologyPage: React.FC<TechnologyPageProps> = ({ onNavigate }) =>
               Real-time guidance for hardware that stays grounded in the actual build.
             </h1>
             <p className="mt-6 max-w-3xl text-lg font-medium leading-relaxed text-white/70 md:text-2xl">
-              Relay combines live multimodal input, session orchestration, microcontroller-aware workflows, circuit
+              Ohmlet combines live multimodal input, session orchestration, microcontroller-aware workflows, circuit
               diagrams, serial feedback, a sandbox with code editing, and community-facing learning surfaces.
             </p>
           </div>
@@ -85,7 +85,7 @@ export const TechnologyPage: React.FC<TechnologyPageProps> = ({ onNavigate }) =>
             <p className="text-xs font-bold uppercase tracking-[0.26em] text-white/45">What this page covers</p>
             <div className="mt-5 grid gap-3">
               {[
-                'How Relay observes and reasons about a physical electronics bench.',
+                'How Ohmlet observes and reasons about a physical electronics bench.',
                 'How tutoring, correction, diagrams, serial feedback, and sandbox tools connect.',
                 'Why the workflow is meant for breadboards and microcontrollers broadly, not just one board family.',
               ].map((item) => (
@@ -160,7 +160,7 @@ export const TechnologyPage: React.FC<TechnologyPageProps> = ({ onNavigate }) =>
               {[
                 {
                   title: 'Verification before confidence',
-                  body: 'Relay should confirm what is physically present before acting overly certain about the next step.',
+                  body: 'Ohmlet should confirm what is physically present before acting overly certain about the next step.',
                   icon: ShieldCheck,
                 },
                 {

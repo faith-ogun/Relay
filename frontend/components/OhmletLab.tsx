@@ -37,8 +37,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { useLiveBridge } from '../hooks/useLiveBridge';
-import { useRelayIdentity } from '../hooks/useRelayIdentity';
-import { useRelayUserState } from '../hooks/useRelayUserState';
+import { useOhmletIdentity } from '../hooks/useOhmletIdentity';
+import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { generateQuizQuestions, assessDrawing, type QuizQuestion, type SkillProfilePayload } from '../services/quizEngineClient';
 import CircuitDiagram, { CircuitDrawingCanvas } from './CircuitDiagram';
 import type { CircuitId } from './CircuitDiagram';
@@ -52,7 +52,7 @@ import type {
   AppTab,
   ConnectionState,
   SessionCreateResponse,
-  RelayLabProps,
+  OhmletLabProps,
   Turn,
   TwinPreferences,
   SkillNode,
@@ -61,13 +61,13 @@ import type {
   AdaptiveHistoryEntry,
   Achievement,
   XpEvent,
-  RelayPersistedState,
-} from './relay/types';
-import { LESSON_CONTENT, type LessonStep } from './relay/data/lessons';
-import { RARITY_LABELS, ACHIEVEMENTS, CardShape } from './relay/data/achievements';
-import { QUICK_PROMPTS, BUILD_LIBRARY } from './relay/data/library';
-import { TOUR_STEPS, FOCUS_STEPS } from './relay/data/tour';
-import { LEADERBOARD_WEEKLY, LEADERBOARD_ALL_TIME, AVATAR_COLORS } from './relay/data/leaderboard';
+  OhmletPersistedState,
+} from './ohmlet/types';
+import { LESSON_CONTENT, type LessonStep } from './ohmlet/data/lessons';
+import { RARITY_LABELS, ACHIEVEMENTS, CardShape } from './ohmlet/data/achievements';
+import { QUICK_PROMPTS, BUILD_LIBRARY } from './ohmlet/data/library';
+import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
+import { LEADERBOARD_WEEKLY, LEADERBOARD_ALL_TIME, AVATAR_COLORS } from './ohmlet/data/leaderboard';
 import {
   APP_TABS,
   XP_ACTIONS,
@@ -79,7 +79,7 @@ import {
   DEFAULT_SKILL_NODES,
   DEFAULT_WEEK_PROGRESS,
   DEFAULT_XP_EVENTS,
-} from './relay/data/defaults';
+} from './ohmlet/data/defaults';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -151,7 +151,7 @@ const themes = {
     chatEmptySub: 'text-slate-300',
     chatYouBubble: 'bg-[#0a0a0a] text-white',
     chatYouTime: 'text-white/40',
-    chatRelayBubble: 'bg-white text-slate-700 ring-1 ring-slate-200/80',
+    chatOhmletBubble: 'bg-white text-slate-700 ring-1 ring-slate-200/80',
     chatSystemBubble: 'bg-[#f3e515]/15 text-slate-600',
     chatTime: 'text-slate-400',
     chatPromptBg: 'bg-white ring-1 ring-slate-200 text-slate-500 hover:bg-[#f3e515]/10 hover:text-slate-700 hover:ring-[#f3e515]/40',
@@ -260,7 +260,7 @@ const themes = {
     chatEmptySub: 'text-white/20',
     chatYouBubble: 'bg-[#f3e515] text-[#0a0a0a]',
     chatYouTime: 'text-[#0a0a0a]/50',
-    chatRelayBubble: 'bg-white/10 text-white/80',
+    chatOhmletBubble: 'bg-white/10 text-white/80',
     chatSystemBubble: 'bg-[#f3e515]/10 text-white/60',
     chatTime: 'text-white/30',
     chatPromptBg: 'bg-white/5 ring-1 ring-white/10 text-white/40 hover:bg-[#f3e515]/10 hover:text-white/70 hover:ring-[#f3e515]/30',
@@ -335,35 +335,35 @@ class SceneErrorBoundary extends React.Component<{ fallback: React.ReactNode; ch
   }
 }
 
-export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
+export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   const apiRoot = useMemo(
-    () => (import.meta.env.VITE_RELAY_API_BASE_URL || 'http://localhost:8082').trim().replace(/\/+$/, ''),
+    () => (import.meta.env.VITE_OHMLET_API_BASE_URL || 'http://localhost:8082').trim().replace(/\/+$/, ''),
     []
   );
   const wsRoot = useMemo(() => {
     // If explicit WS URL set, use it; otherwise derive from API URL
-    const explicit = import.meta.env.VITE_RELAY_WS_URL;
+    const explicit = import.meta.env.VITE_OHMLET_WS_URL;
     if (explicit) return explicit.trim().replace(/\/+$/, '');
     // https → wss, http → ws
     return apiRoot.replace(/^http/, 'ws');
   }, [apiRoot]);
   const quizApiRoot = useMemo(() => {
-    const explicit = (import.meta.env.VITE_RELAY_QUIZ_API_BASE_URL || '').trim();
+    const explicit = (import.meta.env.VITE_OHMLET_QUIZ_API_BASE_URL || '').trim();
     if (explicit) return explicit.replace(/\/+$/, '');
-    if (apiRoot.includes('relay-live-bridge')) return apiRoot.replace('relay-live-bridge', 'relay-quiz-engine');
+    if (apiRoot.includes('ohmlet-live-bridge')) return apiRoot.replace('ohmlet-live-bridge', 'ohmlet-quiz-engine');
     if (apiRoot.includes(':8082')) return apiRoot.replace(':8082', ':8083');
     return apiRoot;
   }, [apiRoot]);
-  const configuredDefaultUserId = useMemo(() => (import.meta.env.VITE_RELAY_DEFAULT_USER_ID || '').trim(), []);
-  const defaultUserId = useRelayIdentity(configuredDefaultUserId);
+  const configuredDefaultUserId = useMemo(() => (import.meta.env.VITE_OHMLET_DEFAULT_USER_ID || '').trim(), []);
+  const defaultUserId = useOhmletIdentity(configuredDefaultUserId);
 
   const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('relay-theme') === 'dark'; } catch { return false; }
+    try { return localStorage.getItem('ohmlet-theme') === 'dark'; } catch { return false; }
   });
   const t = dark ? themes.dark : themes.light;
 
   useEffect(() => {
-    try { localStorage.setItem('relay-theme', dark ? 'dark' : 'light'); } catch { /* noop */ }
+    try { localStorage.setItem('ohmlet-theme', dark ? 'dark' : 'light'); } catch { /* noop */ }
   }, [dark]);
 
   const [liveSessionId] = useState(() => `live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
@@ -439,7 +439,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
   const [joinedChallenges, setJoinedChallenges] = useState<Record<string, boolean>>(DEFAULT_JOINED_CHALLENGES);
 
   const [skillNodes, setSkillNodes] = useState<SkillNode[]>(DEFAULT_SKILL_NODES);
-  const persistedDefaults = useMemo<RelayPersistedState>(() => ({
+  const persistedDefaults = useMemo<OhmletPersistedState>(() => ({
     posts: DEFAULT_POSTS,
     commentReplies: DEFAULT_COMMENT_REPLIES,
     lessonProgress: DEFAULT_LESSON_PROGRESS,
@@ -451,11 +451,11 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
     lastActiveDate: '',
   }), []);
   const {
-    state: persistedRelayState,
-    updateState: updatePersistedRelayState,
-    ready: persistedRelayReady,
+    state: persistedOhmletState,
+    updateState: updatePersistedOhmletState,
+    ready: persistedOhmletReady,
     persistError,
-  } = useRelayUserState<RelayPersistedState>({
+  } = useOhmletUserState<OhmletPersistedState>({
     userId: defaultUserId,
     key: 'workspace-state',
     defaults: persistedDefaults,
@@ -469,22 +469,22 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!persistedRelayReady || hasHydratedPersistedState.current) return;
-    setPosts(persistedRelayState.posts);
-    setCommentReplies(persistedRelayState.commentReplies);
-    setLessonProgress(persistedRelayState.lessonProgress);
-    setAdaptiveHistory(persistedRelayState.adaptiveHistory);
-    setJoinedChallenges(persistedRelayState.joinedChallenges);
-    setSkillNodes(persistedRelayState.skillNodes);
-    setWeekProgress(persistedRelayState.weekProgress);
-    setXpEvents(persistedRelayState.xpEvents || []);
-    setLastActiveDate(persistedRelayState.lastActiveDate || '');
+    if (!persistedOhmletReady || hasHydratedPersistedState.current) return;
+    setPosts(persistedOhmletState.posts);
+    setCommentReplies(persistedOhmletState.commentReplies);
+    setLessonProgress(persistedOhmletState.lessonProgress);
+    setAdaptiveHistory(persistedOhmletState.adaptiveHistory);
+    setJoinedChallenges(persistedOhmletState.joinedChallenges);
+    setSkillNodes(persistedOhmletState.skillNodes);
+    setWeekProgress(persistedOhmletState.weekProgress);
+    setXpEvents(persistedOhmletState.xpEvents || []);
+    setLastActiveDate(persistedOhmletState.lastActiveDate || '');
     hasHydratedPersistedState.current = true;
-  }, [persistedRelayReady, persistedRelayState]);
+  }, [persistedOhmletReady, persistedOhmletState]);
 
   useEffect(() => {
     if (!hasHydratedPersistedState.current) return;
-    updatePersistedRelayState({
+    updatePersistedOhmletState({
       posts,
       commentReplies,
       lessonProgress,
@@ -495,7 +495,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
       xpEvents,
       lastActiveDate,
     });
-  }, [posts, commentReplies, lessonProgress, adaptiveHistory, joinedChallenges, skillNodes, weekProgress, xpEvents, lastActiveDate, updatePersistedRelayState]);
+  }, [posts, commentReplies, lessonProgress, adaptiveHistory, joinedChallenges, skillNodes, weekProgress, xpEvents, lastActiveDate, updatePersistedOhmletState]);
 
   useEffect(() => {
     if (!persistError) return;
@@ -924,7 +924,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
       setTurns((prev) => [
         ...prev,
         ...newItems.map((t) => ({
-          role: (t.role === 'user' ? 'you' : t.role === 'agent' ? 'relay' : 'system') as Turn['role'],
+          role: (t.role === 'user' ? 'you' : t.role === 'agent' ? 'ohmlet' : 'system') as Turn['role'],
           text: t.text,
           timestamp: t.timestamp,
         })),
@@ -964,7 +964,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
     }
     const payload: SessionCreateResponse = await res.json();
     setSessionId(payload.session_id);
-    pushTurn('system', `Session started. Relay is ready to guide ${focusStage}.`);
+    pushTurn('system', `Session started. Ohmlet is ready to guide ${focusStage}.`);
     return payload.session_id;
   };
 
@@ -1038,14 +1038,14 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
       });
       if (!res.ok) {
         const body = await res.text();
-        throw new Error(`Relay request failed: ${res.status} ${body}`);
+        throw new Error(`Ohmlet request failed: ${res.status} ${body}`);
       }
       const payload = await res.json();
-      pushTurn('relay', payload.reply);
+      pushTurn('ohmlet', payload.reply);
       setConnection('online');
     } catch (err) {
       setConnection('offline');
-      setError(err instanceof Error ? err.message : 'Relay request failed.');
+      setError(err instanceof Error ? err.message : 'Ohmlet request failed.');
     } finally {
       setBusy(false);
     }
@@ -1271,7 +1271,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                 R
               </div>
               <div>
-                <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${t.sidebarMuted}`}>Relay</p>
+                <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${t.sidebarMuted}`}>Ohmlet</p>
                 <p className="text-base font-black tracking-tight">Studio</p>
               </div>
             </button>
@@ -1308,7 +1308,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
           {/* Streak card */}
           <div data-tour="tour-streak" className={`mx-3 mt-5 rounded-2xl p-4 ${t.sidebarCardBg}`}>
             <div className="flex items-center gap-3">
-              <div className="relay-streak-flame">
+              <div className="ohmlet-streak-flame">
                 <Flame className="h-7 w-7 text-amber-400" />
               </div>
               <div>
@@ -1388,7 +1388,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
             <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${
-                  connection === 'online' ? 'bg-emerald-400 relay-pulse-glow' : connection === 'offline' ? 'bg-rose-400' : 'bg-amber-400'
+                  connection === 'online' ? 'bg-emerald-400 ohmlet-pulse-glow' : connection === 'offline' ? 'bg-rose-400' : 'bg-amber-400'
                 }`}
               />
               <p className={`text-[11px] font-semibold ${t.sidebarConnText}`}>
@@ -1474,7 +1474,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
           </header>
 
           {error && (
-            <div className={`mx-5 mt-3 relay-fade-in flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${t.errorBg}`}>
+            <div className={`mx-5 mt-3 ohmlet-fade-in flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${t.errorBg}`}>
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {error}
               <button type="button" onClick={() => setError('')} className={`ml-auto ${t.errorClose}`}><X className="h-4 w-4" /></button>
@@ -1485,10 +1485,10 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
           <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
             {/* ═══ BUILD TAB ═══ */}
             {activeTab === 'build' && (
-              <div className="relay-fade-in space-y-5">
+              <div className="ohmlet-fade-in space-y-5">
                 {/* Active build context */}
                 {activeBuild && (
-                  <div className={`relay-fade-in flex items-center gap-4 rounded-xl p-4 ${dark ? 'bg-white/[0.04] ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200/80'}`}>
+                  <div className={`ohmlet-fade-in flex items-center gap-4 rounded-xl p-4 ${dark ? 'bg-white/[0.04] ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200/80'}`}>
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white" style={{ backgroundColor: activeBuild.color }}>
                       <activeBuild.icon className="h-5 w-5" />
                     </div>
@@ -1586,7 +1586,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
                 {/* Simulation mode banner */}
                 {simMode && live.state === 'connected' && (
-                  <div className={`relay-fade-in flex items-center gap-3 rounded-xl px-4 py-3 ${
+                  <div className={`ohmlet-fade-in flex items-center gap-3 rounded-xl px-4 py-3 ${
                     dark ? 'bg-[#f3e515]/10 ring-1 ring-[#f3e515]/20' : 'bg-[#f3e515]/15 ring-1 ring-[#f3e515]/30'
                   }`}>
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3e515] text-black">
@@ -1595,7 +1595,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-black ${dark ? 'text-[#f3e515]' : 'text-[#0a0a0a]'}`}>Demo Mode Active</p>
                       <p className={`text-[11px] ${dark ? 'text-white/50' : 'text-slate-500'}`}>
-                        No hardware needed. Turn on your camera and hold up any object — Relay will identify it in real time.
+                        No hardware needed. Turn on your camera and hold up any object — Ohmlet will identify it in real time.
                         <span className={`ml-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${dark ? 'bg-white/10 text-white/60' : 'bg-slate-200 text-slate-600'}`}>🎧 Best with headphones</span>
                       </p>
                     </div>
@@ -1640,7 +1640,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                                   type="button"
                                   onClick={startSession}
                                   disabled={busy || live.state === 'connecting'}
-                                  className="relay-pulse-glow inline-flex items-center gap-2 rounded-full bg-[#f3e515] px-6 py-3 text-sm font-black text-black transition-transform hover:scale-105 active:scale-95 disabled:opacity-60"
+                                  className="ohmlet-pulse-glow inline-flex items-center gap-2 rounded-full bg-[#f3e515] px-6 py-3 text-sm font-black text-black transition-transform hover:scale-105 active:scale-95 disabled:opacity-60"
                                 >
                                   <PlayCircle className="h-5 w-5" />
                                   {live.state === 'connecting' ? 'Connecting...' : sessionId ? 'Resume Session' : 'Start Live Session'}
@@ -1671,7 +1671,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                                   </span>
                                 </button>
                                 <p className={`max-w-xs text-[11px] leading-relaxed ${dark ? 'text-white/50' : 'text-slate-500'}`}>
-                                  Try Demo Mode to experience the full build flow without electronics components. Hold up any object to see Relay's live vision.
+                                  Try Demo Mode to experience the full build flow without electronics components. Hold up any object to see Ohmlet's live vision.
                                 </p>
                               </div>
                             )}
@@ -1722,7 +1722,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       <div className={`absolute right-4 top-4 flex items-center gap-2 rounded-full px-3 py-1.5 ${t.cameraBadge}`}>
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            live.state === 'connected' ? 'bg-emerald-400 relay-pulse-glow' : connection === 'online' ? 'bg-emerald-400' : connection === 'offline' ? 'bg-rose-400' : 'bg-amber-400'
+                            live.state === 'connected' ? 'bg-emerald-400 ohmlet-pulse-glow' : connection === 'online' ? 'bg-emerald-400' : connection === 'offline' ? 'bg-rose-400' : 'bg-amber-400'
                           }`}
                         />
                         <span className={`text-[11px] font-bold ${t.cameraBadgeText}`}>
@@ -1745,7 +1745,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                     </div>
                     {/* Gemini API session limit notice */}
                     {live.state === 'connected' && (
-                      <div className={`relay-fade-in flex items-center gap-2 px-3 py-2 rounded-b-xl -mt-2 text-[10px] ${
+                      <div className={`ohmlet-fade-in flex items-center gap-2 px-3 py-2 rounded-b-xl -mt-2 text-[10px] ${
                         dark ? 'bg-white/5 text-white/40' : 'bg-slate-50 text-slate-400'
                       }`}>
                         <AlertCircle className="h-3 w-3 shrink-0" />
@@ -1765,14 +1765,14 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${dark ? 'bg-[#f3e515]' : 'bg-[#0a0a0a]'}`}>
                             <Sparkles className={`h-3.5 w-3.5 ${dark ? 'text-[#0a0a0a]' : 'text-[#f3e515]'}`} />
                           </div>
-                          <p className={`text-sm font-black ${t.cardTitle}`}>Relay Assistant</p>
+                          <p className={`text-sm font-black ${t.cardTitle}`}>Ohmlet Assistant</p>
                         </div>
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${dark ? 'bg-white/5 text-white/40' : 'bg-slate-100 text-slate-400'}`}>
                           {focusStage}
                         </span>
                       </div>
 
-                      <div className={`relay-chat-scroll flex-1 min-h-0 overflow-y-auto p-4 ${t.chatBg}`}>
+                      <div className={`ohmlet-chat-scroll flex-1 min-h-0 overflow-y-auto p-4 ${t.chatBg}`}>
                         {turns.length === 0 ? (
                           <div className="flex h-full flex-col items-center justify-center text-center">
                             <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${t.chatEmptyIcon}`}>
@@ -1782,18 +1782,18 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                             <p className={`mt-1 text-xs ${t.chatEmptySub}`}>Start a session or pick a prompt below</p>
                           </div>
                         ) : (
-                          <div className="space-y-3 relay-stagger">
+                          <div className="space-y-3 ohmlet-stagger">
                             {turns.map((turn, idx) => (
                               <div
                                 key={`${turn.timestamp}-${idx}`}
-                                className={`relay-slide-right flex ${turn.role === 'you' ? 'justify-end' : 'justify-start'}`}
+                                className={`ohmlet-slide-right flex ${turn.role === 'you' ? 'justify-end' : 'justify-start'}`}
                               >
                                 <div
                                   className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm ${
                                     turn.role === 'you'
                                       ? t.chatYouBubble
-                                      : turn.role === 'relay'
-                                      ? t.chatRelayBubble
+                                      : turn.role === 'ohmlet'
+                                      ? t.chatOhmletBubble
                                       : t.chatSystemBubble
                                   }`}
                                 >
@@ -1831,7 +1831,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
-                          placeholder="Ask Relay anything..."
+                          placeholder="Ask Ohmlet anything..."
                           rows={1}
                           className={`min-h-[40px] flex-1 resize-none rounded-xl border-0 px-3 py-2.5 text-sm font-medium outline-none transition-all ${t.chatInputBg}`}
                         />
@@ -1886,7 +1886,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                               // Wait one frame so the canvas has rendered content
                               requestAnimationFrame(() => {
                                 const link = document.createElement('a');
-                                link.download = `relay-twin-${(activeBuild?.title || 'build').replace(/\s+/g, '-').toLowerCase()}.png`;
+                                link.download = `ohmlet-twin-${(activeBuild?.title || 'build').replace(/\s+/g, '-').toLowerCase()}.png`;
                                 link.href = canvas.toDataURL('image/png');
                                 link.click();
                               });
@@ -1928,7 +1928,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
               // ── Lesson complete screen ──
               if (lessonComplete) return (
-                <div className="relay-fade-in flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div className="ohmlet-fade-in flex flex-col items-center justify-center py-16 px-6 text-center">
                   <div className="text-6xl mb-4">🎉</div>
                   <h2 className={`text-2xl font-black ${t.cardTitle}`}>Lesson Complete!</h2>
                   <p className={`mt-2 text-sm ${t.cardSub}`}>{activeLesson.title}</p>
@@ -1955,7 +1955,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
               );
 
               return (
-                <div className="relay-fade-in max-w-2xl mx-auto">
+                <div className="ohmlet-fade-in max-w-2xl mx-auto">
                   {/* ── Top bar: back, progress, hearts ── */}
                   <div className="flex items-center gap-3 mb-6">
                     <button type="button" onClick={() => setActiveLesson(null)} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${t.headerBtnBg}`}>
@@ -1977,7 +1977,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                   </div>
 
                   {/* ── Step content ── */}
-                  <div key={lessonStep} className="relay-fade-in">
+                  <div key={lessonStep} className="ohmlet-fade-in">
 
                     {/* TEACH step */}
                     {step.type === 'teach' && (
@@ -2056,7 +2056,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         </div>
                         {/* Feedback */}
                         {lessonAnswered && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {lessonCorrect ? 'Correct!' : 'Not quite.'}
                             </p>
@@ -2104,7 +2104,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           })}
                         </div>
                         {lessonAnswered && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>{lessonCorrect ? 'Correct!' : 'Not quite.'}</p>
                             <p className={`mt-1 text-xs ${dark ? 'text-white/50' : 'text-slate-500'}`}>{step.explanation}</p>
                           </div>
@@ -2155,7 +2155,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           <p className={`text-xs ${dark ? 'text-white/25' : 'text-slate-400'}`}>Hint: {step.hint}</p>
                         )}
                         {lessonAnswered && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>{lessonCorrect ? 'Correct!' : `The answer is: ${step.answer}`}</p>
                           </div>
                         )}
@@ -2274,7 +2274,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           className="rounded-xl overflow-hidden"
                         />
                         {lessonAnswered && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {lessonCorrect ? 'You found it!' : 'Not quite — look more carefully.'}
                             </p>
@@ -2310,7 +2310,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           <p className={`text-xs text-center ${dark ? 'text-white/30' : 'text-slate-400'}`}>Click on the correct component in the diagram above</p>
                         )}
                         {lessonAnswered && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {lessonCorrect ? 'Correct!' : 'Not quite.'}
                             </p>
@@ -2339,7 +2339,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           className="rounded-xl overflow-hidden"
                         />
                         {drawingComplete && (
-                          <div className="relay-fade-in rounded-xl p-4 bg-emerald-400/10">
+                          <div className="ohmlet-fade-in rounded-xl p-4 bg-emerald-400/10">
                             <p className="text-sm font-black text-emerald-400">All connections made!</p>
                             <p className={`mt-1 text-xs ${dark ? 'text-white/50' : 'text-slate-500'}`}>{step.explanation}</p>
                           </div>
@@ -2437,7 +2437,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         )}
                         {dragCorrect !== null && (
                           <>
-                            <div className={`relay-fade-in rounded-xl p-4 ${dragCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
+                            <div className={`ohmlet-fade-in rounded-xl p-4 ${dragCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                               <p className={`text-sm font-black ${dragCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
                                 {dragCorrect ? 'Perfect order!' : 'Not quite right — check the sequence.'}
                               </p>
@@ -2458,7 +2458,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
             })()}
 
             {activeTab === 'learn' && !activeLesson && (
-              <div className="relay-fade-in space-y-5">
+              <div className="ohmlet-fade-in space-y-5">
                 <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
                   {/* Knowledge graph */}
                   <section data-tour="tour-knowledge-graph" className={`overflow-hidden rounded-2xl transition-colors duration-300 ${t.cardBg}`}>
@@ -2484,7 +2484,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                               stroke={avgMastery > 50 ? na.color : t.graphEdge}
                               strokeWidth={avgMastery > 50 ? '2.5' : '1.5'}
                               strokeOpacity={avgMastery > 50 ? 0.4 : 0.25}
-                              className="relay-edge-flow"
+                              className="ohmlet-edge-flow"
                             />
                           );
                         })}
@@ -2547,7 +2547,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       <h3 className={`text-lg font-black tracking-tight ${t.cardTitle}`}>Learning Path</h3>
                       <p className={`mt-0.5 text-xs ${t.cardSub}`}>Guided lessons, Brilliant-style</p>
                     </div>
-                    <div className="p-4 relay-stagger">
+                    <div className="p-4 ohmlet-stagger">
                       {[
                         { title: 'Voltage Basics', desc: 'What voltage is, how to measure it, and why it matters for every circuit.', time: '8 min', color: '#38bdf8' },
                         { title: 'Current Flow Intuition', desc: 'Build an intuition for how current flows through series and parallel paths.', time: '12 min', color: '#f59e0b' },
@@ -2560,7 +2560,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         return (
                           <div
                             key={lesson.title}
-                            className="relay-fade-in group mb-3 overflow-hidden rounded-xl transition-all hover:shadow-md"
+                            className="ohmlet-fade-in group mb-3 overflow-hidden rounded-xl transition-all hover:shadow-md"
                             style={{ borderLeft: `4px solid ${lesson.color}` }}
                           >
                             <div className={`flex items-center gap-4 p-4 rounded-r-xl ${t.lessonCardBg}`}>
@@ -2916,7 +2916,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
                         {/* Feedback */}
                         {drawExerciseFeedback && (
-                          <div className={`relay-fade-in rounded-xl p-4 ${drawExerciseFeedback.correct ? 'bg-emerald-400/10' : 'bg-amber-400/10'}`}>
+                          <div className={`ohmlet-fade-in rounded-xl p-4 ${drawExerciseFeedback.correct ? 'bg-emerald-400/10' : 'bg-amber-400/10'}`}>
                             <div className="flex items-center gap-2 mb-2">
                               <span className={`text-sm font-black ${drawExerciseFeedback.correct ? 'text-emerald-400' : 'text-amber-400'}`}>
                                 {drawExerciseFeedback.correct ? 'Correct!' : 'Needs work'}
@@ -2946,13 +2946,13 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
             {/* ═══ COMMUNITY TAB ═══ */}
             {activeTab === 'community' && (
-              <div className="relay-fade-in grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="ohmlet-fade-in grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
                 {/* Leaderboard */}
                 <section data-tour="tour-leaderboard" className={`overflow-hidden rounded-2xl transition-colors duration-300 ${t.cardBg}`}>
                   <div className={`flex items-center justify-between px-5 py-4 ${t.cardHeaderBorder}`}>
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-amber-500" />
-                      <h2 className={`text-lg font-black tracking-tight ${t.cardTitle}`}>Relay League</h2>
+                      <h2 className={`text-lg font-black tracking-tight ${t.cardTitle}`}>Ohmlet League</h2>
                     </div>
                     <div className={`flex rounded-lg p-0.5 ${t.leagueTabBg}`}>
                       {(['weekly', 'alltime'] as const).map((view) => (
@@ -2977,11 +2977,11 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       if (!entry) return null;
                       const heights = [140, 100, 80];
                       const sizes = ['h-14 w-14', 'h-12 w-12', 'h-11 w-11'];
-                      const medals = ['relay-podium-1', 'relay-podium-2', 'relay-podium-3'];
+                      const medals = ['ohmlet-podium-1', 'ohmlet-podium-2', 'ohmlet-podium-3'];
                       const crownColors = ['text-amber-400', 'text-slate-400', 'text-orange-400'];
                       return (
                         <div key={entry.name} className="flex flex-col items-center" style={{ order: rank === 0 ? 0 : rank === 1 ? -1 : 1 }}>
-                          {rank === 0 && <Crown className="h-5 w-5 text-amber-400 mb-1 relay-streak-flame" />}
+                          {rank === 0 && <Crown className="h-5 w-5 text-amber-400 mb-1 ohmlet-streak-flame" />}
                           <div
                             className={`${sizes[rank]} mb-2 flex items-center justify-center rounded-full text-sm font-black text-white ring-2 ring-white/20 shadow-lg ${medals[rank]}`}
                           >
@@ -3008,9 +3008,9 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                   </div>
 
                   {/* Rest of leaderboard */}
-                  <div className={`px-5 py-3 relay-stagger ${t.cardHeaderBorder.replace('border-b', 'border-t')}`}>
+                  <div className={`px-5 py-3 ohmlet-stagger ${t.cardHeaderBorder.replace('border-b', 'border-t')}`}>
                     {leaderboard.slice(3).map((entry, idx) => (
-                      <div key={entry.name} className="relay-fade-in flex items-center justify-between py-2.5">
+                      <div key={entry.name} className="ohmlet-fade-in flex items-center justify-between py-2.5">
                         <div className="flex items-center gap-3">
                           <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-black ${t.leagueRankBg}`}>
                             {idx + 4}
@@ -3037,7 +3037,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                   {/* Challenges */}
                   <div className={`px-5 py-4 ${t.cardHeaderBorder.replace('border-b', 'border-t')}`}>
                     <h3 className={`text-sm font-black ${t.cardTitle}`}>Active Challenges</h3>
-                    <div className="mt-3 space-y-2 relay-stagger">
+                    <div className="mt-3 space-y-2 ohmlet-stagger">
                       {[
                         { id: 'streak7', title: '7-Day Build Streak', reward: '+140 XP', icon: Flame, color: '#f59e0b', desc: 'Complete at least one build session every day for 7 consecutive days. Each session must reach the wiring stage or beyond.', requirements: ['Build something every day for 7 days', 'Each session must reach the wiring stage', 'Streak resets if you miss a day'] },
                         { id: 'genericOnly', title: 'No Proprietary Kit Build', reward: 'Maker Badge', icon: Zap, color: '#a78bfa', desc: 'Complete a full build using only a generic breadboard and loose components — no branded starter kit allowed.', requirements: ['Select "Generic Breadboard Kit" as your kit', 'Complete all 5 stages of a build', 'No Arduino Starter Kit components'] },
@@ -3046,7 +3046,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         const joined = joinedChallenges[challenge.id];
                         const Icon = challenge.icon;
                         return (
-                          <div key={challenge.id} className={`relay-fade-in flex items-center gap-3 rounded-xl p-3 ${t.challengeBg}`}>
+                          <div key={challenge.id} className={`ohmlet-fade-in flex items-center gap-3 rounded-xl p-3 ${t.challengeBg}`}>
                             <div
                               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
                               style={{ backgroundColor: `${challenge.color}20` }}
@@ -3082,14 +3082,14 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                         <p className={`mt-0.5 text-xs ${t.cardSub}`}>Builds, reflections, and wins from the community</p>
                       </div>
                       <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${dark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 relay-pulse-glow" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 ohmlet-pulse-glow" />
                         {posts.length} new
                       </div>
                     </div>
                   </div>
-                  <div className="p-4 space-y-4 relay-stagger">
+                  <div className="p-4 space-y-4 ohmlet-stagger">
                     {posts.map((post) => (
-                      <article key={post.id} className={`relay-fade-in rounded-xl p-4 transition-all duration-200 hover:shadow-md ${t.postBg}`}>
+                      <article key={post.id} className={`ohmlet-fade-in rounded-xl p-4 transition-all duration-200 hover:shadow-md ${t.postBg}`}>
                         {/* Author row */}
                         <div className="flex items-center gap-3">
                           <div
@@ -3135,7 +3135,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                             }`}
                           >
                             <Heart
-                              className={`h-3.5 w-3.5 transition-transform ${likeAnimating === post.id ? 'relay-heart-pop' : ''} ${
+                              className={`h-3.5 w-3.5 transition-transform ${likeAnimating === post.id ? 'ohmlet-heart-pop' : ''} ${
                                 post.liked ? 'fill-[#f3e515]' : ''
                               }`}
                             />
@@ -3244,7 +3244,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
             {/* ═══ LIBRARY TAB ═══ */}
             {/* ═══ SANDBOX TAB ═══ */}
             {activeTab === 'sandbox' && (
-              <div data-tour="tour-sandbox" className="relay-fade-in -mx-6 -mb-6" style={{ height: 'calc(100vh - 120px)' }}>
+              <div data-tour="tour-sandbox" className="ohmlet-fade-in -mx-6 -mb-6" style={{ height: 'calc(100vh - 120px)' }}>
                 <React.Suspense fallback={
                   <div className={`flex items-center justify-center h-full ${dark ? 'bg-[#0a0a0a]' : 'bg-slate-50'}`}>
                     <div className="text-center">
@@ -3259,8 +3259,8 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
             )}
 
             {activeTab === 'library' && (
-              <div data-tour="tour-library" className="relay-fade-in">
-                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 relay-stagger">
+              <div data-tour="tour-library" className="ohmlet-fade-in">
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 ohmlet-stagger">
                   {BUILD_LIBRARY.map((item) => {
                     const Icon = item.icon;
                     const levelColors: Record<string, string> = {
@@ -3276,7 +3276,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                     return (
                       <article
                         key={item.title}
-                        className={`relay-fade-in group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 ${t.libCardRing} ${t.libBodyBg} shadow-sm`}
+                        className={`ohmlet-fade-in group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 ${t.libCardRing} ${t.libBodyBg} shadow-sm`}
                       >
                         {/* Colored header with gradient */}
                         <div className="relative h-32 overflow-hidden" style={{ backgroundColor: typeof t.libHeaderBg === 'function' ? t.libHeaderBg(item.color) : '' }}>
@@ -3393,7 +3393,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => setChallengeModal(null)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
-            className={`relay-scale-in relative w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl ${t.tourBg}`}
+            className={`ohmlet-scale-in relative w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl ${t.tourBg}`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -3452,7 +3452,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
         <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" onClick={() => setShowProfile(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
           <div
-            className={`relay-fade-in relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl ${dark ? 'bg-[#111114]' : 'bg-white'}`}
+            className={`ohmlet-fade-in relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl ${dark ? 'bg-[#111114]' : 'bg-white'}`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close */}
@@ -3592,7 +3592,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                       }}
                     >
                       <div
-                        className={`relay-holo-card ${ach.earned ? 'earned' : 'locked'} flex flex-col`}
+                        className={`ohmlet-holo-card ${ach.earned ? 'earned' : 'locked'} flex flex-col`}
                         style={{ '--holo-glow': ach.glowColor, '--card-bg': ach.earned ? ach.bg : (dark ? '#18181b' : '#e2e8f0'), aspectRatio: '3/4' } as React.CSSProperties}
                       >
                         {/* Shape centerpiece */}
@@ -3600,7 +3600,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                           <CardShape shape={ach.shape} className={`h-14 w-14 ${!ach.earned ? 'opacity-20' : 'drop-shadow-lg'}`} />
                         </div>
                         {/* Frosted info bar */}
-                        <div className="relay-card-info relative z-[3] px-3 py-2.5">
+                        <div className="ohmlet-card-info relative z-[3] px-3 py-2.5">
                           <div className="flex items-center justify-between">
                             <p className="text-[11px] font-black text-white/90 leading-tight">{ach.title}</p>
                             <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: RARITY_LABELS[ach.tier].color }}>
@@ -3625,13 +3625,13 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
       {/* ═══ CARD INSPECT MODE ═══ */}
       {inspectCard && (
         <div
-          className="relay-card-inspect-overlay"
+          className="ohmlet-card-inspect-overlay"
           onClick={() => setInspectCard(null)}
         >
-          <div className="relay-card-inspect-wrapper" onClick={(e) => e.stopPropagation()}>
+          <div className="ohmlet-card-inspect-wrapper" onClick={(e) => e.stopPropagation()}>
             {/* Tilt layer — instant mouse tracking, no transition */}
             <div
-              className="relay-card-inspect-tilt"
+              className="ohmlet-card-inspect-tilt"
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -3640,7 +3640,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
                 const rotX = ((y - 50) / 50) * -18;
                 e.currentTarget.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
                 // Update holo highlight on the front face
-                const front = e.currentTarget.querySelector('.relay-holo-card') as HTMLElement;
+                const front = e.currentTarget.querySelector('.ohmlet-holo-card') as HTMLElement;
                 if (front) {
                   front.style.setProperty('--mx', `${x}%`);
                   front.style.setProperty('--my', `${y}%`);
@@ -3653,17 +3653,17 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
               }}
             >
               {/* Flip layer — smooth 0.6s transition, separate from tilt */}
-              <div className={`relay-card-inspect-flip ${inspectFlipped ? 'flipped' : ''}`}>
+              <div className={`ohmlet-card-inspect-flip ${inspectFlipped ? 'flipped' : ''}`}>
                 {/* FRONT */}
                 <div
-                  className="relay-card-inspect-face relay-holo-card earned inspecting"
+                  className="ohmlet-card-inspect-face ohmlet-holo-card earned inspecting"
                   style={{ '--holo-glow': inspectCard.glowColor, '--card-bg': inspectCard.bg } as React.CSSProperties}
                 >
                   <div className="relative z-[3] flex h-full flex-col">
                     <div className="flex flex-1 items-center justify-center">
                       <CardShape shape={inspectCard.shape} className="h-24 w-24 drop-shadow-2xl" />
                     </div>
-                    <div className="relay-card-info px-5 py-4">
+                    <div className="ohmlet-card-info px-5 py-4">
                       <div className="flex items-center justify-between">
                         <p className="text-base font-black text-white/95">{inspectCard.title}</p>
                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: RARITY_LABELS[inspectCard.tier].color }}>
@@ -3681,7 +3681,7 @@ export const RelayLab: React.FC<RelayLabProps> = ({ onBackToLanding }) => {
 
                 {/* BACK */}
                 <div
-                  className="relay-card-inspect-face relay-card-inspect-back"
+                  className="ohmlet-card-inspect-face ohmlet-card-inspect-back"
                   style={{ background: inspectCard.bg }}
                 >
                   <div className="relative z-[3] flex h-full flex-col items-center justify-center p-6 text-center">

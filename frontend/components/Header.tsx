@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
-import { RelayLogo } from './Logo';
+import { OhmletLogo } from './Logo';
 
 interface HeaderProps {
   activeRoute: string;
   navItems: ReadonlyArray<{ route: 'mission' | 'technology'; label: string }>;
   darkRoute?: boolean;
-  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'relay-app') => void;
-  onOpenRelayApp: () => void;
+  onNavigate: (route: 'landing' | 'mission' | 'technology' | 'ohmlet-app') => void;
+  onOpenOhmletApp: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   navItems,
   darkRoute = false,
   onNavigate,
-  onOpenRelayApp,
+  onOpenOhmletApp,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 R
               </span>
-              <RelayLogo tone={darkRoute ? 'light' : 'dark'} />
+              <OhmletLogo tone={darkRoute ? 'light' : 'dark'} />
             </button>
           </div>
 
@@ -77,14 +77,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onOpenRelayApp}
+              onClick={onOpenOhmletApp}
               className={`hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition sm:inline-flex ${
                 darkRoute
                   ? 'border border-[#f3e515] bg-[#f3e515] text-black hover:bg-[#e5d70e]'
                   : 'border-2 border-black bg-white text-black hover:bg-[#fffbe2]'
               }`}
             >
-              Open Relay App
+              Open Ohmlet App
             </button>
             <button
               type="button"
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onOpenRelayApp();
+                  onOpenOhmletApp();
                   setMobileOpen(false);
                 }}
                 className={`rounded-xl px-3 py-3 text-left text-sm font-black ${
@@ -155,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'border-2 border-black bg-white text-black'
                 }`}
               >
-                Open Relay App
+                Open Ohmlet App
               </button>
             </div>
           </div>

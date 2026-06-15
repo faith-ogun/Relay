@@ -10,7 +10,7 @@ export const LEADERBOARD_ALL_TIME = [
   { name: 'circuit_aurora', points: 9930, streak: 8, avatar: 'C' },
   { name: 'breadboard_blaze', points: 9050, streak: 6, avatar: 'B' },
   { name: 'faith', points: 8840, streak: 5, avatar: 'F' },
-  { name: 'relay_mentor', points: 8122, streak: 12, avatar: 'R' },
+  { name: 'ohmlet_mentor', points: 8122, streak: 12, avatar: 'R' },
   { name: 'ohm_runner', points: 7902, streak: 4, avatar: 'O' },
 ];
 

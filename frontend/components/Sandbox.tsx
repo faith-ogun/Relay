@@ -56,7 +56,7 @@ const CAMERA_OPTIONS: Array<{ id: CameraPreset; label: string }> = [
   { id: 'front', label: 'Front' },
 ];
 
-const DEFAULT_CODE = `// Light-Activated Alarm — Relay Sandbox
+const DEFAULT_CODE = `// Light-Activated Alarm — Ohmlet Sandbox
 // Wire: 5V -> LDR -> A0, A0 -> 10k resistor -> GND
 // Wire: D9 -> 220 resistor -> LED -> GND
 
@@ -596,7 +596,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900';
 
   return (
-    <div className="relay-fade-in flex h-full flex-col overflow-hidden bg-[#f6f8fb] text-slate-900">
+    <div className="ohmlet-fade-in flex h-full flex-col overflow-hidden bg-[#f6f8fb] text-slate-900">
       <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -862,7 +862,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
                   Clear
                 </button>
               </div>
-              <div className="relay-chat-scroll flex-1 overflow-y-auto px-4 py-3 font-mono text-[11px] leading-5 text-emerald-300/85">
+              <div className="ohmlet-chat-scroll flex-1 overflow-y-auto px-4 py-3 font-mono text-[11px] leading-5 text-emerald-300/85">
                 {simState.serialOutput.map((line, index) => (
                   <div
                     key={`${line}-${index}`}

@@ -1,4 +1,4 @@
-"""Quiz Engine — AI-powered question generation for Relay's Learn tab.
+"""Quiz Engine — AI-powered question generation for Ohmlet's Learn tab.
 
 Generates personalized electronics questions based on user skill level,
 weak areas, and learning history. Uses Gemini for question generation
@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Relay Quiz Engine", version="0.1.0")
+app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,7 +87,7 @@ def _get_genai_client():
         if use_vertex:
             return genai.Client(
                 vertexai=True,
-                project=os.getenv("GOOGLE_CLOUD_PROJECT", "relay-gemini"),
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
                 location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
             )
         api_key = os.getenv("GOOGLE_API_KEY")

@@ -1,10 +1,10 @@
-# Relay Live Bridge
+# Ohmlet Live Bridge
 
-Real-time bidirectional streaming service connecting the Relay frontend to Gemini's Live API via Google ADK.
+Real-time bidirectional streaming service connecting the Ohmlet frontend to Gemini's Live API via Google ADK.
 
 ## What it does
 
-- Accepts WebSocket connections from the Relay frontend
+- Accepts WebSocket connections from the Ohmlet frontend
 - Receives audio (PCM 16kHz) from the user's microphone
 - Receives video frames (JPEG) from the user's webcam
 - Streams everything to Gemini via ADK bidi-streaming
@@ -55,11 +55,11 @@ ADK Event objects serialised as JSON. These contain audio chunks (base64), text 
 ## Cloud Run deployment
 
 ```bash
-gcloud run deploy relay-live-bridge \
+gcloud run deploy ohmlet-live-bridge \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=relay-gemini,GOOGLE_CLOUD_LOCATION=europe-west1"
+  --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=ohmlet-app,GOOGLE_CLOUD_LOCATION=europe-west1"
 ```
 
 ## Constraints

@@ -14,12 +14,12 @@ type FirestoreDoc = {
   updateTime?: string;
 };
 
-type RelayFirestoreConfig = {
+type OhmletFirestoreConfig = {
   apiKey?: string;
   projectId?: string;
 };
 
-const FALLBACK_PROJECT_ID = import.meta.env.VITE_RELAY_GCP_PROJECT_ID;
+const FALLBACK_PROJECT_ID = import.meta.env.VITE_OHMLET_GCP_PROJECT_ID;
 const FIREBASE_PROJECT_ID =
   (import.meta.env.VITE_FIREBASE_PROJECT_ID || FALLBACK_PROJECT_ID || '').trim();
 const FIREBASE_API_KEY = (import.meta.env.VITE_FIREBASE_API_KEY || '').trim();
@@ -91,20 +91,20 @@ const fromFirestoreFields = (fields: Record<string, FirestoreValue> | undefined)
   return out;
 };
 
-const resolveConfig = (override?: RelayFirestoreConfig) => {
+const resolveConfig = (override?: OhmletFirestoreConfig) => {
   const projectId = (override?.projectId || FIREBASE_PROJECT_ID || '').trim();
   const apiKey = (override?.apiKey || FIREBASE_API_KEY || '').trim();
   return { projectId, apiKey, enabled: Boolean(projectId && apiKey) };
 };
 
 const makeUrl = (userId: string, cfg: ReturnType<typeof resolveConfig>) =>
-  `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/relay_state/${encodeURIComponent(userId)}?key=${encodeURIComponent(cfg.apiKey)}`;
+  `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/ohmlet_state/${encodeURIComponent(userId)}?key=${encodeURIComponent(cfg.apiKey)}`;
 
-export const isFirestoreConfigured = (override?: RelayFirestoreConfig) => resolveConfig(override).enabled;
+export const isFirestoreConfigured = (override?: OhmletFirestoreConfig) => resolveConfig(override).enabled;
 
-export async function loadRelayState<T extends Record<string, unknown>>(
+export async function loadOhmletState<T extends Record<string, unknown>>(
   userId: string,
-  override?: RelayFirestoreConfig
+  override?: OhmletFirestoreConfig
 ): Promise<T | null> {
   const cfg = resolveConfig(override);
   if (!cfg.enabled) return null;
@@ -120,10 +120,10 @@ export async function loadRelayState<T extends Record<string, unknown>>(
   return parsed;
 }
 
-export async function saveRelayState<T extends Record<string, unknown>>(
+export async function saveOhmletState<T extends Record<string, unknown>>(
   userId: string,
   state: T,
-  override?: RelayFirestoreConfig
+  override?: OhmletFirestoreConfig
 ): Promise<void> {
   const cfg = resolveConfig(override);
   if (!cfg.enabled) return;

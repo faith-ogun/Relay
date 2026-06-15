@@ -105,11 +105,11 @@ export function useLiveBridge({
       if (!playbackCtxRef.current) {
         playbackCtxRef.current = new AudioContext({ sampleRate: 24000 });
         nextPlayTimeRef.current = 0;
-        console.log('[relay-live] created AudioContext, sampleRate:', playbackCtxRef.current.sampleRate, 'state:', playbackCtxRef.current.state);
+        console.log('[ohmlet-live] created AudioContext, sampleRate:', playbackCtxRef.current.sampleRate, 'state:', playbackCtxRef.current.state);
       }
       const ctx = playbackCtxRef.current;
       if (ctx.state === 'suspended') {
-        console.log('[relay-live] resuming suspended AudioContext');
+        console.log('[ohmlet-live] resuming suspended AudioContext');
         ctx.resume();
       }
 
@@ -124,7 +124,7 @@ export function useLiveBridge({
       source.start(startTime);
       nextPlayTimeRef.current = startTime + audioBuffer.duration;
     } catch (err) {
-      console.error('[relay-live] audio playback error:', err);
+      console.error('[ohmlet-live] audio playback error:', err);
     }
   }, []);
 
@@ -145,7 +145,7 @@ export function useLiveBridge({
               const mime = inlineData.mimeType || inlineData.mime_type || '';
               if (mime.includes('audio') || mime.includes('pcm')) {
                 hasReceivedAudioRef.current = true;
-                console.log('[relay-live] audio chunk received, mime:', mime, 'size:', inlineData.data.length);
+                console.log('[ohmlet-live] audio chunk received, mime:', mime, 'size:', inlineData.data.length);
                 playAudioChunk(inlineData.data);
               }
             }
@@ -172,10 +172,10 @@ export function useLiveBridge({
 
         // ── Turn complete ──
         if (event?.turnComplete) {
-          console.log('[relay-live] turn complete');
+          console.log('[ohmlet-live] turn complete');
         }
       } catch (err) {
-        console.warn('[relay-live] Failed to parse event:', err, data.slice(0, 200));
+        console.warn('[ohmlet-live] Failed to parse event:', err, data.slice(0, 200));
       }
     },
     [pushTranscript, playAudioChunk]
@@ -196,8 +196,8 @@ export function useLiveBridge({
       setState('connected');
       reconnectAttemptRef.current = 0;
       pushTranscript('system', reconnectAttemptRef.current === 0
-        ? 'Connected to Relay Live Bridge.'
-        : 'Reconnected to Relay Live Bridge.');
+        ? 'Connected to Ohmlet Live Bridge.'
+        : 'Reconnected to Ohmlet Live Bridge.');
     };
 
     ws.onmessage = (event) => {

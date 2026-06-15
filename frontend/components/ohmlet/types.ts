@@ -19,12 +19,12 @@ export type MessageResponse = {
   created_at: string;
 };
 
-export type RelayLabProps = {
+export type OhmletLabProps = {
   onBackToLanding: () => void;
 };
 
 export type Turn = {
-  role: 'you' | 'relay' | 'system';
+  role: 'you' | 'ohmlet' | 'system';
   text: string;
   timestamp: string;
 };
@@ -105,7 +105,7 @@ export type XpEvent = {
   detail?: string;
 };
 
-export type RelayPersistedState = {
+export type OhmletPersistedState = {
   posts: CommunityPost[];
   commentReplies: Record<string, Array<{ author: string; text: string; avatar: string; timeAgo: string }>>;
   lessonProgress: Record<string, number>;

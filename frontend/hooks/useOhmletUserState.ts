@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { loadRelayState, saveRelayState } from '../services/firestoreRelayState';
+import { loadOhmletState, saveOhmletState } from '../services/firestoreOhmletState';
 
 const STORAGE_VERSION = 1;
 
@@ -9,7 +9,7 @@ type PersistEnvelope<T> = {
   updatedAt: string;
 };
 
-type UseRelayUserStateOptions<T extends Record<string, unknown>> = {
+type UseOhmletUserStateOptions<T extends Record<string, unknown>> = {
   userId: string;
   key: string;
   defaults: T;
@@ -33,12 +33,12 @@ const mergeState = <T extends Record<string, unknown>>(base: T, incoming: Partia
   return out as T;
 };
 
-export function useRelayUserState<T extends Record<string, unknown>>({
+export function useOhmletUserState<T extends Record<string, unknown>>({
   userId,
   key,
   defaults,
-}: UseRelayUserStateOptions<T>) {
-  const storageKey = useMemo(() => `relay:${userId}:${key}:v${STORAGE_VERSION}`, [userId, key]);
+}: UseOhmletUserStateOptions<T>) {
+  const storageKey = useMemo(() => `ohmlet:${userId}:${key}:v${STORAGE_VERSION}`, [userId, key]);
   const [state, setState] = useState<T>(defaults);
   const [ready, setReady] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function useRelayUserState<T extends Record<string, unknown>>({
       }
 
       try {
-        const remote = await loadRelayState<PersistEnvelope<T> | T>(userId);
+        const remote = await loadOhmletState<PersistEnvelope<T> | T>(userId);
         if (!cancelled && remote) {
           const remoteData = (isObject(remote) && 'data' in remote ? (remote as PersistEnvelope<T>).data : remote) as Partial<T>;
           setState((prev) => mergeState(prev, remoteData));
@@ -104,7 +104,7 @@ export function useRelayUserState<T extends Record<string, unknown>>({
       } catch {
         // Local storage can fail in private mode/quota conditions; ignore.
       }
-      saveRelayState(userId, envelope).catch((err) => {
+      saveOhmletState(userId, envelope).catch((err) => {
         setPersistError(err instanceof Error ? err.message : 'Failed to save persisted data.');
       });
     }, 700);
