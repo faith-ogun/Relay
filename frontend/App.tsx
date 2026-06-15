@@ -2,24 +2,30 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
-import { MissionPage } from './components/MissionPage';
+import { LearnPage } from './components/LearnPage';
+import { BuildPage } from './components/BuildPage';
+import { BlogPage } from './components/BlogPage';
+import { PricingPage } from './components/PricingPage';
 import { OhmletLab } from './components/OhmletLab';
-import { TechnologyPage } from './components/TechnologyPage';
 
-type AppRoute = 'landing' | 'mission' | 'technology' | 'ohmlet-app';
+type AppRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
   landing: '/',
-  mission: '/mission',
-  technology: '/technology',
+  learn: '/learn',
+  build: '/build',
+  blog: '/blog',
+  pricing: '/pricing',
   'ohmlet-app': '/ohmlet-app',
 };
 
 const APP_ROUTE_PATHS = new Set(['/ohmlet-app', '/app', '/ohmlet', '/lab']);
 
 const NAV_ITEMS = [
-  { route: 'mission', label: 'Mission' },
-  { route: 'technology', label: 'Technology' },
+  { route: 'learn', label: 'Learn' },
+  { route: 'build', label: 'Build' },
+  { route: 'blog', label: 'Blog' },
+  { route: 'pricing', label: 'Pricing' },
 ] as const;
 
 const normalizePath = (pathname: string) => {
@@ -33,14 +39,10 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (APP_ROUTE_PATHS.has(normalized)) {
     return 'ohmlet-app';
   }
-
-  if (normalized === '/mission') {
-    return 'mission';
-  }
-
-  if (normalized === '/technology') {
-    return 'technology';
-  }
+  if (normalized === '/learn') return 'learn';
+  if (normalized === '/build') return 'build';
+  if (normalized === '/blog') return 'blog';
+  if (normalized === '/pricing') return 'pricing';
 
   return 'landing';
 };
@@ -84,16 +86,10 @@ const App: React.FC = () => {
     return <OhmletLab onBackToLanding={backToLanding} />;
   }
 
-  const darkShell = route === 'technology';
+  const darkShell = false;
 
   return (
-    <div
-      className={`min-h-screen ${
-        darkShell
-          ? 'bg-[#10131c] text-white selection:bg-[#f3e515] selection:text-black'
-          : 'bg-[#f3e515] text-black selection:bg-black selection:text-[#f3e515]'
-      }`}
-    >
+    <div className="min-h-screen bg-white font-display text-ohmlet-ink selection:bg-ohmlet-gold selection:text-ohmlet-ink">
       <div
         className={`fixed inset-0 pointer-events-none mix-blend-multiply ${
           darkShell ? 'opacity-[0.08]' : 'opacity-[0.03]'
@@ -114,8 +110,10 @@ const App: React.FC = () => {
         />
         <main>
           {route === 'landing' && <Home onNavigate={navigate} />}
-          {route === 'mission' && <MissionPage onNavigate={navigate} />}
-          {route === 'technology' && <TechnologyPage onNavigate={navigate} />}
+          {route === 'learn' && <LearnPage onNavigate={navigate} />}
+          {route === 'build' && <BuildPage onNavigate={navigate} />}
+          {route === 'blog' && <BlogPage onNavigate={navigate} />}
+          {route === 'pricing' && <PricingPage onNavigate={navigate} />}
         </main>
         <Footer />
       </div>

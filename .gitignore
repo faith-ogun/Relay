@@ -44,3 +44,6 @@ submission/
 !submission/gcp_proof.mov
 tasks/
 
+# Brand assets (kept out of the repo — managed separately)
+design/
+

@@ -4,10 +4,28 @@
 
 :root {
   color-scheme: light;
-  --ohmlet-yellow: #f3e515;
-  --ohmlet-yellow-hover: #e8db11;
-  --ohmlet-yellow-soft: #fffde8;
-  --ohmlet-black: #0a0a0a;
+  /* ── Ohmlet rebrand palette (sampled from the mascot logo) ── */
+  --ohmlet-yellow: #facc2e;        /* warm golden accent — used sparingly */
+  --ohmlet-yellow-hover: #f5b800;  /* deeper gold for hover/contrast */
+  --ohmlet-yellow-soft: #fff6d6;   /* pale gold wash for tints */
+  --ohmlet-ink: #14201e;           /* charcoal-teal — primary text/outline */
+  --ohmlet-ink-soft: #46514e;      /* muted body text */
+  --ohmlet-red: #e8472a;           /* tomato pop (the comb) */
+  --ohmlet-blue: #549cf0;          /* friendly blue (from the illustrations) */
+  --ohmlet-blue-deep: #3e86e8;     /* blue for text/contrast */
+  --ohmlet-green: #84cc30;         /* success/leaf green (checkmarks) */
+  --ohmlet-green-deep: #6fb519;    /* green for text/contrast */
+  --ohmlet-cream: #faf8f0;         /* logo-background cream (nav surface) */
+  --ohmlet-line: #ece7db;          /* warm hairline on white */
+  --ohmlet-canvas: #ffffff;        /* page canvas — white, not cream */
+  --ohmlet-black: #14201e;         /* legacy alias → ink (kept for app workspace) */
+
+  /* Variant-B "chunky" brand signature: hard ink drop shadow + thick outline */
+  --ohmlet-shadow-press: 0 5px 0 var(--ohmlet-ink);
+  --ohmlet-shadow-press-sm: 0 3px 0 var(--ohmlet-ink);
+  --ohmlet-shadow-soft: 0 2px 4px rgba(20, 32, 30, 0.04), 0 8px 24px rgba(20, 32, 30, 0.06);
+
+  --ohmlet-font-display: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 html,
@@ -18,7 +36,8 @@ body,
 
 body {
   margin: 0;
-  background: #070707;
+  background: var(--ohmlet-canvas);
+  font-family: var(--ohmlet-font-display);
 }
 
 * {

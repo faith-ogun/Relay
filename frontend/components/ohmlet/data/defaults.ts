@@ -24,7 +24,7 @@ export const XP_ACTIONS: Array<{
 ];
 
 export const DEFAULT_COMMENT_REPLIES: OhmletPersistedState['commentReplies'] = {
-  p1: [{ author: 'breadboard_blaze', text: 'Nice catch on the sensor drift — I had the same issue last week. Did you use a decoupling cap?', avatar: 'B', timeAgo: '1h ago' }],
+  p1: [{ author: 'breadboard_blaze', text: 'Nice catch on the sensor drift. I had the same issue last week. Did you use a decoupling cap?', avatar: 'B', timeAgo: '1h ago' }],
   p2: [{ author: 'ohm_runner', text: 'Same here! The confidence boost from real-time validation is underrated.', avatar: 'O', timeAgo: '3h ago' }],
   p3: [
     { author: 'faith', text: 'How did you know it was 1kΩ vs 10kΩ just from looking?', avatar: 'F', timeAgo: '20h ago' },
@@ -45,7 +45,7 @@ export const DEFAULT_POSTS: OhmletPersistedState['posts'] = [
   {
     id: 'p1',
     author: 'circuit_aurora',
-    title: 'No-kit temperature monitor — done in 22 min',
+    title: 'No-kit temperature monitor, done in 22 min',
     body: 'Used only a generic breadboard and discrete parts from an old kit. Ohmlet caught that my TMP36 was backwards before I even powered it on. The live correction mid-wiring is genuinely useful, not gimmicky.',
     likes: 42,
     comments: 8,
@@ -54,7 +54,7 @@ export const DEFAULT_POSTS: OhmletPersistedState['posts'] = [
     timeAgo: '2h ago',
     avatar: 'C',
     buildName: 'Temperature Comfort Monitor',
-    replyPreview: { author: 'breadboard_blaze', text: 'Nice catch on the sensor drift — I had the same issue last week. Did you use a decoupling cap?', avatar: 'B' },
+    replyPreview: { author: 'breadboard_blaze', text: 'Nice catch on the sensor drift. I had the same issue last week. Did you use a decoupling cap?', avatar: 'B' },
   },
   {
     id: 'p2',
@@ -73,7 +73,7 @@ export const DEFAULT_POSTS: OhmletPersistedState['posts'] = [
   {
     id: 'p3',
     author: 'ohm_runner',
-    title: 'Light alarm build — Ohmlet caught my resistor mix-up',
+    title: 'Light alarm build: Ohmlet caught my resistor mix-up',
     body: 'Was using a 1kΩ instead of 10kΩ for the voltage divider. Ohmlet saw it through the camera and told me the reading would be off before I even uploaded the sketch. Saved me 15 minutes of debugging.',
     likes: 31,
     comments: 12,

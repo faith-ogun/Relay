@@ -874,7 +874,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
         live.sendText(
           `[SIMULATION MODE] You are being evaluated by a hackathon judge. They do NOT have electronics hardware. ` +
           `Greet them briefly with personality, then ask them to turn on their camera and hold up everyday objects so you can demonstrate your live vision. ` +
-          `Focus on identifying what they show you and riffing on it — connect everyday objects to electronics knowledge naturally. Keep it conversational and fun.`,
+          `Focus on identifying what they show you and riffing on it. Connect everyday objects to electronics knowledge naturally. Keep it conversational and fun.`,
           'inventory'
         );
       }, 1500);
@@ -1129,7 +1129,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                 <p className={`text-xs font-medium ${t.headerSub}`}>
                   {activeTab === 'build' && 'Live guidance for your current build'}
                   {activeTab === 'learn' && 'Track concepts and master electronics'}
-                  {activeTab === 'sandbox' && '3D breadboard playground — build and simulate'}
+                  {activeTab === 'sandbox' && '3D breadboard playground, build and simulate'}
                   {activeTab === 'community' && 'Compete, share, and learn together'}
                   {activeTab === 'library' && 'Pick your next project'}
                 </p>
@@ -1303,7 +1303,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-black ${dark ? 'text-[#f3e515]' : 'text-[#0a0a0a]'}`}>Demo Mode Active</p>
                       <p className={`text-[11px] ${dark ? 'text-white/50' : 'text-slate-500'}`}>
-                        No hardware needed. Turn on your camera and hold up any object — Ohmlet will identify it in real time.
+                        No hardware needed. Turn on your camera and hold up any object. Ohmlet will identify it in real time.
                         <span className={`ml-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${dark ? 'bg-white/10 text-white/60' : 'bg-slate-200 text-slate-600'}`}>🎧 Best with headphones</span>
                       </p>
                     </div>
@@ -1984,7 +1984,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                         {lessonAnswered && (
                           <div className={`ohmlet-fade-in rounded-xl p-4 ${lessonCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                             <p className={`text-sm font-black ${lessonCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              {lessonCorrect ? 'You found it!' : 'Not quite — look more carefully.'}
+                              {lessonCorrect ? 'You found it!' : 'Not quite. Look more carefully.'}
                             </p>
                             <p className={`mt-1 text-xs ${dark ? 'text-white/50' : 'text-slate-500'}`}>{step.explanation}</p>
                           </div>
@@ -2147,7 +2147,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                           <>
                             <div className={`ohmlet-fade-in rounded-xl p-4 ${dragCorrect ? 'bg-emerald-400/10' : 'bg-rose-400/10'}`}>
                               <p className={`text-sm font-black ${dragCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                {dragCorrect ? 'Perfect order!' : 'Not quite right — check the sequence.'}
+                                {dragCorrect ? 'Perfect order!' : 'Not quite right. Check the sequence.'}
                               </p>
                             </div>
                             <button type="button" onClick={advanceLessonStep} className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black text-white transition-all active:scale-[0.98]" style={{ backgroundColor: activeLesson.color }}>Continue</button>
@@ -2484,7 +2484,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                             </span>
                           </div>
                           <p className={`mt-1 text-[12px] font-semibold leading-relaxed ${t.cardTitle}`}>{entry.question}</p>
-                          <p className={`mt-1 text-[11px] ${t.cardSub}`}>Your answer: {entry.answerGiven || '—'}</p>
+                          <p className={`mt-1 text-[11px] ${t.cardSub}`}>Your answer: {entry.answerGiven || 'N/A'}</p>
                           <p className={`mt-1 text-[10px] ${dark ? 'text-white/30' : 'text-slate-400'}`}>{prettyTime(entry.answeredAt)}</p>
                         </article>
                       ))}
@@ -2748,7 +2748,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                     <div className="mt-3 space-y-2 ohmlet-stagger">
                       {[
                         { id: 'streak7', title: '7-Day Build Streak', reward: '+140 XP', icon: Flame, color: '#f59e0b', desc: 'Complete at least one build session every day for 7 consecutive days. Each session must reach the wiring stage or beyond.', requirements: ['Build something every day for 7 days', 'Each session must reach the wiring stage', 'Streak resets if you miss a day'] },
-                        { id: 'genericOnly', title: 'No Proprietary Kit Build', reward: 'Maker Badge', icon: Zap, color: '#a78bfa', desc: 'Complete a full build using only a generic breadboard and loose components — no branded starter kit allowed.', requirements: ['Select "Generic Breadboard Kit" as your kit', 'Complete all 5 stages of a build', 'No Arduino Starter Kit components'] },
+                        { id: 'genericOnly', title: 'No Proprietary Kit Build', reward: 'Maker Badge', icon: Zap, color: '#a78bfa', desc: 'Complete a full build using only a generic breadboard and loose components, no branded starter kit allowed.', requirements: ['Select "Generic Breadboard Kit" as your kit', 'Complete all 5 stages of a build', 'No Arduino Starter Kit components'] },
                         { id: 'teachBack', title: 'Teach One Concept', reward: 'Mentor Badge', icon: GraduationCap, color: '#34d399', desc: 'Explain a concept you learned to the community by writing a post about it. Share what you built and what you figured out.', requirements: ['Complete at least one build', 'Write a community post explaining a concept', 'Get at least 3 likes on your post'] },
                       ].map((challenge) => {
                         const joined = joinedChallenges[challenge.id];
@@ -3085,7 +3085,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                     <p className={`text-xs font-black ${dark ? 'text-white/80' : 'text-amber-900'}`}>3D Twin available for Light-Activated Alarm</p>
                     <p className={`mt-1 text-[11px] leading-relaxed ${dark ? 'text-white/40' : 'text-amber-700/70'}`}>
                       The Light-Activated Alarm has a fully working 3D digital twin with live simulation, buzzer audio, and pre-built circuit.
-                      Other projects are marked <span className="font-bold">Mock</span> — during scale-up, we plan to add 3D twins for all builds
+                      Other projects are marked <span className="font-bold">Mock</span>. During scale-up, we plan to add 3D twins for all builds
                       with live Gemini API feedback for real-time circuit validation.
                     </p>
                   </div>

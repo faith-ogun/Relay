@@ -500,15 +500,15 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
     const hasResistor = components.some((item) => item.type.startsWith('resistor_'));
 
     const warnings: string[] = [];
-    if (!hasBreadboard) warnings.push('No breadboard placed — components need a breadboard to connect.');
-    if (!hasArduino) warnings.push('No Arduino placed — the circuit needs a microcontroller.');
-    if (leds.length === 0 && !hasBuzzer) warnings.push('No output component (LED or buzzer) — nothing to activate.');
-    if (!hasLDR && !components.some((c) => c.type === 'button')) warnings.push('No input sensor — the circuit needs an LDR or button to respond to.');
+    if (!hasBreadboard) warnings.push('No breadboard placed. Components need a breadboard to connect.');
+    if (!hasArduino) warnings.push('No Arduino placed. The circuit needs a microcontroller.');
+    if (leds.length === 0 && !hasBuzzer) warnings.push('No output component (LED or buzzer), nothing to activate.');
+    if (!hasLDR && !components.some((c) => c.type === 'button')) warnings.push('No input sensor. The circuit needs an LDR or button to respond to.');
     if (wires.length === 0 && components.filter((c) => c.type !== 'breadboard' && c.type !== 'arduino').length > 0) {
-      warnings.push('No wires placed — components are not connected to each other.');
+      warnings.push('No wires placed. Components are not connected to each other.');
     }
     if (components.filter((c) => c.type !== 'breadboard' && c.type !== 'arduino' && c.type !== 'wire').length > 0 && !hasResistor) {
-      warnings.push('No resistor in circuit — most circuits need a current-limiting resistor.');
+      warnings.push('No resistor in circuit. Most circuits need a current-limiting resistor.');
     }
 
     const serialInit = ['--- Simulation started ---'];
@@ -517,7 +517,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
       warnings.forEach((w) => serialInit.push(`  • ${w}`));
       serialInit.push('Simulation running with available components...');
     } else {
-      serialInit.push('✓ Circuit validation passed — all key components connected.');
+      serialInit.push('✓ Circuit validation passed. All key components connected.');
     }
 
     setSimState((prev) => ({
