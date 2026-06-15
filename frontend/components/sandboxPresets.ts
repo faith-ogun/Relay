@@ -6,7 +6,7 @@ export type SandboxPreset = {
   code: string;
 };
 
-const LIGHT_ALARM_CODE = `// Light-Activated Alarm — Ohmlet Sandbox
+const LIGHT_ALARM_CODE = `// Light-Activated Alarm (Ohmlet Sandbox)
 // Circuit: LDR voltage divider on A0, LED on D9
 
 const int LDR_PIN = A0;

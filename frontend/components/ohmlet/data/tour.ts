@@ -29,14 +29,14 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tour-camera',
     tab: 'build',
     title: 'Live Camera Feed',
-    body: 'Point your webcam at your breadboard and Ohmlet watches in real time via the Gemini Live API — it sees your components, wiring, and corrects mistakes as you go. Sessions last up to 15 min (audio) or 2 min (with video) per Gemini API limits. If it disconnects, it will auto-reconnect.',
+    body: 'Point your webcam at your breadboard and Ohmlet watches in real time via the Gemini Live API. It sees your components, wiring, and corrects mistakes as you go. Sessions last up to 15 min (audio) or 2 min (with video) per Gemini API limits. If it disconnects, it will auto-reconnect.',
     position: 'right',
   },
   {
     target: 'tour-chat',
     tab: 'build',
     title: 'Ohmlet Assistant',
-    body: 'Chat with Ohmlet using voice or text. It responds with spoken audio and text transcripts. Multiple AI models work behind the scenes — Flash for real-time voice, Pro for code generation, and 2.5-Pro for deep reasoning.',
+    body: 'Chat with Ohmlet using voice or text. It responds with spoken audio and text transcripts. Multiple AI models work behind the scenes: Flash for real-time voice, Pro for code generation, and 2.5-Pro for deep reasoning.',
     position: 'left',
   },
   {
@@ -63,7 +63,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tour-learning-path',
     tab: 'learn',
     title: 'Lessons & Adaptive Practice',
-    body: 'Structured lessons with interactive circuit diagrams, drag-to-order exercises, and drawing challenges. Below them, "Generate Set" creates AI-powered adaptive questions using Gemini 3.1 Pro — personalized to your skill gaps. Your answers and correctness persist across sessions.',
+    body: 'Structured lessons with interactive circuit diagrams, drag-to-order exercises, and drawing challenges. Below them, "Generate Set" creates AI-powered adaptive questions using Gemini 3.1 Pro, personalized to your skill gaps. Your answers and correctness persist across sessions.',
     position: 'left',
   },
   // ── Sandbox tab ──
@@ -94,7 +94,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tour-library',
     tab: 'library',
     title: 'Project Library',
-    body: 'Browse builds by difficulty. The Light-Activated Alarm has a working "3D Twin" button that pre-builds the circuit in the Sandbox with code ready to simulate. Other projects are available for guided builds — 3D twins for them are planned for scale-up.',
+    body: 'Browse builds by difficulty. The Light-Activated Alarm has a working "3D Twin" button that pre-builds the circuit in the Sandbox with code ready to simulate. Other projects are available for guided builds. 3D twins for them are planned for scale-up.',
     position: 'bottom',
   },
 ];
