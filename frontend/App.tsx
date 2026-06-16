@@ -7,7 +7,6 @@ import { BuildPage } from './components/BuildPage';
 import { BlogPage } from './components/BlogPage';
 import { BlogPostPage } from './components/BlogPostPage';
 import { PricingPage } from './components/PricingPage';
-import { OhmletLab } from './components/OhmletLab';
 import { WorkspaceHome } from './components/WorkspaceHome';
 
 type AppRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app' | 'workspace';
@@ -104,11 +103,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  if (route === 'ohmlet-app') {
-    return <OhmletLab onBackToLanding={backToLanding} />;
-  }
-
-  if (route === 'workspace') {
+  if (route === 'ohmlet-app' || route === 'workspace') {
     return <WorkspaceHome onBack={backToLanding} />;
   }
 
