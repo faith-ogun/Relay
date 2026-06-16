@@ -13,7 +13,7 @@ export default {
           'gold-soft': '#fff6d6',
           ink: '#14201e',
           'ink-soft': '#46514e',
-          red: '#e8472a',
+          red: '#ff6f5e',
           blue: '#549cf0',
           'blue-deep': '#3e86e8',
           'blue-soft': '#eaf2fe',

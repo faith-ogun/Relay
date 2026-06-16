@@ -64,6 +64,8 @@ import type {
   OhmletPersistedState,
 } from './ohmlet/types';
 import { LESSON_CONTENT, type LessonStep } from './ohmlet/data/lessons';
+import { LearnPath } from './LearnPath';
+import { CURRICULUM, findLesson } from './ohmlet/data/curriculum';
 import { RARITY_LABELS, ACHIEVEMENTS, CardShape } from './ohmlet/data/achievements';
 import { QUICK_PROMPTS, BUILD_LIBRARY } from './ohmlet/data/library';
 import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
@@ -717,6 +719,30 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
   }, [currentAdaptiveQuestion?.id]);
 
   // ── Lesson helpers ──
+  // Lessons completed (100%) drive the learning-path node states.
+  const completedLessonIds = useMemo(
+    () => new Set(Object.entries(lessonProgress).filter(([, v]) => v === 100).map(([k]) => k)),
+    [lessonProgress],
+  );
+
+  // Runner-friendly accent per unit (gold is too light for white button text).
+  const ACCENT_HEX: Record<string, string> = { gold: '#f59e0b', blue: '#549cf0', green: '#34d399', red: '#ff6f5e' };
+
+  const startLessonById = (id: string) => {
+    const lesson = findLesson(id);
+    let accent = 'blue';
+    for (const unit of CURRICULUM) {
+      if (unit.skills.some((s) => s.lessons.some((l) => l.id === id))) accent = unit.accent;
+    }
+    startLesson({
+      title: id,
+      desc: lesson?.summary ?? '',
+      time: lesson ? `${lesson.estMinutes} min` : '',
+      color: ACCENT_HEX[accent] ?? '#549cf0',
+      progress: lessonProgress[id] || 0,
+    });
+  };
+
   const startLesson = (lesson: { title: string; desc: string; progress: number; color: string; time: string }) => {
     setActiveLesson(lesson);
     setLessonStep(0);
@@ -2255,60 +2281,8 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                       <h3 className={`text-lg font-black tracking-tight ${t.cardTitle}`}>Learning Path</h3>
                       <p className={`mt-0.5 text-xs ${t.cardSub}`}>Guided lessons, Brilliant-style</p>
                     </div>
-                    <div className="p-4 ohmlet-stagger">
-                      {[
-                        { title: 'Voltage Basics', desc: 'What voltage is, how to measure it, and why it matters for every circuit.', time: '8 min', color: '#38bdf8' },
-                        { title: 'Current Flow Intuition', desc: 'Build an intuition for how current flows through series and parallel paths.', time: '12 min', color: '#f59e0b' },
-                        { title: 'Breadboard Confidence Drill', desc: 'Learn the internal connections of a breadboard and practice placing components accurately.', time: '15 min', color: '#a78bfa' },
-                        { title: 'Sensor Signal Sanity Checks', desc: 'How to verify your sensor output is reasonable before trusting it in code.', time: '18 min', color: '#34d399' },
-                      ].map((lesson) => {
-                        const progress = lessonProgress[lesson.title] || 0;
-                        const done = progress === 100;
-                        const started = progress > 0;
-                        return (
-                          <div
-                            key={lesson.title}
-                            className="ohmlet-fade-in group mb-3 overflow-hidden rounded-xl transition-all hover:shadow-md"
-                            style={{ borderLeft: `4px solid ${lesson.color}` }}
-                          >
-                            <div className={`flex items-center gap-4 p-4 rounded-r-xl ${t.lessonCardBg}`}>
-                              <div
-                                className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-                                style={{ backgroundColor: `${lesson.color}15` }}
-                              >
-                                {done ? (
-                                  <CheckCircle2 className="h-6 w-6" style={{ color: lesson.color }} />
-                                ) : (
-                                  <>
-                                    <BookOpen className="h-5 w-5" style={{ color: lesson.color }} />
-                                    {started && (
-                                      <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 48 48">
-                                        <circle cx="24" cy="24" r="22" fill="none" stroke={lesson.color} strokeWidth="2" strokeDasharray={`${progress * 1.38} 138`} opacity="0.4" />
-                                      </svg>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-black ${t.cardTitle}`}>{lesson.title}</p>
-                                <p className={`text-[11px] leading-relaxed mt-0.5 ${t.cardSub}`}>{lesson.desc}</p>
-                                <p className={`text-[10px] mt-1 ${dark ? 'text-white/25' : 'text-slate-300'}`}>{lesson.time} {started && !done ? `· ${progress}% done` : ''}</p>
-                              </div>
-                              <button
-                                onClick={() => startLesson({ ...lesson, progress })}
-                                className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-black transition-all hover:scale-105 active:scale-95"
-                                style={{
-                                  backgroundColor: done ? `${lesson.color}15` : lesson.color,
-                                  color: done ? lesson.color : '#fff',
-                                }}
-                              >
-                                {done ? 'Review' : started ? 'Continue' : 'Start'}
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="p-4">
+                      <LearnPath completedLessonIds={completedLessonIds} onStartLesson={startLessonById} />
                     </div>
                   </section>
                 </div>
