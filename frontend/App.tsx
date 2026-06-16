@@ -8,8 +8,9 @@ import { BlogPage } from './components/BlogPage';
 import { BlogPostPage } from './components/BlogPostPage';
 import { PricingPage } from './components/PricingPage';
 import { OhmletLab } from './components/OhmletLab';
+import { WorkspaceHome } from './components/WorkspaceHome';
 
-type AppRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app';
+type AppRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app' | 'workspace';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
   landing: '/',
@@ -18,6 +19,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   blog: '/blog',
   pricing: '/pricing',
   'ohmlet-app': '/ohmlet-app',
+  workspace: '/workspace',
 };
 
 const APP_ROUTE_PATHS = new Set(['/ohmlet-app', '/app', '/ohmlet', '/lab']);
@@ -44,6 +46,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/build') return 'build';
   if (normalized === '/blog' || normalized.startsWith('/blog/')) return 'blog';
   if (normalized === '/pricing') return 'pricing';
+  if (normalized === '/workspace') return 'workspace';
 
   return 'landing';
 };
@@ -103,6 +106,10 @@ const App: React.FC = () => {
 
   if (route === 'ohmlet-app') {
     return <OhmletLab onBackToLanding={backToLanding} />;
+  }
+
+  if (route === 'workspace') {
+    return <WorkspaceHome onBack={backToLanding} />;
   }
 
   const darkShell = false;
