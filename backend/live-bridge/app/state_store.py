@@ -44,6 +44,11 @@ def _client() -> firestore.Client:
     return firestore.Client(project=project)
 
 
+def get_client() -> firestore.Client:
+    """Shared Firestore client (reused across modules, e.g. usage metering)."""
+    return _client()
+
+
 def _doc_ref(user_id: str) -> firestore.DocumentReference:
     return _client().collection(STATE_COLLECTION).document(user_id)
 

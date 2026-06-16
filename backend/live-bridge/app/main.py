@@ -25,6 +25,7 @@ from google.genai import types
 
 from ohmlet_live_agent import agent
 from state_store import router as state_router
+from usage_meter import UsageMeter, persist_usage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
@@ -132,6 +133,7 @@ async def websocket_endpoint(
     current_stage = "inventory"
     run_config = _build_run_config(current_stage)
     live_queue = LiveRequestQueue()
+    meter = UsageMeter(user_id=user_id, session_id=session_id)
 
     # ── Upstream: client → Gemini ──────────────────────────────────────────────
 
@@ -148,6 +150,7 @@ async def websocket_endpoint(
                         data=raw["bytes"],
                     )
                     live_queue.send_realtime(audio_blob)
+                    meter.on_audio_in(len(raw["bytes"]))
                     continue
 
                 # Text frame → parse JSON message
@@ -186,6 +189,7 @@ async def websocket_endpoint(
                                 parts=[types.Part(text=f"[stage={current_stage}] {text}")],
                             )
                             live_queue.send_content(content)
+                            meter.on_text()
                         continue
 
                     if msg_type == "image":
@@ -198,6 +202,7 @@ async def websocket_endpoint(
                                 data=decoded,
                             )
                             live_queue.send_realtime(image_blob)
+                            meter.on_image()
                         continue
 
         except WebSocketDisconnect:
@@ -218,6 +223,7 @@ async def websocket_endpoint(
                 run_config=run_config,
             ):
                 event_count += 1
+                meter.on_event(event)
                 try:
                     payload = event.model_dump_json(exclude_none=True, by_alias=True)
                     logger.info("Event #%d for session %s: %s", event_count, session_id, payload[:200])
@@ -229,12 +235,37 @@ async def websocket_endpoint(
         except Exception:
             logger.exception("Downstream error for session %s", session_id)
 
-    # ── Run both concurrently ──────────────────────────────────────────────────
+    # ── Idle guardrail: stop billing for an abandoned session ───────────────────
 
+    async def watchdog() -> None:
+        timeout = float(os.getenv("OHMLET_IDLE_TIMEOUT_SEC", "180"))
+        while True:
+            await asyncio.sleep(10)
+            if meter.idle_seconds() > timeout:
+                logger.info(
+                    "Idle timeout (%.0fs) for session %s; closing", timeout, session_id
+                )
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass
+                return
+
+    # ── Run concurrently; first to finish (close / disconnect / idle) ends it ───
+
+    tasks = [
+        asyncio.create_task(upstream()),
+        asyncio.create_task(downstream()),
+        asyncio.create_task(watchdog()),
+    ]
     try:
-        await asyncio.gather(upstream(), downstream(), return_exceptions=True)
+        _, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
     finally:
         live_queue.close()
+        persist_usage(meter)
         logger.info("WS session closed: %s", session_id)
 
 
