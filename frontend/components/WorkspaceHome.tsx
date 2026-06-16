@@ -17,6 +17,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { allLessons, nextLesson } from './ohmlet/data/curriculum';
+import { LearnPath } from './LearnPath';
 
 /**
  * Workspace Home (concept).
@@ -78,8 +79,8 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
       <div className="mx-auto flex max-w-[1280px]">
         {/* ── Left rail ── */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ohmlet-line bg-white px-4 py-6 lg:flex">
-          <button type="button" onClick={onBack} className="mb-8 inline-flex items-center px-2">
-            <img src="/brand/ohmlet-logo.png" alt="Ohmlet" className="h-9 w-auto" draggable={false} />
+          <button type="button" onClick={onBack} className="mb-8 flex w-full items-center justify-center px-2">
+            <img src="/brand/ohmlet-logo.png" alt="Ohmlet" className="h-11 w-auto" draggable={false} />
           </button>
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
@@ -116,6 +117,16 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
 
         {/* ── Main ── */}
         <main className="min-w-0 flex-1 px-5 py-6 md:px-8">
+          {active === 'path' ? (
+            <div>
+              <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Learning path</p>
+              <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build by build.</h1>
+              <div className="mt-4">
+                <LearnPath completedLessonIds={new Set()} onStartLesson={() => {}} />
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Top bar */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -172,7 +183,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
             {WAYS.map((w) => {
               const Icon = w.icon;
               return (
-                <button key={w.id} className={`${w.accent} group rounded-2xl border-2 border-ohmlet-ink p-4 text-left shadow-press-sm transition-transform hover:-translate-y-1`}>
+                <button key={w.id} onClick={() => setActive(w.id)} className={`${w.accent} group rounded-2xl border-2 border-ohmlet-ink p-4 text-left shadow-press-sm transition-transform hover:-translate-y-1`}>
                   <div className="flex items-center justify-between">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-white text-ohmlet-ink">
                       <Icon className="h-5 w-5" />
@@ -268,6 +279,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
               </section>
             </div>
           </div>
+
+          </>
+          )}
 
           {onBack && (
             <button onClick={onBack} className="mt-10 inline-flex items-center gap-2 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
