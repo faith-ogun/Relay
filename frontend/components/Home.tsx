@@ -41,6 +41,8 @@ type Feature = {
   imageAlt: string;
   tint: string;
   reverse?: boolean;
+  /** Image fills its column edge-to-edge (no vertical padding, larger). */
+  fillImage?: boolean;
 };
 
 const features: Feature[] = [
@@ -71,38 +73,59 @@ const features: Feature[] = [
     tint: 'bg-white',
     reverse: true,
   },
+  {
+    kicker: 'Your pace',
+    kickerClass: 'text-ohmlet-red',
+    heading: (
+      <>
+        No deadlines. <span className="text-ohmlet-red">Just progress.</span>
+      </>
+    ),
+    body: 'Speed through a path in a weekend or pick it up ten minutes at a time. Your streak waits for you, and every step counts.',
+    image: '/brand/feature-pace.png',
+    imageAlt: 'The Ohmlet moving along a learning path at its own speed',
+    tint: 'bg-ohmlet-gold-soft',
+    fillImage: true,
+  },
 ];
 
-const FeatureSection: React.FC<{ feature: Feature }> = ({ feature }) => (
-  <section className={`${feature.tint} px-6 py-20 md:py-28`}>
-    <div
-      className={`mx-auto grid max-w-6xl items-center gap-10 md:gap-16 lg:grid-cols-2 ${
-        feature.reverse ? 'lg:[&>*:first-child]:order-2' : ''
-      }`}
-    >
-      <div className="flex justify-center">
-        <img
-          src={feature.image}
-          alt={feature.imageAlt}
-          className="ohmlet-float w-full max-w-[420px]"
-          draggable={false}
-          loading="lazy"
-        />
+const FeatureSection: React.FC<{ feature: Feature }> = ({ feature }) => {
+  const fill = feature.fillImage;
+  return (
+    <section className={`${feature.tint} overflow-hidden ${fill ? '' : 'px-6 py-20 md:py-28'}`}>
+      <div
+        className={`mx-auto grid max-w-6xl gap-10 md:gap-16 lg:grid-cols-2 ${
+          fill ? 'items-stretch' : 'items-center'
+        } ${feature.reverse ? 'lg:[&>*:first-child]:order-2' : ''}`}
+      >
+        <div className={fill ? 'flex items-end justify-center' : 'flex justify-center'}>
+          <img
+            src={feature.image}
+            alt={feature.imageAlt}
+            className={
+              fill
+                ? 'block w-full max-w-[560px] self-stretch object-contain object-bottom lg:max-w-none'
+                : 'ohmlet-float w-full max-w-[420px]'
+            }
+            draggable={false}
+            loading="lazy"
+          />
+        </div>
+        <div className={`${fill ? 'self-center px-6 py-16 md:py-20' : ''} ${feature.reverse ? 'lg:order-1' : ''}`}>
+          <p className={`text-sm font-extrabold uppercase tracking-[0.18em] ${feature.kickerClass}`}>
+            {feature.kicker}
+          </p>
+          <h2 className="mt-4 text-4xl font-black leading-[1.05] tracking-[-0.02em] text-ohmlet-ink md:text-5xl">
+            {feature.heading}
+          </h2>
+          <p className="mt-5 max-w-xl text-lg font-semibold leading-relaxed text-ohmlet-ink-soft md:text-xl">
+            {feature.body}
+          </p>
+        </div>
       </div>
-      <div className={feature.reverse ? 'lg:order-1' : ''}>
-        <p className={`text-sm font-extrabold uppercase tracking-[0.18em] ${feature.kickerClass}`}>
-          {feature.kicker}
-        </p>
-        <h2 className="mt-4 text-4xl font-black leading-[1.05] tracking-[-0.02em] text-ohmlet-ink md:text-5xl">
-          {feature.heading}
-        </h2>
-        <p className="mt-5 max-w-xl text-lg font-semibold leading-relaxed text-ohmlet-ink-soft md:text-xl">
-          {feature.body}
-        </p>
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   return (
@@ -188,17 +211,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       {features.map((feature) => (
         <FeatureSection key={feature.kicker} feature={feature} />
       ))}
-
-      {/* ── Work at your own pace: standalone full graphic, flush top & bottom ── */}
-      <section className="bg-ohmlet-gold-soft">
-        <img
-          src="/brand/feature-pace.png"
-          alt="Work at your own pace with the Ohmlet"
-          className="mx-auto block w-full max-w-3xl"
-          draggable={false}
-          loading="lazy"
-        />
-      </section>
 
       {/* ── Pre-footer CTA ── full-bleed illustration whose yellow wave merges into the gold footer ── */}
       <section className="px-6 pt-20 text-center md:pt-28">
