@@ -71,19 +71,6 @@ const features: Feature[] = [
     tint: 'bg-white',
     reverse: true,
   },
-  {
-    kicker: 'Your pace',
-    kickerClass: 'text-ohmlet-red',
-    heading: (
-      <>
-        No deadlines. <span className="text-ohmlet-red">Just progress.</span>
-      </>
-    ),
-    body: 'Speed through a path in a weekend or pick it up ten minutes at a time. Your streak waits for you, and every step counts.',
-    image: '/brand/feature-pace.png',
-    imageAlt: 'The Ohmlet moving along a learning path at its own speed',
-    tint: 'bg-ohmlet-gold-soft',
-  },
 ];
 
 const FeatureSection: React.FC<{ feature: Feature }> = ({ feature }) => (
@@ -201,6 +188,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       {features.map((feature) => (
         <FeatureSection key={feature.kicker} feature={feature} />
       ))}
+
+      {/* ── Work at your own pace: standalone full graphic, flush top & bottom ── */}
+      <section className="bg-ohmlet-gold-soft">
+        <img
+          src="/brand/feature-pace.png"
+          alt="Work at your own pace with the Ohmlet"
+          className="mx-auto block w-full max-w-3xl"
+          draggable={false}
+          loading="lazy"
+        />
+      </section>
 
       {/* ── Pre-footer CTA ── full-bleed illustration whose yellow wave merges into the gold footer ── */}
       <section className="px-6 pt-20 text-center md:pt-28">
