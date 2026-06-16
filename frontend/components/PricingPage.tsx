@@ -7,62 +7,65 @@ interface PricingPageProps {
   onNavigate: Nav;
 }
 
+type Variant = 'free' | 'pro' | 'max';
+
 type Tier = {
   name: string;
+  variant: Variant;
   tagline: string;
-  monthly: number | null;
-  annual: number | null;
-  priceNote: string;
+  monthly: number;
+  annual: number;
   cta: string;
-  highlight?: boolean;
+  badge?: string;
   features: string[];
 };
 
 const tiers: Tier[] = [
   {
     name: 'Free',
+    variant: 'free',
     tagline: 'Start building today, no card needed.',
     monthly: 0,
     annual: 0,
-    priceNote: 'forever',
     cta: 'Get started',
     features: [
       'Your first build path',
-      'Voice + camera tutor, 30 minutes a week',
+      'Voice tutor, 60 minutes a month',
       'Core lessons & circuit diagrams',
       'Community feed access',
     ],
   },
   {
     name: 'Pro',
+    variant: 'pro',
     tagline: 'The full bench tutor.',
     monthly: 15.99,
     annual: 11.99,
-    priceNote: 'month',
     cta: 'Go Pro',
-    highlight: true,
+    badge: 'Most popular',
     features: [
       'Everything in Free',
-      'Live tutor sessions, up to 15 hours a month',
+      'Live tutor sessions, up to 10 hours a month',
       'All build paths & advanced lessons',
       '3D digital twin of every build',
       'Progress tracking, streaks & XP',
-      'Priority response speed',
     ],
   },
   {
-    name: 'Teams',
-    tagline: 'For classrooms and cohorts.',
-    monthly: 9.99,
-    annual: 9.99,
-    priceNote: 'seat / mo',
-    cta: 'Contact us',
+    name: 'max',
+    variant: 'max',
+    tagline: 'Learn electronics, then land the job.',
+    monthly: 34.99,
+    annual: 26.99,
+    cta: 'Go Max',
+    badge: 'Career',
     features: [
       'Everything in Pro',
-      'Educator dashboard & class progress',
-      'Seat management & rosters',
-      'Shared build libraries',
-      'Billed annually, minimum 5 seats',
+      'Interview Mode: AI mock interviews tuned to a job description',
+      'Company prep from real interview data',
+      'Career coaching sessions',
+      'Early access to Ohmlet Labs',
+      'Live tutor sessions, up to 30 hours a month',
     ],
   },
 ];
@@ -98,7 +101,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
           Simple pricing.
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-lg font-semibold leading-relaxed text-ohmlet-ink-soft md:text-xl">
-          Start free. Go Pro when you’re hooked. Bring your whole class when you’re ready.
+          Start free. Go Pro when you’re hooked. Go Max when you’re ready to get hired.
         </p>
 
         <div className="mt-8 inline-flex items-center gap-1 rounded-full border-2 border-ohmlet-ink bg-white p-1">
@@ -131,41 +134,48 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
         <div className="mx-auto grid max-w-6xl items-start gap-6 lg:grid-cols-3">
           {tiers.map((tier) => {
             const price = annual ? tier.annual : tier.monthly;
+            const isMax = tier.variant === 'max';
+            const isPro = tier.variant === 'pro';
+            const cardClass = isMax
+              ? 'bg-ohmlet-ink text-white border-ohmlet-gold shadow-[0_0_34px_rgba(250,204,46,0.22)]'
+              : isPro
+              ? 'bg-ohmlet-gold text-ohmlet-ink border-ohmlet-ink shadow-press lg:-translate-y-3'
+              : 'bg-white text-ohmlet-ink border-ohmlet-ink shadow-press-sm';
             return (
-              <article
-                key={tier.name}
-                className={`rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 ${
-                  tier.highlight ? 'bg-ohmlet-gold shadow-press lg:-translate-y-3' : 'bg-white shadow-press-sm'
-                }`}
-              >
-                {tier.highlight && (
-                  <span className="mb-4 inline-block rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
-                    Most popular
+              <article key={tier.name} className={`rounded-[1.8rem] border-[2.5px] p-7 ${cardClass}`}>
+                {tier.badge && (
+                  <span
+                    className={`mb-4 inline-block rounded-full border-2 px-3 py-1 text-xs font-black uppercase tracking-wide ${
+                      isMax ? 'border-ohmlet-gold text-ohmlet-gold' : 'border-ohmlet-ink bg-white text-ohmlet-ink'
+                    }`}
+                  >
+                    {tier.badge}
                   </span>
                 )}
-                <h3 className="text-2xl font-black tracking-tight text-ohmlet-ink">{tier.name}</h3>
-                <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">{tier.tagline}</p>
+                <h3 className={`text-2xl font-black tracking-tight ${isMax ? 'ohmlet-shimmer lowercase' : 'text-ohmlet-ink'}`}>
+                  {tier.name}
+                </h3>
+                <p className={`mt-1 text-sm font-semibold ${isMax ? 'text-white/65' : 'text-ohmlet-ink-soft'}`}>{tier.tagline}</p>
 
                 <div className="mt-6 flex items-end gap-1">
-                  {price === null ? (
-                    <span className="text-3xl font-black text-ohmlet-ink">Custom</span>
-                  ) : (
-                    <>
-                      <span className="text-5xl font-black tracking-tight text-ohmlet-ink">${price}</span>
-                      <span className="mb-1.5 text-sm font-bold text-ohmlet-ink-soft">/{tier.priceNote}</span>
-                    </>
-                  )}
+                  <span className={`text-5xl font-black tracking-tight ${isMax ? 'text-white' : 'text-ohmlet-ink'}`}>${price}</span>
+                  <span className={`mb-1.5 text-sm font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>/month</span>
                 </div>
-                {price !== null && annual && price > 0 && (
-                  <p className="mt-1 text-xs font-bold text-ohmlet-ink-soft">billed annually</p>
+                {price > 0 ? (
+                  annual && <p className={`mt-1 text-xs font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>billed annually</p>
+                ) : (
+                  <p className="mt-1 text-xs font-bold text-ohmlet-ink-soft">forever</p>
                 )}
-                {price === null && <p className="mt-1 text-xs font-bold text-ohmlet-ink-soft">{tier.priceNote}</p>}
 
                 <button
                   type="button"
-                  onClick={() => onNavigate(tier.name === 'Teams' ? 'pricing' : 'ohmlet-app')}
-                  className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink px-6 py-3.5 text-base font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${
-                    tier.highlight ? 'bg-white' : 'bg-ohmlet-gold'
+                  onClick={() => onNavigate('ohmlet-app')}
+                  className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] px-6 py-3.5 text-base font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${
+                    isMax
+                      ? 'border-ohmlet-gold bg-ohmlet-gold text-ohmlet-ink'
+                      : isPro
+                      ? 'border-ohmlet-ink bg-white text-ohmlet-ink'
+                      : 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink'
                   }`}
                 >
                   {tier.cta}
@@ -174,8 +184,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
 
                 <ul className="mt-7 space-y-3">
                   {tier.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm font-semibold text-ohmlet-ink">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ohmlet-green text-white">
+                    <li key={f} className={`flex items-start gap-2.5 text-sm font-semibold ${isMax ? 'text-white/90' : 'text-ohmlet-ink'}`}>
+                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${isMax ? 'bg-ohmlet-gold text-ohmlet-ink' : 'bg-ohmlet-green text-white'}`}>
                         <Check className="h-3.5 w-3.5" />
                       </span>
                       {f}
@@ -186,6 +196,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
             );
           })}
         </div>
+
+        {/* Teams parked: inbound only */}
+        <p className="mx-auto mt-8 max-w-6xl text-center text-sm font-semibold text-ohmlet-ink-soft">
+          Running a classroom or cohort?{' '}
+          <a href="mailto:hello@ohmlet.org?subject=Ohmlet%20for%20Teams" className="font-black text-ohmlet-blue-deep underline">
+            Talk to us about Teams
+          </a>
+        </p>
       </section>
 
       {/* FAQ */}

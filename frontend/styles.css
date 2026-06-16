@@ -110,6 +110,17 @@ body {
 }
 .ohmlet-count-up { animation: ohmlet-count-up 0.5s ease-out both; }
 
+/* Subtle gold shimmer for the Max tier wordmark (premium, not flashy) */
+@keyframes ohmlet-shimmer { to { background-position: 200% center; } }
+.ohmlet-shimmer {
+  background: linear-gradient(100deg, #f5b800 0%, #fff6d6 50%, #f5b800 100%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: ohmlet-shimmer 3.5s linear infinite;
+}
+
 /* Chat scrollbar */
 .ohmlet-chat-scroll::-webkit-scrollbar { width: 4px; }
 .ohmlet-chat-scroll::-webkit-scrollbar-track { background: transparent; }
