@@ -5,6 +5,7 @@ import { Home } from './components/Home';
 import { LearnPage } from './components/LearnPage';
 import { BuildPage } from './components/BuildPage';
 import { BlogPage } from './components/BlogPage';
+import { BlogPostPage } from './components/BlogPostPage';
 import { PricingPage } from './components/PricingPage';
 import { OhmletLab } from './components/OhmletLab';
 
@@ -41,14 +42,20 @@ const resolveRoute = (pathname: string): AppRoute => {
   }
   if (normalized === '/learn') return 'learn';
   if (normalized === '/build') return 'build';
-  if (normalized === '/blog') return 'blog';
+  if (normalized === '/blog' || normalized.startsWith('/blog/')) return 'blog';
   if (normalized === '/pricing') return 'pricing';
 
   return 'landing';
 };
 
+const resolveBlogSlug = (pathname: string): string | null => {
+  const match = normalizePath(pathname).match(/^\/blog\/(.+)$/);
+  return match ? match[1] : null;
+};
+
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
+  const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
 
   const navigate = useCallback((nextRoute: AppRoute) => {
     const nextPath = ROUTE_PATHS[nextRoute];
@@ -57,7 +64,18 @@ const App: React.FC = () => {
       window.history.pushState({}, '', nextPath);
     }
 
+    setBlogSlug(null);
     setRoute(nextRoute);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  const openPost = useCallback((slug: string) => {
+    const nextPath = `/blog/${slug}`;
+    if (normalizePath(window.location.pathname) !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+    setBlogSlug(slug);
+    setRoute('blog');
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
@@ -72,6 +90,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const onPopState = () => {
       setRoute(resolveRoute(window.location.pathname));
+      setBlogSlug(resolveBlogSlug(window.location.pathname));
       window.scrollTo({ top: 0, behavior: 'auto' });
     };
 
@@ -112,7 +131,12 @@ const App: React.FC = () => {
           {route === 'landing' && <Home onNavigate={navigate} />}
           {route === 'learn' && <LearnPage onNavigate={navigate} />}
           {route === 'build' && <BuildPage onNavigate={navigate} />}
-          {route === 'blog' && <BlogPage onNavigate={navigate} />}
+          {route === 'blog' &&
+            (blogSlug ? (
+              <BlogPostPage slug={blogSlug} onNavigate={navigate} onOpenPost={openPost} />
+            ) : (
+              <BlogPage onNavigate={navigate} onOpenPost={openPost} />
+            ))}
           {route === 'pricing' && <PricingPage onNavigate={navigate} />}
         </main>
         <Footer />

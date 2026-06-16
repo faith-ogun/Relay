@@ -104,7 +104,7 @@ const FeatureSection: React.FC<{ feature: Feature }> = ({ feature }) => {
             alt={feature.imageAlt}
             className={
               fill
-                ? 'block w-full max-w-[560px] self-stretch object-contain object-bottom lg:max-w-none'
+                ? 'ohmlet-float block w-full max-w-[560px] self-stretch object-contain object-bottom lg:max-w-none'
                 : 'ohmlet-float w-full max-w-[420px]'
             }
             draggable={false}

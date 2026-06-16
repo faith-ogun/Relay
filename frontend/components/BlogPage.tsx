@@ -1,91 +1,18 @@
 import React from 'react';
 import { ArrowRight, Clock } from 'lucide-react';
+import { featuredPost, otherPosts } from './blog/posts';
 
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
 
 interface BlogPageProps {
   onNavigate: Nav;
+  onOpenPost: (slug: string) => void;
 }
 
-type Post = {
-  title: string;
-  excerpt: string;
-  category: string;
-  date: string;
-  read: string;
-  author: string;
-  swatch: string;
-};
+export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate, onOpenPost }) => {
+  const featured = featuredPost();
+  const posts = otherPosts();
 
-const featured: Post = {
-  title: 'From Tutorial Hell to Your First Working Circuit',
-  excerpt:
-    'Watching videos feels like progress, but it isn’t. Here’s the shift that gets beginners from passively following along to actually building, and why a tutor that sees your bench changes everything.',
-  category: 'Learning',
-  date: 'Jun 12, 2026',
-  read: '7 min read',
-  author: 'The Ohmlet Team',
-  swatch: 'from-ohmlet-gold to-ohmlet-gold-deep',
-};
-
-const posts: Post[] = [
-  {
-    title: 'How to Read a Breadboard Without Frying Anything',
-    excerpt: 'Power rails, the center gap, and the connections nobody explains: a beginner’s map to the board everything sits on.',
-    category: 'Basics',
-    date: 'Jun 9, 2026',
-    read: '5 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-blue to-ohmlet-blue-deep',
-  },
-  {
-    title: 'Ohm’s Law, Explained With an LED You Can Actually See',
-    excerpt: 'V = IR stops being abstract the moment it decides whether your LED glows or pops. Let’s make it physical.',
-    category: 'Foundations',
-    date: 'Jun 5, 2026',
-    read: '6 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-green to-ohmlet-green-deep',
-  },
-  {
-    title: 'Why Your Arduino Sensor Reads Garbage, and How to Fix It',
-    excerpt: 'Floating pins, missing pull-downs, and noisy analog reads. The usual suspects behind numbers that make no sense.',
-    category: 'Debugging',
-    date: 'May 30, 2026',
-    read: '8 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-red to-[#b5331c]',
-  },
-  {
-    title: 'Resistor Color Codes: A 5-Minute Cheat Sheet',
-    excerpt: 'Stop squinting at tiny bands. A simple way to read any resistor and never mix up your 220Ω and 22kΩ again.',
-    category: 'Reference',
-    date: 'May 24, 2026',
-    read: '4 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-gold to-ohmlet-gold-deep',
-  },
-  {
-    title: 'PWM, Explained: Make an LED Breathe',
-    excerpt: 'Pulse-width modulation sounds intimidating. It’s really just blinking fast enough to fake brightness. Here’s how.',
-    category: 'Projects',
-    date: 'May 18, 2026',
-    read: '6 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-blue to-ohmlet-blue-deep',
-  },
-  {
-    title: 'The Multimeter Skills That Save Every Build',
-    excerpt: 'Continuity, voltage, and resistance checks: the three measurements that turn “it doesn’t work” into “found it.”',
-    category: 'Debugging',
-    date: 'May 11, 2026',
-    read: '7 min read',
-    author: 'The Ohmlet Team',
-    swatch: 'from-ohmlet-green to-ohmlet-green-deep',
-  },
-];
-
-export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate }) => {
   return (
     <div className="w-full">
       {/* Hero */}
@@ -102,7 +29,11 @@ export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate }) => {
 
       {/* Featured */}
       <section className="px-6">
-        <article className="mx-auto grid max-w-6xl overflow-hidden rounded-[1.8rem] border-[2.5px] border-ohmlet-ink shadow-press md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => onOpenPost(featured.slug)}
+          className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[1.8rem] border-[2.5px] border-ohmlet-ink text-left shadow-press transition-transform hover:-translate-y-1 md:grid-cols-2"
+        >
           <div className={`relative flex min-h-[220px] items-center justify-center bg-gradient-to-br ${featured.swatch} p-8`}>
             <span className="absolute left-5 top-5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
               Featured
@@ -123,14 +54,19 @@ export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate }) => {
               </span>
             </div>
           </div>
-        </article>
+        </button>
       </section>
 
       {/* Grid */}
       <section className="px-6 py-16">
         <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
           {posts.map((p) => (
-            <article key={p.title} className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-line bg-white shadow-soft">
+            <button
+              key={p.slug}
+              type="button"
+              onClick={() => onOpenPost(p.slug)}
+              className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-line bg-white text-left shadow-soft transition-transform hover:-translate-y-1"
+            >
               <div className={`h-28 bg-gradient-to-br ${p.swatch}`} />
               <div className="p-6">
                 <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">{p.category}</p>
@@ -145,7 +81,7 @@ export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate }) => {
                   </span>
                 </div>
               </div>
-            </article>
+            </button>
           ))}
         </div>
       </section>
