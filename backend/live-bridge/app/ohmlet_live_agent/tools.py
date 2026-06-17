@@ -5,6 +5,7 @@ a stronger model for code generation, deep reasoning, or quick lookups.
 Each tool internally uses google.genai to call the appropriate model.
 """
 
+import contextvars
 import os
 from google import genai
 
@@ -12,6 +13,27 @@ from google import genai
 FLASH_MODEL = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
 PRO_MODEL = os.getenv("OHMLET_PRO_MODEL", "gemini-2.5-pro")
 REASONING_MODEL = os.getenv("OHMLET_REASONING_MODEL", "gemini-2.5-pro")
+
+# Plan-aware routing: priority plans (Pro/max) get the premium models for the
+# expensive code + reasoning tools; everyone else is routed to Flash so a Free
+# session can't quietly run up Pro-model spend. The WS handler sets this per
+# session via set_priority_models(); contextvars keep it isolated per session.
+_priority_models: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "ohmlet_priority_models", default=False
+)
+
+
+def set_priority_models(enabled: bool) -> None:
+    """Called once per live session to select the model tier for its plan."""
+    _priority_models.set(enabled)
+
+
+def _code_model() -> str:
+    return PRO_MODEL if _priority_models.get() else FLASH_MODEL
+
+
+def _reasoning_model() -> str:
+    return REASONING_MODEL if _priority_models.get() else FLASH_MODEL
 
 
 def _get_client() -> genai.Client:
@@ -57,7 +79,7 @@ Rules:
 
 Return ONLY the Arduino code, no markdown fences."""
 
-    response = client.models.generate_content(model=PRO_MODEL, contents=prompt)
+    response = client.models.generate_content(model=_code_model(), contents=prompt)
     return response.text
 
 
@@ -86,7 +108,7 @@ Respond with:
 1. A one-line explanation of the bug
 2. The corrected complete code (no markdown fences)"""
 
-    response = client.models.generate_content(model=PRO_MODEL, contents=prompt)
+    response = client.models.generate_content(model=_code_model(), contents=prompt)
     return response.text
 
 
@@ -115,7 +137,7 @@ Rules:
 - Relate it to practical use in Arduino projects
 - If relevant, mention common mistakes beginners make"""
 
-    response = client.models.generate_content(model=REASONING_MODEL, contents=prompt)
+    response = client.models.generate_content(model=_reasoning_model(), contents=prompt)
     return response.text
 
 

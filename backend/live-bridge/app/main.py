@@ -24,8 +24,10 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from ohmlet_live_agent import agent
+from ohmlet_live_agent.tools import set_priority_models
 from state_store import router as state_router
 from usage_meter import UsageMeter, persist_usage
+import entitlements
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
@@ -119,6 +121,24 @@ async def websocket_endpoint(
     """
     await websocket.accept()
     logger.info("WS connected: user=%s session=%s", user_id, session_id)
+
+    # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
+    plan = entitlements.get_plan(user_id)
+    remaining_seconds = entitlements.live_seconds_remaining(user_id, plan)
+    if remaining_seconds <= 0:
+        logger.info("Live budget exhausted for user=%s plan=%s; rejecting", user_id, plan)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "error",
+                    "code": "live_budget_exhausted",
+                    "plan": plan,
+                    "message": "You have used today's live tutoring time on this plan.",
+                }
+            )
+        )
+        await websocket.close(code=4003)
+        return
 
     # Get or create ADK session
     session = await session_service.get_session(
@@ -214,6 +234,8 @@ async def websocket_endpoint(
 
     async def downstream() -> None:
         logger.info("Downstream starting for session %s", session_id)
+        # Select the model tier for this session's plan (Free → Flash, Pro/max → Pro).
+        set_priority_models(entitlements.has_priority_models(plan))
         try:
             event_count = 0
             async for event in runner.run_live(
@@ -241,12 +263,34 @@ async def websocket_endpoint(
         timeout = float(os.getenv("OHMLET_IDLE_TIMEOUT_SEC", "180"))
         while True:
             await asyncio.sleep(10)
+            # Idle: stop billing for an abandoned session.
             if meter.idle_seconds() > timeout:
                 logger.info(
                     "Idle timeout (%.0fs) for session %s; closing", timeout, session_id
                 )
                 try:
                     await websocket.close()
+                except Exception:
+                    pass
+                return
+            # Budget: cut the session off when it runs past the plan's daily cap.
+            if remaining_seconds != float("inf") and meter.duration_seconds() >= remaining_seconds:
+                logger.info(
+                    "Live budget reached (%.0fs) for user=%s session=%s; closing",
+                    remaining_seconds, user_id, session_id,
+                )
+                try:
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "code": "live_budget_exhausted",
+                                "plan": plan,
+                                "message": "You've reached today's live tutoring time on this plan.",
+                            }
+                        )
+                    )
+                    await websocket.close(code=4003)
                 except Exception:
                     pass
                 return
@@ -266,6 +310,9 @@ async def websocket_endpoint(
     finally:
         live_queue.close()
         persist_usage(meter)
+        # Charge this session's wall-clock time against today's live budget so the
+        # cap holds across reconnects and multiple sessions in a day.
+        entitlements.add_live_seconds(user_id, meter.duration_seconds())
         logger.info("WS session closed: %s", session_id)
 
 
