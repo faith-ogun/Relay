@@ -1,20 +1,25 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
   CameraOff,
   CheckCircle2,
   ChevronRight,
   Cpu,
+  Focus,
+  Lock,
   Mic,
   MicOff,
   PhoneOff,
   Radio,
+  RefreshCw,
   ScanLine,
   Volume2,
   Wrench,
   Zap,
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
+import { usePlan } from '../../../hooks/usePlan';
+import { PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 
 /**
@@ -61,12 +66,42 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
 
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
+  const [snapped, setSnapped] = useState(false);
 
-  const { state, micOn, camOn, transcripts, connect, disconnect, toggleMic, toggleCam, sendText, sendStageUpdate, videoRef } =
-    useLiveBridge({ wsUrl, userId, sessionId });
+  const { canGoLive, liveCapMinutes, liveMinutesRemaining, consumeLiveSeconds, plan } = usePlan();
+
+  const {
+    state,
+    micOn,
+    camOn,
+    facing,
+    transcripts,
+    connect,
+    disconnect,
+    toggleMic,
+    toggleCam,
+    switchCamera,
+    captureSnapshot,
+    sendText,
+    sendStageUpdate,
+    videoRef,
+  } = useLiveBridge({ wsUrl, userId, sessionId });
 
   const live = state === 'connected';
   const connecting = state === 'connecting';
+  const unlimited = liveCapMinutes === Infinity;
+
+  // Meter live time against the plan's daily budget while connected, and cut the
+  // session off when the budget runs out (the same cap the server enforces).
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => consumeLiveSeconds(10), 10000);
+    return () => clearInterval(id);
+  }, [live, consumeLiveSeconds]);
+
+  useEffect(() => {
+    if (live && liveMinutesRemaining <= 0) disconnect();
+  }, [live, liveMinutesRemaining, disconnect]);
 
   // Start the session and request mic + camera in the same user gesture so the
   // browser shows the permission prompt right away.
@@ -74,6 +109,12 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
     connect();
     if (!micOn) toggleMic();
     if (!camOn) toggleCam();
+  };
+
+  const snapNow = () => {
+    captureSnapshot();
+    setSnapped(true);
+    setTimeout(() => setSnapped(false), 700);
   };
 
   const setStageAndNotify = (s: Stage) => {
@@ -86,6 +127,34 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
     sendText(text, stage);
     setDraft('');
   };
+
+  // ── Out of live budget (plan gate) ──
+  if (!live && !connecting && !canGoLive) {
+    const upgradeTo = plan === 'free' ? PLAN_META.pro : PLAN_META.max;
+    return (
+      <div className="ohmlet-rise mx-auto max-w-xl">
+        <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
+        <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">You have used today's bench time.</h1>
+        <div className="mt-6 rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white p-7 shadow-press">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft">
+            <Lock className="h-6 w-6 text-ohmlet-gold-deep" />
+          </span>
+          <p className="mt-4 text-base font-semibold leading-relaxed text-ohmlet-ink">
+            The {PLAN_META[plan].label} plan includes {liveCapMinutes} minutes of live tutoring a day. Your lessons,
+            sandbox, and community stay open. Live sessions reset tomorrow.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button className="inline-flex items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none">
+              Upgrade to {upgradeTo.label}
+            </button>
+            <span className="inline-flex items-center text-sm font-bold text-ohmlet-ink-soft">
+              {upgradeTo.label} gives you {upgradeTo.id === 'max' ? 'unlimited' : '180 min/day'} of live time.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Pre-flight (not connected) ──
   if (!live && !connecting) {
@@ -104,9 +173,9 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
               <p className="mt-2 text-sm font-semibold text-white/65">{build.desc}</p>
               <ul className="mt-5 space-y-2.5">
                 {[
-                  'Point your phone or webcam at the breadboard',
+                  'Open Ohmlet on the device whose camera you want to use, your laptop or your phone',
                   'Talk to it like a bench partner, hands free',
-                  'It catches wiring mistakes before you power on',
+                  'It glances at your board and catches mistakes before you power on',
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2.5 text-sm font-semibold text-white/85">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-ohmlet-gold" />
@@ -123,6 +192,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
           <div className="flex flex-col gap-3 border-t border-white/10 bg-black/20 px-8 py-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-white/55">
               Ohmlet asks for camera and microphone access when the session starts.
+              {!unlimited && ` ${Math.floor(liveMinutesRemaining)} of ${liveCapMinutes} min left today.`}
             </p>
             <button
               onClick={goLive}
@@ -159,12 +229,19 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
           </span>
           <h1 className="text-xl font-black tracking-tight">{build.title}</h1>
         </div>
-        <button
-          onClick={disconnect}
-          className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
-        >
-          <PhoneOff className="h-4 w-4" /> End session
-        </button>
+        <div className="flex items-center gap-2">
+          {!unlimited && (
+            <span className="rounded-full border-2 border-ohmlet-line bg-white px-3 py-1.5 text-xs font-black text-ohmlet-ink-soft">
+              {Math.floor(liveMinutesRemaining)} min left today
+            </span>
+          )}
+          <button
+            onClick={disconnect}
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+          >
+            <PhoneOff className="h-4 w-4" /> End session
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
@@ -193,6 +270,27 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
             <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 bg-gradient-to-t from-black/60 to-transparent p-4">
               <ControlButton on={micOn} onClick={toggleMic} onIcon={Mic} offIcon={MicOff} label={micOn ? 'Mute' : 'Unmute'} />
               <ControlButton on={camOn} onClick={toggleCam} onIcon={Camera} offIcon={CameraOff} label={camOn ? 'Camera off' : 'Camera on'} />
+              {camOn && (
+                <>
+                  <button
+                    onClick={snapNow}
+                    aria-label="Show the tutor my board now"
+                    className={`flex h-12 items-center gap-2 rounded-full border-2 px-4 text-sm font-black transition-all hover:scale-105 ${
+                      snapped ? 'border-ohmlet-green bg-ohmlet-green text-white' : 'border-white bg-white text-ohmlet-ink'
+                    }`}
+                  >
+                    <Focus className="h-5 w-5" /> {snapped ? 'Sent' : 'Look now'}
+                  </button>
+                  <button
+                    onClick={switchCamera}
+                    aria-label="Switch camera"
+                    title={facing === 'environment' ? 'Using rear camera' : 'Using front camera'}
+                    className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/40 bg-black/40 text-white backdrop-blur transition-all hover:scale-105"
+                  >
+                    <RefreshCw className="h-5 w-5" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

@@ -20,17 +20,31 @@ type UseLiveBridgeOptions = {
   userId: string;
   sessionId: string;
   autoConnect?: boolean;
+  /**
+   * Snapshot cadence in ms for the background vision heartbeat. Vision is the
+   * dominant cost driver, so we sample slowly (default 2500ms ≈ 0.4fps) and lean
+   * on captureSnapshot() for the moments that matter. Set to 0 to disable the
+   * heartbeat entirely (pure on-demand snapshots).
+   */
+  visionIntervalMs?: number;
 };
+
+export type CameraFacing = 'user' | 'environment';
 
 type UseLiveBridgeReturn = {
   state: LiveBridgeState;
   micOn: boolean;
   camOn: boolean;
+  facing: CameraFacing;
   transcripts: LiveTranscript[];
   connect: () => void;
   disconnect: () => void;
   toggleMic: () => void;
   toggleCam: () => void;
+  /** Toggle front/rear camera (rear is best for pointing at a bench on a phone). */
+  switchCamera: () => void;
+  /** Send a single frame to the tutor immediately ("look at my board now"). */
+  captureSnapshot: () => void;
   sendText: (text: string, stage: string) => void;
   sendStageUpdate: (stage: string) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -53,10 +67,13 @@ export function useLiveBridge({
   userId,
   sessionId,
   autoConnect = false,
+  visionIntervalMs = 2500,
 }: UseLiveBridgeOptions): UseLiveBridgeReturn {
   const [state, setState] = useState<LiveBridgeState>('disconnected');
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
+  const [facing, setFacing] = useState<CameraFacing>('environment');
+  const facingRef = useRef<CameraFacing>('environment');
   const [transcripts, setTranscripts] = useState<LiveTranscript[]>([]);
 
   // Track whether we've received any audio data this session.
@@ -316,7 +333,62 @@ export function useLiveBridge({
     }
   }, [micOn, pushTranscript]);
 
-  // ── Camera toggle ──
+  // ── Camera ──
+
+  // Grab one frame from the live preview and ship it to the tutor. Used by both
+  // the slow background heartbeat and the on-demand "look now" snapshot.
+  const sendFrame = useCallback(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (!video.videoWidth) return; // Not ready yet
+
+    if (!canvasRef.current) canvasRef.current = document.createElement('canvas');
+
+    // Scale down for Gemini — 512px wide is plenty and keeps tokens (cost) down.
+    const scale = Math.min(1, 512 / video.videoWidth);
+    const w = Math.floor(video.videoWidth * scale);
+    const h = Math.floor(video.videoHeight * scale);
+    const canvas = canvasRef.current;
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob || wsRef.current?.readyState !== WebSocket.OPEN) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          wsRef.current?.send(JSON.stringify({ type: 'image', data: base64, mimeType: 'image/jpeg' }));
+        };
+        reader.readAsDataURL(blob);
+      },
+      'image/jpeg',
+      0.6,
+    );
+  }, []);
+
+  const startCameraStream = useCallback(async (mode: CameraFacing) => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+        // ideal (not exact) so a laptop with one webcam still resolves.
+        facingMode: { ideal: mode },
+      },
+    });
+    camStreamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+    }
+    return stream;
+  }, []);
 
   const toggleCam = useCallback(async () => {
     if (camOn) {
@@ -328,65 +400,37 @@ export function useLiveBridge({
     }
 
     try {
-      // Request camera at reasonable resolution — don't force square or oversized
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-      });
-      camStreamRef.current = stream;
+      await startCameraStream(facingRef.current);
 
-      // Attach to video element for live preview (this is instant, no lag)
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      // Snapshot vision: a slow heartbeat keeps the tutor loosely aware while the
+      // preview stays full framerate. visionIntervalMs = 0 disables the heartbeat.
+      if (visionIntervalMs > 0) {
+        camIntervalRef.current = setInterval(sendFrame, visionIntervalMs);
       }
-
-      // Lazy-create small offscreen canvas for frame capture (sent to Gemini only)
-      if (!canvasRef.current) {
-        canvasRef.current = document.createElement('canvas');
-      }
-
-      // Send JPEG frames at ~1fps to Gemini (preview stays full framerate)
-      camIntervalRef.current = setInterval(() => {
-        if (wsRef.current?.readyState !== WebSocket.OPEN) return;
-        if (!videoRef.current || !canvasRef.current) return;
-
-        const video = videoRef.current;
-        if (!video.videoWidth) return; // Not ready yet
-
-        // Scale down for Gemini — 512px wide is plenty
-        const scale = Math.min(1, 512 / video.videoWidth);
-        const w = Math.floor(video.videoWidth * scale);
-        const h = Math.floor(video.videoHeight * scale);
-        const canvas = canvasRef.current;
-        canvas.width = w;
-        canvas.height = h;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.drawImage(video, 0, 0, w, h);
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob || wsRef.current?.readyState !== WebSocket.OPEN) return;
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const base64 = (reader.result as string).split(',')[1];
-              wsRef.current?.send(
-                JSON.stringify({ type: 'image', data: base64, mimeType: 'image/jpeg' })
-              );
-            };
-            reader.readAsDataURL(blob);
-          },
-          'image/jpeg',
-          0.6
-        );
-      }, 1000);
 
       setCamOn(true);
     } catch {
       pushTranscript('system', 'Camera access denied or unavailable.');
     }
-  }, [camOn, pushTranscript]);
+  }, [camOn, pushTranscript, startCameraStream, sendFrame, visionIntervalMs]);
+
+  const switchCamera = useCallback(async () => {
+    const next: CameraFacing = facingRef.current === 'environment' ? 'user' : 'environment';
+    facingRef.current = next;
+    setFacing(next);
+    if (!camOn) return;
+    // Swap the underlying track without tearing down the heartbeat.
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
+    try {
+      await startCameraStream(next);
+    } catch {
+      pushTranscript('system', 'Could not switch camera.');
+    }
+  }, [camOn, startCameraStream, pushTranscript]);
+
+  const captureSnapshot = useCallback(() => {
+    sendFrame();
+  }, [sendFrame]);
 
   // ── Send text message ──
 
@@ -420,11 +464,14 @@ export function useLiveBridge({
     state,
     micOn,
     camOn,
+    facing,
     transcripts,
     connect,
     disconnect,
     toggleMic,
     toggleCam,
+    switchCamera,
+    captureSnapshot,
     sendText,
     sendStageUpdate,
     videoRef,

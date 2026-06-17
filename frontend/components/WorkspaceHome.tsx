@@ -23,6 +23,8 @@ import { LiveTutorView } from './ohmlet/views/LiveTutorView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { CommunityView } from './ohmlet/views/CommunityView';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
+import { usePlan } from '../hooks/usePlan';
+import { PLAN_META, type Plan } from './ohmlet/entitlements';
 
 /**
  * WorkspaceHome — the Ohmlet app workspace.
@@ -86,6 +88,7 @@ const ACHIEVEMENT_PREVIEW = [
 
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
   const [active, setActive] = useState<ViewId>('today');
+  const { plan, setPlan } = usePlan();
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [xp, setXp] = useState(1240);
   const [streak] = useState(3);
@@ -158,8 +161,23 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
             <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black">F</span>
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-ohmlet-ink">faith</p>
-              <p className="text-xs font-bold text-ohmlet-ink-soft">{LEAGUE} League</p>
+              <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
             </div>
+          </div>
+          {/* Plan switcher: stands in for billing while we wire Stripe. Flipping
+              this changes what's unlocked across the app, so gating is testable. */}
+          <div className="mt-3 flex items-center gap-1 rounded-xl border border-ohmlet-line bg-ohmlet-cream p-1">
+            {(['free', 'pro', 'max'] as Plan[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPlan(p)}
+                className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
+                  plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
+                }`}
+              >
+                {PLAN_META[p].label}
+              </button>
+            ))}
           </div>
         </aside>
 
