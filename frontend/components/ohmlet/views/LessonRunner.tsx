@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Heart, Lightbulb, RotateCcw, X, Zap } from 'lucide-react';
+import { ArrowRight, Check, Heart, RotateCcw, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
@@ -445,9 +445,8 @@ const StepView: React.FC<StepViewProps> = (p) => {
             placeholder="Type your answer"
             className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-5 py-4 text-lg font-black text-ohmlet-ink shadow-press-sm outline-none focus:border-ohmlet-gold-deep disabled:opacity-70"
           />
-          <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-ohmlet-ink-soft">
-            <Lightbulb className="h-4 w-4 text-ohmlet-gold-deep" /> {step.hint}
-          </p>
+          {/* Hints are disabled for now: the authored ones gave the answer away.
+              Re-enable here once they're rewritten as method nudges. */}
         </div>
       );
 

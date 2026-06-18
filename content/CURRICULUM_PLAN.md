@@ -11,6 +11,28 @@
 
 ---
 
+## Status snapshot (2026-06-18)
+
+Where the curriculum actually stands, for whoever picks this up next:
+
+- **5 units, 56 lessons built.** v1 target ~143 (12 units); ceiling ~450–650 (§5b/§5c).
+- **Authoring rails live:** `npm run lint:lessons` (schema + quality checks), the
+  circuit DSL (diagrams as data), and the admin `/author` preview console. See
+  [`CURRICULUM_AUTHORING.md`](./CURRICULUM_AUTHORING.md).
+- **Leveling live:** Bronze→Silver→Gold, with difficulty-tiered question pools so
+  replays escalate (§5c).
+- **Quality bar set and enforced.** A playtest found the first 56 lessons too easy
+  and guessable. The linter now flags the issues and reports the backlog: ~51
+  "longest answer" tells + ~42 lessons under the question target. **Two lessons
+  rebuilt to the bar as references** (`The Closed Loop`, `Powering an LED Safely`);
+  the other ~54 need the same treatment (rolls into #41/#42).
+- **Hints are temporarily DISABLED** in the lesson runner. The authored fill-blank
+  hints were giving the answer away ("the opposite of an open one" for "closed").
+  They will return only when rewritten as method nudges that never name or describe
+  the answer (the linter already guards the literal-answer case).
+- **Next session:** rebuild the existing 54 lessons to the quality bar, and/or
+  author Units 6+. The linter output is the worklist.
+
 ## 0. Guiding principle: depth-first, not breadth-first
 
 We build depth-first, not a shallow spread across many topics. The committed
