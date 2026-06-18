@@ -233,4 +233,242 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'match', instruction: 'Match each measurement to how you take it.', pairs: [['Measure voltage', 'Across a component (parallel)'], ['Measure current', 'Through the path (series)'], ['Voltage unit', 'Volts'], ['Current unit', 'Amps'], ['Resistance unit', 'Ohms']] },
     ],
   },
+
+  // ─────────────────────────── Unit 1 checkpoint ───────────────────────────
+  'Unit 1 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'What does current need in order to flow?', options: ['A single dead-end wire', 'A complete, unbroken loop', 'Only a resistor', 'Two batteries'], correct: 1, explanation: 'Current flows only around a complete loop back to the source.' },
+      { type: 'multiple_choice', question: 'A 10V supply across a 2000Ω resistor. What current flows?', options: ['2 mA', '5 mA', '20 mA', '200 mA'], correct: 1, explanation: 'I = V / R = 10 / 2000 = 0.005 A = 5 mA.' },
+      { type: 'true_false', statement: 'For a fixed voltage, increasing resistance increases the current.', correct: false, explanation: 'More resistance means LESS current: I = V / R.' },
+      { type: 'identify_component', question: 'Click the component that limits current in this circuit.', circuitDiagram: 'series_circuit', correctComponent: 'resistor', explanation: 'The resistor limits the current.' },
+      { type: 'choose_resistor', question: '5V supply, an LED dropping 2V, target ~15 mA. Pick the resistor.', circuitDiagram: 'series_circuit', options: ['10 Ω', '220 Ω', '4.7 kΩ', '47 kΩ'], correct: 1, explanation: '(5−2)/0.015 ≈ 200Ω, so 220Ω is the standard choice.' },
+      { type: 'spot_error', question: 'Click the problem with this LED circuit.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'No current-limiting resistor, the LED will burn out.' },
+      { type: 'predict_reading', question: 'Two equal resistors across 6V. Predict the midpoint voltage.', circuitDiagram: 'voltage_divider', options: ['1.5 V', '3 V', '6 V', '12 V'], correct: 1, explanation: 'Equal resistors split the voltage in half: 3V.' },
+      { type: 'match', instruction: 'Sort each material.', pairs: [['Copper', 'Conductor'], ['Glass', 'Insulator'], ['Silver', 'Conductor'], ['Rubber', 'Insulator'], ['Gold', 'Conductor']] },
+    ],
+  },
+
+  // ═══════════════════════ Unit 2: On the Breadboard ═══════════════════════
+
+  'Power Rails': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'The Bus Rails', body: 'The long strips down the sides of a breadboard are the power rails (or bus rails): one for + (positive) and one for − (ground). Every hole along a rail is connected, so you can tap power or ground anywhere along the board.', circuitDiagram: 'breadboard_layout' },
+      { type: 'multiple_choice', question: 'On a breadboard, the two long strips along the edges are usually used for...', options: ['Holding components in place', 'Power (+) and ground (−)', 'Decoration', 'Nothing'], correct: 1, explanation: 'The edge rails distribute + and − across the whole board.' },
+      { type: 'true_false', statement: 'Every hole along a single power rail is connected together.', correct: true, explanation: 'Yes. A rail is one long connected strip, so power is available anywhere along it.' },
+      { type: 'multiple_choice', question: 'Why feed power to the rails first, rather than to one component?', options: ['It looks neater only', 'So + and − are available anywhere on the board', 'Rails make components faster', 'It is required by law'], correct: 1, explanation: 'With the rails powered, any component can grab + or − from the nearest hole, keeping wiring short and tidy.' },
+      { type: 'identify_component', question: 'Click the part of this board that carries the positive supply.', circuitDiagram: 'breadboard_layout', correctComponent: 'power_rail', explanation: 'The + rail runs along the edge and feeds the whole board.' },
+      { type: 'match', instruction: 'Match each rail or zone to its job.', pairs: [['+ rail', 'Positive supply bus'], ['− rail', 'Ground bus'], ['Centre gap', 'Separates the two halves'], ['Terminal rows', 'Connect components together'], ['Jumper wire', 'Bridges one point to another']] },
+    ],
+  },
+
+  'Jumper Wires': {
+    xpReward: 20,
+    steps: [
+      { type: 'teach', title: 'Bridging the Board', body: 'Jumper wires carry a connection from one point on the board to another, for example from the + rail to a component row. Solid-core wire (around 22 gauge) is ideal: it pushes cleanly into the holes and holds its shape. Stranded wire frays and is hard to insert.' },
+      { type: 'multiple_choice', question: 'Which wire is best for a breadboard?', options: ['Thick stranded wire', 'Solid-core wire (~22 gauge)', 'Bare wire with no insulation', 'Any household cable'], correct: 1, explanation: 'Solid-core wire inserts cleanly and stays put; stranded wire frays in the holes.' },
+      { type: 'teach', title: 'Keep It Tidy', body: 'Short, flat jumpers that hug the board are easier to follow and debug than long arcs flying across it. A tidy layout is not just pretty, it is how you spot a wrong connection at a glance.' },
+      { type: 'true_false', statement: 'Long, messy jumper wires make a circuit easier to debug.', correct: false, explanation: 'The opposite. Tidy, short jumpers let you trace the circuit and catch mistakes quickly.' },
+      { type: 'multiple_choice', question: 'A jumper wire from the + rail to row 10 does what?', options: ['Nothing', 'Brings the positive supply to row 10', 'Creates a short', 'Removes power from row 10'], correct: 1, explanation: 'The jumper carries + from the rail to that row, so components in row 10 can use it.' },
+      { type: 'drag_order', instruction: 'Order the steps to power a component row from the rail.', items: ['Connect the supply to the + and − rails', 'Run a jumper from the + rail to the component row', 'Place the component in that row', 'Run a jumper from the component to the − rail'], correctOrder: [0, 1, 2, 3] },
+    ],
+  },
+
+  'From Schematic to Breadboard': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Two Views of One Circuit', body: 'A schematic shows what connects to what using symbols, ignoring physical layout. A breadboard build is the physical version. Same circuit, two views. Learning to translate between them is the core breadboarding skill.', circuitDiagram: 'series_circuit' },
+      { type: 'multiple_choice', question: 'What does a schematic show?', options: ['The exact physical positions of parts', 'Which components connect to which, using symbols', 'Only the colours of the wires', 'The price of each part'], correct: 1, explanation: 'A schematic captures the connections and components, not their physical placement.' },
+      { type: 'identify_component', question: 'In this schematic, click the LED.', circuitDiagram: 'series_circuit', correctComponent: 'led', explanation: 'The triangle-and-bar symbol is the LED.' },
+      { type: 'true_false', statement: 'A schematic and a breadboard build of the same circuit must look physically identical.', correct: false, explanation: 'No. They represent the same connections, but the schematic is a tidy diagram and the breadboard is the physical layout.' },
+      { type: 'drag_order', instruction: 'Order the steps to turn a simple series schematic into a build.', items: ['Read the schematic and list the components', 'Power the breadboard rails', 'Place each component spanning different rows', 'Add jumpers to match the schematic connections', 'Check it against the schematic before powering on'], correctOrder: [0, 1, 2, 3, 4] },
+      { type: 'multiple_choice', question: 'What is the #1 breadboard placement mistake?', options: ['Using the wrong wire colour', 'Both legs of a component in the same connected row', 'Wires that are too short', 'Powering the rails'], correct: 1, explanation: 'Both legs in one connected row short the component out, since all holes in that row are joined.' },
+    ],
+  },
+
+  'Build a Series LED Circuit': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Your First Build', body: 'A series LED circuit is the classic first build: power, a current-limiting resistor, the LED, and back to ground. One loop, one current. Let us wire it.', circuitDiagram: 'series_circuit', showCurrentFlow: true },
+      { type: 'draw_connection', instruction: 'Wire the loop: power to the resistor, resistor to the LED, LED to ground.', terminals: [{ x: 60, y: 50, label: '5V', id: 'power' }, { x: 160, y: 50, label: 'R', id: 'resistor_in' }, { x: 250, y: 50, label: 'R', id: 'resistor_out' }, { x: 320, y: 50, label: 'LED', id: 'led' }, { x: 320, y: 200, label: 'GND', id: 'ground' }], expectedConnections: [['power', 'resistor_in'], ['resistor_out', 'led'], ['led', 'ground']], explanation: 'Power → resistor → LED → ground. The resistor must come before the LED to limit current.' },
+      { type: 'multiple_choice', question: 'Why does the resistor go before the LED?', options: ['It looks better', 'To limit the current through the LED', 'To raise the voltage', 'It does not matter'], correct: 1, explanation: 'The resistor limits current to protect the LED. Order in a series loop does not change the current, but the resistor must be present.' },
+      { type: 'spot_error', question: 'The build does not light. Click the issue.', circuitDiagram: 'reversed_led', correctRegion: 'reversed_led', explanation: 'The LED is reversed. Flip it so current can flow anode to cathode.' },
+      { type: 'predict_behavior', question: 'You wired it correctly and apply power. What happens?', circuitDiagram: 'series_circuit', options: ['Nothing', 'The LED lights up', 'The resistor explodes', 'The battery reverses'], correct: 1, explanation: 'A correct series loop with a proper resistor lights the LED safely.' },
+      { type: 'true_false', statement: 'In this series loop, the same current flows through the resistor and the LED.', correct: true, explanation: 'Yes. One loop means one current, equal through every component.' },
+    ],
+  },
+
+  'Build a Parallel Circuit': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Two Branches', body: 'In parallel, each LED gets its own branch and its own resistor, and each branch sees the full supply voltage. The supply current is the sum of the branch currents.', circuitDiagram: 'parallel_circuit', showCurrentFlow: true },
+      { type: 'multiple_choice', question: 'For two LEDs at equal brightness in parallel, you should use...', options: ['One shared resistor for both', 'A resistor in each branch', 'No resistors', 'One resistor in series with the battery only'], correct: 1, explanation: 'A resistor per branch sets each LED current independently, keeping them matched.' },
+      { type: 'identify_component', question: 'Click a resistor in one of the parallel branches.', circuitDiagram: 'parallel_circuit', correctComponent: 'r1', explanation: 'Each branch has its own resistor.' },
+      { type: 'predict_behavior', question: 'You put a single resistor in the shared part and run two LEDs in parallel after it. What is the risk?', circuitDiagram: 'parallel_circuit', options: ['Nothing, it is ideal', 'The LEDs may glow unevenly and share current poorly', 'The voltage doubles', 'The battery charges'], correct: 1, explanation: 'Sharing one resistor lets the LEDs fight over current, so they often light unevenly. A resistor per branch fixes it.' },
+      { type: 'true_false', statement: 'Each branch of a parallel circuit sees the full supply voltage.', correct: true, explanation: 'Yes. Voltage is the same across parallel branches; the current is what splits.' },
+      { type: 'fill_blank', prompt: 'Two parallel branches each draw 10 mA. The supply provides ___ mA total.', blank: '___', answer: '20', hint: 'Parallel branch currents add: 10 + 10.' },
+    ],
+  },
+
+  'Switches in a Circuit': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Controlled Break', body: 'A switch is a controlled break in the loop. Closed, it completes the circuit and current flows. Open, it breaks the loop and current stops. A momentary (pushbutton) switch is only closed while pressed; a toggle switch stays where you flip it.' },
+      { type: 'multiple_choice', question: 'What happens when a switch in a series loop is open?', options: ['Current increases', 'Current stops, the loop is broken', 'Voltage doubles', 'Nothing changes'], correct: 1, explanation: 'An open switch breaks the loop, so no current flows.' },
+      { type: 'predict_behavior', question: 'An LED is lit. You open the switch in its loop. What happens?', circuitDiagram: 'series_circuit', options: ['It gets brighter', 'It goes out', 'It changes colour', 'Nothing'], correct: 1, explanation: 'Opening the switch breaks the loop, so the LED goes out.' },
+      { type: 'true_false', statement: 'A momentary pushbutton stays closed after you release it.', correct: false, explanation: 'No. A momentary switch is closed only while pressed; a toggle switch stays put.' },
+      { type: 'multiple_choice', question: 'Where should a switch go to control a whole series loop?', options: ['Anywhere in the loop', 'Only next to the battery + terminal', 'Only next to the LED', 'Outside the loop'], correct: 0, explanation: 'A series loop has one path, so a switch anywhere in it breaks the whole loop.' },
+      { type: 'match', instruction: 'Match each switch term to its meaning.', pairs: [['Closed', 'Loop complete, current flows'], ['Open', 'Loop broken, no current'], ['Momentary', 'Closed only while pressed'], ['Toggle', 'Stays where you set it'], ['SPST', 'Simple on/off, one circuit']] },
+    ],
+  },
+
+  'Common Wiring Mistakes': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'The Usual Suspects', body: 'Most beginner circuits fail for one of a few reasons: a reversed LED, a missing current-limiting resistor, both legs of a part in the same connected row, or an accidental short. Learn to spot them on sight.', circuitDiagram: 'breadboard_layout' },
+      { type: 'spot_error', question: 'Click what is wrong here.', circuitDiagram: 'reversed_led', correctRegion: 'reversed_led', explanation: 'The LED is backwards. Current only flows anode to cathode.' },
+      { type: 'spot_error', question: 'Click the dangerous fault.', circuitDiagram: 'short_circuit', correctRegion: 'short_wire', explanation: 'A wire bypasses the load, creating a short. Current spikes.' },
+      { type: 'spot_error', question: 'Click the missing piece.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'No current-limiting resistor, so the LED draws far too much current.' },
+      { type: 'multiple_choice', question: 'You put both legs of a resistor in the same connected breadboard row. What happens?', options: ['It works fine', 'The resistor is shorted out and does nothing', 'It doubles the resistance', 'The board breaks'], correct: 1, explanation: 'All holes in a row are joined, so both legs in one row short across the resistor, bypassing it.' },
+      { type: 'true_false', statement: 'A reversed LED will still light, just more dimly.', correct: false, explanation: 'No. Reversed, an LED blocks current and stays completely dark.' },
+    ],
+  },
+
+  'Debugging a Dead Circuit': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Work the Loop', body: 'When nothing happens, debug calmly and in order: check power first, then the loop is complete, then component orientation, then values. Most dead circuits are a broken loop or a reversed part, not a faulty component.' },
+      { type: 'drag_order', instruction: 'Order a sensible debugging sequence for a dead circuit.', items: ['Confirm power reaches the rails', 'Check the loop is complete (no gaps)', 'Check component orientation (LED polarity)', 'Check resistor and component values', 'Measure with a multimeter to confirm'], correctOrder: [0, 1, 2, 3, 4] },
+      { type: 'multiple_choice', question: 'An LED build does nothing. What is the most likely cause to check first?', options: ['A faulty LED', 'No power or a broken loop', 'The wrong brand of wire', 'Room temperature'], correct: 1, explanation: 'Dead-circuit faults are usually no power or a broken loop, check those before blaming a component.' },
+      { type: 'predict_reading', question: 'You measure 0V across the whole circuit even though the supply is on. What does that suggest?', circuitDiagram: 'series_circuit', options: ['Everything is fine', 'Power is not reaching the circuit (a break before it)', 'The LED is too bright', 'The resistor is too small'], correct: 1, explanation: 'No voltage across the circuit means power is not getting in, likely a break or disconnected rail upstream.' },
+      { type: 'true_false', statement: 'A loose jumper wire can make a whole circuit appear dead.', correct: true, explanation: 'Yes. One loose connection breaks the loop, and the whole circuit stops.' },
+      { type: 'match', instruction: 'Match each symptom to its likely cause.', pairs: [['Nothing happens', 'Broken loop or no power'], ['LED dark but circuit powered', 'LED reversed'], ['Wire gets hot', 'Short circuit'], ['LED very dim', 'Resistor too large'], ['LED burned out', 'Resistor missing or too small']] },
+    ],
+  },
+
+  'Unit 2 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'The long edge strips of a breadboard are normally used for...', options: ['Components', 'Power (+) and ground (−)', 'Labels', 'Nothing'], correct: 1, explanation: 'The edge rails distribute + and − across the board.' },
+      { type: 'true_false', statement: 'All holes along one power rail are connected together.', correct: true, explanation: 'Yes, a rail is one connected strip.' },
+      { type: 'identify_component', question: 'Click the LED in this schematic.', circuitDiagram: 'series_circuit', correctComponent: 'led', explanation: 'The triangle-and-bar symbol is the LED.' },
+      { type: 'spot_error', question: 'Click the fault in this circuit.', circuitDiagram: 'short_circuit', correctRegion: 'short_wire', explanation: 'A wire shorts across the load.' },
+      { type: 'predict_behavior', question: 'You open the switch in a lit LED loop. What happens?', circuitDiagram: 'series_circuit', options: ['Brighter', 'It goes out', 'No change', 'It flickers faster'], correct: 1, explanation: 'Opening the switch breaks the loop; the LED goes out.' },
+      { type: 'multiple_choice', question: 'Both legs of a component land in the same connected row. Result?', options: ['Works fine', 'The component is shorted out', 'Resistance doubles', 'Board breaks'], correct: 1, explanation: 'A connected row joins both legs, shorting the component.' },
+      { type: 'drag_order', instruction: 'Order a sensible debugging sequence.', items: ['Check power reaches the rails', 'Check the loop is complete', 'Check component orientation', 'Check component values'], correctOrder: [0, 1, 2, 3] },
+      { type: 'match', instruction: 'Match symptom to cause.', pairs: [['Nothing happens', 'Broken loop or no power'], ['LED dark, powered', 'LED reversed'], ['Wire gets hot', 'Short circuit'], ['LED burned out', 'No current-limiting resistor']] },
+    ],
+  },
+
+  // ═══════════════════════ Unit 3: Sensors & Signals ═══════════════════════
+
+  'Potentiometers': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'An Adjustable Resistor', body: 'A potentiometer (pot) is a resistor you can turn. Inside is a track of resistance and a sliding contact called the wiper. Turning the knob moves the wiper, changing the resistance between the wiper and each end. It lets you vary voltage and current by hand.', circuitDiagram: 'voltage_divider' },
+      { type: 'multiple_choice', question: 'What does the wiper in a potentiometer do?', options: ['Stores charge', 'Slides along the resistance track to change resistance', 'Generates voltage', 'Blocks current entirely'], correct: 1, explanation: 'The wiper taps a point along the resistive track, setting the resistance from the wiper to each end.' },
+      { type: 'teach', title: 'A Pot Is a Divider', body: 'Wire the two ends of a pot across your supply and the wiper becomes the midpoint of a voltage divider you can turn. That is why pots are used as volume knobs and to set adjustable thresholds.', circuitDiagram: 'voltage_divider' },
+      { type: 'predict_behavior', question: 'You turn the pot so the wiper moves toward the + end. What happens to the wiper voltage?', circuitDiagram: 'voltage_divider', options: ['It rises toward the supply voltage', 'It drops to zero', 'It stays fixed', 'It becomes negative'], correct: 0, explanation: 'Moving the wiper toward + gives it a larger share of the supply, so its voltage rises.' },
+      { type: 'true_false', statement: 'A potentiometer lets you vary resistance by turning a shaft.', correct: true, explanation: 'Yes. The wiper position sets the resistance, so turning the knob varies it.' },
+      { type: 'match', instruction: 'Match each potentiometer part to its role.', pairs: [['Wiper', 'Sliding contact, the output'], ['Track', 'The resistive element'], ['Two ends', 'Connect across the supply'], ['Knob', 'Moves the wiper'], ['Midpoint voltage', 'What the wiper taps off']] },
+    ],
+  },
+
+  'The LDR': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Light-Controlled Resistor', body: 'An LDR (light-dependent resistor), also called a photoresistor, is made from a semiconductor like cadmium sulfide. Light frees more charge carriers in the material, so its resistance drops in bright light and rises in darkness. It is a passive, non-polarised part with two leads.', circuitDiagram: 'ldr_alarm' },
+      { type: 'multiple_choice', question: 'What happens to an LDR\'s resistance in bright light?', options: ['It rises', 'It drops', 'It stays the same', 'It becomes infinite'], correct: 1, explanation: 'Light frees more charge carriers, so resistance falls in bright light.' },
+      { type: 'true_false', statement: 'An LDR\'s resistance increases as it gets darker.', correct: true, explanation: 'Yes. Less light means fewer free charge carriers, so resistance rises in the dark.' },
+      { type: 'identify_component', question: 'Click the light-sensing component.', circuitDiagram: 'ldr_alarm', correctComponent: 'ldr', explanation: 'The LDR changes resistance with light.' },
+      { type: 'multiple_choice', question: 'Is an LDR polarised (does orientation matter)?', options: ['Yes, like an LED', 'No, it works either way', 'Only in daylight', 'Only above 5V'], correct: 1, explanation: 'An LDR is a passive, non-polarised resistor, so either leg can face either way.' },
+      { type: 'predict_behavior', question: 'You put an LDR in a voltage divider and cover it with your hand. Its resistance rises. What does the divider output do (with the LDR on top)?', circuitDiagram: 'voltage_divider', options: ['The output voltage changes as the LDR resistance changes', 'Nothing ever changes', 'The supply voltage rises', 'The circuit shorts'], correct: 0, explanation: 'As the LDR resistance changes with light, it takes a different share of the voltage, so the divider output moves. That is how it senses light.' },
+    ],
+  },
+
+  'Thermistors': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Temperature-Controlled Resistor', body: 'A thermistor is a resistor whose value changes with temperature. The common NTC type (negative temperature coefficient) drops in resistance as it gets hotter. Like the LDR, it is a passive, non-polarised sensor you read with a voltage divider.' },
+      { type: 'multiple_choice', question: 'For a common NTC thermistor, as temperature rises its resistance...', options: ['Rises', 'Falls', 'Stays the same', 'Becomes negative'], correct: 1, explanation: 'NTC means negative temperature coefficient: resistance falls as temperature rises.' },
+      { type: 'true_false', statement: 'A thermistor and an LDR are both resistors whose value is changed by the world around them.', correct: true, explanation: 'Yes. One responds to temperature, the other to light, but both are variable resistors you read with a divider.' },
+      { type: 'multiple_choice', question: 'How do you read a thermistor\'s resistance as a voltage?', options: ['Connect it straight to 5V', 'Put it in a voltage divider with a fixed resistor', 'Use it as an LED', 'You cannot'], correct: 1, explanation: 'A divider turns the changing resistance into a changing voltage a pin can read, just like the LDR.' },
+      { type: 'match', instruction: 'Match each sensor to what it responds to.', pairs: [['LDR', 'Light'], ['NTC thermistor', 'Temperature'], ['Potentiometer', 'A turn of the knob'], ['Fixed resistor', 'Nothing, it is constant']] },
+    ],
+  },
+
+  'Divider as a Sensor': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Resistance Into Voltage', body: 'A microcontroller cannot read resistance directly, it reads voltage. The trick: put your sensor (LDR or thermistor) and a fixed resistor in a voltage divider. As the sensor resistance changes, the midpoint voltage changes, and that is what the pin reads.', circuitDiagram: 'ldr_alarm' },
+      { type: 'identify_component', question: 'Click the point where the changing voltage is read.', circuitDiagram: 'ldr_alarm', correctComponent: 'a0', explanation: 'The analog pin A0 reads the divider midpoint voltage.' },
+      { type: 'predict_reading', question: 'LDR on top, 10kΩ fixed resistor on the bottom, 5V supply. In bright light the LDR is low resistance (say 1kΩ). Predict the midpoint voltage.', circuitDiagram: 'voltage_divider', options: ['About 0.5 V', 'About 2.5 V', 'About 4.5 V', 'Exactly 5 V'], correct: 2, explanation: 'Vout = 5 × 10k / (1k + 10k) ≈ 4.5V. In bright light the LDR drops, so the bottom resistor keeps most of the voltage.' },
+      { type: 'predict_behavior', question: 'Now it goes dark, so the LDR resistance shoots up to 200kΩ. What happens to the midpoint voltage?', circuitDiagram: 'voltage_divider', options: ['It rises', 'It falls toward 0', 'It stays at 4.5V', 'It doubles past 5V'], correct: 1, explanation: 'A huge LDR resistance takes most of the voltage, so the midpoint (across the 10k) falls. Dark = low reading.' },
+      { type: 'fill_blank', prompt: 'A divider turns a changing ___ into a changing voltage the pin can read.', blank: '___', answer: 'resistance', hint: 'The sensor changes this; the divider converts it to a voltage.' },
+      { type: 'true_false', statement: 'A microcontroller pin reads voltage, not resistance directly.', correct: true, explanation: 'Yes. That is exactly why we use a divider to convert resistance into a readable voltage.' },
+    ],
+  },
+
+  'Analog vs Digital': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Two Kinds of Signal', body: 'A digital signal has just two states: HIGH (on) or LOW (off). An analog signal is a continuous range in between. A button is digital; a light sensor is analog because the brightness can be anything from dark to dazzling.' },
+      { type: 'multiple_choice', question: 'Which of these is an analog signal?', options: ['A push button (pressed or not)', 'A light sensor reading brightness', 'A power switch', 'A door that is open or shut'], correct: 1, explanation: 'Brightness varies continuously, so it is analog. The others are two-state (digital).' },
+      { type: 'teach', title: 'Reading Analog', body: 'A microcontroller reads analog voltage with an analog-to-digital converter. A common 10-bit converter maps 0V to 5V onto the numbers 0 to 1023. So a midpoint of 2.5V reads about 512.' },
+      { type: 'fill_blank', prompt: 'A 10-bit analog reading ranges from 0 to ___', blank: '___', answer: '1023', hint: '2 to the power 10, minus 1.' },
+      { type: 'predict_reading', question: 'A sensor sits at the divider midpoint of 2.5V on a 5V system with a 0 to 1023 reading. Predict the value.', circuitDiagram: 'voltage_divider', options: ['About 0', 'About 256', 'About 512', 'About 1023'], correct: 2, explanation: '2.5V is half of 5V, so it maps to about half of 1023, roughly 512.' },
+      { type: 'match', instruction: 'Sort each signal.', pairs: [['Push button', 'Digital'], ['Light level', 'Analog'], ['On/off switch', 'Digital'], ['Temperature', 'Analog'], ['Volume knob', 'Analog']] },
+    ],
+  },
+
+  'Planning the Light Alarm': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'The Whole System', body: 'The Light-Activated Alarm has three parts: a SENSE stage (an LDR voltage divider), a DECIDE stage (compare the reading to a threshold), and an ACT stage (turn on an LED or buzzer). Sense, decide, act: the shape of almost every useful circuit.', circuitDiagram: 'ldr_alarm' },
+      { type: 'multiple_choice', question: 'What is the job of the sense stage in the alarm?', options: ['Make noise', 'Turn light level into a voltage to read', 'Limit current to the LED', 'Store power'], correct: 1, explanation: 'The LDR divider senses light and turns it into a readable voltage.' },
+      { type: 'drag_order', instruction: 'Order the three stages of the alarm.', items: ['Sense the light (LDR divider)', 'Decide (compare to a threshold)', 'Act (LED or buzzer on)'], correctOrder: [0, 1, 2] },
+      { type: 'identify_component', question: 'Click the part that produces the alarm output.', circuitDiagram: 'ldr_alarm', correctComponent: 'led', explanation: 'The LED (or a buzzer) is the act stage, the alarm output.' },
+      { type: 'match', instruction: 'Match each stage to its component.', pairs: [['Sense', 'LDR + resistor divider'], ['Decide', 'Threshold comparison'], ['Act', 'LED or buzzer'], ['Read point', 'Analog pin A0']] },
+      { type: 'true_false', statement: 'Sense, decide, act is a pattern you will reuse in many circuits.', correct: true, explanation: 'Yes. Most useful builds sense something, decide based on it, and act.' },
+    ],
+  },
+
+  'Setting the Threshold': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Where to Draw the Line', body: 'The threshold is the reading at which the alarm flips from off to on. Set it between the typical bright reading and the typical dark reading. Too close to one and it triggers by accident; well between them and it is reliable.' },
+      { type: 'predict_behavior', question: 'In bright light the LDR divider reads about 800, and in darkness about 200. Where is a sensible threshold for a darkness alarm?', options: ['Around 950', 'Around 500', 'Around 50', 'Exactly 1023'], correct: 1, explanation: 'A threshold around 500 sits comfortably between 200 (dark) and 800 (light), so it triggers cleanly when it gets dark.' },
+      { type: 'multiple_choice', question: 'You set the threshold at 790, just below the bright reading of 800. What is the risk?', options: ['It is perfect', 'A tiny dip in light triggers it by accident', 'It will never trigger', 'It damages the LDR'], correct: 1, explanation: 'A threshold hugging the bright reading triggers on the smallest shadow. Leave a margin.' },
+      { type: 'predict_behavior', question: 'Darkness alarm with threshold 500. The room goes dark and the reading falls to 200. What does the alarm do?', circuitDiagram: 'ldr_alarm', options: ['Stays off', 'Turns on', 'Explodes', 'Resets the board'], correct: 1, explanation: 'The reading (200) dropped below the threshold (500), so the decide stage fires the alarm.' },
+      { type: 'true_false', statement: 'A good threshold sits roughly between the bright and dark readings.', correct: true, explanation: 'Yes. Midway gives margin against noise and accidental triggers.' },
+      { type: 'fill_blank', prompt: 'Bright reads 800, dark reads 200. A safe middle threshold is about ___', blank: '___', answer: '500', hint: 'Halfway between 200 and 800.' },
+    ],
+  },
+
+  'Wiring the Light Alarm': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Bring It Together', body: 'Time to wire the full alarm: the LDR and a 10kΩ resistor form the divider, the midpoint goes to the analog pin, and the LED (with its own resistor) is the output. This is the capstone of everything so far.', circuitDiagram: 'ldr_alarm' },
+      { type: 'draw_connection', instruction: 'Wire the LDR divider: 5V to the LDR, LDR to the junction, junction to the 10kΩ resistor, resistor to ground, and the junction to A0.', terminals: [{ x: 60, y: 40, label: '5V', id: 'vcc' }, { x: 180, y: 40, label: 'LDR', id: 'ldr' }, { x: 300, y: 40, label: 'A0', id: 'a0' }, { x: 180, y: 140, label: '10kΩ', id: 'res' }, { x: 180, y: 240, label: 'GND', id: 'gnd' }], expectedConnections: [['vcc', 'ldr'], ['ldr', 'a0'], ['ldr', 'res'], ['res', 'gnd']], explanation: '5V → LDR → junction → 10kΩ → GND, with the junction also feeding A0. The divider midpoint is what the pin reads.' },
+      { type: 'identify_component', question: 'Click the component that limits current to the output LED.', circuitDiagram: 'ldr_alarm', correctComponent: 'led_resistor', explanation: 'The series resistor on the LED branch limits its current, just like every LED you have wired.' },
+      { type: 'spot_error', question: 'The alarm LED never lights even when triggered. Click the likely wiring fault.', circuitDiagram: 'reversed_led', correctRegion: 'reversed_led', explanation: 'The output LED is reversed. Flip it so current can flow.' },
+      { type: 'predict_behavior', question: 'Everything is wired and the threshold is set. You cover the LDR. What happens?', circuitDiagram: 'ldr_alarm', options: ['Nothing', 'The reading falls below the threshold and the alarm LED turns on', 'The LDR burns out', 'The supply doubles'], correct: 1, explanation: 'Covering the LDR raises its resistance, the reading drops past the threshold, and the act stage lights the LED.' },
+      { type: 'true_false', statement: 'You have now built sense, decide, and act into one working circuit.', correct: true, explanation: 'Yes. That is the full Light-Activated Alarm, and the pattern behind countless real devices.' },
+    ],
+  },
+
+  'Unit 3 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'In bright light, an LDR\'s resistance...', options: ['Rises', 'Falls', 'Stays the same', 'Goes infinite'], correct: 1, explanation: 'Light frees charge carriers, so resistance falls.' },
+      { type: 'multiple_choice', question: 'A common NTC thermistor, as it heats up, has resistance that...', options: ['Rises', 'Falls', 'Stays fixed', 'Reverses'], correct: 1, explanation: 'NTC: resistance falls as temperature rises.' },
+      { type: 'identify_component', question: 'Click where the divider voltage is read.', circuitDiagram: 'ldr_alarm', correctComponent: 'a0', explanation: 'A0 reads the divider midpoint.' },
+      { type: 'predict_reading', question: 'A sensor sits at 2.5V on a 5V, 0 to 1023 system. Predict the reading.', circuitDiagram: 'voltage_divider', options: ['0', '256', '512', '1023'], correct: 2, explanation: 'Half of 5V maps to about half of 1023, ~512.' },
+      { type: 'multiple_choice', question: 'Which signal is analog?', options: ['A push button', 'A light level', 'An on/off switch', 'A closed door'], correct: 1, explanation: 'Light level varies continuously, so it is analog.' },
+      { type: 'drag_order', instruction: 'Order the alarm\'s three stages.', items: ['Sense the light', 'Decide against a threshold', 'Act (LED on)'], correctOrder: [0, 1, 2] },
+      { type: 'predict_behavior', question: 'Darkness alarm, threshold 500. The room darkens and the reading drops to 180. What happens?', circuitDiagram: 'ldr_alarm', options: ['Alarm stays off', 'Alarm turns on', 'LDR burns out', 'Nothing'], correct: 1, explanation: 'The reading fell below the threshold, so the alarm fires.' },
+      { type: 'match', instruction: 'Match each sensor to what it senses.', pairs: [['LDR', 'Light'], ['Thermistor', 'Temperature'], ['Potentiometer', 'A knob turn'], ['Button', 'Pressed or not']] },
+    ],
+  },
 };

@@ -135,6 +135,59 @@ input behaviour (Exploring Arduino, Blum). Verified.
 
 ---
 
+## Unit 2 — On the Breadboard
+
+All breadboard mechanics grounded in **ME** (Make: Electronics, Ch.2, the
+solderless breadboard, solid-core 22-gauge wire, toggle/pushbutton switches) and
+standard breadboard reference.
+
+- **Power Rails** (new) — edge bus rails carry + and −, every hole along a rail
+  connected: ME Ch.2 breadboard layout. Verified.
+- **Jumper Wires** (new) — solid-core ~22-gauge wire is ideal, stranded frays:
+  ME Ch.2 (Figs 2-7/2-8). Verified.
+- **From Schematic to Breadboard** (new) — schematic = connections by symbol vs
+  physical layout; the "both legs in one row shorts it" rule: ME Ch.2; standard.
+- **Build a Series LED Circuit** (new) — power → resistor → LED → ground, resistor
+  limits current: ME Exp.2; Ohm's law (STG). Verified.
+- **Build a Parallel Circuit** (new) — a resistor per branch, branches see full
+  voltage, branch currents add: STG Ch.1 (parallel); EAC Vol.2 (LEDs). Verified.
+- **Switches in a Circuit** (new) — switch = controlled break; momentary vs toggle,
+  SPST: ME Ch.2 (toggle + pushbutton switches). Verified.
+- **Common Wiring Mistakes** (new) — reversed LED, missing resistor, short, both
+  legs in one row: ME Ch.1–2; STG. Verified.
+- **Debugging a Dead Circuit** (new) — check power → loop → orientation → values →
+  measure: standard fault-finding method (ME; PEI multimeter use). Verified.
+- **Unit 2 Checkpoint** (new) — mixed retrieval over the above; no new claims.
+
+## Unit 3 — Sensors & Signals
+
+Variable-resistance components grounded in **EAC Vol.3 (Sensors)** and **ME**.
+
+- **Potentiometers** (new) — a resistor with a sliding wiper that varies voltage
+  and current; used as an adjustable divider: ME Exp. ("Look Inside Your
+  Potentiometer", the coil + wiper; "vary voltage and current by varying
+  resistance"). Verified.
+- **The LDR** (new) — photoresistor of cadmium sulfide; light frees charge
+  carriers so resistance falls in light and rises in dark; passive, non-polarised:
+  EAC Vol.3 Ch.20 "Photoresistor" (How It Works). Verified.
+- **Thermistors** (new) — NTC thermistor resistance falls as temperature rises
+  (negative temperature coefficient); passive, non-polarised, read with a divider:
+  EAC Vol.3 Ch.23 "NTC thermistor". Verified.
+- **Divider as a Sensor** (new) — sensor + fixed resistor divider converts changing
+  resistance into a readable voltage; worked values (LDR 1k bright → ~4.5V, dark
+  200k → low): PEI Ch.2 (dividers); EAC Vol.3. Arithmetic verified.
+- **Analog vs Digital** (new) — digital = two states, analog = continuous; 10-bit
+  ADC maps 0–5V to 0–1023, midpoint ≈ 512: Exploring Arduino (Blum); EAC Vol.3.
+  Verified.
+- **Planning the Light Alarm** (new) — sense → decide → act system shape for the
+  LDR alarm: synthesis of the divider (PEI) + LDR (EAC Vol.3); the flagship build.
+- **Setting the Threshold** (new) — choose a threshold between the bright and dark
+  readings with margin: standard sensor-thresholding practice; reasoning verified.
+- **Wiring the Light Alarm** (new) — LDR + 10k divider → A0, LED with its own
+  resistor as output: matches the existing `ldr_alarm` diagram + Sensor Signal
+  Sanity Checks lesson. Verified.
+- **Unit 3 Checkpoint** (new) — mixed retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

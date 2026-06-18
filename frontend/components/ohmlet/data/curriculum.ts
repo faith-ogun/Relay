@@ -92,6 +92,15 @@ export const CURRICULUM: CurriculumUnit[] = [
           { id: 'Measuring Your Circuit', title: 'Measuring Your Circuit', summary: 'Predict and read voltage and current with a meter.', estMinutes: 12 },
         ],
       },
+      {
+        id: 'foundations-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove the foundations before moving to the breadboard.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 1 Checkpoint', title: 'Unit 1 Checkpoint', summary: 'A mixed test of everything in Foundations.', estMinutes: 10 },
+        ],
+      },
     ],
   },
   {
@@ -103,20 +112,53 @@ export const CURRICULUM: CurriculumUnit[] = [
     skills: [
       {
         id: 'breadboarding',
-        title: 'Breadboarding',
+        title: 'The Breadboard',
         description: 'How the board connects, and how to wire it cleanly.',
         icon: 'Wrench',
         lessons: [
           { id: 'Breadboard Confidence Drill', title: 'Breadboard Confidence Drill', summary: 'Internal connections and clean placement.', estMinutes: 15 },
+          { id: 'Power Rails', title: 'Power Rails', summary: 'The + and − bus rails that feed the board.', estMinutes: 8 },
+          { id: 'Jumper Wires', title: 'Jumper Wires', summary: 'Bridging points with clean solid-core wire.', estMinutes: 8 },
         ],
       },
       {
-        id: 'circuit-safety',
-        title: 'Circuit Safety',
-        description: 'Spot shorts and overloads before they cost you a component.',
-        icon: 'Wrench',
+        id: 'building-circuits',
+        title: 'Building Circuits',
+        description: 'Translate a schematic into a working build.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'From Schematic to Breadboard', title: 'Schematic to Breadboard', summary: 'Read a schematic and lay it out for real.', estMinutes: 10 },
+          { id: 'Build a Series LED Circuit', title: 'Build a Series LED', summary: 'Wire your first working loop.', estMinutes: 12 },
+          { id: 'Build a Parallel Circuit', title: 'Build a Parallel Circuit', summary: 'Two branches, one resistor each.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'switches-control',
+        title: 'Switches & Control',
+        description: 'Open and close the loop on demand.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'Switches in a Circuit', title: 'Switches in a Circuit', summary: 'A controlled break in the loop.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'debugging-safety',
+        title: 'Debugging & Safety',
+        description: 'Spot the faults that kill a circuit.',
+        icon: 'Gauge',
         lessons: [
           { id: 'Short Circuits and Safety', title: 'Short Circuits & Safety', summary: 'What a short is, why it is dangerous, and how to avoid it.', estMinutes: 12 },
+          { id: 'Common Wiring Mistakes', title: 'Common Wiring Mistakes', summary: 'Reversed LEDs, missing resistors, shorts.', estMinutes: 10 },
+          { id: 'Debugging a Dead Circuit', title: 'Debugging a Dead Circuit', summary: 'Work the loop in order to find the fault.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'breadboard-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can build and debug on the board.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 2 Checkpoint', title: 'Unit 2 Checkpoint', summary: 'A mixed test of everything on the breadboard.', estMinutes: 10 },
         ],
       },
     ],
@@ -129,13 +171,46 @@ export const CURRICULUM: CurriculumUnit[] = [
     accent: 'green',
     skills: [
       {
-        id: 'reading-sensors',
-        title: 'Reading Sensors',
-        description: 'Turn light, heat, and motion into numbers you can trust.',
+        id: 'variable-resistance',
+        title: 'Variable Resistance',
+        description: 'Components whose resistance changes with the world.',
         icon: 'Gauge',
         lessons: [
+          { id: 'Potentiometers', title: 'Potentiometers', summary: 'A resistor you can turn by hand.', estMinutes: 10 },
+          { id: 'The LDR', title: 'The LDR', summary: 'Resistance that drops in light.', estMinutes: 10 },
+          { id: 'Thermistors', title: 'Thermistors', summary: 'Resistance that changes with temperature.', estMinutes: 8 },
+        ],
+      },
+      {
+        id: 'reading-sensors',
+        title: 'Reading Sensors',
+        description: 'Turn changing resistance into numbers you can trust.',
+        icon: 'Cpu',
+        lessons: [
           { id: 'The Voltage Divider', title: 'The Voltage Divider', summary: 'Split a voltage, then turn it into a sensor.', estMinutes: 14 },
-          { id: 'Sensor Signal Sanity Checks', title: 'Sensor Signal Sanity Checks', summary: 'Verify sensor output before trusting it in code.', estMinutes: 18 },
+          { id: 'Divider as a Sensor', title: 'Divider as a Sensor', summary: 'Swap a fixed resistor for an LDR.', estMinutes: 12 },
+          { id: 'Analog vs Digital', title: 'Analog vs Digital', summary: 'Continuous signals and the 0 to 1023 reading.', estMinutes: 10 },
+          { id: 'Sensor Signal Sanity Checks', title: 'Sensor Signal Sanity Checks', summary: 'Verify sensor output before trusting it.', estMinutes: 18 },
+        ],
+      },
+      {
+        id: 'light-alarm',
+        title: 'The Light-Activated Alarm',
+        description: 'Sense, decide, act: build the flagship.',
+        icon: 'Lightbulb',
+        lessons: [
+          { id: 'Planning the Light Alarm', title: 'Planning the Alarm', summary: 'Sense, decide, act: the system shape.', estMinutes: 10 },
+          { id: 'Setting the Threshold', title: 'Setting the Threshold', summary: 'Where to draw the on/off line.', estMinutes: 10 },
+          { id: 'Wiring the Light Alarm', title: 'Wiring the Alarm', summary: 'Bring the whole build together.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'sensors-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can sense the world and act on it.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 3 Checkpoint', title: 'Unit 3 Checkpoint', summary: 'A mixed test of sensors, signals, and the alarm.', estMinutes: 10 },
         ],
       },
     ],

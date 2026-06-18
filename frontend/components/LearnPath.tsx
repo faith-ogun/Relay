@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Gauge, Lock, Play, Wrench, Zap } from 'lucide-react';
+import { Check, Cpu, Gauge, Lightbulb, Lock, Play, Trophy, Wrench, Zap } from 'lucide-react';
 import {
   CURRICULUM,
   allLessons,
@@ -20,6 +20,9 @@ const SKILL_ICONS: Record<string, IconType> = {
   Zap,
   Wrench,
   Gauge,
+  Cpu,
+  Lightbulb,
+  Trophy,
 };
 
 const ACCENT: Record<CurriculumAccent, { chip: string; ring: string; done: string }> = {

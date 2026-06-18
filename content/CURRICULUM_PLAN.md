@@ -82,6 +82,35 @@ lesson 5x" model: that is tuned for vocabulary recall, and we teach skills.
 
 ---
 
+## 2b. Difficulty sequencing & unit checkpoints (decided 2026-06-18)
+
+Three questions came up while building; here are the decisions.
+
+**How is difficulty ordered, beginner-then-intermediate or interleaved?**
+Progressive, not interleaved. The path runs several **beginner** units, then
+**intermediate**, then **advanced**, each unit a notch harder than the last (this
+mirrors Duolingo's sections: beginner sections 1–4, intermediate 5–8). Every unit
+carries a `level` field and the path shows the level badge. Current order:
+Foundations (beginner) → On the Breadboard (beginner) → Sensors & Signals
+(intermediate) → … We do not randomly mix easy and hard units; the ramp is the
+point. Difficulty rises *within* a unit too (intro → practice → capstone lessons).
+
+**Is there a test at the end of each unit before you progress?**
+Yes. Every unit now ends in a **Unit Checkpoint**: a mixed, cumulative test drawn
+from across the unit, with **no teach steps** (pure retrieval) and bonus XP (50).
+Because the path unlocks linearly (the next lesson unlocks when the previous is
+complete), the checkpoint is automatically the gate: you cannot reach the next
+unit's lessons until you have passed that unit's checkpoint. This is the concrete
+implementation of the "Unit Checkpoint ceremony" in §3.
+
+**How is mastery actually tested, is it just "didn't lose 3 hearts"?**
+Today, yes, plus the checkpoint. A lesson is mastered by getting through all its
+steps without losing all 3 hearts; lose all 3 and you restart **that lesson** from
+the beginning (hearts reset to 3, never carrying between lessons). The unit
+checkpoint then re-tests the whole unit. The richer model in §2 (80% pass with a
+remixed targeted retry, per-skill strength) is the planned upgrade; the hearts +
+checkpoint model is the shipped version and is genuinely Duolingo-shaped.
+
 ## 3. Spaced repetition and review
 
 Right-sized for skill mastery and sparse early data (not raw Half-Life Regression,

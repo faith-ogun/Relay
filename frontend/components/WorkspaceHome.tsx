@@ -165,6 +165,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
   if (running) {
     return (
       <LessonRunner
+        key={running.id}
         lessonId={running.id}
         accent={running.accent}
         onExit={() => setRunning(null)}
