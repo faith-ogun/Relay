@@ -50,7 +50,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
   const [fill, setFill] = useState('');
   const [region, setRegion] = useState<string | null>(null);
   const [order, setOrder] = useState<number[]>([]);
-  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [matched, setMatched] = useState<Set<number>>(new Set()); // completed LEFT pair indices
+  const [matchedRights, setMatchedRights] = useState<Set<number>>(new Set()); // consumed RIGHT chip indices
   const [matchSel, setMatchSel] = useState<{ side: 'l' | 'r'; idx: number } | null>(null);
   const [rightOrder, setRightOrder] = useState<number[]>([]);
   const [drawn, setDrawn] = useState<Array<[string, string]>>([]);
@@ -67,6 +68,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
     setFill('');
     setRegion(null);
     setMatched(new Set());
+    setMatchedRights(new Set());
     setMatchSel(null);
     setDrawn([]);
     setDrawSel(null);
@@ -246,6 +248,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
           setOrder={setOrder}
           matched={matched}
           setMatched={setMatched}
+          matchedRights={matchedRights}
+          setMatchedRights={setMatchedRights}
           matchSel={matchSel}
           setMatchSel={setMatchSel}
           rightOrder={rightOrder}
@@ -329,6 +333,8 @@ interface StepViewProps {
   setOrder: (o: number[]) => void;
   matched: Set<number>;
   setMatched: (s: Set<number>) => void;
+  matchedRights: Set<number>;
+  setMatchedRights: (s: Set<number>) => void;
   matchSel: { side: 'l' | 'r'; idx: number } | null;
   setMatchSel: (s: { side: 'l' | 'r'; idx: number } | null) => void;
   rightOrder: number[];
@@ -511,28 +517,49 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
   step,
   matched,
   setMatched,
+  matchedRights,
+  setMatchedRights,
   matchSel,
   setMatchSel,
   rightOrder,
 }) => {
+  // Brief red flash on a wrong pairing (so a wrong tap gives feedback, not silence).
+  const [wrong, setWrong] = useState<{ l: number; r: number } | null>(null);
+
   const select = (side: 'l' | 'r', idx: number) => {
-    if (matched.has(idx)) return;
-    if (!matchSel) {
+    // Already consumed? (left and right are tracked independently)
+    if (side === 'l' && matched.has(idx)) return;
+    if (side === 'r' && matchedRights.has(idx)) return;
+
+    // First pick, or re-pick on the same side.
+    if (!matchSel || matchSel.side === side) {
       setMatchSel({ side, idx });
       return;
     }
-    if (matchSel.side === side) {
-      setMatchSel({ side, idx });
-      return;
-    }
-    // Pair: a left index always corresponds to the same pair index.
+
     const leftIdx = side === 'l' ? idx : matchSel.idx;
     const rightIdx = side === 'r' ? idx : matchSel.idx;
-    if (leftIdx === rightIdx) {
+
+    // Match by VALUE, not position: any right chip with the correct value counts.
+    // This makes categorisation work (two materials can both be "Conductor").
+    if (step.pairs[leftIdx][1] === step.pairs[rightIdx][1]) {
       setMatched(new Set([...matched, leftIdx]));
+      setMatchedRights(new Set([...matchedRights, rightIdx]));
+    } else {
+      setWrong({ l: leftIdx, r: rightIdx });
+      window.setTimeout(() => setWrong(null), 650);
     }
     setMatchSel(null);
   };
+
+  const cls = (on: boolean, sel: boolean, isWrong: boolean) =>
+    on
+      ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
+      : isWrong
+      ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red'
+      : sel
+      ? 'border-ohmlet-ink bg-ohmlet-gold-soft'
+      : 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
 
   return (
     <div className="ohmlet-rise">
@@ -544,12 +571,10 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
             const sel = matchSel?.side === 'l' && matchSel.idx === i;
             return (
               <button
-                key={left}
+                key={i}
                 disabled={on}
                 onClick={() => select('l', i)}
-                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${
-                  on ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep' : sel ? 'border-ohmlet-ink bg-ohmlet-gold-soft' : 'border-ohmlet-line bg-white hover:border-ohmlet-ink'
-                }`}
+                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${cls(on, sel, wrong?.l === i)}`}
               >
                 {left}
               </button>
@@ -559,16 +584,14 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
         <div className="space-y-3">
           {rightOrder.map((pairIdx) => {
             const right = step.pairs[pairIdx][1];
-            const on = matched.has(pairIdx);
+            const on = matchedRights.has(pairIdx);
             const sel = matchSel?.side === 'r' && matchSel.idx === pairIdx;
             return (
               <button
-                key={right}
+                key={pairIdx}
                 disabled={on}
                 onClick={() => select('r', pairIdx)}
-                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${
-                  on ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep' : sel ? 'border-ohmlet-ink bg-ohmlet-gold-soft' : 'border-ohmlet-line bg-white hover:border-ohmlet-ink'
-                }`}
+                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${cls(on, sel, wrong?.r === pairIdx)}`}
               >
                 {right}
               </button>
@@ -577,7 +600,7 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
         </div>
       </div>
       <p className="mt-4 text-center text-sm font-semibold text-ohmlet-ink-soft">
-        {matched.size}/{step.pairs.length} matched. Tap a term, then its definition.
+        {matched.size}/{step.pairs.length} matched. Tap a term, then its match.
       </p>
     </div>
   );

@@ -113,7 +113,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'identify_component', question: 'Click one of the resistors in this parallel circuit.', circuitDiagram: 'parallel_circuit', correctComponent: 'r1', explanation: 'Each branch has its own resistor. In parallel, you generally give every LED its own resistor.' },
       { type: 'fill_blank', prompt: 'Two 10kΩ resistors connected in series add up to ___ kΩ', blank: '___', answer: '20', hint: 'Series resistances simply add: 10 + 10.' },
       { type: 'multiple_choice', question: 'You want three LEDs at the same brightness from one 5V supply. Best approach?', options: ['One resistor for all three in parallel', 'Each LED in its own branch with its own resistor', 'All three LEDs in series with no resistor', 'Connect them straight to 5V'], correct: 1, explanation: 'Give each parallel LED its own resistor so they share current evenly and stay at matched brightness.' },
-      { type: 'match', instruction: 'Match the circuit type to its behavior.', pairs: [['Series', 'Same current everywhere'], ['Parallel', 'Current splits between branches'], ['Series', 'Voltage divides across parts'], ['Parallel', 'Each branch sees full voltage']] },
+      { type: 'match', instruction: 'Match each idea to the circuit it describes.', pairs: [['Same current everywhere', 'Series'], ['Current splits between branches', 'Parallel'], ['Resistors add: R1 + R2', 'Series'], ['Every branch sees full voltage', 'Parallel']] },
     ],
   },
   'Short Circuits and Safety': {
