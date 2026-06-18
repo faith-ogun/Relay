@@ -7,9 +7,22 @@ import { BuildPage } from './components/BuildPage';
 import { BlogPage } from './components/BlogPage';
 import { BlogPostPage } from './components/BlogPostPage';
 import { PricingPage } from './components/PricingPage';
+import { LegalPage } from './components/legal/LegalPage';
+import { SupportPage } from './components/SupportPage';
 import { WorkspaceHome } from './components/WorkspaceHome';
 
-type AppRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app' | 'workspace';
+type AppRoute =
+  | 'landing'
+  | 'learn'
+  | 'build'
+  | 'blog'
+  | 'pricing'
+  | 'terms'
+  | 'privacy'
+  | 'cookies'
+  | 'support'
+  | 'ohmlet-app'
+  | 'workspace';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
   landing: '/',
@@ -17,6 +30,10 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   build: '/build',
   blog: '/blog',
   pricing: '/pricing',
+  terms: '/terms',
+  privacy: '/privacy',
+  cookies: '/cookies',
+  support: '/support',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
 };
@@ -45,6 +62,10 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/build') return 'build';
   if (normalized === '/blog' || normalized.startsWith('/blog/')) return 'blog';
   if (normalized === '/pricing') return 'pricing';
+  if (normalized === '/terms') return 'terms';
+  if (normalized === '/privacy') return 'privacy';
+  if (normalized === '/cookies') return 'cookies';
+  if (normalized === '/support') return 'support';
   if (normalized === '/workspace') return 'workspace';
 
   return 'landing';
@@ -140,8 +161,12 @@ const App: React.FC = () => {
               <BlogPage onNavigate={navigate} onOpenPost={openPost} />
             ))}
           {route === 'pricing' && <PricingPage onNavigate={navigate} />}
+          {(route === 'terms' || route === 'privacy' || route === 'cookies') && (
+            <LegalPage slug={route} onNavigate={navigate} />
+          )}
+          {route === 'support' && <SupportPage onNavigate={navigate} />}
         </main>
-        <Footer />
+        <Footer onNavigate={navigate} />
       </div>
     </div>
   );
