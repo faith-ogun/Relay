@@ -10,6 +10,8 @@ import { PricingPage } from './components/PricingPage';
 import { LegalPage } from './components/legal/LegalPage';
 import { SupportPage } from './components/SupportPage';
 import { WorkspaceHome } from './components/WorkspaceHome';
+import { AuthorPreview } from './components/ohmlet/views/AuthorPreview';
+import { useIdentity } from './hooks/useIdentity';
 
 type AppRoute =
   | 'landing'
@@ -21,6 +23,7 @@ type AppRoute =
   | 'privacy'
   | 'cookies'
   | 'support'
+  | 'author'
   | 'ohmlet-app'
   | 'workspace';
 
@@ -34,6 +37,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   privacy: '/privacy',
   cookies: '/cookies',
   support: '/support',
+  author: '/author',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
 };
@@ -66,6 +70,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/privacy') return 'privacy';
   if (normalized === '/cookies') return 'cookies';
   if (normalized === '/support') return 'support';
+  if (normalized === '/author') return 'author';
   if (normalized === '/workspace') return 'workspace';
 
   return 'landing';
@@ -79,6 +84,7 @@ const resolveBlogSlug = (pathname: string): string | null => {
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
+  const { isAdmin } = useIdentity();
 
   const navigate = useCallback((nextRoute: AppRoute) => {
     const nextPath = ROUTE_PATHS[nextRoute];
@@ -126,6 +132,12 @@ const App: React.FC = () => {
 
   if (route === 'ohmlet-app' || route === 'workspace') {
     return <WorkspaceHome onBack={backToLanding} />;
+  }
+
+  // /author is the admin-only lesson review console. Non-admins get the landing
+  // page (the route simply isn't theirs).
+  if (route === 'author') {
+    return isAdmin ? <AuthorPreview onBack={backToLanding} /> : <Home onNavigate={navigate} />;
   }
 
   const darkShell = false;

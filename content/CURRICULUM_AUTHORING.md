@@ -66,9 +66,55 @@ Author a mix: lead with `teach`, reinforce with 2–4 interactive checks, end wi
 
 1. Author the steps and add an entry to `LESSON_CONTENT` keyed by a stable id.
 2. Reference that id from a Skill in `CURRICULUM` (or create a new Unit/Skill).
-3. Run `validateCurriculum()` (returns `[]` when healthy) and `npm run build`.
-4. Keep the tutor grounded: the live tutor is fed the current lesson's authored
+3. Run `npm run lint:lessons` (must pass with 0 errors) and `npm run build`.
+4. Open `/author` (admin only) and preview the lesson through the real runner.
+5. Keep the tutor grounded: the live tutor is fed the current lesson's authored
    content so it teaches from verified material, not free recall.
+
+## The rails (authoring tooling)
+
+Three pieces turn lesson-writing from slow hand-craft into reviewed assembly:
+
+### 1. The linter — `npm run lint:lessons`
+
+`frontend/components/ohmlet/data/lessonSchema.ts` validates every lesson and step;
+`frontend/scripts/lint-lessons.mjs` runs it over the real data (via Vite's module
+loader, no extra tooling) and exits non-zero on any error. It catches what a human
+would otherwise only find by playing every lesson:
+
+- out-of-range `correct` indices, empty options/questions, duplicate options
+- `drag_order.correctOrder` that is not a permutation of the items
+- `spot_error` / `identify_component` whose region is **not a clickable region of
+  that circuit** (the most common silent bug)
+- unknown circuit references; malformed `draw_connection` terminals/connections
+- lessons referenced in the curriculum with no content, and orphans
+- warnings: missing explanations, 3+ consecutive teach steps, all-teach lessons
+
+The same `summarizeLint()` runs in the browser, so the `/author` console shows live
+status without a build step.
+
+### 2. The `/author` preview route (admin only)
+
+`AuthorPreview.tsx` lists every lesson grouped by unit with a red/amber/green lint
+status, the problems inline, and a **Preview** button that renders the lesson
+through the real `LessonRunner` (preview = exactly what ships). This is the human
+approval gate: review and approve in minutes instead of re-reading JSON.
+
+### 3. Circuit diagrams: curated SVG + the DSL
+
+Two ways to get a circuit diagram, both sharing one primitive palette
+(`circuits/primitives.tsx`):
+
+- **Curated (hand-coded):** the original 8 in `CircuitDiagram.tsx`. Frozen, pixel-
+  tuned. Use the escape hatch here only for irregular one-off circuits.
+- **DSL (data-authored):** add a `CircuitSpec` to `circuits/specs.ts` —
+  `{ nodes, wires, annotations }`. The renderer (`SpecCircuit.tsx`) draws it, and
+  the region registry **auto-derives** its clickable regions from the node ids, so
+  the linter validates lessons that use it for free. This is the scalable path for
+  new diagrams (Units 6+). Add new component shapes to `primitives.tsx`.
+
+Region source of truth: `circuits/registry.ts` (`CIRCUIT_REGIONS`) merges the
+hand-written legacy regions with the DSL-derived ones.
 
 ## Depth target
 

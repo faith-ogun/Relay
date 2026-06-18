@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, Heart, Lightbulb, RotateCcw, X, Zap } from 'lucide-react';
-import CircuitDiagram, { type CircuitId } from '../../CircuitDiagram';
+import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
 
@@ -373,7 +373,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
           <p className="mt-4 whitespace-pre-line text-lg font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
           {step.circuitDiagram && (
             <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-              <CircuitDiagram circuit={step.circuitDiagram as CircuitId} showCurrentFlow={step.showCurrentFlow} className="mx-auto w-full max-w-xl" />
+              <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={step.showCurrentFlow} className="mx-auto w-full max-w-xl" />
             </div>
           )}
         </div>
@@ -441,7 +441,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
           <Prompt>{'question' in step ? step.question : ''}</Prompt>
           <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
             <CircuitDiagram
-              circuit={step.circuitDiagram as CircuitId}
+              circuit={step.circuitDiagram}
               clickable={!checked}
               onRegionClick={(id) => p.setRegion(id)}
               highlightRegion={p.region}
@@ -468,7 +468,7 @@ const Prompt: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const Diagram: React.FC<{ circuit: string }> = ({ circuit }) => (
   <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-    <CircuitDiagram circuit={circuit as CircuitId} className="mx-auto w-full max-w-xl" />
+    <CircuitDiagram circuit={circuit} className="mx-auto w-full max-w-xl" />
   </div>
 );
 
