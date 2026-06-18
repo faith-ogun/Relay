@@ -215,6 +215,109 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'arduino',
+    title: 'Meet the Arduino',
+    subtitle: 'Bring your circuits to life with code',
+    level: 'intermediate',
+    accent: 'gold',
+    skills: [
+      {
+        id: 'what-arduino',
+        title: 'What an Arduino Is',
+        description: 'The tiny computer that runs your circuit.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'What Is a Microcontroller', title: 'What Is a Microcontroller', summary: 'A small programmable computer on a chip.', estMinutes: 8 },
+          { id: 'The Arduino Pins', title: 'The Arduino Pins', summary: 'Digital, analog, and power pins.', estMinutes: 8 },
+          { id: 'The Sketch: setup and loop', title: 'The Sketch: setup & loop', summary: 'Runs once, then runs forever.', estMinutes: 8 },
+        ],
+      },
+      {
+        id: 'first-sketch',
+        title: 'Your First Sketch',
+        description: 'Write code that drives a pin.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'Naming Pins with Variables', title: 'Naming Pins', summary: 'const int LED = 13, and why.', estMinutes: 8 },
+          { id: 'pinMode and Outputs', title: 'pinMode & Outputs', summary: 'Tell a pin its direction.', estMinutes: 8 },
+          { id: 'digitalWrite: On and Off', title: 'digitalWrite: On & Off', summary: 'Drive a pin HIGH or LOW.', estMinutes: 8 },
+          { id: 'Blink', title: 'Blink', summary: 'The hello-world of hardware.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'talk-debug',
+        title: 'Talking & Debugging',
+        description: 'See what your code is doing, and fix it.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'The Serial Monitor', title: 'The Serial Monitor', summary: 'Let the Arduino print to your screen.', estMinutes: 10 },
+          { id: 'Uploading Your Code', title: 'Uploading Your Code', summary: 'From computer to chip.', estMinutes: 8 },
+          { id: 'Reading Errors', title: 'Reading Errors', summary: 'Semicolons, braces, and first errors first.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'arduino-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can write and upload a sketch.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 4 Checkpoint', title: 'Unit 4 Checkpoint', summary: 'A mixed test of Arduino basics.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'inputs-outputs',
+    title: 'Inputs, Outputs & Code',
+    subtitle: 'Read the world and act on it in software',
+    level: 'advanced',
+    accent: 'red',
+    skills: [
+      {
+        id: 'reading-inputs',
+        title: 'Reading Inputs',
+        description: 'Buttons, pull resistors, and clean signals.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'Reading a Button', title: 'Reading a Button', summary: 'digitalRead and INPUT pins.', estMinutes: 10 },
+          { id: 'Pull-up and Pull-down Resistors', title: 'Pull-up & Pull-down', summary: 'Fix the floating-pin problem.', estMinutes: 12 },
+          { id: 'Debouncing a Button', title: 'Debouncing a Button', summary: 'One press, not five.', estMinutes: 8 },
+        ],
+      },
+      {
+        id: 'analog-pwm',
+        title: 'Analog & PWM',
+        description: 'Read sensors and fake analog output in code.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'analogRead in Code', title: 'analogRead in Code', summary: 'Turn a sensor voltage into 0 to 1023.', estMinutes: 10 },
+          { id: 'analogWrite and PWM', title: 'analogWrite & PWM', summary: 'Dim and fade with pulse-width modulation.', estMinutes: 10 },
+          { id: 'Making Sound with tone()', title: 'Making Sound', summary: 'Drive a buzzer with tone().', estMinutes: 8 },
+        ],
+      },
+      {
+        id: 'code-alarm',
+        title: 'Code the Light Alarm',
+        description: 'Make the Arduino run the build you wired.',
+        icon: 'Lightbulb',
+        lessons: [
+          { id: 'if: Making Decisions', title: 'if: Making Decisions', summary: 'Run code only when a condition is true.', estMinutes: 10 },
+          { id: 'Coding the Light Alarm', title: 'Coding the Alarm', summary: 'analogRead, if, digitalWrite: the full sketch.', estMinutes: 14 },
+          { id: 'Calibrating in Code', title: 'Calibrating in Code', summary: 'Tune the threshold with the Serial Monitor.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'inputs-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can code inputs, outputs, and the alarm.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 5 Checkpoint', title: 'Unit 5 Checkpoint', summary: 'A mixed test of inputs, outputs, and alarm code.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

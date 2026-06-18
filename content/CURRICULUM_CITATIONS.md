@@ -188,6 +188,60 @@ Variable-resistance components grounded in **EAC Vol.3 (Sensors)** and **ME**.
   Sanity Checks lesson. Verified.
 - **Unit 3 Checkpoint** (new) — mixed retrieval; no new claims.
 
+## Unit 4 — Meet the Arduino
+
+All Arduino code grounded in **EA** (Exploring Arduino, Blum), Chapters 1–2.
+
+- **What Is a Microcontroller** (new) — a small computer on a chip that reads
+  inputs, runs your code, drives outputs, and keeps the stored program: EA Ch.1.
+- **The Arduino Pins** (new) — digital pins 0–13 (HIGH/LOW), analog inputs A0–A5
+  (0–5V), 5V/GND power pins, ADC measures 0–5V: EA Ch.1–2 (board tour). Verified.
+- **The Sketch: setup and loop** (new) — setup() runs once, loop() runs forever:
+  EA Ch.1 ("setup() is executed once… loop() repeats forever"). Verified.
+- **Naming Pins with Variables** (new) — const int LED = 13; for readable,
+  portable code: EA Ch.1–2 (const int LED=9 example, LED_BUILTIN portability).
+- **pinMode and Outputs** (new) — pinMode(pin, OUTPUT/INPUT) in setup(); pins
+  default to INPUT: EA Ch.1 ("All pins default to inputs unless you explicitly
+  tell the Arduino to treat them as outputs"). Verified.
+- **digitalWrite: On and Off** (new) — HIGH = 5V, LOW = 0V, holds state: EA Ch.1
+  ("HIGH (5V) or LOW (0V)… remains in this state until changed"). Verified.
+- **Blink** (new) — the canonical sketch (pinMode in setup; digitalWrite HIGH,
+  delay, LOW, delay in loop): EA Ch.1 Listing (Blink). Verified verbatim-free.
+- **The Serial Monitor** (new) — Serial.begin(9600), Serial.println(val), baud
+  must match: EA Ch.3 (Listing 3-1, "A common value is 9600 baud"). Verified.
+- **Uploading Your Code** (new) — compile then send over USB; board stores + runs:
+  EA Ch.1 (upload flow). Verified.
+- **Reading Errors** (new) — missing semicolon / brace; fix the first error first:
+  general Arduino/C convention (EA Ch.1–2). Verified.
+- **Unit 4 Checkpoint** (new) — mixed retrieval; no new claims.
+
+## Unit 5 — Inputs, Outputs & Code
+
+Grounded in **EA** (Exploring Arduino, Blum) Ch.2–3.
+
+- **Reading a Button** (new) — pinMode INPUT + digitalRead returns HIGH/LOW:
+  EA Ch.2 (digital inputs). Verified.
+- **Pull-up and Pull-down Resistors** (new) — a floating pin reads noise; a
+  pull-down holds it LOW by default (pull-up HIGH): EA Ch.2 ("the input pin is
+  said to be floating… reading it could cause unexpected results"). Verified.
+- **Debouncing a Button** (new) — mechanical contacts bounce for a few ms; wait
+  before re-reading: EA Ch.2 ("debounce a button in software"). Verified.
+- **analogRead in Code** (new) — analogRead(A0) returns 0–1023 for 0–5V; no
+  pinMode needed: EA Ch.3 ("a number between 0 and 1023"). Verified.
+- **analogWrite and PWM** (new) — fast switching averages to an apparent level;
+  analogWrite 0–255 for dimming/speed: EA Ch.2 (PWM). Verified.
+- **Making Sound with tone()** (new) — tone(pin, freq) / noTone(pin), higher freq
+  = higher pitch: standard Arduino tone() reference. Verified.
+- **if: Making Decisions** (new) — if (condition) runs a block; <, >, == :
+  standard C/Arduino control flow. Verified.
+- **Coding the Light Alarm** (new) — analogRead → if (reading < threshold) →
+  digitalWrite: synthesis of EA Ch.2–3 mapped onto the Unit 3 alarm. The
+  sense/decide/act callback. Verified logic.
+- **Calibrating in Code** (new) — print readings, note bright vs dark, set the
+  threshold between them: EA Ch.3 (Serial-monitor calibration of a pot/sensor).
+  Verified.
+- **Unit 5 Checkpoint** (new) — mixed retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

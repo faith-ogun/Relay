@@ -192,6 +192,31 @@ is a zigzag; a real one is striped, and they must learn both.
 
 ---
 
+## 6a. What actually shipped vs this outline (reconciliation, 2026-06-18)
+
+The 12-unit sketch below was a fine-grained CONCEPT list. The built curriculum
+deliberately compresses it into **fewer, deeper units** (each ~11–13 lessons, the
+sizing in §1), the Duolingo "section" model, rather than 12 thin units. The
+mapping:
+
+| Built unit | Level | Covers outline units | Lessons |
+|---|---|---|---|
+| 1. Foundations | beginner | 1–5 (loop, V/I/R, Ohm, LEDs, series/parallel) | 13 |
+| 2. On the Breadboard | beginner | 6 + building/debugging | 11 |
+| 3. Sensors & Signals | intermediate | 8–9 (analog sensors + the alarm) | 11 |
+| 4. Meet the Arduino | intermediate | 7 (microcontroller, sketch, Blink, serial) | 11 |
+| 5. Inputs, Outputs & Code | advanced | 10, 12 (PWM, inputs, debug) + code the alarm | 10 |
+
+**Why the Light-Activated Alarm lands at the end of Unit 3, not "Unit 9":** in a
+build-first product, reaching a real, satisfying build EARLY is the point (it
+drives First-Build-Completed and retention, §0). Making learners grind eight units
+first would be the wrong call. So the alarm is the **beginner-arc capstone** as a
+HARDWARE build at the end of Unit 3 (wire it, understand sense/decide/act), and
+then Unit 5 brings it to life in CODE (analogRead → if → digitalWrite) as a
+deliberate callback. Build the circuit, learn the Arduino, code it to life: the way
+real makers actually do it. The "Unit 9" in the outline below was under the old
+12-thin-unit numbering and no longer applies.
+
 ## 6. Proposed path outline (first ~12 units)
 
 Discovery-first (Platt's *Make: Electronics* template), with theory pulled in

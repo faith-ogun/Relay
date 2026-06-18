@@ -471,4 +471,254 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'match', instruction: 'Match each sensor to what it senses.', pairs: [['LDR', 'Light'], ['Thermistor', 'Temperature'], ['Potentiometer', 'A knob turn'], ['Button', 'Pressed or not']] },
     ],
   },
+
+  // ═══════════════════════ Unit 4: Meet the Arduino ═══════════════════════
+
+  'What Is a Microcontroller': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Tiny Programmable Computer', body: 'An Arduino is a board built around a microcontroller: a small computer on a single chip. It has no screen or keyboard. Instead it reads its input pins, runs the program you upload, and sets its output pins. That is the whole idea: read the world, decide in code, change the world.' },
+      { type: 'multiple_choice', question: 'What is a microcontroller?', options: ['A type of resistor', 'A small computer on a chip that runs your program', 'A kind of battery', 'A display screen'], correct: 1, explanation: 'It is a tiny programmable computer that reads inputs, runs your code, and drives outputs.' },
+      { type: 'true_false', statement: 'An Arduino keeps running the last program you uploaded, even after you unplug your computer.', correct: true, explanation: 'Yes. The program is stored on the board, so it runs whenever the Arduino has power.' },
+      { type: 'multiple_choice', question: 'Which best describes what an Arduino does in a project?', options: ['Reads inputs, runs code, drives outputs', 'Only lights LEDs', 'Only stores data', 'Generates its own power'], correct: 0, explanation: 'Sense, decide, act, exactly the pattern from the light alarm, now in code.' },
+      { type: 'match', instruction: 'Match each idea to the alarm you already built.', pairs: [['Input pin', 'Reads the LDR voltage'], ['Your code', 'Decides against the threshold'], ['Output pin', 'Drives the LED or buzzer'], ['The board', 'Runs it all on its own']] },
+    ],
+  },
+
+  'The Arduino Pins': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'The Rows of Pins', body: 'An Arduino Uno has a few kinds of pin:\n\n• Digital pins (0 to 13): on/off, HIGH or LOW.\n• Analog input pins (A0 to A5): read a voltage from 0 to 5V.\n• Power pins: 5V, 3.3V, and GND (ground).\n\nYou wire your circuit to these pins and address each one in code.', circuitDiagram: 'ldr_alarm' },
+      { type: 'multiple_choice', question: 'Which pins read a continuously varying voltage from a sensor?', options: ['Digital pins 0 to 13', 'Analog input pins A0 to A5', 'The 5V pin', 'GND'], correct: 1, explanation: 'Analog input pins (A0 to A5) measure voltages from 0 to 5V, ideal for sensors.' },
+      { type: 'multiple_choice', question: 'A digital pin can be in how many states?', options: ['One', 'Two: HIGH or LOW', 'Ten', 'Any value from 0 to 1023'], correct: 1, explanation: 'A digital pin is either HIGH (5V) or LOW (0V).' },
+      { type: 'identify_component', question: 'Click the analog pin that reads the sensor in this alarm circuit.', circuitDiagram: 'ldr_alarm', correctComponent: 'a0', explanation: 'A0 is an analog input reading the divider voltage.' },
+      { type: 'true_false', statement: 'You connect the ground of your circuit to a GND pin on the Arduino.', correct: true, explanation: 'Yes. A shared ground is what lets the Arduino and your circuit agree on 0V.' },
+      { type: 'match', instruction: 'Match each pin type to its job.', pairs: [['Digital pin', 'On/off (HIGH or LOW)'], ['Analog input', 'Reads 0 to 5V'], ['5V pin', 'Supplies power'], ['GND pin', 'The 0V reference']] },
+    ],
+  },
+
+  'The Sketch: setup and loop': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Every Sketch Has Two Parts', body: 'An Arduino program (a "sketch") always has two functions:\n\nvoid setup() {\n  // runs ONCE at the start\n}\n\nvoid loop() {\n  // runs OVER AND OVER, forever\n}\n\nsetup() is for one-time settings (like pin directions). loop() is the part that repeats for as long as the board has power.' },
+      { type: 'multiple_choice', question: 'How often does the code inside setup() run?', options: ['Once, at the start', 'Over and over forever', 'Never', 'Only when a button is pressed'], correct: 0, explanation: 'setup() runs a single time when the program starts.' },
+      { type: 'multiple_choice', question: 'How often does the code inside loop() run?', options: ['Once', 'Over and over, forever', 'Twice', 'Only on reset'], correct: 1, explanation: 'loop() repeats continuously for as long as the Arduino is powered.' },
+      { type: 'true_false', statement: 'You can leave loop() empty if your program only needs to do something once.', correct: true, explanation: 'Yes. Both functions must exist, but loop() can be empty if all the work is in setup().' },
+      { type: 'fill_blank', prompt: 'The function that runs once at the start is called ___()', blank: '___', answer: 'setup', hint: 'The other one is loop().' },
+      { type: 'match', instruction: 'Match each function to when it runs.', pairs: [['setup()', 'Once, at the start'], ['loop()', 'Over and over, forever']] },
+    ],
+  },
+
+  'Naming Pins with Variables': {
+    xpReward: 20,
+    steps: [
+      { type: 'teach', title: 'Give Pins Meaningful Names', body: 'Instead of scattering the number 13 through your code, name it once at the top:\n\nconst int LED = 13;\n\nNow you write LED everywhere, and if you move the LED to another pin you change just one line. const means the value will not change while the program runs.' },
+      { type: 'multiple_choice', question: 'Why name a pin with a variable like const int LED = 13;?', options: ['It makes the LED brighter', 'So the code reads clearly and you change the pin in one place', 'It is required by the compiler', 'It saves battery'], correct: 1, explanation: 'A named pin makes code readable and means a pin change is a one-line edit.' },
+      { type: 'fill_blank', prompt: 'Complete the line that names pin 9 as BUZZER: const int BUZZER = ___;', blank: '___', answer: '9', hint: 'Just the pin number.' },
+      { type: 'true_false', statement: 'const means the value can change freely while the program runs.', correct: false, explanation: 'The opposite. const marks a value that stays fixed for the whole program.' },
+      { type: 'multiple_choice', question: 'You move your LED from pin 13 to pin 8. With const int LED = 13; at the top, what do you change?', options: ['Every digitalWrite line', 'Just that one line, to 8', 'Nothing', 'The whole loop()'], correct: 1, explanation: 'That is the benefit: change the single definition and the rest of the code follows.' },
+    ],
+  },
+
+  'pinMode and Outputs': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Tell a Pin Its Direction', body: 'Before you use a pin, tell the Arduino whether it is an input or an output, using pinMode() in setup():\n\npinMode(LED, OUTPUT);\n\nOUTPUT lets the pin drive something (like an LED). INPUT lets the pin read something. Pins default to INPUT until you change them.' },
+      { type: 'multiple_choice', question: 'Where do you normally set a pin\'s direction with pinMode()?', options: ['In loop()', 'In setup()', 'Outside both functions', 'You never need to'], correct: 1, explanation: 'Pin directions are a one-time setting, so they go in setup().' },
+      { type: 'fill_blank', prompt: 'Set the LED pin as an output: pinMode(LED, ___);', blank: '___', answer: 'OUTPUT', hint: 'The opposite of INPUT. Capitals.' },
+      { type: 'multiple_choice', question: 'You want a pin to drive an LED. Which mode?', options: ['INPUT', 'OUTPUT', 'ANALOG', 'It does not matter'], correct: 1, explanation: 'Driving something means OUTPUT. Reading something means INPUT.' },
+      { type: 'true_false', statement: 'Arduino pins default to OUTPUT unless you say otherwise.', correct: false, explanation: 'They default to INPUT. Set OUTPUT explicitly when you want to drive a pin.' },
+    ],
+  },
+
+  'digitalWrite: On and Off': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Turn a Pin On or Off', body: 'digitalWrite() sets an output pin HIGH or LOW:\n\ndigitalWrite(LED, HIGH); // 5V, LED on\ndigitalWrite(LED, LOW);  // 0V, LED off\n\nThe pin stays in that state until you change it again.', circuitDiagram: 'series_circuit' },
+      { type: 'multiple_choice', question: 'What voltage does digitalWrite(LED, HIGH) put on the pin (on a 5V Uno)?', options: ['0V', '2.5V', '5V', '13V'], correct: 2, explanation: 'HIGH means 5V on an Uno; LOW means 0V.' },
+      { type: 'fill_blank', prompt: 'Turn the LED off: digitalWrite(LED, ___);', blank: '___', answer: 'LOW', hint: 'The opposite of HIGH.' },
+      { type: 'predict_behavior', question: 'Your loop has only digitalWrite(LED, HIGH); and nothing else. What does the LED do?', options: ['Blinks', 'Stays on solidly', 'Stays off', 'Fades'], correct: 1, explanation: 'With no LOW and no delay, the pin is driven HIGH continuously, so the LED is solid on.' },
+      { type: 'true_false', statement: 'After digitalWrite sets a pin HIGH, it stays HIGH until your code changes it.', correct: true, explanation: 'Yes. The pin holds its state until the next digitalWrite.' },
+    ],
+  },
+
+  'Blink': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Hello, World', body: 'Blink is the classic first sketch. It turns the LED on, waits, off, waits, forever:\n\nconst int LED = 13;\n\nvoid setup() {\n  pinMode(LED, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(LED, HIGH);\n  delay(1000);\n  digitalWrite(LED, LOW);\n  delay(1000);\n}\n\ndelay(1000) pauses for 1000 milliseconds, one second.', circuitDiagram: 'series_circuit' },
+      { type: 'multiple_choice', question: 'What does delay(1000) do?', options: ['Repeats 1000 times', 'Pauses the program for 1000 milliseconds (1 second)', 'Sets the pin to 1000V', 'Nothing'], correct: 1, explanation: 'delay() pauses for the given number of milliseconds; 1000 ms is one second.' },
+      { type: 'drag_order', instruction: 'Order the lines inside loop() to blink the LED.', items: ['digitalWrite(LED, HIGH);', 'delay(1000);', 'digitalWrite(LED, LOW);', 'delay(1000);'], correctOrder: [0, 1, 2, 3] },
+      { type: 'predict_behavior', question: 'You remove both delay() lines from Blink. What happens?', options: ['The LED blinks slower', 'The LED switches so fast it looks dimly on, not blinking', 'The LED turns off', 'The Arduino breaks'], correct: 1, explanation: 'Without delays the pin toggles thousands of times a second, far too fast to see as a blink; it just looks faintly lit.' },
+      { type: 'fill_blank', prompt: 'To make the LED stay on for half a second, use delay(___);', blank: '___', answer: '500', hint: 'Milliseconds. Half of 1000.' },
+      { type: 'true_false', statement: 'pinMode for the LED belongs in loop(), not setup().', correct: false, explanation: 'It belongs in setup(), it is a one-time setting. loop() does the repeating blink.' },
+    ],
+  },
+
+  'The Serial Monitor': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Let the Arduino Talk Back', body: 'The Serial Monitor lets your Arduino print messages to your computer, which is how you see what it is thinking. Start it in setup():\n\nSerial.begin(9600);\n\nThen print anywhere:\n\nSerial.println(value);\n\n9600 is the baud rate (speed); the Monitor must be set to the same number.' },
+      { type: 'fill_blank', prompt: 'Start serial at the common baud rate: Serial.begin(___);', blank: '___', answer: '9600', hint: 'The standard default baud rate.' },
+      { type: 'multiple_choice', question: 'Why is the Serial Monitor so useful?', options: ['It powers the Arduino', 'It lets you see values and messages from your running program', 'It uploads code', 'It limits current'], correct: 1, explanation: 'Printing values is the simplest, most powerful way to debug what your code is actually doing.' },
+      { type: 'predict_reading', question: 'Your loop reads a sensor with analogRead and does Serial.println(value). You turn a knob from min to max. What do you see scroll by?', options: ['Always 0', 'Numbers climbing from about 0 to about 1023', 'Letters', 'Nothing'], correct: 1, explanation: 'analogRead returns 0 to 1023, so the printed numbers track the knob across that range.' },
+      { type: 'true_false', statement: 'The Serial Monitor baud rate must match the number in Serial.begin().', correct: true, explanation: 'Yes. Mismatched baud rates produce garbled text.' },
+    ],
+  },
+
+  'Uploading Your Code': {
+    xpReward: 20,
+    steps: [
+      { type: 'teach', title: 'From Computer to Chip', body: 'To run a sketch you upload it: the IDE compiles your code, then sends it over the USB cable to the board, where it is stored and starts running. You pick the right board and port first, then press Upload.' },
+      { type: 'drag_order', instruction: 'Order the steps to get a sketch running on the board.', items: ['Write the sketch', 'Select your board and port', 'Press Upload (it compiles, then sends)', 'The board stores and runs it'], correctOrder: [0, 1, 2, 3] },
+      { type: 'multiple_choice', question: 'What happens when you press Upload?', options: ['The code runs only on the computer', 'The IDE compiles the code and sends it to the board over USB', 'The board emails you', 'Nothing until you reboot the computer'], correct: 1, explanation: 'Upload compiles your sketch and transfers it to the board, which then runs it.' },
+      { type: 'true_false', statement: 'Once uploaded, the sketch keeps running on the board even after you unplug the USB data cable, as long as it has power.', correct: true, explanation: 'Yes. The program lives on the board; it runs whenever powered.' },
+      { type: 'multiple_choice', question: 'Upload fails saying no board is found. What is the most likely fix?', options: ['Rewrite the whole sketch', 'Select the correct board and port, and check the cable', 'Buy a new computer', 'Remove the LED'], correct: 1, explanation: 'A missing-board error is almost always the wrong port/board selection or a charge-only USB cable.' },
+    ],
+  },
+
+  'Reading Errors': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Errors Are Clues', body: 'When code will not compile, the IDE prints an error and highlights a line. The most common beginner errors are tiny: a missing semicolon at the end of a line, a missing closing brace, or a misspelled command. Read the first error first, lower ones are often just knock-on effects.' },
+      { type: 'multiple_choice', question: 'Which is the most common beginner compile error?', options: ['A missing semicolon at the end of a line', 'The Arduino is broken', 'The LED is too bright', 'The wrong resistor'], correct: 0, explanation: 'Most statements must end with a semicolon; a missing one is the classic error.' },
+      { type: 'true_false', statement: 'The line  digitalWrite(LED, HIGH)  with no semicolon on the end will fail to compile.', correct: true, explanation: 'A simple statement needs its semicolon; without it the sketch will not compile.' },
+      { type: 'true_false', statement: 'When you see many errors, you should usually fix the first one first.', correct: true, explanation: 'Yes. Later errors are often caused by the first, so fixing the top one can clear several.' },
+      { type: 'fill_blank', prompt: 'Every simple statement in Arduino code must end with a ___', blank: '___', answer: 'semicolon', hint: 'The ; character.' },
+      { type: 'multiple_choice', question: 'The IDE highlights a line and says "expected }". What is likely missing?', options: ['A resistor', 'A closing curly brace somewhere above', 'A new board', 'A delay'], correct: 1, explanation: 'Unbalanced braces are a common structural error; you are missing a closing }.' },
+    ],
+  },
+
+  'Unit 4 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'A microcontroller is...', options: ['A resistor', 'A small computer on a chip that runs your program', 'A battery', 'A screen'], correct: 1, explanation: 'A tiny programmable computer.' },
+      { type: 'multiple_choice', question: 'Which pins read 0 to 5V from a sensor?', options: ['Digital 0 to 13', 'Analog A0 to A5', '5V', 'GND'], correct: 1, explanation: 'Analog input pins read 0 to 5V.' },
+      { type: 'fill_blank', prompt: 'The function that runs once at start is ___()', blank: '___', answer: 'setup', hint: 'The other is loop().' },
+      { type: 'fill_blank', prompt: 'Set a pin to drive an LED: pinMode(LED, ___);', blank: '___', answer: 'OUTPUT', hint: 'Capitals.' },
+      { type: 'drag_order', instruction: 'Order the loop() lines to blink an LED.', items: ['digitalWrite(LED, HIGH);', 'delay(1000);', 'digitalWrite(LED, LOW);', 'delay(1000);'], correctOrder: [0, 1, 2, 3] },
+      { type: 'predict_behavior', question: 'loop() has only digitalWrite(LED, HIGH); with no delay or LOW. The LED...', options: ['Blinks', 'Stays solidly on', 'Stays off', 'Fades'], correct: 1, explanation: 'Driven HIGH continuously, it stays on.' },
+      { type: 'fill_blank', prompt: 'Start the Serial Monitor: Serial.begin(___);', blank: '___', answer: '9600', hint: 'Standard baud rate.' },
+      { type: 'true_false', statement: 'Most simple statements must end with a semicolon.', correct: true, explanation: 'Yes, a missing semicolon is the classic compile error.' },
+    ],
+  },
+
+  // ═══════════════════ Unit 5: Inputs, Outputs & Code ═══════════════════
+
+  'Reading a Button': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Reading an Input', body: 'To read a button, set its pin as an INPUT and use digitalRead():\n\npinMode(BUTTON, INPUT);\nint state = digitalRead(BUTTON);\n\ndigitalRead returns HIGH or LOW depending on the voltage on the pin. A button just connects the pin to 5V or lets it go.' },
+      { type: 'fill_blank', prompt: 'Read the button\'s state: int state = digitalRead(___);', blank: '___', answer: 'BUTTON', hint: 'The name of the pin you defined.' },
+      { type: 'multiple_choice', question: 'What does digitalRead() return?', options: ['A number 0 to 1023', 'HIGH or LOW', 'A voltage in volts', 'The pin number'], correct: 1, explanation: 'digitalRead reports the pin as HIGH or LOW, a digital (two-state) reading.' },
+      { type: 'multiple_choice', question: 'To read a pin instead of drive it, set its mode to...', options: ['OUTPUT', 'INPUT', 'HIGH', 'PWM'], correct: 1, explanation: 'Reading a pin means INPUT.' },
+      { type: 'true_false', statement: 'A button gives an analog value from 0 to 1023.', correct: false, explanation: 'A plain button is digital: pressed or not, HIGH or LOW. Analog values come from sensors like the LDR.' },
+    ],
+  },
+
+  'Pull-up and Pull-down Resistors': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'The Floating Pin Problem', body: 'A button connects a pin to 5V when pressed. But when it is NOT pressed, the pin connects to nothing, it "floats", and electrical noise makes it flicker randomly between HIGH and LOW. A pull-down resistor (to ground) holds the pin at a steady LOW until the button is pressed. A pull-up (to 5V) does the reverse.' },
+      { type: 'multiple_choice', question: 'What is a "floating" input pin?', options: ['A pin set to OUTPUT', 'A pin connected to neither 5V nor ground, so it picks up noise', 'A pin at exactly 2.5V', 'A broken pin'], correct: 1, explanation: 'With no defined connection, the pin floats and its reading fluctuates with noise.' },
+      { type: 'multiple_choice', question: 'A pull-down resistor sets the button\'s default (unpressed) reading to...', options: ['HIGH', 'LOW', 'Random', '2.5V'], correct: 1, explanation: 'A pull-down ties the pin to ground, so it reads LOW until the button connects it to 5V.' },
+      { type: 'predict_behavior', question: 'You wire a button with no pull-up or pull-down. Unpressed, what does digitalRead give?', options: ['A steady LOW', 'A steady HIGH', 'Random, flickering values', 'Always 512'], correct: 2, explanation: 'A floating pin has no defined state, so it flickers unpredictably. That is exactly what the pull resistor fixes.' },
+      { type: 'true_false', statement: 'A pull-up or pull-down resistor gives a digital input a defined default state.', correct: true, explanation: 'Yes. It anchors the pin to HIGH (pull-up) or LOW (pull-down) until the button changes it.' },
+      { type: 'match', instruction: 'Match each setup to the unpressed reading.', pairs: [['Pull-down resistor', 'Reads LOW by default'], ['Pull-up resistor', 'Reads HIGH by default'], ['No resistor (floating)', 'Random, noisy reading']] },
+    ],
+  },
+
+  'Debouncing a Button': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'One Press, Many Signals', body: 'When you press a real button, the metal contacts physically bounce for a few milliseconds, so the Arduino can read one press as several rapid presses. Smoothing this out is called debouncing. The simplest fix: after detecting a change, wait a few milliseconds before reading again.' },
+      { type: 'multiple_choice', question: 'Why might one button press register as several?', options: ['The Arduino is broken', 'The contacts physically bounce for a few milliseconds', 'The resistor is too big', 'The LED interferes'], correct: 1, explanation: 'Mechanical contacts bounce, producing several rapid transitions from one press.' },
+      { type: 'multiple_choice', question: 'A simple software debounce is to...', options: ['Use a bigger LED', 'Wait a short time after a change before reading again', 'Remove the pull-down', 'Increase the baud rate'], correct: 1, explanation: 'A brief delay after a detected change lets the bouncing settle before you read again.' },
+      { type: 'true_false', statement: 'Debouncing is about smoothing the noisy signal from a button being pressed.', correct: true, explanation: 'Yes. It stops one physical press from registering as many.' },
+      { type: 'fill_blank', prompt: 'Bouncing lasts a few ___ (the unit delay() uses).', blank: '___', answer: 'milliseconds', hint: 'Thousandths of a second.' },
+    ],
+  },
+
+  'analogRead in Code': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Reading a Sensor in Code', body: 'analogRead() turns the voltage on an analog pin into a number from 0 (0V) to 1023 (5V):\n\nint value = analogRead(A0);\n\nThis is exactly how the Arduino reads your LDR divider. No pinMode is needed for analog input pins.', circuitDiagram: 'ldr_alarm' },
+      { type: 'fill_blank', prompt: 'Read the sensor on pin A0: int value = analogRead(___);', blank: '___', answer: 'A0', hint: 'The analog pin the divider connects to.' },
+      { type: 'multiple_choice', question: 'analogRead() returns a number in what range?', options: ['0 to 5', '0 to 100', '0 to 1023', 'HIGH or LOW'], correct: 2, explanation: 'A 10-bit ADC maps 0 to 5V onto 0 to 1023.' },
+      { type: 'predict_reading', question: 'Your LDR divider sits at about 2.5V and feeds A0. Predict the analogRead value.', circuitDiagram: 'voltage_divider', options: ['About 0', 'About 512', 'About 1023', 'HIGH'], correct: 1, explanation: '2.5V is half of 5V, so analogRead returns about half of 1023, roughly 512.' },
+      { type: 'predict_behavior', question: 'You cover the LDR so the divider voltage falls. What happens to the analogRead value?', circuitDiagram: 'ldr_alarm', options: ['It rises', 'It falls', 'It stays the same', 'It jumps to 1023'], correct: 1, explanation: 'Lower voltage maps to a lower number. The reading falls as it gets darker (with the LDR on top).' },
+      { type: 'true_false', statement: 'Analog input pins need pinMode set to INPUT before analogRead works.', correct: false, explanation: 'No. Analog input pins read directly with analogRead, no pinMode needed.' },
+    ],
+  },
+
+  'analogWrite and PWM': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Faking Analog Output', body: 'A digital pin can only do HIGH or LOW, but if it switches between them very fast, the average looks like a level in between. That is PWM (pulse-width modulation), and analogWrite() does it:\n\nanalogWrite(LED, 128);\n\nThe value 0 to 255 sets the brightness: 0 is off, 255 is full, 128 is about half.' },
+      { type: 'multiple_choice', question: 'What does PWM let a digital pin do?', options: ['Read analog voltages', 'Appear to output a level between off and full by switching fast', 'Store data', 'Measure temperature'], correct: 1, explanation: 'Rapid on/off switching averages to an apparent in-between level, used for dimming and speed control.' },
+      { type: 'fill_blank', prompt: 'analogWrite uses a value from 0 to ___', blank: '___', answer: '255', hint: '8-bit range; full brightness.' },
+      { type: 'predict_behavior', question: 'analogWrite(LED, 255) versus analogWrite(LED, 64). What is the difference?', options: ['No difference', '255 is full brightness, 64 is dim', '64 is brighter', 'Both are off'], correct: 1, explanation: 'Higher PWM value means a higher average, so 255 is full brightness and 64 is dim.' },
+      { type: 'multiple_choice', question: 'PWM is commonly used to...', options: ['Dim LEDs and control motor speed', 'Read sensors', 'Power the board', 'Replace the resistor'], correct: 0, explanation: 'Dimming, fading, and motor-speed control are classic PWM uses.' },
+      { type: 'true_false', statement: 'PWM produces a true analog voltage on the pin.', correct: false, explanation: 'Not exactly. It rapidly switches HIGH/LOW so the average behaves like an analog level, which is good enough for LEDs and motors.' },
+    ],
+  },
+
+  'Making Sound with tone()': {
+    xpReward: 20,
+    steps: [
+      { type: 'teach', title: 'Beeps and Buzzes', body: 'tone() drives a buzzer or speaker at a given frequency in hertz:\n\ntone(BUZZER, 1000);   // 1000 Hz tone\nnoTone(BUZZER);        // stop\n\nHigher frequency means a higher pitch. This is how your alarm makes noise.' },
+      { type: 'multiple_choice', question: 'What does the number in tone(BUZZER, 1000) set?', options: ['The volume', 'The frequency (pitch) in hertz', 'The pin number', 'The delay'], correct: 1, explanation: 'It sets the frequency in hertz; higher is a higher pitch.' },
+      { type: 'fill_blank', prompt: 'Stop the buzzer: ___(BUZZER);', blank: '___', answer: 'noTone', hint: 'The opposite of tone().' },
+      { type: 'predict_behavior', question: 'You call tone(BUZZER, 2000) instead of tone(BUZZER, 500). How does it sound?', options: ['Quieter', 'Higher pitched', 'Lower pitched', 'No sound'], correct: 1, explanation: 'Higher frequency means a higher pitch.' },
+      { type: 'true_false', statement: 'A buzzer is an output, so its pin should be set to OUTPUT.', correct: true, explanation: 'Yes, you are driving it, so it is an output.' },
+    ],
+  },
+
+  'if: Making Decisions': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Code That Decides', body: 'An if statement runs code only when a condition is true:\n\nif (value < threshold) {\n  // do this when value is below threshold\n}\n\nThe part in parentheses is the condition. Common comparisons: < (less than), > (greater than), == (equal to).' },
+      { type: 'multiple_choice', question: 'When does the code inside if (value < 500) { } run?', options: ['Always', 'Only when value is less than 500', 'Only when value equals 500', 'Never'], correct: 1, explanation: 'The block runs only while the condition (value < 500) is true.' },
+      { type: 'fill_blank', prompt: 'Fill the comparison so it triggers when dark (reading below threshold): if (reading ___ threshold)', blank: '___', answer: '<', hint: 'Less-than sign.' },
+      { type: 'predict_behavior', question: 'threshold is 500. The reading is 200. Does if (reading < threshold) run its block?', options: ['Yes', 'No', 'Only sometimes', 'It errors'], correct: 0, explanation: '200 is less than 500, so the condition is true and the block runs.' },
+      { type: 'multiple_choice', question: 'Which operator checks "greater than"?', options: ['<', '>', '==', '!'], correct: 1, explanation: '> is greater than; < is less than; == is equal to.' },
+      { type: 'true_false', statement: 'if lets your program do different things depending on a sensor reading.', correct: true, explanation: 'Yes. That is the decide stage of sense, decide, act, in code.' },
+    ],
+  },
+
+  'Coding the Light Alarm': {
+    xpReward: 40,
+    steps: [
+      { type: 'teach', title: 'The Alarm, in Code', body: 'Now make the Arduino run your alarm. Read the LDR, compare to a threshold, drive the output:\n\nvoid loop() {\n  int reading = analogRead(A0);\n  if (reading < threshold) {\n    digitalWrite(ALARM, HIGH); // dark: alarm on\n  } else {\n    digitalWrite(ALARM, LOW);  // light: alarm off\n  }\n}\n\nSense (analogRead), decide (if), act (digitalWrite).', circuitDiagram: 'ldr_alarm' },
+      { type: 'drag_order', instruction: 'Order the loop() to make a darkness alarm.', items: ['int reading = analogRead(A0);', 'if (reading < threshold) {', 'digitalWrite(ALARM, HIGH);', '} else {', 'digitalWrite(ALARM, LOW);', '}'], correctOrder: [0, 1, 2, 3, 4, 5] },
+      { type: 'fill_blank', prompt: 'Read the sensor into a variable: int reading = analogRead(___);', blank: '___', answer: 'A0', hint: 'The alarm divider feeds this analog pin.' },
+      { type: 'predict_behavior', question: 'threshold = 500. The room goes dark and the reading drops to 180. What does the code do?', circuitDiagram: 'ldr_alarm', options: ['Sets ALARM LOW (off)', 'Sets ALARM HIGH (on)', 'Nothing', 'Resets the board'], correct: 1, explanation: '180 < 500 is true, so the if block runs and drives the alarm HIGH (on).' },
+      { type: 'identify_component', question: 'Click the output the code drives HIGH to sound the alarm.', circuitDiagram: 'ldr_alarm', correctComponent: 'led', explanation: 'digitalWrite(ALARM, HIGH) drives the LED (or buzzer) output.' },
+      { type: 'true_false', statement: 'This sketch is sense, decide, act expressed in code.', correct: true, explanation: 'Yes: analogRead senses, if decides, digitalWrite acts. The exact pattern you wired in Unit 3.' },
+    ],
+  },
+
+  'Calibrating in Code': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Tune With the Serial Monitor', body: 'Hardware thresholds are easier to set with real numbers. Print the reading with Serial.println(reading), watch the Serial Monitor in light and in dark, then set your threshold between the two values you actually see. No guessing.' },
+      { type: 'drag_order', instruction: 'Order the steps to calibrate your alarm threshold.', items: ['Print the reading with Serial.println', 'Note the value in bright light', 'Note the value in darkness', 'Set the threshold between the two', 'Test that it triggers cleanly'], correctOrder: [0, 1, 2, 3, 4] },
+      { type: 'predict_reading', question: 'In light the Monitor shows ~780, in dark ~190. Which threshold is best?', options: ['770', '500', '50', '1023'], correct: 1, explanation: '500 sits cleanly between 190 (dark) and 780 (light), giving margin against noise.' },
+      { type: 'multiple_choice', question: 'Why print the reading instead of guessing the threshold?', options: ['It looks professional', 'So you set it from the real values your sensor actually produces', 'It makes the LED brighter', 'It is required to compile'], correct: 1, explanation: 'Real readings vary by sensor, resistor, and room; measuring beats guessing.' },
+      { type: 'true_false', statement: 'A threshold set right next to the bright reading is more reliable.', correct: false, explanation: 'No. Too close and small light changes trigger it by accident. Leave margin, sit in the middle.' },
+    ],
+  },
+
+  'Unit 5 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'digitalRead() returns...', options: ['0 to 1023', 'HIGH or LOW', 'A voltage', 'The pin number'], correct: 1, explanation: 'It is a digital (two-state) read.' },
+      { type: 'multiple_choice', question: 'An input pin connected to neither 5V nor ground is...', options: ['Grounded', 'Floating, and reads noisily', 'At 5V', 'Fine'], correct: 1, explanation: 'A floating pin flickers; a pull resistor fixes it.' },
+      { type: 'fill_blank', prompt: 'Read analog pin A0: int v = analogRead(___);', blank: '___', answer: 'A0', hint: 'The analog pin.' },
+      { type: 'predict_reading', question: 'A divider at 2.5V feeds A0. analogRead gives about...', circuitDiagram: 'voltage_divider', options: ['0', '512', '1023', 'HIGH'], correct: 1, explanation: 'Half of 5V is about half of 1023.' },
+      { type: 'fill_blank', prompt: 'analogWrite brightness goes 0 to ___', blank: '___', answer: '255', hint: '8-bit.' },
+      { type: 'predict_behavior', question: 'threshold 500, reading 180, in if (reading < threshold) digitalWrite(ALARM, HIGH). The alarm...', circuitDiagram: 'ldr_alarm', options: ['Stays off', 'Turns on', 'Errors', 'Fades'], correct: 1, explanation: '180 < 500 is true, so ALARM goes HIGH.' },
+      { type: 'drag_order', instruction: 'Order the darkness-alarm loop().', items: ['int reading = analogRead(A0);', 'if (reading < threshold) {', 'digitalWrite(ALARM, HIGH);', '} else {', 'digitalWrite(ALARM, LOW);', '}'], correctOrder: [0, 1, 2, 3, 4, 5] },
+      { type: 'true_false', statement: 'Sense, decide, act maps to analogRead, if, digitalWrite.', correct: true, explanation: 'Exactly the shape of the alarm sketch.' },
+    ],
+  },
 };
