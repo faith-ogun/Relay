@@ -7,12 +7,15 @@ import {
   type CurriculumAccent,
   type CurriculumLesson,
 } from './ohmlet/data/curriculum';
+import { LEVEL_META } from './ohmlet/data/levels';
 
 type IconType = React.ComponentType<{ className?: string }>;
 
 interface LearnPathProps {
-  /** Ids of lessons the learner has completed. */
+  /** Ids of lessons the learner has completed (level >= 1). */
   completedLessonIds?: ReadonlySet<string>;
+  /** Per-lesson level: 1 Bronze, 2 Silver, 3 Gold. */
+  lessonLevels?: Record<string, number>;
   onStartLesson?: (lessonId: string) => void;
 }
 
@@ -42,14 +45,16 @@ const LessonNode: React.FC<{
   state: NodeState;
   accent: CurriculumAccent;
   offset: string;
+  level: number; // 0 not started, 1-3 medal
   onStart?: (id: string) => void;
-}> = ({ lesson, state, accent, offset, onStart }) => {
+}> = ({ lesson, state, accent, offset, level, onStart }) => {
   const a = ACCENT[accent];
+  const medal = level >= 1 ? LEVEL_META[Math.min(3, level) as 1 | 2 | 3] : null;
   const base =
     'relative flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-ohmlet-ink transition-all';
   const look =
     state === 'done'
-      ? `${a.done} text-ohmlet-ink shadow-press-sm`
+      ? 'text-white shadow-press-sm'
       : state === 'active'
       ? `bg-white text-ohmlet-ink shadow-press ring-4 ring-offset-2 ${a.ring} ohmlet-pulse-glow`
       : 'bg-ohmlet-line/60 text-ohmlet-ink/30 border-ohmlet-ink/20';
@@ -61,7 +66,9 @@ const LessonNode: React.FC<{
         disabled={state === 'locked'}
         onClick={() => state !== 'locked' && onStart?.(lesson.id)}
         className={`${base} ${look} ${state !== 'locked' ? 'hover:-translate-y-0.5' : 'cursor-not-allowed'}`}
+        style={medal ? { background: medal.color } : undefined}
         aria-label={lesson.title}
+        title={medal ? (level < 3 ? `${medal.name} — replay to level up` : 'Gold — mastered') : undefined}
       >
         {state === 'done' ? (
           <Check className="h-8 w-8" strokeWidth={3} />
@@ -69,6 +76,14 @@ const LessonNode: React.FC<{
           <Play className="h-7 w-7 translate-x-0.5" fill="currentColor" />
         ) : (
           <Lock className="h-6 w-6" />
+        )}
+        {/* level pips */}
+        {medal && (
+          <span className="absolute -bottom-1 flex gap-0.5">
+            {[1, 2, 3].map((p) => (
+              <span key={p} className={`h-1.5 w-1.5 rounded-full border border-ohmlet-ink ${p <= level ? 'bg-white' : 'bg-ohmlet-ink/20'}`} />
+            ))}
+          </span>
         )}
       </button>
       <span
@@ -83,20 +98,28 @@ const LessonNode: React.FC<{
           {lesson.estMinutes} min
         </span>
       )}
+      {medal && (
+        <span className="mt-0.5 text-[11px] font-black uppercase tracking-wide" style={{ color: medal.color }}>
+          {level < 3 ? `${medal.name} · level up` : 'Gold'}
+        </span>
+      )}
     </div>
   );
 };
 
-export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new Set(), onStartLesson }) => {
+export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new Set(), lessonLevels = {}, onStartLesson }) => {
   const next = nextLesson(completedLessonIds);
-  const done = allLessons().filter((l) => completedLessonIds.has(l.id)).length;
-  const total = allLessons().length;
+  const all = allLessons();
+  const done = all.filter((l) => completedLessonIds.has(l.id)).length;
+  const total = all.length;
+  // Mastery: total level points earned out of 3 per lesson (how "gold" the path is).
+  const goldPoints = all.reduce((sum, l) => sum + Math.min(3, lessonLevels[l.id] ?? 0), 0);
   let nodeIndex = 0;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-16">
       {/* Progress header */}
-      <div className="sticky top-2 z-10 mb-8 flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white/90 px-5 py-3 shadow-soft backdrop-blur">
+      <div className="sticky top-2 z-10 mb-4 flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white/90 px-5 py-3 shadow-soft backdrop-blur">
         <div className="h-3 flex-1 overflow-hidden rounded-full bg-ohmlet-line">
           <div
             className="h-full rounded-full bg-ohmlet-gold transition-all"
@@ -106,6 +129,18 @@ export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new S
         <span className="text-sm font-black text-ohmlet-ink">
           {done}/{total}
         </span>
+      </div>
+
+      {/* Leveling legend */}
+      <div className="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold text-ohmlet-ink-soft">
+        <span>Pass once for</span>
+        {([1, 2, 3] as const).map((lvl) => (
+          <span key={lvl} className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full border border-ohmlet-ink" style={{ background: LEVEL_META[lvl].color }} />
+            {LEVEL_META[lvl].name}
+          </span>
+        ))}
+        <span>· replay to level up · {goldPoints}/{total * 3} mastery</span>
       </div>
 
       {CURRICULUM.map((unit) => {
@@ -150,6 +185,7 @@ export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new S
                           state={state}
                           accent={unit.accent}
                           offset={offset}
+                          level={lessonLevels[lesson.id] ?? 0}
                           onStart={onStartLesson}
                         />
                       );

@@ -13,9 +13,12 @@
 
 ## 0. Guiding principle: depth-first, not breadth-first
 
-We launch with **one genuinely deep, finishable path of 40 to 80 lessons**, not a
-shallow spread across many. This is deliberate, and it is the answer to "why not
-Duolingo's 7,500 lessons":
+We build depth-first, not a shallow spread across many topics. The committed
+targets (see §5b/§5c): **v1 launch at ~143 lessons / 12 units**, headed for the
+**reasonable ceiling of ~450–650 lessons / ~35–45 units**, with Bronze→Silver→Gold
+leveling multiplying felt depth on top. (The original framing below was a 40–80
+floor; it has since been superseded by those numbers.) This is the answer to "why
+not Duolingo's 7,500 lessons":
 
 - Duolingo's 7,500 is the *mature* state of one course after 13+ years and a large
   team. It launched with a few dozen skills and grew. Our 80 is day one, not the
@@ -192,6 +195,79 @@ is a zigzag; a real one is striped, and they must learn both.
 
 ---
 
+## 5b. LAUNCH PLAN: the full unit map (locked 2026-06-18)
+
+The committed target for launch. 12 units, ~143 lessons. Levels ramp
+beginner → intermediate → advanced (re-tag Unit 5 down to intermediate; advanced
+is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
+
+| #  | Unit                            | Level        | Status   | Lessons |
+|----|---------------------------------|--------------|----------|---------|
+| 1  | Foundations                     | beginner     | ✅ built  | 13 |
+| 2  | On the Breadboard               | beginner     | ✅ built  | 11 |
+| 3  | Sensors & Signals               | intermediate | ✅ built  | 11 |
+| 4  | Meet the Arduino                | intermediate | ✅ built  | 11 |
+| 5  | Inputs, Outputs & Code          | intermediate | ✅ built  | 10 |
+| 6  | Capacitors, RC & Timing         | intermediate | planned  | 12 |
+| 7  | Transistors & Switching         | intermediate | planned  | 13 |
+| 8  | Op-Amps & Signal Conditioning   | advanced     | planned  | 12 |
+| 9  | Filters, Oscillators & Signals  | advanced     | planned  | 12 |
+| 10 | Power Supplies & Regulation     | advanced     | planned  | 11 |
+| 11 | Digital Logic & Embedded        | advanced     | planned  | 14 |
+| 12 | Comms, Motors & Robotics        | advanced     | planned  | 13 |
+
+**Milestones:**
+- **Built now:** 5 units, 56 lessons (~2 hrs).
+- **Launch core (Units 1–8):** 8 units, ~93 lessons. The minimum to honestly sell a
+  monthly Pro subscription.
+- **Full v1 (Units 1–12):** 12 units, ~143 lessons. Unlocks the annual plan and
+  makes max / Interview Mode credible (embedded + hardware peripherals land in
+  Units 11–12).
+- **Still to author:** 87 lessons across Units 6–12.
+
+This sits above the pricing council's 120-lesson floor and approaches its 180–220
+"good" target; the remaining gap to 180+ is closed post-launch by deepening units
+and adding the labelled advanced tracks (RTOS, FPGA, RF) noted in §6.
+
+Counts are targets, not contracts: a unit may land at ±2 lessons as the material
+dictates. The 12-unit shape and the level ramp are the fixed commitments.
+
+## 5c. Scale ceiling and the engagement multiplier (target: 450–650 lessons)
+
+The committed long-term goal is the **reasonable ceiling: ~450–650 lessons across
+~35–45 units**, a genuine Brilliant-scale product. v1 (~143 lessons) is the launch
+floor; this is where the curriculum is headed.
+
+**What the 9 books on hand can support** (~1.41M words):
+
+| Scenario | Lessons | Units | What it means |
+|----------|---------|-------|---------------|
+| Worst case | ~250–350 | ~20–25 | Only clearly in-scope, non-redundant material |
+| **Reasonable (target)** | **~450–650** | **~35–45** | Full beginner→advanced + components + robotics tracks |
+| Best case | ~900–1,200 | ~70–90 | Mine every drop (incl. reference drills, adapted grad material) |
+
+The pure word-count ceiling is ~1,000–1,200 lessons; it's discounted for
+cross-book redundancy (~30–40% overlap on fundamentals) and out-of-scope grad
+material (much of *Art of Electronics*). Adding 2–3 more books (robotics, digital
+logic) pushes the reasonable target past 800.
+
+**The engagement multiplier (Bronze → Silver → Gold), shipped 2026-06-18.** Duolingo's
+"repeat the circle" is not 3–5 new lessons; it is the same content replayed at
+rising difficulty. We do the same, adapted for a skill app, so **felt depth is
+2–4× the authored lesson count** without authoring 2–4× the lessons:
+
+- The next lesson unlocks after a single pass (**Bronze**) — no forced grinding.
+- A learner can replay any lesson to reach **Silver** then **Gold** for more XP.
+- Each level is harder: Silver drops the teach steps and shuffles the practice
+  steps + their options into a pure-recall run; Gold does the same with fewer
+  hearts. (`components/ohmlet/data/levels.ts`.)
+- The path shows a medal per lesson (bronze/silver/gold) with level pips and a
+  "mastery" counter (gold points / total). Per-lesson levels persist per user.
+
+So engagement hours scale on two independent axes: **authored lessons** (toward the
+450–650 ceiling) and **leveling/review** (3× replay per lesson). A 450-lesson
+library with leveling is comparable in playtime to a 1,000+ lesson flat library.
+
 ## 6a. What actually shipped vs this outline (reconciliation, 2026-06-18)
 
 The 12-unit sketch below was a fine-grained CONCEPT list. The built curriculum
@@ -359,6 +435,92 @@ Build the rails first so every later lesson is cheap and safe.
   skill (5 to 8 lessons) per focused session.
 
 ---
+
+## 11b. Council II — launch scale, difficulty ramp, and how we build it (2026-06-18)
+
+A second LLM council (pricing/value, difficulty/scope, pipeline/execution)
+deliberated "how many lessons to launch with, how hard should they get, and how
+do we produce them." They converged.
+
+### Launch scale (pricing lens)
+- 57 lessons (~2 hrs) is a demo, not a sellable annual subscription.
+- **Floor: ~120 lessons (~12 engaged hrs)** to honestly sell a monthly Pro.
+- **Good: ~180–220 lessons (~25–30 hrs)** with a real advanced track to justify
+  the **annual** plan and make **max / Interview Mode** non-embarrassing.
+- Do NOT chase Duolingo's launch count (~247 short language drills); chase
+  **Brilliant's depth × breadth** (that is the price band, ~$162/yr, we match).
+- Lesson count buys *trust at point of sale*; the live tutor + retention loop buy
+  *renewal*. Need both. Sell the visible roadmap ("more builds shipping monthly").
+- Gating: if not at target by launch, ship Pro **monthly only** and withhold the
+  **annual discount + max/Interview Mode** until the advanced units exist.
+
+### The difficulty ramp (curriculum lens)
+Current 56 top out at ~high-school-maker level; "advanced" on Unit 5 is generous.
+Four regimes:
+- **A Intuition** (U1–2, 3–8 min): numbers given, no math to pass.
+- **B First real calculation** (mid-U1→U3, 8–14 min): first calc at "Powering an
+  LED Safely" (R = (Vsupply−Vf)/I, non-round values, pick E12, predict current);
+  then divider math.
+- **C Multi-step design with constraints** (new units, 12–20 min): coupled
+  equations + a parts choice (RC τ=RC, transistor biasing, op-amp gain, regulator
+  dissipation).
+- **D Spec-driven / open-ended** (top units, 20–35 min, multi-part): given a spec,
+  pick topology AND values AND justify. Interview-grade.
+
+A genuinely hard lesson (the target for ~lesson 80): *"Drive the Relay"* — Arduino
+pin sources 20mA at 5V, switch a 12V 120mA relay coil; size the NPN base resistor
+for saturation (β_min given), orient the flyback diode, vision-verify the build,
+confirm the relay clicks and pin current stayed safe. Two calculations, a parts
+choice, a polarity gotcha, a verified build. (~25 min.)
+
+### Full roadmap: 12 units, ~130 lessons (complete beginner→advanced v1)
+Existing U1–5 stay; **add 7 units** (books strongly support each; AoE alone could
+justify hundreds more, so ~130 is a confident v1 ceiling, not a stretch):
+
+| # | Unit | Level | Sources |
+|---|------|-------|---------|
+| 6 | Capacitors, RC & Timing | intermediate | AoE ch.1, PEI ch.2–3, 555 |
+| 7 | Transistors & Switching | intermediate→adv | AoE ch.2, PEI ch.4 |
+| 8 | Op-Amps & Signal Conditioning | advanced | AoE ch.4, PEI ch.8 |
+| 9 | Filters, Oscillators & Signals | advanced | AoE ch.6, PEI ch.9–10 |
+| 10 | Power Supplies & Regulation | advanced | AoE ch.9, PEI ch.11 |
+| 11 | Digital Logic & Embedded Deep-Dive | advanced | AoE ch.10–11, Blum |
+| 12 | Comms, Motors & Robotics | advanced | Blum, PEI ch.14, EoEC |
+
+Re-tag levels honestly: beginner U1–2, intermediate U3–7, advanced U8–12.
+**Interview Mode is honest with U11–12 shipped**, scoped to hardware fundamentals +
+embedded peripherals (I2C/SPI/UART, interrupts, timers/PWM, GPIO/ADC) + embedded-C
+basics — explicitly NOT RTOS/FPGA/RF (a later labelled max track).
+**Launch v1 = U1–8 (~78 lessons); fast-follow U9–12** to unlock annual + Interview Mode.
+
+### Gating the ramp so it feels earned
+Add a `rigor` flag (calculator / datasheet glyph on the node); enforce real
+`prerequisite` locks (not just order); make U6+ checkpoints graded design problems,
+not recall; add two **gateway exams** (after U5, after U10); on hard lessons require
+the calculation AND the vision-verified build AND the running result to pass.
+
+### How we build it (execution lens) — THE KEY CALL
+**Stop hand-authoring; build the rails.** We are at 57, the threshold where
+hand-authoring stops being rational is ~40–60. Rails = a few build days; then it
+becomes *review, not authoring* at ~80–120 lessons/week, so 57 → ~130–200 in a few
+weeks. Minimum viable rails:
+1. **Schema-as-law**: Zod/TS schema + `npm run lint:lessons` (indices in range, one
+   correct answer, region ids resolve, choose_resistor/divider math actually
+   computes, difficulty monotonic). Makes malformed lessons impossible to merge.
+2. **Grounded drafts with per-step citations** from the 9 books (no citation →
+   reject); a deterministic linter + an LLM faithfulness critic before a single
+   human approval gate.
+3. **`/author` preview route**: review rendered lessons (not JSON), ~3–5 min each.
+4. **Circuit DSL** (the real bottleneck): ~130 lessons need **40–70 diagrams, not
+   8**. DSL renders ~30–40 parameterised topologies as data; a **curated-SVG escape
+   hatch** (~15) covers irregular advanced circuits (op-amp stages, H-bridges).
+   Build the DSL first; add curated SVGs lazily for advanced units.
+
+Pragmatic note: the generation model is the assistant itself, so the heavy RAG +
+vector-DB version is optional. The durable, high-leverage rails are the **linter +
+the circuit DSL + the `/author` preview**; with those, batch-authoring grounded in
+the books (with citations) is fast and consistent. Never generate more than one
+batch ahead of review.
 
 ## 11. Open decisions / next actions
 

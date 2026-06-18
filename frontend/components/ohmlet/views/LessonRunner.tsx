@@ -3,6 +3,7 @@ import { ArrowRight, Check, Heart, Lightbulb, RotateCcw, X, Zap } from 'lucide-r
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
+import { LEVEL_META, buildLeveledSteps, heartsForLevel, xpForLevel } from '../data/levels';
 
 /**
  * LessonRunner — the interactive lesson engine for the new workspace.
@@ -10,15 +11,19 @@ import { findLesson } from '../data/curriculum';
  * Renders the authored steps in LESSON_CONTENT for a given lesson id, one at a
  * time, Duolingo-style: a progress bar, hearts, an exercise, then a check /
  * continue rhythm. Supports every authored step type. On completion it reports
- * the earned XP and the lesson id back so the workspace can persist progress.
+ * the earned XP, the level reached, and the lesson id back so the workspace can
+ * persist progress. The `level` prop (Bronze/Silver/Gold) controls difficulty:
+ * higher levels strip teach steps and shuffle for a harder pure-recall run.
  */
 
 interface LessonRunnerProps {
   lessonId: string;
   /** Accent hex for the lesson's unit (progress + correct states). */
   accent: string;
+  /** The level being attempted: 1 Bronze, 2 Silver, 3 Gold. Defaults to 1. */
+  level?: number;
   onExit: () => void;
-  onComplete: (lessonId: string, xp: number) => void;
+  onComplete: (lessonId: string, xp: number, level: number) => void;
 }
 
 const shuffle = <T,>(arr: T[]): T[] => {
@@ -43,13 +48,16 @@ const shuffledOrder = (n: number): number[] => {
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, onExit, onComplete }) => {
+export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, onExit, onComplete }) => {
   const lesson = findLesson(lessonId);
   const content = LESSON_CONTENT[lessonId];
-  const steps = content?.steps ?? [];
+  // Steps are transformed for the attempted level (Bronze = as authored;
+  // Silver/Gold = teach dropped + shuffled). Rebuilt only when lesson/level change.
+  const steps = useMemo(() => buildLeveledSteps(content?.steps ?? [], level), [content, level]);
+  const levelMeta = LEVEL_META[Math.min(3, Math.max(1, level)) as 1 | 2 | 3];
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [hearts, setHearts] = useState(3);
+  const [hearts, setHearts] = useState(() => heartsForLevel(level));
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [done, setDone] = useState(false);
@@ -164,10 +172,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
     if (!ok) setHearts((h) => Math.max(0, h - 1));
   };
 
+  const earnedXp = content ? xpForLevel(content.xpReward, level) : 0;
+
   const handleContinue = () => {
     if (stepIndex + 1 >= steps.length) {
       setDone(true);
-      onComplete(lessonId, content.xpReward);
+      onComplete(lessonId, earnedXp, level);
       return;
     }
     setStepIndex((i) => i + 1);
@@ -175,7 +185,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
 
   const retry = () => {
     setStepIndex(0);
-    setHearts(3);
+    setHearts(heartsForLevel(level));
     setDone(false);
     setChecked(false);
     setCorrect(null);
@@ -186,15 +196,23 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
     return (
       <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
         <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
-          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ohmlet-ink bg-ohmlet-gold shadow-press-sm">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ohmlet-ink shadow-press-sm" style={{ background: levelMeta.color }}>
             <img src="/brand/ohmlet-mascot.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
           </div>
-          <h2 className="mt-6 text-3xl font-black tracking-tight">Lesson complete!</h2>
+          <p className="mt-5 inline-block rounded-full border-2 border-ohmlet-ink px-3 py-1 text-xs font-black uppercase tracking-wide" style={{ background: levelMeta.soft }}>
+            {levelMeta.name} earned
+          </p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight">{level >= 3 ? 'Mastered!' : 'Lesson complete!'}</h2>
           <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">{lesson.title}</p>
           <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
             <Zap className="h-5 w-5 text-ohmlet-gold-deep" fill="currentColor" />
-            <span className="text-lg font-black">+{content.xpReward} XP</span>
+            <span className="text-lg font-black">+{earnedXp} XP</span>
           </div>
+          {level < 3 && (
+            <p className="mt-4 text-xs font-semibold text-ohmlet-ink-soft">
+              Replay this lesson to reach {LEVEL_META[(level + 1) as 1 | 2 | 3].name}.
+            </p>
+          )}
           <button
             onClick={onExit}
             className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none"
@@ -240,6 +258,11 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
         <div className="h-4 flex-1 overflow-hidden rounded-full bg-ohmlet-line">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: accent }} />
         </div>
+        {level > 1 && (
+          <span className="hidden shrink-0 rounded-full border-2 border-ohmlet-ink px-2.5 py-0.5 text-xs font-black uppercase tracking-wide sm:inline" style={{ background: levelMeta.soft }}>
+            {levelMeta.name} round
+          </span>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Heart className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
           <span className="text-base font-black tabular-nums">{hearts}</span>

@@ -27,18 +27,22 @@ import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
 import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
+import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
 
 interface ProgressState {
-  completedLessonIds: string[];
+  /** Per-lesson level: 1 Bronze, 2 Silver, 3 Gold. Present at >=1 means completed. */
+  lessonLevels: Record<string, number>;
   xp: number;
   streak: number;
   completedToday: number;
   lastActiveDate: string;
+  /** Legacy field (pre-leveling); migrated into lessonLevels on load. */
+  completedLessonIds?: string[];
   [k: string]: unknown; // satisfies useOhmletUserState's Record<string, unknown> constraint
 }
 
 const PROGRESS_DEFAULTS: ProgressState = {
-  completedLessonIds: [],
+  lessonLevels: {},
   xp: 0,
   streak: 0,
   completedToday: 0,
@@ -123,10 +127,20 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
     defaults: PROGRESS_DEFAULTS,
   });
 
-  const completed = useMemo(() => new Set(progress.completedLessonIds), [progress.completedLessonIds]);
+  // Per-lesson levels, with one-time migration from the legacy completedLessonIds.
+  const lessonLevels = useMemo<Record<string, number>>(() => {
+    if (progress.lessonLevels && Object.keys(progress.lessonLevels).length > 0) return progress.lessonLevels;
+    if (progress.completedLessonIds?.length) return Object.fromEntries(progress.completedLessonIds.map((id) => [id, 1]));
+    return progress.lessonLevels ?? {};
+  }, [progress.lessonLevels, progress.completedLessonIds]);
+
+  const completed = useMemo(
+    () => new Set(Object.entries(lessonLevels).filter(([, lvl]) => lvl >= 1).map(([id]) => id)),
+    [lessonLevels],
+  );
   const xp = progress.xp;
   const streak = progress.streak;
-  const [running, setRunning] = useState<{ id: string; accent: string } | null>(null);
+  const [running, setRunning] = useState<{ id: string; accent: string; level: number } | null>(null);
 
   const next = nextLesson(completed) ?? allLessons()[0];
   const pathPreview = allLessons().slice(0, 4);
@@ -137,37 +151,47 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
     return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => ({ d, on: i < lit }));
   }, [streak]);
 
-  const launchLesson = useCallback((id: string) => {
-    setRunning({ id, accent: lessonAccentHex(id) });
-  }, []);
+  // Launch at the next level the learner is working toward (Bronze first, then up).
+  const launchLesson = useCallback(
+    (id: string) => {
+      const level = nextAttemptLevel(lessonLevels[id] ?? 0);
+      setRunning({ id, accent: lessonAccentHex(id), level });
+    },
+    [lessonLevels],
+  );
 
-  const handleComplete = useCallback((id: string, gained: number) => {
-    setProgress((prev) => {
-      if (prev.completedLessonIds.includes(id)) return prev; // no double XP for a repeat
-      const today = dayStr(0);
-      const sameDay = prev.lastActiveDate === today;
-      const streak = sameDay
-        ? prev.streak || 1
-        : prev.lastActiveDate === dayStr(1)
-        ? prev.streak + 1
-        : 1;
-      return {
-        completedLessonIds: [...prev.completedLessonIds, id],
-        xp: prev.xp + gained,
-        streak,
-        completedToday: sameDay ? prev.completedToday + 1 : 1,
-        lastActiveDate: today,
-      };
-    });
-  }, [setProgress]);
+  const handleComplete = useCallback(
+    (id: string, gained: number, level: number) => {
+      setProgress((prev) => {
+        const levels = { ...(prev.lessonLevels ?? {}) };
+        const prevLevel = levels[id] ?? 0;
+        if (level <= prevLevel) return prev; // replay at or below current level: no new XP/level
+        levels[id] = level;
+        const firstEver = prevLevel === 0;
+        const today = dayStr(0);
+        const sameDay = prev.lastActiveDate === today;
+        const streak = sameDay ? prev.streak || 1 : prev.lastActiveDate === dayStr(1) ? prev.streak + 1 : 1;
+        return {
+          ...prev,
+          lessonLevels: levels,
+          xp: prev.xp + gained,
+          streak,
+          completedToday: sameDay ? prev.completedToday + (firstEver ? 1 : 0) : 1,
+          lastActiveDate: today,
+        };
+      });
+    },
+    [setProgress],
+  );
 
   // ── Lesson runner takes over the whole screen ──
   if (running) {
     return (
       <LessonRunner
-        key={running.id}
+        key={`${running.id}-${running.level}`}
         lessonId={running.id}
         accent={running.accent}
+        level={running.level}
         onExit={() => setRunning(null)}
         onComplete={handleComplete}
       />
@@ -245,7 +269,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
               <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Learning path</p>
               <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build by build.</h1>
               <div className="mt-4">
-                <LearnPath completedLessonIds={completed} onStartLesson={launchLesson} />
+                <LearnPath completedLessonIds={completed} lessonLevels={lessonLevels} onStartLesson={launchLesson} />
               </div>
             </div>
           )}
@@ -345,22 +369,30 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
                   </div>
                   <ol className="mt-4 space-y-2">
                     {pathPreview.map((l) => {
-                      const isDone = completed.has(l.id);
+                      const lvl = lessonLevels[l.id] ?? 0;
+                      const isDone = lvl >= 1;
                       const isNext = l.id === next.id;
+                      const medal = lvl >= 1 ? LEVEL_META[Math.min(3, lvl) as 1 | 2 | 3] : null;
                       return (
                         <li key={l.id}>
                           <button
                             onClick={() => launchLesson(l.id)}
                             className="flex w-full items-center gap-3 rounded-xl border border-ohmlet-line p-3 text-left transition-colors hover:border-ohmlet-ink hover:bg-ohmlet-gold-soft/40"
                           >
-                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ohmlet-ink text-xs font-black ${isDone ? 'bg-ohmlet-green text-white' : isNext ? 'bg-ohmlet-gold' : 'bg-white text-ohmlet-ink-soft'}`}>
-                              {isDone ? '✓' : <Play className="h-4 w-4" fill="currentColor" />}
+                            <span
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ohmlet-ink text-xs font-black"
+                              style={medal ? { background: medal.color, color: '#fff' } : undefined}
+                            >
+                              {isDone ? '✓' : isNext ? <Play className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4 text-ohmlet-ink-soft" fill="currentColor" />}
                             </span>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-black">{l.title}</p>
-                              <p className="truncate text-xs font-semibold text-ohmlet-ink-soft">{l.estMinutes} min</p>
+                              <p className="truncate text-xs font-semibold text-ohmlet-ink-soft">
+                                {medal ? `${medal.name} · ${l.estMinutes} min` : `${l.estMinutes} min`}
+                              </p>
                             </div>
-                            {isNext && <span className="ml-auto rounded-full bg-ohmlet-gold-soft px-2 py-0.5 text-[10px] font-black uppercase text-ohmlet-ink-soft">Next</span>}
+                            {isDone && lvl < 3 && <span className="ml-auto rounded-full bg-ohmlet-gold-soft px-2 py-0.5 text-[10px] font-black uppercase text-ohmlet-ink-soft">Level up</span>}
+                            {isNext && lvl === 0 && <span className="ml-auto rounded-full bg-ohmlet-gold-soft px-2 py-0.5 text-[10px] font-black uppercase text-ohmlet-ink-soft">Next</span>}
                           </button>
                         </li>
                       );
