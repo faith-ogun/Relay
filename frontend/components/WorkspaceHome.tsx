@@ -24,7 +24,32 @@ import { SandboxView } from './ohmlet/views/SandboxView';
 import { CommunityView } from './ohmlet/views/CommunityView';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { usePlan } from '../hooks/usePlan';
+import { useIdentity } from '../hooks/useIdentity';
+import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
+
+interface ProgressState {
+  completedLessonIds: string[];
+  xp: number;
+  streak: number;
+  completedToday: number;
+  lastActiveDate: string;
+  [k: string]: unknown; // satisfies useOhmletUserState's Record<string, unknown> constraint
+}
+
+const PROGRESS_DEFAULTS: ProgressState = {
+  completedLessonIds: [],
+  xp: 0,
+  streak: 0,
+  completedToday: 0,
+  lastActiveDate: '',
+};
+
+const dayStr = (offsetDays = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  return d.toISOString().slice(0, 10);
+};
 
 /**
  * WorkspaceHome — the Ohmlet app workspace.
@@ -63,7 +88,6 @@ const lessonAccentHex = (lessonId: string): string => {
 const LEAGUE = 'Copper';
 const LEAGUE_RANK = 4;
 const GOAL_TARGET = 3;
-const WEEK_BASE = [true, true, true, false, false, false, false];
 
 const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ className?: string }>; beta?: boolean }> = [
   { id: 'today', label: 'Today', icon: Home },
@@ -88,28 +112,54 @@ const ACHIEVEMENT_PREVIEW = [
 
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
   const [active, setActive] = useState<ViewId>('today');
-  const { plan, setPlan } = usePlan();
-  const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [xp, setXp] = useState(1240);
-  const [streak] = useState(3);
+  const { userId, isAdmin } = useIdentity();
+  const { plan, setPlan } = usePlan(userId);
+
+  // Progress persists per-user: instantly to localStorage (refresh-safe) and,
+  // when the backend is reachable, to the Firestore state store (cross-device).
+  const { state: progress, setState: setProgress } = useOhmletUserState<ProgressState>({
+    userId,
+    key: 'progress',
+    defaults: PROGRESS_DEFAULTS,
+  });
+
+  const completed = useMemo(() => new Set(progress.completedLessonIds), [progress.completedLessonIds]);
+  const xp = progress.xp;
+  const streak = progress.streak;
   const [running, setRunning] = useState<{ id: string; accent: string } | null>(null);
-  const [justFinished, setJustFinished] = useState(false);
 
   const next = nextLesson(completed) ?? allLessons()[0];
   const pathPreview = allLessons().slice(0, 4);
-  const goalDone = Math.min(GOAL_TARGET, completed.size + 2);
+  const goalDone = Math.min(GOAL_TARGET, progress.lastActiveDate === dayStr(0) ? progress.completedToday : 0);
   const goalPct = Math.round((goalDone / GOAL_TARGET) * 100);
-  const week = useMemo(() => WEEK_BASE.map((on, i) => ({ d: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i], on: on || (justFinished && i === 3) })), [justFinished]);
+  const week = useMemo(() => {
+    const lit = Math.min(streak, 7);
+    return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => ({ d, on: i < lit }));
+  }, [streak]);
 
   const launchLesson = useCallback((id: string) => {
     setRunning({ id, accent: lessonAccentHex(id) });
   }, []);
 
   const handleComplete = useCallback((id: string, gained: number) => {
-    setCompleted((prev) => new Set(prev).add(id));
-    setXp((prev) => prev + gained);
-    setJustFinished(true);
-  }, []);
+    setProgress((prev) => {
+      if (prev.completedLessonIds.includes(id)) return prev; // no double XP for a repeat
+      const today = dayStr(0);
+      const sameDay = prev.lastActiveDate === today;
+      const streak = sameDay
+        ? prev.streak || 1
+        : prev.lastActiveDate === dayStr(1)
+        ? prev.streak + 1
+        : 1;
+      return {
+        completedLessonIds: [...prev.completedLessonIds, id],
+        xp: prev.xp + gained,
+        streak,
+        completedToday: sameDay ? prev.completedToday + 1 : 1,
+        lastActiveDate: today,
+      };
+    });
+  }, [setProgress]);
 
   // ── Lesson runner takes over the whole screen ──
   if (running) {
@@ -164,21 +214,27 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
               <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
             </div>
           </div>
-          {/* Plan switcher: stands in for billing while we wire Stripe. Flipping
-              this changes what's unlocked across the app, so gating is testable. */}
-          <div className="mt-3 flex items-center gap-1 rounded-xl border border-ohmlet-line bg-ohmlet-cream p-1">
-            {(['free', 'pro', 'max'] as Plan[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPlan(p)}
-                className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
-                  plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
-                }`}
-              >
-                {PLAN_META[p].label}
-              </button>
-            ))}
-          </div>
+          {/* Admin-only plan switcher: stands in for billing while we wire Stripe.
+              Gated to admins so normal users never see it (and default to Free).
+              With real auth (#29) this becomes an admin custom claim. */}
+          {isAdmin && (
+            <>
+              <p className="mt-3 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Admin · view as plan</p>
+              <div className="mt-1 flex items-center gap-1 rounded-xl border border-ohmlet-line bg-ohmlet-cream p-1">
+                {(['free', 'pro', 'max'] as Plan[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPlan(p)}
+                    className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
+                      plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
+                    }`}
+                  >
+                    {PLAN_META[p].label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* ── Main ── */}

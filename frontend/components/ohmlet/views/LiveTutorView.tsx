@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { usePlan } from '../../../hooks/usePlan';
+import { useIdentity } from '../../../hooks/useIdentity';
 import { PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 
@@ -61,14 +62,14 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle }) => {
     const raw = import.meta.env.VITE_OHMLET_WS_URL || 'ws://localhost:8082';
     return raw.replace(/\/$/, '');
   }, []);
-  const userId = import.meta.env.VITE_OHMLET_DEFAULT_USER_ID || 'faith';
+  const { userId } = useIdentity();
   const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
 
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
   const [snapped, setSnapped] = useState(false);
 
-  const { canGoLive, liveCapMinutes, liveMinutesRemaining, consumeLiveSeconds, plan } = usePlan();
+  const { canGoLive, liveCapMinutes, liveMinutesRemaining, consumeLiveSeconds, plan } = usePlan(userId);
 
   const {
     state,
