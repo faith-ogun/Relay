@@ -54,7 +54,7 @@ export const CURRICULUM: CurriculumUnit[] = [
         description: 'What a circuit is, what flows through it, and what blocks it.',
         icon: 'Zap',
         lessons: [
-          { id: 'The Closed Loop', title: 'The Closed Loop', summary: 'Current only flows around a complete loop.', estMinutes: 8 },
+          { id: 'The Closed Loop', title: 'The Closed Loop', summary: 'Current only flows around a complete loop.', estMinutes: 10 },
           { id: 'Conductors and Insulators', title: 'Conductors & Insulators', summary: 'What lets current through, and what stops it.', estMinutes: 8 },
           { id: 'Voltage Basics', title: 'Voltage Basics', summary: 'Electrical pressure, measured in volts.', estMinutes: 8 },
           { id: 'Current Flow Intuition', title: 'Current Flow Intuition', summary: 'How current moves in series and parallel.', estMinutes: 12 },
@@ -79,7 +79,7 @@ export const CURRICULUM: CurriculumUnit[] = [
         icon: 'Zap',
         lessons: [
           { id: 'LEDs and Polarity', title: 'LEDs & Polarity', summary: 'One-way valves that always need a resistor.', estMinutes: 12 },
-          { id: 'Powering an LED Safely', title: 'Powering an LED Safely', summary: 'Choose the resistor; predict survive, dim, or burn.', estMinutes: 12 },
+          { id: 'Powering an LED Safely', title: 'Powering an LED Safely', summary: 'Calculate the resistor; predict the current.', estMinutes: 14 },
         ],
       },
       {

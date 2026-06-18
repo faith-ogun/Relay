@@ -16,7 +16,14 @@ export type LessonStepPredictBehavior = { type: 'predict_behavior'; question: st
 export type LessonStepChooseResistor = { type: 'choose_resistor'; question: string; circuitDiagram?: string; options: string[]; correct: number; explanation: string };
 export type LessonStep = LessonStepTeach | LessonStepMC | LessonStepTF | LessonStepFill | LessonStepMatch | LessonStepSpotError | LessonStepIdentify | LessonStepDraw | LessonStepDragOrder | LessonStepPredictReading | LessonStepPredictBehavior | LessonStepChooseResistor;
 
-export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: number }> = {
+// Difficulty tier for a question (used by leveling: Bronze favours tier 1, Silver
+// tier 2, Gold tier 3). Untagged steps default to tier 1. A lesson with a deep,
+// tiered pool of questions lets Bronze/Silver/Gold draw DIFFERENT, harder slices
+// instead of reshuffling the same handful.
+export type Difficulty = 1 | 2 | 3;
+export type AuthoredStep = LessonStep & { difficulty?: Difficulty };
+
+export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: number }> = {
   'Voltage Basics': {
     xpReward: 20,
     steps: [
@@ -145,15 +152,31 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
   // ── Unit 1 foundations: new lessons (grounded in the source books, see CURRICULUM_CITATIONS.md) ──
 
   'The Closed Loop': {
-    xpReward: 20,
+    xpReward: 25,
     steps: [
-      { type: 'teach', title: 'A Circuit Is a Loop', body: 'Current can only flow around a complete, unbroken loop, from one terminal of the source, through your components, and back to the other terminal. Break the loop anywhere and the current stops everywhere. This single idea sits under every circuit you will ever build.', circuitDiagram: 'series_circuit', showCurrentFlow: true },
-      { type: 'multiple_choice', question: 'What does current need in order to flow?', options: ['A single wire to nowhere', 'A complete, unbroken loop', 'Only a battery', 'Only a resistor'], correct: 1, explanation: 'Current needs a complete loop back to the source. A path that does not return is a dead end, and nothing flows.' },
-      { type: 'true_false', statement: 'If there is a break anywhere in the loop, current still flows in the rest of it.', correct: false, explanation: 'No. One break stops the current everywhere in a single loop, the same way a missing section of track stops the whole train.' },
+      // Teach (Bronze shows these; Silver/Gold are pure recall).
+      { type: 'teach', title: 'A Circuit Is a Loop', body: 'Current can only flow around a complete, unbroken loop: out of one terminal of the source, through your components, and back to the other terminal. Break the loop anywhere and the current stops everywhere. This single idea sits under every circuit you will ever build.', circuitDiagram: 'series_circuit', showCurrentFlow: true },
       { type: 'teach', title: 'Open vs Closed', body: 'A switch is just a controlled break in the loop.\n\n• Closed switch = complete loop = current flows.\n• Open switch = broken loop = no current.\n\nThat is all a light switch does: it opens and closes the loop.' },
-      { type: 'identify_component', question: 'Click the source that pushes current around this loop.', circuitDiagram: 'series_circuit', correctComponent: 'battery', explanation: 'The battery is the source. It provides the potential difference that drives current around the complete loop.' },
-      { type: 'predict_behavior', question: 'You snip one wire in this working loop. What happens to the LED?', circuitDiagram: 'series_circuit', options: ['It gets brighter', 'It goes out', 'Nothing changes', 'It changes colour'], correct: 1, explanation: 'Snipping any wire breaks the loop, so current stops everywhere and the LED goes out.' },
-      { type: 'match', instruction: 'Match each term to what it means for the loop.', pairs: [['Closed circuit', 'Complete loop, current flows'], ['Open circuit', 'Broken loop, no current'], ['Switch', 'A controlled break in the loop'], ['Source', 'Pushes current around the loop'], ['Short circuit', 'Loop with no load, huge current']] },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'What must a circuit have for current to flow?', options: ['An unbroken loop back to the source', 'A single wire leading to nowhere', 'A resistor connected on its own', 'A switch that is left wide open'], correct: 0, explanation: 'Current needs a complete loop back to the source. A path that does not return is a dead end.' },
+      { type: 'true_false', difficulty: 1, statement: 'If there is one break in a single loop, current still flows in the rest of it.', correct: false, explanation: 'One break stops the current everywhere in that loop, like a missing section of track stopping the whole train.' },
+      { type: 'identify_component', difficulty: 1, question: 'Click the source that pushes current around this loop.', circuitDiagram: 'series_circuit', correctComponent: 'battery', explanation: 'The battery is the source; it provides the potential difference that drives the current.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An open switch does what to the loop?', options: ['Breaks the loop, so current stops', 'Completes the loop, so current flows', 'Forces the current to speed up', 'Reverses the current direction'], correct: 0, explanation: 'Open = a break in the loop = no current. Closed = a complete loop = current flows.' },
+      { type: 'true_false', difficulty: 1, statement: 'A closed switch completes the loop and lets current flow.', correct: true, explanation: 'Closing the switch removes the break, so the loop is complete and current flows.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'You snip one wire in this working loop. What happens to the LED?', circuitDiagram: 'series_circuit', options: ['It goes out completely', 'It glows a little brighter', 'It keeps glowing the same', 'It slowly shifts colour'], correct: 0, explanation: 'Snipping any wire breaks the loop, so current stops everywhere and the LED goes out.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Two bulbs share one series loop. You unscrew one. What happens to the other?', options: ['It also goes out completely', 'It glows about twice as bright', 'It carries on entirely unaffected', 'It begins to flicker quickly'], correct: 0, explanation: 'A series loop has one path. Unscrewing one bulb breaks the loop, so the other goes out too.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A circuit where current flows is called a ___ circuit.', blank: '___', answer: 'closed', hint: 'It is the opposite of an open one.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Where can a single switch go to control a whole series loop?', options: ['Anywhere along the single loop', 'Only right at the battery plus', 'Only directly beside the bulb', 'Somewhere outside the loop'], correct: 0, explanation: 'A series loop has one path, so a switch anywhere in it breaks the whole loop.' },
+      { type: 'match', difficulty: 2, instruction: 'Match each term to what it means for the loop.', pairs: [['Closed circuit', 'Complete loop, current flows'], ['Open circuit', 'Broken loop, no current'], ['Switch', 'A controlled break in the loop'], ['Source', 'Pushes current around the loop'], ['Short circuit', 'Loop with no load, huge current']] },
+
+      // ── Tier 3: reason ──
+      { type: 'predict_behavior', difficulty: 3, question: 'A series loop has a battery, an open switch, and a bulb (off). You add a wire directly across the open switch. What happens?', circuitDiagram: 'series_circuit', options: ['The bulb lights; the wire bypasses the switch', 'Nothing happens; the bulb stays dark', 'The battery drains with no current at all', 'The bulb lights at only half brightness'], correct: 0, explanation: 'The added wire completes the loop around the open switch, so current flows and the bulb lights.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A loop has a battery and a bulb, plus a stray wire joining the battery terminals directly. What happens?', options: ['Most current rushes through the stray wire', 'The bulb glows much brighter than usual', 'Both paths simply share the current evenly', 'The battery voltage suddenly doubles'], correct: 0, explanation: 'The stray wire is a near-zero-resistance path, so it hogs the current (a short) and the bulb barely lights.' },
+      { type: 'spot_error', difficulty: 3, question: 'Click the path that is stealing the current away from the bulb.', circuitDiagram: 'short_circuit', correctRegion: 'short_wire', explanation: 'That wire bypasses the components with almost no resistance, so nearly all the current takes it instead.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'You build a loop whose only component is a plain wire from + to − (no bulb, no resistor). What happens?', options: ['A short: a very large, unsafe current flows', 'No current, because there is no resistor', 'A small safe current, the same as a bulb', 'The current reverses and charges the battery'], correct: 0, explanation: 'With nothing to limit it, the current spikes. That is a short circuit, and the wire and battery heat up fast.' },
     ],
   },
 
@@ -209,15 +232,30 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
   },
 
   'Powering an LED Safely': {
-    xpReward: 30,
+    xpReward: 35,
     steps: [
       { type: 'teach', title: 'An LED Needs a Limit', body: 'An LED barely resists current on its own. Connect it straight across a supply and a huge current rushes through and destroys it almost instantly. A series resistor sets a safe current. A typical small LED wants around 15 to 20 mA.', circuitDiagram: 'led_no_resistor' },
-      { type: 'spot_error', question: 'This LED will burn out. Click the problem.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'There is no current-limiting resistor, so nothing stops the current. The LED draws far too much and fails.' },
-      { type: 'teach', title: 'Sizing the Resistor', body: 'Use Ohm\'s law on the resistor. With a 5V supply and an LED that drops about 2V, the resistor must drop the remaining 3V. For 15 mA:\n\nR = (5V − 2V) / 0.015A = 200Ω\n\nThe nearest common value is 220Ω, which is the classic LED resistor.' },
-      { type: 'choose_resistor', question: '5V supply, an LED dropping 2V, and you want about 15 mA. Which resistor should you choose?', circuitDiagram: 'series_circuit', options: ['22 Ω', '220 Ω', '2.2 kΩ', '22 kΩ'], correct: 1, explanation: '220Ω gives roughly (5−2)/220 ≈ 14 mA, right in the safe range. 22Ω lets far too much current through; the kΩ values choke it down to a dim glow.' },
-      { type: 'predict_behavior', question: 'You grab a 22Ω resistor instead of 220Ω. What happens to the LED?', circuitDiagram: 'series_circuit', options: ['Nothing, it is fine', 'Far too much current flows, risking burnout', 'It will not light at all', 'It glows very dimly'], correct: 1, explanation: 'A resistor 10× too small lets roughly 10× the current through, well over the LED\'s safe limit, so it runs dangerously hot and can burn out.' },
-      { type: 'predict_behavior', question: 'Now you use a 22 kΩ resistor. What happens?', circuitDiagram: 'series_circuit', options: ['It burns out', 'It glows very dimly or not at all', 'It gets brighter', 'It explodes'], correct: 1, explanation: 'A resistor 100× too large chokes the current to a fraction of a milliamp, so the LED is barely lit.' },
-      { type: 'multiple_choice', question: 'What current does a typical small LED want?', options: ['Around 20 mA', 'Around 2 A', 'Around 200 mA', 'As much as possible'], correct: 0, explanation: 'Most small indicator LEDs are happy around 15 to 20 mA. The resistor is what sets it.' },
+      { type: 'teach', title: 'Sizing the Resistor', body: 'Use Ohm\'s law on the resistor, not the LED. The resistor drops whatever voltage the LED does not:\n\nR = (Vsupply − Vf) / I\n\nWith 5V, an LED forward voltage Vf of 2V, and a target of 15 mA:\nR = (5 − 2) / 0.015 = 200Ω → use the nearest common value, 220Ω.\n\nThe trap: forgetting to subtract Vf. Always subtract the LED drop first.' },
+
+      // ── Tier 1: recall ──
+      { type: 'spot_error', difficulty: 1, question: 'This LED will burn out. Click the problem.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'No current-limiting resistor, so nothing stops the current. The LED draws far too much and fails.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'What current does a typical small indicator LED want?', options: ['Around 15 to 20 mA', 'Around 2 amps', 'Around 200 mA', 'As much as it can take'], correct: 0, explanation: 'Most small LEDs are happy around 15 to 20 mA; the series resistor is what sets it.' },
+      { type: 'true_false', difficulty: 1, statement: 'An LED should always have a series resistor to limit its current.', correct: true, explanation: 'Without one, nothing limits the current and the LED is destroyed almost instantly.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'In an LED circuit, the resistor\'s job is to...', options: ['Limit the current to a safe level', 'Raise the voltage across the LED', 'Change the colour of the LED', 'Store charge to smooth the supply'], correct: 0, explanation: 'The resistor sets a safe current; it does not change the LED\'s colour or voltage.' },
+
+      // ── Tier 2: one calculation ──
+      { type: 'fill_blank', difficulty: 2, prompt: 'On a 5V supply, an LED drops 2V. The resistor must drop ___ V.', blank: '___', answer: '3', hint: 'It takes whatever the LED leaves: supply minus the LED drop.' },
+      { type: 'choose_resistor', difficulty: 2, question: '5V supply, LED dropping 2V, target about 15 mA. Which resistor?', circuitDiagram: 'series_circuit', options: ['22 Ω', '220 Ω', '2.2 kΩ', '22 kΩ'], correct: 1, explanation: '(5 − 2) / 0.015 = 200Ω, so 220Ω. 22Ω passes ~10× too much; the kΩ values choke it to a dim glow.' },
+      { type: 'predict_reading', difficulty: 2, question: '5V supply, LED Vf 2V, a 220Ω resistor. What current flows? (I = (V−Vf)/R)', circuitDiagram: 'series_circuit', options: ['≈ 14 mA', '≈ 23 mA', '≈ 7 mA', '≈ 36 mA'], correct: 0, explanation: '(5 − 2) / 220 = 13.6 mA. Picking 23 mA means you forgot to subtract the 2V LED drop (5/220).' },
+      { type: 'choose_resistor', difficulty: 2, question: 'Now a 9V supply, the same 2V LED, target ~15 mA. Which resistor?', circuitDiagram: 'series_circuit', options: ['150 Ω', '220 Ω', '470 Ω', '1 kΩ'], correct: 2, explanation: '(9 − 2) / 0.015 = 467Ω → 470Ω. The higher supply leaves more voltage for the resistor to drop, so R is larger.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You grab a 22Ω resistor instead of 220Ω on that 5V LED. What happens?', circuitDiagram: 'series_circuit', options: ['Far too much current flows, risking burnout', 'Nothing changes, it is perfectly fine', 'It will not light up at all', 'It glows very faintly'], correct: 0, explanation: 'A resistor 10× too small passes ~10× the current (~136 mA), far over the LED\'s limit. It runs hot and can fail.' },
+
+      // ── Tier 3: multi-step reasoning ──
+      { type: 'predict_reading', difficulty: 3, question: 'A red LED has Vf 1.8V. On 5V through a 330Ω resistor, the current is closest to:', circuitDiagram: 'series_circuit', options: ['≈ 10 mA', '≈ 15 mA', '≈ 6 mA', '≈ 20 mA'], correct: 0, explanation: '(5 − 1.8) / 330 = 9.7 mA ≈ 10 mA. The 15 mA answer is the classic slip of forgetting Vf (5/330).' },
+      { type: 'choose_resistor', difficulty: 3, question: 'Two red LEDs (Vf 1.8V each) in SERIES on 5V, target ~12 mA. Pick the resistor.', circuitDiagram: 'series_circuit', options: ['120 Ω', '47 Ω', '390 Ω', '1 kΩ'], correct: 0, explanation: 'Two in series drop 3.6V, leaving 1.4V. R = 1.4 / 0.012 = 117Ω → 120Ω. You must add both LED drops first.' },
+      { type: 'predict_reading', difficulty: 3, question: 'Those two series LEDs (3.6V total) on 5V through a 120Ω resistor draw about:', circuitDiagram: 'series_circuit', options: ['≈ 12 mA', '≈ 42 mA', '≈ 28 mA', '≈ 6 mA'], correct: 0, explanation: '(5 − 3.6) / 120 = 11.7 mA ≈ 12 mA. The 42 mA answer ignores both LED drops (5/120).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A 220Ω resistor drops 3V at 14 mA. Its power, and is a 1/4 W part OK?', options: ['≈ 42 mW, fine for a 1/4 W part', '≈ 420 mW, too much for 1/4 W', '≈ 3 W, it needs a big resistor', '≈ 0.5 mW, basically nothing'], correct: 0, explanation: 'P = V × I = 3 × 0.014 = 0.042 W = 42 mW, comfortably under the 250 mW a 1/4 W resistor handles.' },
+      { type: 'fill_blank', difficulty: 3, prompt: 'An LED drops 2V at 20 mA. Its power use, P = V × I, is ___ W.', blank: '___', answer: '0.04', hint: 'Volts times amps; convert the milliamps to amps first.' },
     ],
   },
 

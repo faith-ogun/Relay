@@ -67,6 +67,17 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
         if (new Set(s.options).size !== s.options.length) warn(`${step.type}: duplicate options`);
         if (!Number.isInteger(s.correct) || s.correct < 0 || s.correct >= s.options.length)
           err(`${step.type}: correct index ${s.correct} is out of range (0..${s.options.length - 1})`);
+        else if (s.options.length >= 3) {
+          // The "longest answer is correct" tell: distractors should match the
+          // correct answer in length (item-writing best practice). Flag when the
+          // correct option is clearly the longest by a wide margin.
+          const lens = s.options.map((o) => o.trim().length);
+          const correctLen = lens[s.correct];
+          const others = lens.filter((_, i) => i !== s.correct);
+          const avgOther = others.reduce((a, b) => a + b, 0) / others.length;
+          if (correctLen === Math.max(...lens) && correctLen >= avgOther * 1.6 && correctLen - avgOther >= 12)
+            warn(`${step.type}: correct option is much longer than the distractors (the "longest answer" tell — pad the distractors to match)`);
+        }
       }
       if (!isNonEmpty(s.explanation)) warn(`${step.type}: empty explanation`);
       break;
@@ -81,6 +92,8 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
       if (!isNonEmpty(step.prompt)) err('fill_blank: empty prompt');
       if (!isNonEmpty(step.answer)) err('fill_blank: empty answer');
       if (!isNonEmpty(step.hint)) warn('fill_blank: empty hint');
+      else if (isNonEmpty(step.answer) && step.answer.trim().length >= 2 && step.hint.toLowerCase().includes(step.answer.trim().toLowerCase()))
+        warn('fill_blank: the hint contains the answer (hints should nudge toward the method, not give it away)');
       break;
     }
     case 'match': {
@@ -160,6 +173,7 @@ function lintLesson(lessonId: string, lesson: { steps: LessonStep[]; xpReward: n
 
   const nonTeach = lesson.steps.filter((s) => s.type !== 'teach').length;
   if (nonTeach === 0) pushLesson('warn', 'lesson has no interactive steps (all teach)');
+  else if (nonTeach < 6) pushLesson('warn', `only ${nonTeach} graded questions; aim for 8+ (12+ for a tiered pool that levels well)`);
 
   let consecutiveTeach = 0;
   lesson.steps.forEach((step, i) => {

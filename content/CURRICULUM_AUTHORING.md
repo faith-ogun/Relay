@@ -116,6 +116,37 @@ Two ways to get a circuit diagram, both sharing one primitive palette
 Region source of truth: `circuits/registry.ts` (`CIRCUIT_REGIONS`) merges the
 hand-written legacy regions with the DSL-derived ones.
 
+## The quality bar (non-negotiable, partly linter-enforced)
+
+The first 56 lessons were too easy and guessable. The bar, grounded in standard
+item-writing research:
+
+- **Balanced distractors.** All options similar in length, grammar, and
+  plausibility. The correct answer must NOT be the longest/most-detailed one (the
+  "longest answer" tell). The linter warns when it is.
+- **Distractors are common mistakes.** The wrong numeric answers should be the
+  results of the errors a learner actually makes (e.g. forgetting to subtract an
+  LED's forward voltage → `5/220` instead of `(5−2)/220`). A plausible distractor
+  teaches; a silly one gives the answer away.
+- **Hints nudge the method, never name the answer.** No "less-than sign" for a `<`
+  answer, no "5/1000" hint for a `5` answer. The linter warns when a fill-blank
+  hint literally contains the answer (it can't catch semantic giveaways, so judge
+  those at the /author gate).
+- **Depth: aim for 8+ graded questions; 12+ for a tiered pool that levels well.**
+  The linter warns below 6.
+- **Real difficulty, not just a harder topic.** Tag questions with
+  `difficulty: 1 | 2 | 3`. Tier 1 = recall, Tier 2 = one calculation/application,
+  Tier 3 = multi-step reasoning or a real computation (e.g. size a base resistor
+  for saturation; two LEDs in series; power vs the resistor's rating). Bronze
+  favours Tier 1, Silver Tier 2, Gold Tier 3 (see `data/levels.ts`), so a deep
+  pool makes replays genuinely escalate.
+
+Reference rebuilds to copy the bar from: **The Closed Loop** (tiered beginner pool)
+and **Powering an LED Safely** (real calculations with common-mistake distractors).
+The other ~54 lessons predate this bar and are flagged by `npm run lint:lessons`
+(currently ~51 "longest answer" + ~42 "too short") — that is the re-authoring
+backlog.
+
 ## Depth target
 
 Benchmark: Mimo ships thousands of exercises per path; Duolingo's depth is the

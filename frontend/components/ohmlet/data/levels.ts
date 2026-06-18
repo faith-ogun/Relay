@@ -10,7 +10,7 @@
 //   Silver (2): teach steps dropped, remaining steps + their options shuffled.
 //   Gold   (3): same pure-recall run as Silver, but with fewer hearts.
 
-import type { LessonStep } from './lessons';
+import type { AuthoredStep, LessonStep } from './lessons';
 
 export type LessonLevel = 0 | 1 | 2 | 3; // 0 = not started
 export const MAX_LEVEL = 3 as const;
@@ -60,15 +60,55 @@ function shuffleStepOptions(step: LessonStep): LessonStep {
   return { ...step, options, correct } as LessonStep;
 }
 
+// How many questions a single run shows when a lesson has a deep pool.
+export const RUN_SIZE = 8;
+// A lesson needs more than this many questions to count as a "pool" worth sampling.
+const POOL_THRESHOLD = RUN_SIZE + 2;
+
+// Tier preference order by level: which difficulty to draw from first.
+const TIER_ORDER: Record<number, Difficulty[]> = {
+  1: [1, 2, 3],
+  2: [2, 3, 1],
+  3: [3, 2, 1],
+};
+type Difficulty = 1 | 2 | 3;
+
+const difficultyOf = (s: AuthoredStep): Difficulty => (s.difficulty === 2 || s.difficulty === 3 ? s.difficulty : 1);
+
 /**
- * Build the step list for a given level. Bronze returns the lesson as authored;
- * Silver/Gold strip the teach steps and shuffle the practice steps + their options
- * so a replay is a fresh, harder pure-recall run, not a memorised sequence.
+ * Build the step list for a given level.
+ *
+ * Small / legacy lessons (few questions): Bronze plays as authored; Silver/Gold
+ * strip teach steps and shuffle the practice + options for a harder recall run.
+ *
+ * Deep, tiered lessons (a real question pool): each level draws a DIFFERENT,
+ * harder slice — Bronze favours easy questions, Gold the hardest — so replays
+ * feel like new, escalating challenges rather than the same set reshuffled.
  */
-export function buildLeveledSteps(steps: LessonStep[], level: number): LessonStep[] {
+export function buildLeveledSteps(steps: AuthoredStep[], level: number): LessonStep[] {
+  const teach = steps.filter((s) => s.type === 'teach');
+  const graded = steps.filter((s) => s.type !== 'teach');
+
+  // Deep pool → sample a tiered slice.
+  if (graded.length >= POOL_THRESHOLD) {
+    const byTier: Record<Difficulty, AuthoredStep[]> = { 1: [], 2: [], 3: [] };
+    for (const s of graded) byTier[difficultyOf(s)].push(s);
+    const order = TIER_ORDER[Math.min(3, Math.max(1, level))];
+    const picked: AuthoredStep[] = [];
+    for (const tier of order) {
+      for (const s of shuffle(byTier[tier])) {
+        if (picked.length >= RUN_SIZE) break;
+        picked.push(s);
+      }
+      if (picked.length >= RUN_SIZE) break;
+    }
+    const run = shuffle(picked).map(shuffleStepOptions);
+    // Bronze keeps a little teaching up front; Silver/Gold are pure recall.
+    return level <= 1 ? [...teach.slice(0, 2), ...run] : run;
+  }
+
+  // Small lesson fallback.
   if (level <= 1) return steps;
-  const practice = steps.filter((s) => s.type !== 'teach');
-  // Guard: if a lesson is almost all teaching, keep the original rather than empty it.
-  if (practice.length < 2) return steps;
-  return shuffle(practice).map(shuffleStepOptions);
+  if (graded.length < 2) return steps;
+  return shuffle(graded).map(shuffleStepOptions);
 }
