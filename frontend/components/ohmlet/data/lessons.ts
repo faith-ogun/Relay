@@ -29,7 +29,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'fill_blank', prompt: 'In a voltage divider with Vin = 5V, R1 = 10kΩ, R2 = 10kΩ, Vout = ___ V', blank: '___', answer: '2.5', hint: 'Equal resistors split the voltage in half.', circuitDiagram: 'voltage_divider' },
       { type: 'multiple_choice', question: 'What happens to Vout in a voltage divider if R2 increases?', options: ['Vout decreases', 'Vout increases', 'Vout stays the same', 'The circuit breaks'], correct: 1, explanation: 'As R2 gets larger relative to R1, it gets a bigger share of the voltage: Vout = Vin × R2/(R1+R2).', circuitDiagram: 'voltage_divider' },
       { type: 'true_false', statement: 'You can measure voltage at a single point in a circuit.', correct: false, explanation: 'Voltage is always a difference between two points. You need a reference (usually ground).' },
-      { type: 'match', instruction: 'Match each term to its definition.', pairs: [['Voltage', 'Electrical pressure (measured in V)'], ['Current', 'Flow of electrons (measured in A)'], ['Resistance', 'Opposition to flow (measured in Ω)'], ['Ground', 'Reference point at 0V']] },
+      { type: 'match', instruction: 'Match each term to its definition.', pairs: [['Voltage', 'Electrical pressure (measured in V)'], ['Current', 'Flow of electrons (measured in A)'], ['Resistance', 'Opposition to flow (measured in Ω)'], ['Ground', 'Reference point at 0V'], ['Battery', 'Provides the voltage that drives current']] },
     ],
   },
   'Current Flow Intuition': {
@@ -45,7 +45,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'fill_blank', prompt: 'Using Ohm\'s Law: a 330Ω resistor with 3.3V across it draws ___ mA', blank: '___', answer: '10', hint: 'I = V/R = 3.3/330 = 0.01A = ?mA' },
       { type: 'spot_error', question: 'This LED circuit is missing something critical. Click on the problem area.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'Without a current-limiting resistor, too much current flows through the LED. It will burn out instantly!' },
       { type: 'multiple_choice', question: 'Why do you need a resistor with an LED?', options: ['To make the LED brighter', 'To limit current and prevent burnout', 'To increase voltage across the LED', 'LEDs don\'t actually need resistors'], correct: 1, explanation: 'Without a current-limiting resistor, too much current flows through the LED, destroying it almost instantly.' },
-      { type: 'match', instruction: 'Match the circuit type to its current behavior.', pairs: [['Series circuit', 'Same current everywhere'], ['Parallel circuit', 'Current splits between branches'], ['Short circuit', 'Dangerously high current'], ['Open circuit', 'Zero current flow']] },
+      { type: 'match', instruction: 'Match the circuit type to its current behavior.', pairs: [['Series circuit', 'Same current everywhere'], ['Parallel circuit', 'Current splits between branches'], ['Short circuit', 'Dangerously high current'], ['Open circuit', 'Zero current flow'], ['Conventional current', 'Flows from + to −']] },
     ],
   },
   'Breadboard Confidence Drill': {
@@ -87,7 +87,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'multiple_choice', question: 'To reduce the current in a circuit, you should...', options: ['Add more resistance', 'Remove resistance', 'Add more LEDs', 'Increase the voltage'], correct: 0, explanation: 'More resistance means less current for the same voltage: I = V / R.' },
       { type: 'identify_component', question: 'Click the component that limits the current in this circuit.', circuitDiagram: 'series_circuit', correctComponent: 'resistor', explanation: 'The resistor limits current to protect the LED.' },
       { type: 'true_false', statement: 'For a fixed voltage, increasing resistance decreases the current.', correct: true, explanation: 'Correct. I = V / R, so a bigger R gives a smaller I.' },
-      { type: 'match', instruction: 'Match each quantity to its unit.', pairs: [['Voltage', 'Volts (V)'], ['Current', 'Amps (A)'], ['Resistance', 'Ohms (Ω)'], ['Power', 'Watts (W)']] },
+      { type: 'match', instruction: 'Match each quantity to its unit.', pairs: [['Voltage', 'Volts (V)'], ['Current', 'Amps (A)'], ['Resistance', 'Ohms (Ω)'], ['Power', 'Watts (W)'], ['Charge', 'Coulombs (C)']] },
     ],
   },
   'LEDs and Polarity': {
@@ -113,7 +113,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'identify_component', question: 'Click one of the resistors in this parallel circuit.', circuitDiagram: 'parallel_circuit', correctComponent: 'r1', explanation: 'Each branch has its own resistor. In parallel, you generally give every LED its own resistor.' },
       { type: 'fill_blank', prompt: 'Two 10kΩ resistors connected in series add up to ___ kΩ', blank: '___', answer: '20', hint: 'Series resistances simply add: 10 + 10.' },
       { type: 'multiple_choice', question: 'You want three LEDs at the same brightness from one 5V supply. Best approach?', options: ['One resistor for all three in parallel', 'Each LED in its own branch with its own resistor', 'All three LEDs in series with no resistor', 'Connect them straight to 5V'], correct: 1, explanation: 'Give each parallel LED its own resistor so they share current evenly and stay at matched brightness.' },
-      { type: 'match', instruction: 'Match each idea to the circuit it describes.', pairs: [['Same current everywhere', 'Series'], ['Current splits between branches', 'Parallel'], ['Resistors add: R1 + R2', 'Series'], ['Every branch sees full voltage', 'Parallel']] },
+      { type: 'match', instruction: 'Match each idea to the circuit it describes.', pairs: [['Same current everywhere', 'Series'], ['Current splits between branches', 'Parallel'], ['Resistors add: R1 + R2', 'Series'], ['Every branch sees full voltage', 'Parallel'], ['One break stops everything', 'Series']] },
     ],
   },
   'Short Circuits and Safety': {
@@ -153,7 +153,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'teach', title: 'Open vs Closed', body: 'A switch is just a controlled break in the loop.\n\n• Closed switch = complete loop = current flows.\n• Open switch = broken loop = no current.\n\nThat is all a light switch does: it opens and closes the loop.' },
       { type: 'identify_component', question: 'Click the source that pushes current around this loop.', circuitDiagram: 'series_circuit', correctComponent: 'battery', explanation: 'The battery is the source. It provides the potential difference that drives current around the complete loop.' },
       { type: 'predict_behavior', question: 'You snip one wire in this working loop. What happens to the LED?', circuitDiagram: 'series_circuit', options: ['It gets brighter', 'It goes out', 'Nothing changes', 'It changes colour'], correct: 1, explanation: 'Snipping any wire breaks the loop, so current stops everywhere and the LED goes out.' },
-      { type: 'match', instruction: 'Match each term to what it means for the loop.', pairs: [['Closed circuit', 'Complete loop, current flows'], ['Open circuit', 'Broken loop, no current'], ['Switch', 'A controlled break in the loop'], ['Source', 'Pushes current around the loop']] },
+      { type: 'match', instruction: 'Match each term to what it means for the loop.', pairs: [['Closed circuit', 'Complete loop, current flows'], ['Open circuit', 'Broken loop, no current'], ['Switch', 'A controlled break in the loop'], ['Source', 'Pushes current around the loop'], ['Short circuit', 'Loop with no load, huge current']] },
     ],
   },
 
@@ -165,7 +165,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'true_false', statement: 'The plastic coating around a wire is there to conduct electricity.', correct: false, explanation: 'The opposite. The plastic is an insulator. It stops the current escaping and stops wires shorting against each other.' },
       { type: 'multiple_choice', question: 'Silver actually conducts slightly better than copper. Why are wires usually copper, not silver?', options: ['Silver is a poor conductor', 'Silver is far more expensive', 'Silver does not conduct at all', 'Copper is a better conductor'], correct: 1, explanation: 'Silver is a touch better, but far too expensive for everyday wiring, so copper is the practical choice.' },
       { type: 'multiple_choice', question: 'Why does a circuit need insulators as well as conductors?', options: ['To make it heavier', 'To guide current where you want it and stop it where you do not', 'Insulators make current flow faster', 'They are only decorative'], correct: 1, explanation: 'Conductors carry current along the intended path; insulators keep it from leaking or shorting elsewhere. You need both.' },
-      { type: 'match', instruction: 'Sort each material.', pairs: [['Copper', 'Conductor'], ['Rubber', 'Insulator'], ['Gold', 'Conductor'], ['Glass', 'Insulator']] },
+      { type: 'match', instruction: 'Sort each material into conductor or insulator.', pairs: [['Copper', 'Conductor'], ['Rubber', 'Insulator'], ['Silver', 'Conductor'], ['Glass', 'Insulator'], ['Aluminium', 'Conductor']] },
     ],
   },
 
@@ -178,7 +178,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'teach', title: 'The Water Picture', body: 'Picture water in a pipe. Voltage is the pressure pushing the water, current is the flow rate, and resistance is a narrow section that restricts the flow. Squeeze the pipe (more resistance) and less water flows. It is a helpful picture, just remember real circuits need a complete loop, unlike an open hose.' },
       { type: 'identify_component', question: 'Click the component whose job is to provide resistance.', circuitDiagram: 'series_circuit', correctComponent: 'resistor', explanation: 'The resistor (the zig-zag symbol) provides a fixed resistance that limits the current in the loop.' },
       { type: 'predict_reading', question: 'A 5V supply pushes current through a 1000Ω resistor. Using I = V / R, predict the current.', circuitDiagram: 'series_circuit', options: ['0.5 mA', '5 mA', '50 mA', '500 mA'], correct: 1, explanation: 'I = V / R = 5 / 1000 = 0.005 A = 5 mA. Bigger resistance, smaller current.' },
-      { type: 'match', instruction: 'Match each quantity to what it does.', pairs: [['Voltage', 'The push (pressure)'], ['Current', 'The flow rate'], ['Resistance', 'Opposition to the flow']] },
+      { type: 'match', instruction: 'Match each term to what it means.', pairs: [['Voltage', 'The push (pressure)'], ['Current', 'The flow rate'], ['Resistance', 'Opposition to the flow'], ['Ohm (Ω)', 'The unit of resistance'], ['Resistor', 'Part that adds resistance']] },
     ],
   },
 
@@ -191,7 +191,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'fill_blank', prompt: 'Red, Red, Brown. Digits 2 and 2 give 22, and Brown means ×10. The value is ___ Ω', blank: '___', answer: '220', hint: '22 × 10 = ?' },
       { type: 'multiple_choice', question: 'A resistor has only three coloured bands and no fourth band. What is its tolerance?', options: ['1%', '5%', '10%', '20%'], correct: 3, explanation: 'No fourth (tolerance) band means 20%, the loosest standard tolerance.' },
       { type: 'predict_reading', question: 'Yellow, Violet, Orange. Predict the value.', options: ['47 Ω', '470 Ω', '4.7 kΩ', '47 kΩ'], correct: 3, explanation: 'Yellow=4, Violet=7 give "47". Orange multiplier = ×1000. 47 × 1000 = 47,000 Ω = 47 kΩ.' },
-      { type: 'match', instruction: 'Match each colour to its digit.', pairs: [['Black', '0'], ['Brown', '1'], ['Red', '2'], ['Yellow', '4']] },
+      { type: 'match', instruction: 'Match each colour to its digit.', pairs: [['Black', '0'], ['Brown', '1'], ['Red', '2'], ['Orange', '3'], ['Yellow', '4']] },
     ],
   },
 
@@ -230,7 +230,7 @@ export const LESSON_CONTENT: Record<string, { steps: LessonStep[]; xpReward: num
       { type: 'true_false', statement: 'You measure current by connecting the meter in parallel across a component.', correct: false, explanation: 'That is how you measure voltage. Current must be measured in series, in the path. Putting a current meter in parallel can short the component.' },
       { type: 'predict_reading', question: 'This voltage divider has two equal resistors across 5V. Predict the voltage the meter reads at the midpoint.', circuitDiagram: 'voltage_divider', options: ['0 V', '2.5 V', '5 V', '10 V'], correct: 1, explanation: 'Equal resistors split the voltage evenly, so the midpoint sits at half of 5V, which is 2.5V.' },
       { type: 'predict_reading', question: 'A 5V supply drives a single 1 kΩ resistor. Predict the current the meter reads.', circuitDiagram: 'series_circuit', options: ['5 mA', '50 mA', '0.5 mA', '500 mA'], correct: 0, explanation: 'I = V / R = 5 / 1000 = 5 mA.' },
-      { type: 'match', instruction: 'Match each measurement to how you take it.', pairs: [['Voltage', 'Across a component (parallel)'], ['Current', 'Through the path (series)'], ['Voltage unit', 'Volts'], ['Current unit', 'Amps']] },
+      { type: 'match', instruction: 'Match each measurement to how you take it.', pairs: [['Measure voltage', 'Across a component (parallel)'], ['Measure current', 'Through the path (series)'], ['Voltage unit', 'Volts'], ['Current unit', 'Amps'], ['Resistance unit', 'Ohms']] },
     ],
   },
 };

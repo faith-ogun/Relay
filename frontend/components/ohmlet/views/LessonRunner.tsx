@@ -30,6 +30,16 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
+// A shuffled [0..n-1] that is NOT the original order, so a match column never
+// renders in its authored sequence (which would line the answers up diagonally).
+const shuffledOrder = (n: number): number[] => {
+  const ident = Array.from({ length: n }, (_, i) => i);
+  if (n <= 1) return ident;
+  let out = shuffle(ident);
+  for (let t = 0; t < 12 && out.every((v, i) => v === i); t++) out = shuffle(ident);
+  return out;
+};
+
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
@@ -53,6 +63,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
   const [matched, setMatched] = useState<Set<number>>(new Set()); // completed LEFT pair indices
   const [matchedRights, setMatchedRights] = useState<Set<number>>(new Set()); // consumed RIGHT chip indices
   const [matchSel, setMatchSel] = useState<{ side: 'l' | 'r'; idx: number } | null>(null);
+  const [leftOrder, setLeftOrder] = useState<number[]>([]);
   const [rightOrder, setRightOrder] = useState<number[]>([]);
   const [drawn, setDrawn] = useState<Array<[string, string]>>([]);
   const [drawSel, setDrawSel] = useState<string | null>(null);
@@ -73,7 +84,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
     setDrawn([]);
     setDrawSel(null);
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
-    if (step?.type === 'match') setRightOrder(shuffle(step.pairs.map((_, i) => i)));
+    if (step?.type === 'match') {
+      // Shuffle BOTH columns (each off its original order) so answers never line
+      // up as a straight diagonal.
+      setLeftOrder(shuffledOrder(step.pairs.length));
+      setRightOrder(shuffledOrder(step.pairs.length));
+    }
   }, [stepIndex, step]);
 
   const progress = steps.length ? Math.round((stepIndex / steps.length) * 100) : 0;
@@ -252,6 +268,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
           setMatchedRights={setMatchedRights}
           matchSel={matchSel}
           setMatchSel={setMatchSel}
+          leftOrder={leftOrder}
           rightOrder={rightOrder}
           drawn={drawn}
           setDrawn={setDrawn}
@@ -337,6 +354,7 @@ interface StepViewProps {
   setMatchedRights: (s: Set<number>) => void;
   matchSel: { side: 'l' | 'r'; idx: number } | null;
   setMatchSel: (s: { side: 'l' | 'r'; idx: number } | null) => void;
+  leftOrder: number[];
   rightOrder: number[];
   drawn: Array<[string, string]>;
   setDrawn: (d: Array<[string, string]>) => void;
@@ -521,6 +539,7 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
   setMatchedRights,
   matchSel,
   setMatchSel,
+  leftOrder,
   rightOrder,
 }) => {
   // Brief red flash on a wrong pairing (so a wrong tap gives feedback, not silence).
@@ -566,15 +585,16 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
       <Prompt>{step.instruction}</Prompt>
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="space-y-3">
-          {step.pairs.map(([left], i) => {
-            const on = matched.has(i);
-            const sel = matchSel?.side === 'l' && matchSel.idx === i;
+          {leftOrder.map((pairIdx) => {
+            const left = step.pairs[pairIdx][0];
+            const on = matched.has(pairIdx);
+            const sel = matchSel?.side === 'l' && matchSel.idx === pairIdx;
             return (
               <button
-                key={i}
+                key={pairIdx}
                 disabled={on}
-                onClick={() => select('l', i)}
-                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${cls(on, sel, wrong?.l === i)}`}
+                onClick={() => select('l', pairIdx)}
+                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${cls(on, sel, wrong?.l === pairIdx)}`}
               >
                 {left}
               </button>
