@@ -91,6 +91,9 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
   const evaluate = (): boolean => {
     switch (step.type) {
       case 'multiple_choice':
+      case 'predict_reading':
+      case 'predict_behavior':
+      case 'choose_resistor':
         return choice === step.correct;
       case 'true_false':
         return tf === step.correct;
@@ -118,6 +121,9 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, on
   const canCheck = (): boolean => {
     switch (step.type) {
       case 'multiple_choice':
+      case 'predict_reading':
+      case 'predict_behavior':
+      case 'choose_resistor':
         return choice !== null;
       case 'true_false':
         return tf !== null;
@@ -342,32 +348,23 @@ const StepView: React.FC<StepViewProps> = (p) => {
           <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
           <p className="mt-4 whitespace-pre-line text-lg font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
           {step.circuitDiagram && (
-            <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-              <CircuitDiagram circuit={step.circuitDiagram as CircuitId} showCurrentFlow={step.showCurrentFlow} />
+            <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+              <CircuitDiagram circuit={step.circuitDiagram as CircuitId} showCurrentFlow={step.showCurrentFlow} className="mx-auto w-full max-w-xl" />
             </div>
           )}
         </div>
       );
 
     case 'multiple_choice':
-      return (
-        <div className="ohmlet-rise">
-          <Prompt>{step.question}</Prompt>
-          {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
-          <div className="mt-6 grid gap-3">
-            {step.options.map((opt, i) => {
-              const sel = p.choice === i;
-              const reveal = checked && i === step.correct;
-              const wrong = checked && sel && i !== step.correct;
-              return (
-                <Option key={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => p.setChoice(i)}>
-                  {opt}
-                </Option>
-              );
-            })}
-          </div>
-        </div>
-      );
+      return <ChoiceStep {...p} step={step} />;
+
+    // Prediction family: commit a prediction, then the circuit reveals the truth.
+    case 'predict_reading':
+      return <ChoiceStep {...p} step={step} eyebrow="Predict the reading" />;
+    case 'predict_behavior':
+      return <ChoiceStep {...p} step={step} eyebrow="Predict what happens" />;
+    case 'choose_resistor':
+      return <ChoiceStep {...p} step={step} eyebrow="Choose the component" />;
 
     case 'true_false':
       return (
@@ -418,13 +415,14 @@ const StepView: React.FC<StepViewProps> = (p) => {
       return (
         <div className="ohmlet-rise">
           <Prompt>{'question' in step ? step.question : ''}</Prompt>
-          <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
             <CircuitDiagram
               circuit={step.circuitDiagram as CircuitId}
               clickable={!checked}
               onRegionClick={(id) => p.setRegion(id)}
               highlightRegion={p.region}
               correctRegion={checked ? (step.type === 'spot_error' ? step.correctRegion : step.correctComponent) : null}
+              className="mx-auto w-full max-w-xl"
             />
           </div>
           {!p.region && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Tap a part of the circuit.</p>}
@@ -445,8 +443,8 @@ const Prompt: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Diagram: React.FC<{ circuit: string }> = ({ circuit }) => (
-  <div className="mt-5 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-    <CircuitDiagram circuit={circuit as CircuitId} />
+  <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+    <CircuitDiagram circuit={circuit as CircuitId} className="mx-auto w-full max-w-xl" />
   </div>
 );
 
@@ -481,6 +479,32 @@ const Option: React.FC<{
     </button>
   );
 };
+
+// ── Choice step (multiple_choice + the prediction family) ──
+// All share question + options + correct + optional circuit. The eyebrow reframes
+// it as a prediction ("Predict the reading"), which is what makes predict_* feel
+// distinct from a plain quiz: you commit, then the answer + explanation reveal.
+const ChoiceStep: React.FC<
+  { step: { question: string; options: string[]; correct: number; circuitDiagram?: string }; eyebrow?: string } & StepViewProps
+> = ({ step, eyebrow, choice, setChoice, checked }) => (
+  <div className="ohmlet-rise">
+    {eyebrow && <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">{eyebrow}</p>}
+    <Prompt>{step.question}</Prompt>
+    {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
+    <div className="mt-6 grid gap-3">
+      {step.options.map((opt, i) => {
+        const sel = choice === i;
+        const reveal = checked && i === step.correct;
+        const wrong = checked && sel && i !== step.correct;
+        return (
+          <Option key={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)}>
+            {opt}
+          </Option>
+        );
+      })}
+    </div>
+  </div>
+);
 
 // ── Match step ──
 const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & StepViewProps> = ({

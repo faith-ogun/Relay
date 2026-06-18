@@ -16,6 +16,7 @@ function Battery({ x, y, label, highlight, onClick, id }: { x: number; y: number
       style={{ cursor: onClick ? 'pointer' : 'default' }}
       className={highlight ? 'circuit-highlight' : ''}
     >
+      {onClick && <rect x={-20} y={-24} width={40} height={48} fill="transparent" />}
       <line x1={-15} y1={0} x2={-6} y2={0} stroke="currentColor" strokeWidth={2} />
       <line x1={-6} y1={-14} x2={-6} y2={14} stroke="currentColor" strokeWidth={3} />
       <line x1={6} y1={-8} x2={6} y2={8} stroke="currentColor" strokeWidth={2} />
@@ -36,6 +37,7 @@ function Resistor({ x, y, rotation = 0, label, highlight, onClick, id, error }: 
       onClick={() => onClick?.(id || 'resistor')}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
+      {onClick && <rect x={-28} y={-16} width={56} height={32} fill="transparent" />}
       <line x1={-25} y1={0} x2={-15} y2={0} stroke="currentColor" strokeWidth={2} />
       <polyline points="-15,-6 -10,6 -5,-6 0,6 5,-6 10,6 15,-6" fill="none" stroke={error ? '#ef4444' : 'currentColor'} strokeWidth={2} strokeLinejoin="round" />
       <line x1={15} y1={0} x2={25} y2={0} stroke="currentColor" strokeWidth={2} />
@@ -52,6 +54,7 @@ function LED({ x, y, rotation = 0, color = '#ef4444', label, highlight, onClick,
       onClick={() => onClick?.(id || 'led')}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
+      {onClick && <rect x={-22} y={-18} width={44} height={36} fill="transparent" />}
       <line x1={-20} y1={0} x2={-6} y2={0} stroke="currentColor" strokeWidth={2} />
       <polygon points="-6,-8 -6,8 8,0" fill={error ? '#ef4444' : color} opacity={0.7} stroke={error ? '#ef4444' : color} strokeWidth={1.5} />
       <line x1={8} y1={-8} x2={8} y2={8} stroke="currentColor" strokeWidth={2} />
@@ -72,6 +75,7 @@ function LDRSymbol({ x, y, label, highlight, onClick, id }: { x: number; y: numb
       onClick={() => onClick?.(id || 'ldr')}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
+      {onClick && <rect x={-22} y={-20} width={44} height={44} fill="transparent" />}
       <line x1={-20} y1={0} x2={-8} y2={0} stroke="currentColor" strokeWidth={2} />
       <circle cx={0} cy={0} r={10} fill="none" stroke="currentColor" strokeWidth={2} />
       {/* Zigzag inside */}
@@ -127,6 +131,7 @@ function Buzzer({ x, y, label, highlight, onClick, id }: { x: number; y: number;
       onClick={() => onClick?.(id || 'buzzer')}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
+      {onClick && <rect x={-22} y={-16} width={44} height={38} fill="transparent" />}
       <line x1={-20} y1={0} x2={-10} y2={0} stroke="currentColor" strokeWidth={2} />
       <rect x={-10} y={-10} width={20} height={20} rx={3} fill="none" stroke="currentColor" strokeWidth={2} />
       <text x={0} y={4} textAnchor="middle" fontSize={10} fill="currentColor" fontWeight={700}>♪</text>
@@ -144,6 +149,7 @@ function Switch({ x, y, open = true, label, highlight, onClick, id }: { x: numbe
       onClick={() => onClick?.(id || 'switch')}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
+      {onClick && <rect x={-22} y={-16} width={44} height={34} fill="transparent" />}
       <line x1={-20} y1={0} x2={-6} y2={0} stroke="currentColor" strokeWidth={2} />
       <circle cx={-6} cy={0} r={3} fill="currentColor" />
       {open
@@ -222,10 +228,9 @@ export default function CircuitDiagram({
     <div className={`relative ${className || ''}`}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-        height="auto"
-        style={{ color: fg, maxHeight: height }}
-        className="select-none"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ color: fg }}
+        className="select-none w-full h-auto"
       >
         {/* Subtle grid background */}
         <defs>
@@ -803,10 +808,9 @@ export function SpotComponentExercise({
     <div className={className}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-        height="auto"
-        style={{ color: fg, maxHeight: height }}
-        className="select-none"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ color: fg }}
+        className="select-none w-full h-auto"
       >
         <defs>
           <pattern id="spot-grid" width={20} height={20} patternUnits="userSpaceOnUse">

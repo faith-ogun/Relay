@@ -49,13 +49,47 @@ export const CURRICULUM: CurriculumUnit[] = [
     accent: 'gold',
     skills: [
       {
-        id: 'voltage-current',
-        title: 'Voltage & Current',
-        description: 'What actually moves through a wire, and what pushes it.',
+        id: 'circuits-current',
+        title: 'Circuits & Current',
+        description: 'What a circuit is, what flows through it, and what blocks it.',
         icon: 'Zap',
         lessons: [
+          { id: 'The Closed Loop', title: 'The Closed Loop', summary: 'Current only flows around a complete loop.', estMinutes: 8 },
+          { id: 'Conductors and Insulators', title: 'Conductors & Insulators', summary: 'What lets current through, and what stops it.', estMinutes: 8 },
           { id: 'Voltage Basics', title: 'Voltage Basics', summary: 'Electrical pressure, measured in volts.', estMinutes: 8 },
           { id: 'Current Flow Intuition', title: 'Current Flow Intuition', summary: 'How current moves in series and parallel.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'resistance-ohms',
+        title: 'Resistance & Ohm\'s Law',
+        description: 'The one equation that ties voltage, current, and resistance together.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'What Resistance Is', title: 'What Resistance Is', summary: 'Opposition to current, measured in ohms.', estMinutes: 8 },
+          { id: 'Resistors and Ohm\'s Law', title: 'Resistors & Ohm\'s Law', summary: 'V = I × R, and using it to limit current.', estMinutes: 12 },
+          { id: 'Reading Resistor Color Codes', title: 'Reading Color Codes', summary: 'Decode the coloured bands on a resistor.', estMinutes: 10 },
+          { id: 'Power and Heat', title: 'Power & Heat', summary: 'P = V × I, and why parts get warm.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'leds-limiting',
+        title: 'LEDs & Current Limiting',
+        description: 'Light something up without burning it out.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'LEDs and Polarity', title: 'LEDs & Polarity', summary: 'One-way valves that always need a resistor.', estMinutes: 12 },
+          { id: 'Powering an LED Safely', title: 'Powering an LED Safely', summary: 'Choose the resistor; predict survive, dim, or burn.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'series-parallel',
+        title: 'Series, Parallel & Measuring',
+        description: 'Connecting parts, and reading what your circuit is doing.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'Series vs Parallel', title: 'Series vs Parallel', summary: 'Same current vs split current; same vs divided voltage.', estMinutes: 12 },
+          { id: 'Measuring Your Circuit', title: 'Measuring Your Circuit', summary: 'Predict and read voltage and current with a meter.', estMinutes: 12 },
         ],
       },
     ],
@@ -76,6 +110,15 @@ export const CURRICULUM: CurriculumUnit[] = [
           { id: 'Breadboard Confidence Drill', title: 'Breadboard Confidence Drill', summary: 'Internal connections and clean placement.', estMinutes: 15 },
         ],
       },
+      {
+        id: 'circuit-safety',
+        title: 'Circuit Safety',
+        description: 'Spot shorts and overloads before they cost you a component.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'Short Circuits and Safety', title: 'Short Circuits & Safety', summary: 'What a short is, why it is dangerous, and how to avoid it.', estMinutes: 12 },
+        ],
+      },
     ],
   },
   {
@@ -91,6 +134,7 @@ export const CURRICULUM: CurriculumUnit[] = [
         description: 'Turn light, heat, and motion into numbers you can trust.',
         icon: 'Gauge',
         lessons: [
+          { id: 'The Voltage Divider', title: 'The Voltage Divider', summary: 'Split a voltage, then turn it into a sensor.', estMinutes: 14 },
           { id: 'Sensor Signal Sanity Checks', title: 'Sensor Signal Sanity Checks', summary: 'Verify sensor output before trusting it in code.', estMinutes: 18 },
         ],
       },
