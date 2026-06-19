@@ -75,6 +75,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [rightOrder, setRightOrder] = useState<number[]>([]);
   const [drawn, setDrawn] = useState<Array<[string, string]>>([]);
   const [drawSel, setDrawSel] = useState<string | null>(null);
+  const [traced, setTraced] = useState<string[]>([]); // trace_current: tapped regions in order
+  const [placed, setPlaced] = useState<number[]>([]); // build_to_spec: palette index in each filled slot
 
   const step = steps[stepIndex];
 
@@ -91,6 +93,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setMatchSel(null);
     setDrawn([]);
     setDrawSel(null);
+    setTraced([]);
+    setPlaced([]);
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
     if (step?.type === 'match') {
       // Shuffle BOTH columns (each off its original order) so answers never line
@@ -139,6 +143,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
         const have = new Set(drawn.map(norm));
         return want.size === have.size && [...want].every((c) => have.has(c));
       }
+      case 'trace_current':
+        return traced.length === step.correctPath.length && traced.every((r, i) => r === step.correctPath[i]);
+      case 'fix_the_circuit':
+        return region === step.faultRegion && choice === step.correctFix;
+      case 'build_to_spec':
+        return placed.length === step.slots && placed.every((p, i) => p === step.correct[i]);
       default:
         return true;
     }
@@ -160,6 +170,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
         return region !== null;
       case 'draw_connection':
         return drawn.length > 0;
+      case 'trace_current':
+        return traced.length === step.correctPath.length;
+      case 'fix_the_circuit':
+        return region !== null && choice !== null;
+      case 'build_to_spec':
+        return placed.length === step.slots;
       default:
         return true;
     }
@@ -297,6 +313,10 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
           setDrawn={setDrawn}
           drawSel={drawSel}
           setDrawSel={setDrawSel}
+          traced={traced}
+          setTraced={setTraced}
+          placed={placed}
+          setPlaced={setPlaced}
         />
       </div>
 
@@ -383,6 +403,10 @@ interface StepViewProps {
   setDrawn: (d: Array<[string, string]>) => void;
   drawSel: string | null;
   setDrawSel: (s: string | null) => void;
+  traced: string[];
+  setTraced: (s: string[]) => void;
+  placed: number[];
+  setPlaced: (p: number[]) => void;
 }
 
 const StepView: React.FC<StepViewProps> = (p) => {
@@ -477,6 +501,15 @@ const StepView: React.FC<StepViewProps> = (p) => {
 
     case 'draw_connection':
       return <DrawStep {...p} step={step} />;
+
+    case 'trace_current':
+      return <TraceStep {...p} step={step} />;
+
+    case 'fix_the_circuit':
+      return <FixStep {...p} step={step} />;
+
+    case 'build_to_spec':
+      return <BuildStep {...p} step={step} />;
 
     default:
       return null;
@@ -748,6 +781,175 @@ const DrawStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_connection' }
       <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">
         Tap two terminals to wire them. {drawn.length} connection{drawn.length === 1 ? '' : 's'} drawn.
       </p>
+    </div>
+  );
+};
+
+// ── Trace-current step ──
+// Tap the parts the current flows through, in loop order. Kills the "current gets
+// used up" misconception by making the learner walk the complete return path.
+const TraceStep: React.FC<{ step: Extract<LessonStep, { type: 'trace_current' }> } & StepViewProps> = ({
+  step,
+  traced,
+  setTraced,
+  checked,
+}) => {
+  const tap = (id: string) => {
+    if (checked) return;
+    // Re-tapping an already-traced part rewinds the path back to just before it,
+    // so a learner can correct a wrong turn without starting over.
+    if (traced.includes(id)) return setTraced(traced.slice(0, traced.indexOf(id)));
+    setTraced([...traced, id]);
+  };
+  return (
+    <div className="ohmlet-rise">
+      <Prompt>{step.question}</Prompt>
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+        <CircuitDiagram
+          circuit={step.circuitDiagram}
+          clickable={!checked}
+          onRegionClick={tap}
+          highlightRegion={traced.length ? traced[traced.length - 1] : null}
+          className="mx-auto w-full max-w-xl"
+        />
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {traced.length === 0 ? (
+          <p className="text-sm font-semibold text-ohmlet-ink-soft">Tap the parts the current flows through, in order.</p>
+        ) : (
+          traced.map((id, i) => (
+            <React.Fragment key={`${id}-${i}`}>
+              {i > 0 && <span className="text-ohmlet-ink-soft">→</span>}
+              <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-3 py-1 text-sm font-black text-ohmlet-ink">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ohmlet-ink text-[10px] text-white">{i + 1}</span>
+                {id}
+              </span>
+            </React.Fragment>
+          ))
+        )}
+      </div>
+      {checked && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">The loop: {step.correctPath.join(' → ')}</p>}
+    </div>
+  );
+};
+
+// ── Fix-the-circuit step ──
+// Two stages: tap the faulty part, then choose the correct repair. Diagnosis plus
+// remedy, a real step beyond spot_error (which only asks "what is wrong?").
+const FixStep: React.FC<{ step: Extract<LessonStep, { type: 'fix_the_circuit' }> } & StepViewProps> = ({
+  step,
+  region,
+  setRegion,
+  choice,
+  setChoice,
+  checked,
+}) => (
+  <div className="ohmlet-rise">
+    <Prompt>{step.question}</Prompt>
+    <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        clickable={!checked}
+        onRegionClick={(id) => setRegion(id)}
+        highlightRegion={region}
+        correctRegion={checked ? step.faultRegion : null}
+        className="mx-auto w-full max-w-xl"
+      />
+    </div>
+    {!region ? (
+      <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">First, tap the part that is wrong.</p>
+    ) : (
+      <div className="mt-5">
+        <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Now choose the fix</p>
+        <div className="grid gap-3">
+          {step.fixes.map((fix, i) => (
+            <Option
+              key={fix}
+              selected={choice === i}
+              reveal={checked && i === step.correctFix}
+              wrong={checked && choice === i && i !== step.correctFix}
+              disabled={checked}
+              onClick={() => setChoice(i)}
+            >
+              {fix}
+            </Option>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+// ── Build-to-spec step ──
+// Assemble a circuit by tapping the right parts from a palette (which includes
+// distractor parts) into ordered slots. A synthesis exercise: the learner must
+// recognise which parts are needed AND in what order, not just connect fixed pins.
+const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }> } & StepViewProps> = ({
+  step,
+  placed,
+  setPlaced,
+  checked,
+}) => {
+  const addPart = (pi: number) => {
+    if (checked || placed.length >= step.slots) return;
+    setPlaced([...placed, pi]);
+  };
+  const clearSlot = (slotIdx: number) => {
+    if (checked) return;
+    setPlaced(placed.filter((_, i) => i !== slotIdx));
+  };
+  return (
+    <div className="ohmlet-rise">
+      <Prompt>{step.instruction}</Prompt>
+      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        {Array.from({ length: step.slots }).map((_, i) => {
+          const pi = placed[i];
+          const filled = pi !== undefined;
+          const correctHere = checked && filled && pi === step.correct[i];
+          const wrongHere = checked && filled && pi !== step.correct[i];
+          let look = 'border-dashed border-ohmlet-line bg-white text-ohmlet-ink-soft';
+          if (correctHere) look = 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-ink';
+          else if (wrongHere) look = 'border-ohmlet-red bg-[#fdece8] text-ohmlet-ink';
+          else if (filled) look = 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink';
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="text-ohmlet-ink-soft">→</span>}
+              <button
+                type="button"
+                disabled={checked || !filled}
+                onClick={() => clearSlot(i)}
+                className={`min-w-[88px] rounded-2xl border-2 px-3 py-3 text-sm font-black shadow-soft transition-all ${look}`}
+              >
+                {filled ? step.palette[pi] : i + 1}
+              </button>
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {!checked ? (
+        <>
+          <div className="mt-6">
+            <p className="mb-2 text-center text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Parts</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {step.palette.map((part, i) => (
+                <button
+                  key={`${part}-${i}`}
+                  type="button"
+                  disabled={placed.length >= step.slots}
+                  onClick={() => addPart(i)}
+                  className="rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-bold text-ohmlet-ink shadow-soft transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {part}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Tap parts to fill the slots in order. Tap a filled slot to clear it.</p>
+        </>
+      ) : (
+        <p className="mt-4 text-center text-sm font-semibold text-ohmlet-ink-soft">Correct build: {step.correct.map((c) => step.palette[c]).join(' → ')}</p>
+      )}
     </div>
   );
 };

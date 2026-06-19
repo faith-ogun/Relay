@@ -117,43 +117,40 @@ retention. The flagship Arduino-Starter-Kit demo (LDR + LED/buzzer) is the Unit 
 
 ## 5. Exercise types — real inventory
 
-### Built and in use (11 graded types + `teach`)
+### Built and in use (14 graded types + `teach`)
 
-Defined in `frontend/components/ohmlet/data/lessons.ts`. Approximate usage today shows
-the imbalance we are correcting (see the variety mandate below):
+Defined in `frontend/components/ohmlet/data/lessons.ts`, rendered by `LessonRunner.tsx`,
+validated by the linter. The construction/repair/trace family was added 2026-06-19.
 
-| Type | Use | Note |
-|------|-----|------|
-| `multiple_choice` | ~heavy | Over-used; the rebalance trims this share |
-| `true_false` | common | Quick concept check |
-| `fill_blank` | common | Recall a value/term (method-only hints) |
-| `predict_behavior` ★ | growing | Predict → commit → reveal |
-| `predict_reading` ★ | growing | "What will the meter / serial read?" |
-| `match` | common | Pair terms ↔ definitions (both columns shuffle) |
-| `identify_component` | moderate | Click the right part on a diagram |
-| `spot_error` | moderate | Find the fault in a circuit |
-| `choose_resistor` ★ | moderate | Current-limiting / sizing as design |
-| `drag_order` | light | Order a procedure |
-| `draw_connection` | **rare (~5)** | Wire terminals; under-used, expand in capstones |
+| Type | Note |
+|------|------|
+| `multiple_choice` | Over-used today; the rebalance trims its share |
+| `true_false` | Quick concept check |
+| `fill_blank` | Recall a value/term (method-only hints) |
+| `predict_behavior` ★ | Predict → commit → reveal |
+| `predict_reading` ★ | "What will the meter / serial read?" |
+| `match` | Pair terms ↔ definitions (both columns shuffle) |
+| `identify_component` | Click the right part on a diagram |
+| `spot_error` | Find the fault in a circuit |
+| `choose_resistor` ★ | Current-limiting / sizing as design |
+| `drag_order` | Order a procedure |
+| `draw_connection` | Wire fixed terminals together |
+| `trace_current` ★ NEW | Tap the current path in loop order; kills "current gets used up" |
+| `fix_the_circuit` ★ NEW | Tap the fault, then pick the repair (diagnose + remedy) |
+| `build_to_spec` ★ NEW | Assemble from a parts palette (with distractors) into ordered slots |
 
-### NOT built yet — the variety backlog (fenced honestly)
+### Still on the backlog (not built)
 
-These are **promised in spirit but do not exist in code.** Do not describe them as real
-until built. Decision (2026-06-19): **retrofit variety everywhere** — build these, then
-rebalance existing units away from multiple-choice.
-
-| Proposed type | Teaches | Priority |
-|---------------|---------|----------|
-| `build_to_spec` ("draw the circuit") | Synthesis; validated by the sim, accepts any valid topology | high |
-| `fix_the_circuit` | Repair (distinct from spot_error's diagnosis) | high |
-| `trace_current` | Complete-loop rule; kills "current gets used up" | high |
-| `place_missing_component` ("draw the missing component") | Component roles + polarity | medium |
-| `match_image` | Schematic symbol ↔ real-part photo ↔ name; bridges to the live tutor | medium |
-| `read_waveform` / `annotate_signal` | PWM, duty cycle, timing (signal units) | medium |
+| Proposed type | Teaches | Note |
+|---------------|---------|------|
+| `build_to_spec` open-ended | Free-wire synthesis validated by a live sim, any valid topology | Bigger feature; belongs with the Sandbox/sim work. The shipped `build_to_spec` is the constrained palette-and-slots constructor. |
+| `place_missing_component` | Component roles + polarity | medium |
+| `match_image` | Schematic symbol ↔ real-part photo ↔ name | medium; needs photos |
+| `read_waveform` / `annotate_signal` | PWM, duty cycle, timing | medium |
 
 **The variety mandate:** no single type should dominate a lesson; lead with `teach`,
-reinforce with a *mix* (favour the predict/build/draw family), end on a synthesis step.
-Target: multiple_choice well under half of graded steps once the retrofit is done.
+reinforce with a *mix* (favour the predict/build/trace/fix family), end on a synthesis
+step. Target: multiple_choice well under half of graded steps once the rebalance is done.
 
 **Core principle:** because our diagrams are *executable code, not pictures*, the
 highest-value exercises are **predict → commit → reveal** — the learner commits to a

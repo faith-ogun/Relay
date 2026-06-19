@@ -155,6 +155,60 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
         });
       break;
     }
+    case 'trace_current': {
+      const s = step as { question: string; circuitDiagram: string; correctPath: string[]; explanation: string };
+      if (!isNonEmpty(s.question)) err('trace_current: empty question');
+      if (!isNonEmpty(s.circuitDiagram)) err('trace_current: missing circuitDiagram');
+      if (!Array.isArray(s.correctPath) || s.correctPath.length < 2) err('trace_current: correctPath needs at least 2 steps');
+      else if (isKnownCircuit(s.circuitDiagram)) {
+        const valid = regionsFor(s.circuitDiagram);
+        s.correctPath.forEach((r, ri) => {
+          if (!valid.includes(r)) err(`trace_current: correctPath[${ri}] "${r}" is not a clickable region of "${s.circuitDiagram}" (valid: ${valid.join(', ')})`);
+        });
+        if (new Set(s.correctPath).size !== s.correctPath.length) warn('trace_current: correctPath repeats a region (a simple loop visits each part once)');
+      }
+      if (!isNonEmpty(s.explanation)) warn('trace_current: empty explanation');
+      break;
+    }
+    case 'fix_the_circuit': {
+      const s = step as { question: string; circuitDiagram: string; faultRegion: string; fixes: string[]; correctFix: number; explanation: string };
+      if (!isNonEmpty(s.question)) err('fix_the_circuit: empty question');
+      if (!isNonEmpty(s.circuitDiagram)) err('fix_the_circuit: missing circuitDiagram');
+      else if (isKnownCircuit(s.circuitDiagram)) {
+        const valid = regionsFor(s.circuitDiagram);
+        if (!isNonEmpty(s.faultRegion)) err('fix_the_circuit: missing faultRegion');
+        else if (!valid.includes(s.faultRegion)) err(`fix_the_circuit: faultRegion "${s.faultRegion}" is not a clickable region of "${s.circuitDiagram}" (valid: ${valid.join(', ')})`);
+      }
+      if (!Array.isArray(s.fixes) || s.fixes.length < 2) err('fix_the_circuit: needs at least 2 fixes');
+      else {
+        if (s.fixes.some((f) => !isNonEmpty(f))) err('fix_the_circuit: has an empty fix option');
+        if (!Number.isInteger(s.correctFix) || s.correctFix < 0 || s.correctFix >= s.fixes.length)
+          err(`fix_the_circuit: correctFix index ${s.correctFix} is out of range (0..${s.fixes.length - 1})`);
+        else if (s.fixes.length >= 3) {
+          const lens = s.fixes.map((o) => o.trim().length);
+          const correctLen = lens[s.correctFix];
+          const others = lens.filter((_, i) => i !== s.correctFix);
+          const avgOther = others.reduce((a, b) => a + b, 0) / others.length;
+          if (correctLen === Math.max(...lens) && correctLen >= avgOther * 1.6 && correctLen - avgOther >= 12)
+            warn('fix_the_circuit: correct fix is much longer than the distractors (the "longest answer" tell)');
+        }
+      }
+      if (!isNonEmpty(s.explanation)) warn('fix_the_circuit: empty explanation');
+      break;
+    }
+    case 'build_to_spec': {
+      const s = step as { instruction: string; palette: string[]; slots: number; correct: number[]; explanation: string };
+      if (!isNonEmpty(s.instruction)) err('build_to_spec: empty instruction');
+      if (!Array.isArray(s.palette) || s.palette.length < 2) err('build_to_spec: palette needs at least 2 parts');
+      else if (s.palette.some((p) => !isNonEmpty(p))) err('build_to_spec: has an empty palette part');
+      if (!Number.isInteger(s.slots) || s.slots < 1) err('build_to_spec: slots must be a positive integer');
+      else if (Array.isArray(s.palette) && s.palette.length <= s.slots) warn('build_to_spec: palette should include distractor parts (more parts than slots) so it tests recognition');
+      if (!Array.isArray(s.correct) || s.correct.length !== s.slots) err(`build_to_spec: correct must list one palette index per slot (expected ${s.slots})`);
+      else if (Array.isArray(s.palette) && s.correct.some((c) => !Number.isInteger(c) || c < 0 || c >= s.palette.length))
+        err(`build_to_spec: a correct index is out of range (0..${s.palette.length - 1})`);
+      if (!isNonEmpty(s.explanation)) warn('build_to_spec: empty explanation');
+      break;
+    }
     default: {
       err(`unknown step type "${(step as { type: string }).type}"`);
     }

@@ -26,7 +26,24 @@ in the plan.
 
 `teach` · `multiple_choice` · `true_false` · `fill_blank` · `match` · `drag_order` ·
 `spot_error` · `identify_component` · `draw_connection` · `predict_reading` ·
-`predict_behavior` · `choose_resistor`.
+`predict_behavior` · `choose_resistor` · `trace_current` · `fix_the_circuit` ·
+`build_to_spec`.
+
+**The construction/repair/trace family (prefer these over multiple_choice where they fit):**
+- `trace_current` — `{ question; circuitDiagram; correctPath: string[]; explanation }`.
+  The learner taps the parts current flows through, in loop order. Each id in
+  `correctPath` must be a clickable region of the circuit. Great for the
+  "current gets used up" misconception. Example: "The Closed Loop".
+- `fix_the_circuit` — `{ question; circuitDiagram; faultRegion; fixes: string[]; correctFix; explanation }`.
+  Two stages: tap the faulty region, then pick the repair. `faultRegion` must be a
+  clickable region; `fixes` follow the balanced-distractor rule. A step beyond
+  `spot_error` (diagnose + remedy). Example: "Powering an LED Safely".
+- `build_to_spec` — `{ instruction; palette: string[]; slots; correct: number[]; explanation; circuitDiagram? }`.
+  Assemble a circuit by placing parts from a palette (include DISTRACTOR parts, so
+  palette length > slots) into ordered slots. `correct` lists one palette index per
+  slot. Synthesis. Example: "Build a Series LED Circuit". (This is the constrained
+  constructor; the open-ended free-wire + live-sim "draw the circuit" is a separate
+  future feature, not this.)
 
 Each graded step may carry `difficulty: 1 | 2 | 3`. Exact field shapes are the
 `LessonStep*` types at the top of `lessons.ts` — match them exactly (TypeScript
