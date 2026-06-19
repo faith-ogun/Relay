@@ -201,7 +201,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'teach', title: 'What Lets Current Through', body: 'A conductor lets charge move through it easily. Metals like copper are excellent conductors, which is why wires are made of copper. An insulator resists the flow of charge: plastic, rubber, glass, and air.' },
       { type: 'multiple_choice', question: 'Which of these is a good conductor?', options: ['Rubber', 'Copper', 'Glass', 'Plastic'], correct: 1, explanation: 'Copper is an excellent conductor and the standard material for wires.' },
       { type: 'true_false', statement: 'The plastic coating around a wire is there to conduct electricity.', correct: false, explanation: 'The opposite. The plastic is an insulator. It stops the current escaping and stops wires shorting against each other.' },
-      { type: 'multiple_choice', question: 'Silver actually conducts slightly better than copper. Why are wires usually copper, not silver?', options: ['Silver is a poor conductor', 'Silver is far more expensive', 'Silver does not conduct at all', 'Copper is a better conductor'], correct: 1, explanation: 'Silver is a touch better, but far too expensive for everyday wiring, so copper is the practical choice.' },
+      { type: 'true_false', statement: 'Silver conducts slightly better than copper, yet wires are usually copper because silver is far more expensive.', correct: true, explanation: 'Silver is a touch better, but far too expensive for everyday wiring, so copper is the practical choice.' },
       { type: 'multiple_choice', question: 'Why does a circuit need insulators as well as conductors?', options: ['Only to make the finished circuit heavier to carry', 'To guide current where you want it and block it elsewhere', 'Because insulators make the current flow noticeably faster', 'They are purely decorative and serve no real purpose'], correct: 1, explanation: 'Conductors carry current along the intended path; insulators keep it from leaking or shorting elsewhere. You need both.' },
       { type: 'multiple_choice', question: 'What is the main reason wires are made of copper rather than another metal?', options: ['It is naturally a strong permanent magnet', 'It conducts well and stays affordable', 'It is actually a very good insulator', 'It is simply the cheapest metal that exists'], correct: 1, explanation: 'Copper conducts almost as well as silver but costs far less, so it is the practical choice for wiring.' },
       { type: 'true_false', statement: 'Dry air normally behaves as an insulator.', correct: true, explanation: 'Dry air does not conduct at everyday voltages, which is why two bare wires a small gap apart do not short through the air.' },
@@ -895,12 +895,12 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 2: convert
       { type: 'fill_blank', difficulty: 2, prompt: 'A 100 nF capacitor expressed in microfarads is ___ µF.', blank: '___', answer: '0.1', hint: 'There are 1000 nF in a µF, so divide by 1000.' },
-      { type: 'multiple_choice', difficulty: 2, question: 'How many nanofarads are in 10 µF?', options: ['10,000 nF', '10 nF', '100 nF', '1,000,000 nF'], correct: 0, explanation: '1 µF = 1000 nF, so 10 µF = 10,000 nF.' },
+      { type: 'fill_blank', difficulty: 2, prompt: '10 µF expressed in nanofarads is ___ nF.', blank: '___', answer: '10000', hint: 'There are a thousand nanofarads in each microfarad, so multiply.' },
       { type: 'fill_blank', difficulty: 2, prompt: '4700 pF written in nanofarads is ___ nF.', blank: '___', answer: '4.7', hint: 'There are 1000 pF in a nF.' },
       { type: 'multiple_choice', difficulty: 2, question: 'A schematic calls for 0.1 µF. Which marking on a part is the same value?', options: ['100 nF', '10 nF', '1 nF', '1000 pF'], correct: 0, explanation: '0.1 µF × 1000 = 100 nF. The common "104" ceramic is exactly this.' },
 
       // Tier 3: reason
-      { type: 'multiple_choice', difficulty: 3, question: 'You needed 10 µF in a timing circuit but fitted 10 nF by mistake. What happens to the timing?', options: ['It runs about 1000× faster than intended', 'It runs about 1000× slower', 'No change, nF and µF are the same', 'The circuit will not power on'], correct: 0, explanation: '10 nF is 1000× smaller than 10 µF, so the time constant (and the delay) is about 1000× shorter.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You needed 10 µF in a timing circuit but fitted 10 nF by mistake. What happens to the timing?', options: ['It runs about 1000× faster than intended', 'It runs about 1000× slower', 'No change, nF and µF are the same', 'The circuit will not power on'], correct: 0, explanation: '10 nF is 1000× smaller than 10 µF, so the time constant (and the delay) is about 1000× shorter.' },
       { type: 'multiple_choice', difficulty: 3, question: 'A "104" ceramic capacitor uses the same digit-digit-multiplier idea as a resistor, in picofarads: 10 followed by 4 zeros. What is its value?', options: ['100,000 pF, the same as 100 nF or 0.1 µF', 'Just 104 pF, reading the number literally', 'About 10.4 µF, a fairly large value', 'Only 14 pF, a very tiny value'], correct: 0, explanation: '"104" means 10 × 10,000 pF = 100,000 pF = 100 nF = 0.1 µF, the workhorse decoupling cap.' },
     ],
   },
@@ -914,7 +914,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       // Tier 1: recall
       { type: 'multiple_choice', difficulty: 1, question: 'Which capacitor type is polarised (orientation matters)?', options: ['Electrolytic', 'Ceramic', 'Both equally', 'Neither'], correct: 0, explanation: 'Electrolytics are polarised; ceramics are not.' },
       { type: 'true_false', difficulty: 1, statement: 'A ceramic capacitor can be connected either way round.', correct: true, explanation: 'Yes. Ceramics are non-polarised, so either lead can face either way.' },
-      { type: 'multiple_choice', difficulty: 1, question: 'On an electrolytic capacitor, the stripe down the can usually marks the...', options: ['Negative lead', 'Positive lead', 'Hottest point', 'Value in µF'], correct: 0, explanation: 'The stripe marks the negative lead; the shorter leg is often negative too.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'On an electrolytic capacitor, the stripe down the can usually marks the ___ lead.', blank: '___', answer: 'negative', hint: 'The shorter leg is often the same polarity as the striped one.' },
 
       // Tier 2: apply
       { type: 'predict_behavior', difficulty: 2, question: 'You wire a 100 µF electrolytic in backwards and power up. What is the likely result?', options: ['It can overheat, fail, and even pop', 'It works better than normal', 'It quietly becomes a resistor', 'Nothing ever happens'], correct: 0, explanation: 'A reversed electrolytic can break down, heat up, and vent or burst. Always observe its polarity.' },
@@ -1027,7 +1027,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       // Tier 1: recall
       { type: 'multiple_choice', difficulty: 1, question: 'A series (coupling) capacitor blocks ___ and passes ___.', options: ['the steady DC level; the changing AC signal', 'the changing AC signal; the steady DC level', 'all of the current; none of the current', 'the voltage entirely; the current entirely'], correct: 0, explanation: 'It blocks the steady DC level and passes the changing part of the signal.' },
       { type: 'true_false', difficulty: 1, statement: 'Once a series capacitor charges to a steady DC voltage, no further steady current flows through it.', correct: true, explanation: 'Yes. Steady DC charges it once and then stops; that is why it blocks DC.' },
-      { type: 'multiple_choice', difficulty: 1, question: 'A capacitor used to pass a signal from one stage to the next is called a...', options: ['Coupling capacitor', 'Smoothing capacitor', 'Decoupling capacitor', 'Timing capacitor'], correct: 0, explanation: 'Coupling (DC-blocking) capacitors carry the signal between stages.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A capacitor used to pass a signal from one stage to the next, blocking the DC, is called a ___ capacitor.', blank: '___', answer: 'coupling', hint: 'Named for the job of linking one stage to the next.' },
 
       // Tier 2: apply
       { type: 'predict_behavior', difficulty: 2, question: 'An audio signal sits on a 2.5V DC bias. After a coupling capacitor, what does the next stage see?', options: ['The wiggle alone, with the DC offset removed', 'Only the steady 2.5V bias, with no signal', 'Double the original voltage, offset and all', 'Nothing at all, the signal is gone'], correct: 0, explanation: 'The cap blocks the 2.5V DC and passes the AC wiggle, so the next stage sees the signal without the offset.' },
@@ -1053,7 +1053,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 2: apply
       { type: 'predict_behavior', difficulty: 2, question: 'A noisy sensor signal has a slow trend plus high-frequency hash. After an RC low-pass filter, the output shows...', circuitDiagram: 'rc_low_pass', options: ['The slow trend, with the hash smoothed away', 'Only the fast hash, with the trend removed', 'Nothing useful, the whole signal is lost', 'A doubled copy of the original signal'], correct: 0, explanation: 'The filter passes the slow trend and attenuates the fast hash, cleaning the signal.' },
-      { type: 'multiple_choice', difficulty: 2, question: 'You raise the capacitor value in a low-pass filter. The cutoff frequency...', options: ['Falls, giving more aggressive smoothing', 'Rises, letting more high frequencies through', 'Stays the same regardless of the value', 'Becomes negative and inverts the signal'], correct: 0, explanation: 'fc = 1/(2πRC); a larger C lowers fc, so it cuts more of the higher frequencies.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You raise the capacitor value in a low-pass filter. The cutoff frequency...', options: ['Falls, giving more aggressive smoothing', 'Rises, letting more high frequencies through', 'Stays the same regardless of the value', 'Becomes negative and inverts the signal'], correct: 0, explanation: 'fc = 1/(2πRC); a larger C lowers fc, so it cuts more of the higher frequencies.' },
       { type: 'multiple_choice', difficulty: 2, question: 'Swapping the resistor and capacitor positions (cap in series, R to ground) turns it into a...', options: ['High-pass filter', 'Voltage doubler', 'Rectifier', 'Lower-value low-pass'], correct: 0, explanation: 'Cap in series blocks lows and passes highs, the opposite job: a high-pass filter.' },
 
       // Tier 3: reason
@@ -1094,7 +1094,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       // Tier 1: recall
       { type: 'multiple_choice', difficulty: 1, question: 'The 555 is best described as a...', options: ['Timer / oscillator chip', 'Voltage regulator', 'Microcontroller', 'Type of capacitor'], correct: 0, explanation: 'It is a dedicated timing chip used for one-shots and oscillators.' },
       { type: 'multiple_choice', difficulty: 1, question: 'Which 555 mode produces a continuous square wave on its own?', options: ['Astable', 'Monostable', 'Bistable only', 'It cannot oscillate'], correct: 0, explanation: 'Astable mode free-runs, producing a repeating square wave.' },
-      { type: 'multiple_choice', difficulty: 1, question: 'Which 555 mode gives a single output pulse when triggered?', options: ['Monostable (one-shot)', 'Astable', 'Free-running', 'Continuous'], correct: 0, explanation: 'Monostable fires one pulse of a set length per trigger.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'The 555 mode that fires a single output pulse per trigger (a one-shot) is called ___.', blank: '___', answer: 'monostable', hint: 'The name pairs "one stable state" with the idea of a single shot.' },
       { type: 'true_false', difficulty: 1, statement: 'The 555\'s timing is set by an external resistor and capacitor.', correct: true, explanation: 'Yes. The external RC sets the pulse length or oscillation rate.' },
 
       // Tier 2: apply
@@ -1103,7 +1103,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'multiple_choice', difficulty: 2, question: 'Why might you choose a 555 over an Arduino just to blink an LED?', options: ['It is cheap and needs no code for a fixed timer', 'It is much faster at doing floating-point math', 'It has far more program memory available', 'It can run a complete operating system'], correct: 0, explanation: 'For a single fixed timing job, a 555 is a cheap, code-free, rugged solution.' },
 
       // Tier 3: reason
-      { type: 'multiple_choice', difficulty: 3, question: 'A 555 astable uses roughly t ≈ 0.7 × R × C for its timing. With R = 10 kΩ and C = 100 µF, each phase lasts about...', options: ['About 0.7 s', 'About 7 s', 'About 70 ms', 'About 7 ms'], correct: 0, explanation: '0.7 × 10,000 × 0.0001 = 0.7 s per phase, so a roughly 1.4 s period (slow, visible blink).' },
+      { type: 'predict_reading', difficulty: 3, question: 'A 555 astable uses roughly t ≈ 0.7 × R × C for its timing. With R = 10 kΩ and C = 100 µF, predict how long each phase lasts.', options: ['About 0.7 s', 'About 7 s', 'About 70 ms', 'About 7 ms'], correct: 0, explanation: '0.7 × 10,000 × 0.0001 = 0.7 s per phase, so a roughly 1.4 s period (slow, visible blink).' },
       { type: 'multiple_choice', difficulty: 3, question: 'You need timing you can reprogram on the fly and log over serial. 555 or Arduino?', options: ['Arduino: its timing is software you can change and report', '555: it is the only one that can be reprogrammed', 'Neither part is able to time anything at all', 'Both are exactly identical in their flexibility'], correct: 0, explanation: 'When you need adjustable, observable, logic-rich timing, the microcontroller wins; the 555 shines for fixed, simple, cheap timing.' },
       { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['Astable', 'Free-running oscillator'], ['Monostable', 'One pulse per trigger'], ['Timing R and C', 'Set the pulse or rate'], ['Larger C', 'Slower, longer timing']] },
     ],
@@ -1158,7 +1158,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 1: recall
       { type: 'multiple_choice', difficulty: 1, question: 'As a switch, a transistor operates in which two states?', options: ['Fully off (cutoff) and fully on (saturation)', 'Constantly half-on, hovering between the two states', 'Only ever partly on, never reaching either end', 'Off in one direction and reversed in the other'], correct: 0, explanation: 'Switching uses the two extremes: cutoff (off) and saturation (fully on).' },
-      { type: 'multiple_choice', difficulty: 1, question: 'Roughly how much current can a single Arduino pin safely source?', options: ['About 20 to 40 mA', 'About 2 to 4 amps', 'About 500 mA', 'Effectively unlimited'], correct: 0, explanation: 'A pin handles tens of milliamps; bigger loads need a transistor.' },
+      { type: 'predict_reading', difficulty: 1, question: 'Roughly how much current can a single Arduino pin safely source?', options: ['About 20 to 40 mA', 'About 2 to 4 amps', 'About 500 mA', 'Effectively unlimited'], correct: 0, explanation: 'A pin handles tens of milliamps; bigger loads need a transistor.' },
       { type: 'true_false', difficulty: 1, statement: 'A saturated (fully on) transistor acts roughly like a closed switch.', correct: true, explanation: 'Yes. In saturation it drops only a small voltage and passes the load current, like a closed switch.' },
 
       // Tier 2: apply
@@ -1185,7 +1185,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 2: one calculation
       { type: 'fill_blank', difficulty: 2, prompt: 'Base current 1 mA, collector current 150 mA. The current gain β is ___.', blank: '___', answer: '150', hint: 'Divide the collector current by the base current.' },
-      { type: 'multiple_choice', difficulty: 2, question: 'Ic = 200 mA and Ib = 2 mA. What is β?', options: ['100', '400', '40', '10'], correct: 0, explanation: 'β = Ic / Ib = 200 / 2 = 100.' },
+      { type: 'predict_reading', difficulty: 2, question: 'Ic = 200 mA and Ib = 2 mA. Predict the current gain β.', options: ['100', '400', '40', '10'], correct: 0, explanation: 'β = Ic / Ib = 200 / 2 = 100.' },
       { type: 'predict_reading', difficulty: 2, question: 'You need Ic = 300 mA and the transistor\'s β is 150. What base current does that require, as a minimum?', options: ['2 mA', '20 mA', '0.5 mA', '45 mA'], correct: 0, explanation: 'Ib = Ic / β = 300 / 150 = 2 mA (minimum; drive a little more to saturate).' },
       { type: 'multiple_choice', difficulty: 2, question: 'When sizing base current for a switch, which β should you assume?', options: ['The lowest β the part might have', 'The single highest β ever measured on a good sample', 'Exactly β = 1 in every single case', 'Any random value, since it makes no difference'], correct: 0, explanation: 'Designing for the lowest β guarantees enough base current for every sample.' },
 
@@ -1248,7 +1248,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'teach', title: 'Heat and Ratings', body: 'A real switch is not perfect: it drops a little voltage while passing current, so it dissipates power (P = V × I) as heat. Pick a device rated for more than your load current and voltage, and add a heatsink if the power gets high. Running a part near its limit is how it fails.' },
 
       // Tier 1: recall
-      { type: 'multiple_choice', difficulty: 1, question: 'For switching several amps with very little drive current, a common modern choice is a...', options: ['MOSFET', 'Single small-signal BJT', 'Plain resistor', 'Ceramic capacitor'], correct: 0, explanation: 'MOSFETs switch large currents and are driven by voltage, needing almost no steady gate current.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'For switching several amps with very little drive current, the common modern choice is a ___.', blank: '___', answer: 'MOSFET', hint: 'A voltage-driven device controlled at its gate, not a current-driven base.' },
       { type: 'true_false', difficulty: 1, statement: 'A switching device drops some voltage while conducting, so it gives off heat.', correct: true, explanation: 'Yes. The small on-state voltage times the load current is power dissipated as heat.' },
       { type: 'multiple_choice', difficulty: 1, question: 'When choosing a switching transistor, you should pick one rated for...', options: ['More than the load\'s current and voltage', 'Exactly the load current, no margin', 'Far less than the load needs', 'Only the base current'], correct: 0, explanation: 'Headroom above the load\'s current and voltage keeps the part cool and reliable.' },
 
@@ -1271,7 +1271,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 1: recall
       { type: 'multiple_choice', difficulty: 1, question: 'A coil (inductor) opposes a change in its...', options: ['Current', 'Colour', 'Temperature', 'Resistance value'], correct: 0, explanation: 'An inductor opposes a change in current, just as a capacitor opposes a change in voltage.' },
-      { type: 'multiple_choice', difficulty: 1, question: 'Switching off a coil suddenly produces a...', options: ['Large reverse voltage spike (back-EMF)', 'Gentle drop to zero with no spike', 'Steady rise in supply voltage', 'Permanent magnetic charge'], correct: 0, explanation: 'The collapsing field generates a back-EMF spike, often many times the supply voltage.' },
+      { type: 'predict_behavior', difficulty: 1, question: 'You switch off a coil suddenly. Predict what its voltage does.', options: ['A large reverse voltage spike (back-EMF) appears', 'It drops gently to zero with no spike', 'The supply voltage steadily rises', 'It keeps a permanent magnetic charge'], correct: 0, explanation: 'The collapsing field generates a back-EMF spike, often many times the supply voltage.' },
       { type: 'true_false', difficulty: 1, statement: 'The back-EMF spike from a coil can be much larger than the supply voltage.', correct: true, explanation: 'Yes, that is exactly why it is dangerous to the switching transistor.' },
 
       // Tier 2: apply
@@ -1337,13 +1337,13 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'teach', title: 'Picking Between Them', body: 'BJTs are cheap, simple, and fine for small loads and signal work. MOSFETs win for switching larger currents efficiently. The MOSFET\'s terminals are gate, drain, and source (the rough counterparts of base, collector, emitter). The flyback-diode rule for inductive loads is exactly the same for both.' },
 
       // Tier 1: recall
-      { type: 'multiple_choice', difficulty: 1, question: 'A MOSFET is controlled by its gate...', options: ['Voltage', 'Current', 'Temperature', 'Colour'], correct: 0, explanation: 'MOSFETs are voltage-controlled at the gate; BJTs are current-controlled at the base.' },
-      { type: 'multiple_choice', difficulty: 1, question: 'A BJT is controlled by its base...', options: ['Current', 'Voltage only', 'Resistance', 'Frequency'], correct: 0, explanation: 'A BJT needs a base current to turn on.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A MOSFET is controlled by its gate ___ (it draws almost no steady gate current).', blank: '___', answer: 'voltage', hint: 'The quantity measured in volts, not the one measured in amps.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A BJT is controlled by its base ___ (a small one into the base turns it on).', blank: '___', answer: 'current', hint: 'The quantity measured in amps, not the one measured in volts.' },
       { type: 'true_false', difficulty: 1, statement: 'A MOSFET draws almost no steady current at its gate.', correct: true, explanation: 'Yes. Once the gate is charged, it draws virtually no steady current.' },
 
       // Tier 2: apply
       { type: 'multiple_choice', difficulty: 2, question: 'You must switch 5A efficiently from a 5V logic pin. Best general choice?', options: ['A logic-level MOSFET', 'A tiny small-signal BJT', 'A plain resistor', 'A coupling capacitor'], correct: 0, explanation: 'A logic-level MOSFET turns fully on from 5V and switches amps with low loss.' },
-      { type: 'multiple_choice', difficulty: 2, question: 'The MOSFET terminals (gate, drain, source) roughly correspond to which BJT terminals?', options: ['Base, collector, emitter', 'Emitter, base, collector', 'Anode, cathode, gate', 'Plus, minus, ground'], correct: 0, explanation: 'Gate≈base (control), drain≈collector, source≈emitter.' },
+      { type: 'match', difficulty: 2, instruction: 'Match each MOSFET terminal to the BJT terminal it roughly corresponds to.', pairs: [['Gate', 'Base (the control input)'], ['Drain', 'Collector'], ['Source', 'Emitter']] },
       { type: 'multiple_choice', difficulty: 2, question: 'Switching an inductive load with a MOSFET, what protection do you still need?', options: ['A flyback diode across the load', 'Nothing, MOSFETs are immune', 'A second gate resistor only', 'A larger source capacitor'], correct: 0, explanation: 'Back-EMF does not care which switch you use; the flyback diode rule is the same.' },
 
       // Tier 3: reason
@@ -1363,7 +1363,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'true_false', difficulty: 1, statement: 'NPN and PNP transistors use opposite supply polarities and current directions.', correct: true, explanation: 'Yes. A PNP is the mirror image of an NPN.' },
 
       // Tier 2: apply
-      { type: 'multiple_choice', difficulty: 2, question: 'For a natural high-side switch (between supply and load), which BJT fits?', options: ['PNP', 'NPN', 'Either, polarity is irrelevant', 'Neither can switch high-side'], correct: 0, explanation: 'A PNP is the natural high-side switch; an NPN is the natural low-side switch.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'The BJT that sits naturally as a high-side switch (between supply and load) is the ___.', blank: '___', answer: 'PNP', hint: 'The polarity that turns on with its base pulled low, the mirror of the low-side type.' },
       { type: 'predict_behavior', difficulty: 2, question: 'You drop an NPN into a circuit designed for a PNP without changing anything. What happens?', options: ['It will not switch correctly; the polarity is wrong', 'It works completely identically, with no difference at all', 'It runs at roughly double its normal speed', 'It quietly turns itself into a MOSFET'], correct: 0, explanation: 'NPN and PNP need opposite drive and supply arrangements; swapping one for the other without rewiring fails.' },
       { type: 'multiple_choice', difficulty: 2, question: 'Why are NPN low-side switches the beginner default?', options: ['The base drive shares the logic\'s ground reference', 'PNP transistors are genuinely very rare and hard to source', 'NPN parts need no base resistor at all', 'NPN loads always run at a higher voltage'], correct: 0, explanation: 'A ground-referenced base is easy to drive straight from a pin, so NPN low-side is the simplest start.' },
 
