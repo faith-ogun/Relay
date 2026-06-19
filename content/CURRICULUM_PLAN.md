@@ -1,637 +1,348 @@
 # Ohmlet Curriculum Plan
 
-> The master plan for what the Ohmlet curriculum is, how it is structured, how
-> learners progress, and how we author it at scale. Synthesised from an LLM
-> council (learning science, electronics pedagogy, content-pipeline engineering)
-> on 2026-06-18, plus the confirmed strategy decisions.
+> **The single source of truth for the curriculum: what it is, how it's sized, how
+> learners progress, and how we author it.** This is a *spec*, not a diary. The dated
+> build-log lives in [`metadata/curriculum-changelog.md`](../metadata/curriculum-changelog.md);
+> "what we did on day X" goes there, never here. If anything ever conflicts, this file wins.
 >
-> Operational companion docs: [`CURRICULUM_AUTHORING.md`](./CURRICULUM_AUTHORING.md)
-> (how to author and ship one lesson) and [`LEARNING_RESOURCES.md`](./LEARNING_RESOURCES.md)
-> (the source books). This file is the "what and why and how much."
+> Companion docs: [`CURRICULUM_AUTHORING.md`](./CURRICULUM_AUTHORING.md) (how to author
+> and ship one lesson, incl. the quality bar) · [`CURRICULUM_CITATIONS.md`](./CURRICULUM_CITATIONS.md)
+> (per-lesson source grounding) · [`LEARNING_RESOURCES.md`](./LEARNING_RESOURCES.md) (the books).
+>
+> **Status (live):** 10 units · 115 lessons · lint 0 errors / 0 warnings · build green.
 
 ---
 
-## Status snapshot (2026-06-19)
+## 1. The target — one ramp, three milestones
 
-Where the curriculum actually stands, for whoever picks this up next:
+There is **one** plan. It is a ramp, not a set of competing numbers. Earlier drafts
+quoted several totals (40–80, 130, 143, 450–650); those were milestones on this ramp,
+now stated once, here:
 
-- **Unit 10 authored: "Power Supplies & Regulation" (advanced), 11 lessons** —
-  why regulate, AC→DC rectification (half/full-wave, bridge), smoothing & ripple,
-  the zener reference (R=(Vin−Vz)/I), the linear regulator (7805, dropout), regulator
-  heat (P=(Vin−Vout)·Iout), switching regulators (buck/boost, efficiency), linear vs
-  switching, a clean supply (bulk + decoupling + ground), checkpoint. Grounded in STG
-  ch.2&11, EAC Vol.1 ch.17&19, PEI ch.11. Lints clean; build green.
-  **10 units, 115 lessons.** Units 11–12 remain for full v1 (~143).
-- **Unit 9 authored: "Filters, Oscillators & Signals" (advanced), 12 lessons** —
-  waveforms (f=1/T), measuring AC (peak/pp/RMS), the frequency domain, high-pass vs
-  low-pass, the cutoff (fc=1/2πRC, 0.707/−3dB), decibels & roll-off, band-pass/notch
-  (BW=f2−f1), LC resonance, what an oscillator is, the relaxation oscillator, reading
-  a scope, checkpoint. Reuses `rc_low_pass`. Grounded in STG ch.7, PEI ch.9-10, AoE.
-  Lints clean; build green. **9 units, 104 lessons.**
-- **Unit 8 authored: "Op-Amps & Signal Conditioning" (advanced), 12 lessons** —
-  what an op-amp is, the golden rules, negative feedback, non-inverting (1+Rf/Rg) and
-  inverting (−Rf/Rin) amps, the voltage follower, the comparator, hysteresis/Schmitt
-  trigger, real op-amp limits, single-supply biasing, sensor conditioning, checkpoint.
-  Calculation/concept-driven (no new diagram). Grounded in AoE ch.4, PEI ch.8, EAC
-  Vol.2. Lints clean; build green. **8 units, 92 lessons.**
-- **DIAGRAM BACKLOG (deliberate):** Units 8+ would be stronger with their signature
-  schematics (op-amp inverting/non-inverting, regulator, H-bridge). The DSL + OpAmp
-  primitive support them, but a correct op-amp schematic needs visual iteration, so
-  these are deferred to a dedicated, visually-verified diagram pass rather than risk
-  slop mid-batch. Lessons teach fully via calculation/concept in the meantime.
-- **ALL 46 pre-bar Units 1–5 lessons rebuilt to the quality bar (2026-06-19).**
-  The "longest answer" tells were fixed (distractors padded so the correct option
-  is never the lone longest) and every short lesson was deepened with genuine extra
-  graded questions to clear the 6-question floor (most now 6–8 graded). **The entire
-  curriculum now lints 0 errors / 0 warnings** (was 89 warnings). Build green.
-  This was the backlog called out in the prior snapshots; it is now closed.
-- **7 units, 80 lessons, every lesson at the quality bar.** v1 target ~143 (12
-  units); ceiling ~450–650. Next: author Units 8–12.
+| Milestone | Units | Lessons | What it means |
+|-----------|-------|---------|---------------|
+| **Built now** | 10 | 115 | Beginner → advanced analog core, all at the quality bar |
+| **v1 launch** | 12 | ~145 | + Units 11–12 (digital/embedded, comms/motors/robotics). The sellable product. |
+| **Ceiling** | ~35–45 | ~450–650 | Brilliant-scale: deepened units + added tracks (robotics, digital, audio, power, RF) |
 
-- **Unit 7 authored to the quality bar (2026-06-19): "Transistors & Switching"**,
-  12 lessons (the BJT, transistor-as-switch, β, base-resistor sizing, low/high-side,
-  bigger loads/MOSFETs, back-EMF, the flyback diode, the **"Drive the Relay"
-  capstone** from §11b, MOSFETs vs BJTs, NPN vs PNP, checkpoint). Difficulty-tiered,
-  balanced distractors, method-only hints; **new unit lints 0/0**. Grounded in STG
-  Ch.3, EAC Vol.1, PEI Ch.4. Uses the `transistor_switch` DSL diagram.
-- **7 units, 80 lessons built.** v1 target ~143 (12 units); ceiling ~450–650.
-- **Authoring note (confirmed):** the "longest answer" linter check is strict
-  (correct must not be the unique longest AND within ~1.6×/12 chars of the average).
-  Fastest clean path: make ONE distractor at least as long as the correct option.
-- **Still to do this push:** rebuild the 54 pre-bar Units 1–5 lessons (the 89 lint
-  warnings are the worklist) and author Units 8–12 (+ extra units toward the ceiling).
+- **Felt depth multiplier:** Bronze → Silver → Gold leveling replays each lesson at
+  rising difficulty, so playtime is ~3× the authored lesson count without authoring 3×.
+  A 450-lesson library with leveling rivals a 1,000+ flat one.
+- **Why not Duolingo's thousands at launch:** that's the mature state of a 13-year course.
+  Beginner→advanced electronics is a few hundred *core* concepts taught in dense lessons
+  (one whole concept each, a real build per unit). We reach the ceiling by *deepening*
+  after retention is proven, not by front-loading breadth.
+- **Reference points (not targets):** the pricing analysis put a ~120-lesson floor for a
+  monthly Pro and ~180–220 for "good / annual-worthy." v1's ~145 clears the floor; the
+  advanced tracks toward the ceiling clear "good." These inform pricing, they are not
+  separate curriculum targets.
 
-- **Unit 6 authored to the quality bar (2026-06-19): "Capacitors, RC & Timing"**,
-  12 lessons (caps, farad units, polarity, charging, τ = RC, RC design, smoothing/
-  decoupling, coupling, the RC low-pass filter, RC timing, the 555, checkpoint).
-  Difficulty-tiered pools, balanced distractors, method-only hints; **lints 0
-  errors / 0 warnings on the new unit** (the 89 remaining warnings are all the
-  pre-bar Units 1–5 backlog). Grounded in EAC Vol.1, Make: Electronics, PEI
-  (see CURRICULUM_CITATIONS.md). Reuses the `rc_low_pass` DSL diagram.
-- **6 units, 68 lessons built.** v1 target ~143 (12 units); ceiling ~450–650.
-- **Still to do this push:** rebuild the 54 pre-bar Units 1–5 lessons (the 89 lint
-  warnings are the worklist), and author Units 7–12 (+ extra units toward the
-  ceiling). Authoring tip learned: write one distractor as long as the correct
-  option up front, keep the correct option concise — avoids the "longest answer"
-  rework the linter flags.
-
-## Status snapshot (2026-06-18)
-
-Where the curriculum actually stood the day before:
-
-- **5 units, 56 lessons built.** v1 target ~143 (12 units); ceiling ~450–650 (§5b/§5c).
-- **Authoring rails live:** `npm run lint:lessons` (schema + quality checks), the
-  circuit DSL (diagrams as data), and the admin `/author` preview console. See
-  [`CURRICULUM_AUTHORING.md`](./CURRICULUM_AUTHORING.md).
-- **Leveling live:** Bronze→Silver→Gold, with difficulty-tiered question pools so
-  replays escalate (§5c).
-- **Quality bar set and enforced.** A playtest found the first 56 lessons too easy
-  and guessable. The linter now flags the issues and reports the backlog: ~51
-  "longest answer" tells + ~42 lessons under the question target. **Two lessons
-  rebuilt to the bar as references** (`The Closed Loop`, `Powering an LED Safely`);
-  the other ~54 need the same treatment (rolls into #41/#42).
-- **Hints are temporarily DISABLED** in the lesson runner. The authored fill-blank
-  hints were giving the answer away ("the opposite of an open one" for "closed").
-  They will return only when rewritten as method nudges that never name or describe
-  the answer (the linter already guards the literal-answer case).
-- **Next session:** rebuild the existing 54 lessons to the quality bar, and/or
-  author Units 6+. The linter output is the worklist.
-
-## 0. Guiding principle: depth-first, not breadth-first
-
-We build depth-first, not a shallow spread across many topics. The committed
-targets (see §5b/§5c): **v1 launch at ~143 lessons / 12 units**, headed for the
-**reasonable ceiling of ~450–650 lessons / ~35–45 units**, with Bronze→Silver→Gold
-leveling multiplying felt depth on top. (The original framing below was a 40–80
-floor; it has since been superseded by those numbers.) This is the answer to "why
-not Duolingo's 7,500 lessons":
-
-- Duolingo's 7,500 is the *mature* state of one course after 13+ years and a large
-  team. It launched with a few dozen skills and grew. Our 80 is day one, not the
-  ceiling.
-- A language needs thousands of tiny lessons because vocabulary is effectively
-  unbounded. Beginner-to-intermediate electronics is a few hundred core concepts,
-  taught in denser lessons (one whole concept per lesson, a real build per unit).
-- The failure mode for a solo founder pre-launch is "shallow everywhere,
-  finishable nowhere," not "too few lessons." Retention comes from a path a learner
-  can complete and feel mastery on, plus the live tutor and the build payoff.
-- 80 is the floor of a ramp. The pipeline and circuit DSL in this plan are built so
-  that going from 80 to 800 is an approval-queue exercise, not a rebuild. Electronics
-  is deep (analog, digital, power, sensors, audio, robotics, embedded), so the
-  long-term ceiling is genuinely thousands across many paths.
-
-**80 is the minimum viable curriculum: the smallest thing that is genuinely
-complete.** Scale content deliberately after retention and unit economics are proven.
+The original "40–80 lessons / 5–7 units" floor from the first draft is **retired** (we
+passed it); it is kept only in the changelog for history.
 
 ---
 
-## 1. Structure and sizing
+## 2. Structure & sizing
 
 Hierarchy: **Units → Skills → Lessons → Steps.** A lesson contains *steps* (the
-individual exercises), not units. Targets are variable with guardrails:
+individual exercises).
 
-| Level | Target | Range | Rule |
-|-------|--------|-------|------|
-| Steps per lesson | 7 | 5 to 9 | One concept per lesson, time-boxed to 3 to 5 min |
-| Lessons per skill | 4 | 3 to 6 | A skill = one coherent capability |
-| Skills per unit | 3 to 4 | 2 to 5 | A unit = a milestone the learner can name |
-| Lessons per unit | ~12 to 16 | emergent | — |
-| Total path | 40 to 80 | — | ~5 to 7 units |
+| Level | Target | Hard rule |
+|-------|--------|-----------|
+| Graded steps / lesson | **8–14** | **≥6 is the floor** (linter warns below 6) |
+| `teach` steps / lesson | 1–3 | Never 3 *consecutive*; never a majority-passive lesson |
+| Lessons / skill | 3–4 | A skill = one coherent capability |
+| Skills / unit | 3–5 | A unit = a milestone the learner can name |
+| Lessons / unit | ~11–13 | Includes the unit checkpoint |
 
-**Vary lesson structure by role, not just count** (uniform length reads as a content
-mill):
+**Vary lesson role, not just length** (uniform lessons read as a content mill):
 
-- **Intro lesson** in a skill: more `teach` + `multiple_choice` (build intuition).
-- **Practice lessons:** `identify_component`, `match`, `drag_order`, `spot_error`,
-  the predict exercises (active recall, little new teaching).
-- **Capstone lesson** in a skill: heavy `draw_connection`, `build_to_spec`,
-  `fix_the_circuit`. The "do the thing" lesson; should feel harder.
-
-**Hard rules:** never more than 2 consecutive `teach` steps; never a
-majority-passive lesson. That line is the difference between Brilliant and a
-slideshow.
+- **Intro** lesson: more `teach` + `multiple_choice` (build intuition).
+- **Practice** lessons: active recall — identify, match, drag_order, spot_error, the
+  predict family. Little new teaching.
+- **Capstone** lesson: "do the thing" — draw_connection / build_to_spec / fix_the_circuit.
+  Should feel harder.
 
 ---
 
-## 2. Mastery and progression
+## 3. The unit map (v1)
 
-**Mastery is per-Skill, not per-Lesson.** We do NOT use Duolingo's "repeat the same
-lesson 5x" model: that is tuned for vocabulary recall, and we teach skills.
+Levels ramp beginner → intermediate → advanced. Counts are targets (±2 as material dictates);
+the 12-unit shape and the level ramp are fixed.
 
-- A lesson is completed **once** to unlock the next, gated at **≥80% of graded steps
-  correct** (teach steps do not count).
-- Below threshold, the learner does **not** redo the whole lesson. They get a
-  **remixed targeted retry of only the missed steps** (different distractors,
-  mirrored circuit, swapped values).
-- Repeated failure **escalates modality** instead of repeating the quiz:
-  quiz → AI tutor reteaches the micro-concept live → build it on camera. This is
-  the point of having a live tutor; do not waste it on more taps.
-- A **Skill** is mastered by completing its lessons plus passing one short
-  **Skill Check** (interleaved retrieval across the skill's lessons).
+| #  | Unit | Level | Status | Lessons |
+|----|------|-------|--------|---------|
+| 1  | Foundations | beginner | ✅ built | 13 |
+| 2  | On the Breadboard | beginner | ✅ built | 11 |
+| 3  | Sensors & Signals | intermediate | ✅ built | 11 |
+| 4  | Meet the Arduino | intermediate | ✅ built | 11 |
+| 5  | Inputs, Outputs & Code | intermediate | ✅ built | 10 |
+| 6  | Capacitors, RC & Timing | intermediate | ✅ built | 12 |
+| 7  | Transistors & Switching | intermediate→adv | ✅ built | 12 |
+| 8  | Op-Amps & Signal Conditioning | advanced | ✅ built | 12 |
+| 9  | Filters, Oscillators & Signals | advanced | ✅ built | 12 |
+| 10 | Power Supplies & Regulation | advanced | ✅ built | 11 |
+| 11 | Digital Logic & Embedded | advanced | planned | ~14 |
+| 12 | Comms, Motors & Robotics | advanced | planned | ~13 |
 
----
+**Launch core (U1–8)** is the minimum to honestly sell monthly Pro; **full v1 (U1–12)**
+unlocks the annual plan and makes max / Interview Mode credible (embedded peripherals +
+hardware land in U11–12). **Interview Mode** is honest once U11–12 ship, scoped to
+hardware fundamentals + embedded peripherals (I2C/SPI/UART, interrupts, timers/PWM,
+GPIO/ADC) + embedded-C basics — explicitly NOT RTOS/FPGA/RF (a later labelled max track).
 
-## 2b. Difficulty sequencing & unit checkpoints (decided 2026-06-18)
-
-Three questions came up while building; here are the decisions.
-
-**How is difficulty ordered, beginner-then-intermediate or interleaved?**
-Progressive, not interleaved. The path runs several **beginner** units, then
-**intermediate**, then **advanced**, each unit a notch harder than the last (this
-mirrors Duolingo's sections: beginner sections 1–4, intermediate 5–8). Every unit
-carries a `level` field and the path shows the level badge. Current order:
-Foundations (beginner) → On the Breadboard (beginner) → Sensors & Signals
-(intermediate) → … We do not randomly mix easy and hard units; the ramp is the
-point. Difficulty rises *within* a unit too (intro → practice → capstone lessons).
-
-**Is there a test at the end of each unit before you progress?**
-Yes. Every unit now ends in a **Unit Checkpoint**: a mixed, cumulative test drawn
-from across the unit, with **no teach steps** (pure retrieval) and bonus XP (50).
-Because the path unlocks linearly (the next lesson unlocks when the previous is
-complete), the checkpoint is automatically the gate: you cannot reach the next
-unit's lessons until you have passed that unit's checkpoint. This is the concrete
-implementation of the "Unit Checkpoint ceremony" in §3.
-
-**How is mastery actually tested, is it just "didn't lose 3 hearts"?**
-Today, yes, plus the checkpoint. A lesson is mastered by getting through all its
-steps without losing all 3 hearts; lose all 3 and you restart **that lesson** from
-the beginning (hearts reset to 3, never carrying between lessons). The unit
-checkpoint then re-tests the whole unit. The richer model in §2 (80% pass with a
-remixed targeted retry, per-skill strength) is the planned upgrade; the hearts +
-checkpoint model is the shipped version and is genuinely Duolingo-shaped.
-
-## 3. Spaced repetition and review
-
-Right-sized for skill mastery and sparse early data (not raw Half-Life Regression,
-which models millions of vocab items).
-
-**Within a lesson — interleaving.** Reserve 1 to 2 of the ~7 steps to retrieve a
-*prior* skill, not the brand-new one. End on a cumulative step. Interleaved practice
-beats blocked practice for durable transfer.
-
-**Across the path — two layers:**
-
-1. **Skill strength decay (the engine).** Each skill carries a `strength ∈ [0,1]`,
-   starts at 1.0 on mastery, decays on an expanding (Leitner-style) schedule:
-   review due at **1 → 3 → 7 → 16 → 35 days**, advancing a box on a successful
-   Refresh, dropping on a miss. When strength crosses a threshold, the path surfaces
-   a **Refresh node** (a short 4 to 5 step interleaved set, NOT a lesson replay).
-   Ship Leitner now (cheap, interpretable); graduate to a fitted DAS3H/HLR model
-   later once we have enough traces. Same schema, swap the interval function.
-2. **Unit Checkpoints (ceremony).** Each unit ends in a cumulative, interleaved
-   checkpoint that pays disproportionate XP and animates the reward (the
-   "Legendary" moment).
-
-**Ohmlet-specific divergence:** a **camera-verified real build is the strongest
-retrieval event.** A quiz pass restores skill strength to ~0.9; a verified live
-build restores to 1.0 and jumps two Leitner boxes. The scheduler must not treat a
-build as worth the same as a tap-quiz.
+**Beyond v1 (toward the ceiling):** the tree branches into tracks — Robotics, Digital/FPGA,
+Audio, Power/RF, Sensors deep-dive — each a sequence of units deepening a domain. New
+tracks are added after retention + unit economics are proven, not before.
 
 ---
 
-## 4. Exercise types
+## 4. Capstones (the rule)
 
-We already have **9** (in `lessons.ts`): `teach`, `multiple_choice`, `true_false`,
-`fill_blank`, `match`, `drag_order`, `spot_error`, `identify_component`,
-`draw_connection`.
+**A capstone closes the unit (or arc) it completes.** There is no fixed "capstone unit."
+A capstone is the satisfying real build that proves the skills just learned.
 
-The core principle for new ones: because our circuit diagrams are **executable code,
-not pictures**, the highest-value exercises are **predict → commit → reveal**, where
-the learner commits to a prediction and the circuit *truthfully* responds. A
-misconception only dies when the learner watches a truthful simulation contradict
-their wrong prediction.
+| Capstone | Closes | Form |
+|----------|--------|------|
+| Light-Activated Alarm (wired) | Unit 3 (sense→decide→act, hardware) | draw_connection build |
+| Light-Activated Alarm (coded) | Unit 5 (analogRead→if→digitalWrite) | code build (callback to U3) |
+| Drive the Relay | Unit 7 (transistor switching) | calc + verified build |
+| *(future)* Line-follower / robot | a Robotics unit | live camera-verified build |
+| *(future)* Audio amplifier | a signal/audio unit | build + measurement |
 
-Recommended additions, highest value first:
-
-| New type | Teaches | Notes |
-|----------|---------|-------|
-| `predict_reading` ★ | Ohm's law applied, the LDR analog value | "What will the meter / serial read?" then reveal |
-| `trace_current` ★ | Complete-loop rule; kills "current gets used up" | Tap the path, animation confirms |
-| `choose_resistor` / `set_value` ★ | Current limiting as design | Pick part / slide value; LED survives, dims, or burns |
-| `predict_behavior` ★ | Sensor → logic → actuator causality | Animated outcome states, capstone-concept exercise |
-| `read_resistor_band` | The colour code, reading real parts | Needs a real illustration (see §5) |
-| `fix_the_circuit` | Repair (distinct from `spot_error`'s diagnosis) | Rewire/replace until it actually works |
-| `build_to_spec` | Synthesis ("draw the circuit") | Open-ended; validated by simulation, accepts any valid topology |
-| `place_missing_component` | Component roles + polarity ("draw the missing component") | Orientation matters (anode/cathode, cap, diode) |
-| `match_image` | Schematic symbol ↔ real-part photo ↔ name | Connective tissue to the live camera tutor |
-| `read_waveform` / `annotate_signal` | PWM, duty cycle, timing | Later units (motors, sound, dimming) |
-
-De-prioritised: free-form hand-drawn schematic recognition (expensive, hard to
-grade; `build_to_spec` on the sim teaches the same synthesis with truthful
-validation).
-
-The founder's three original ideas all map and are kept: "match the image"
-(`match_image`), "draw the circuit" (`build_to_spec`), "draw the missing component"
-(`place_missing_component`).
+Reaching a real build **early** is deliberate: it drives first-build-completion and
+retention. The flagship Arduino-Starter-Kit demo (LDR + LED/buzzer) is the Unit 3/5 alarm.
 
 ---
 
-## 5. Visual strategy: which medium tells which truth
+## 5. Exercise types — real inventory
+
+### Built and in use (11 graded types + `teach`)
+
+Defined in `frontend/components/ohmlet/data/lessons.ts`. Approximate usage today shows
+the imbalance we are correcting (see the variety mandate below):
+
+| Type | Use | Note |
+|------|-----|------|
+| `multiple_choice` | ~heavy | Over-used; the rebalance trims this share |
+| `true_false` | common | Quick concept check |
+| `fill_blank` | common | Recall a value/term (method-only hints) |
+| `predict_behavior` ★ | growing | Predict → commit → reveal |
+| `predict_reading` ★ | growing | "What will the meter / serial read?" |
+| `match` | common | Pair terms ↔ definitions (both columns shuffle) |
+| `identify_component` | moderate | Click the right part on a diagram |
+| `spot_error` | moderate | Find the fault in a circuit |
+| `choose_resistor` ★ | moderate | Current-limiting / sizing as design |
+| `drag_order` | light | Order a procedure |
+| `draw_connection` | **rare (~5)** | Wire terminals; under-used, expand in capstones |
+
+### NOT built yet — the variety backlog (fenced honestly)
+
+These are **promised in spirit but do not exist in code.** Do not describe them as real
+until built. Decision (2026-06-19): **retrofit variety everywhere** — build these, then
+rebalance existing units away from multiple-choice.
+
+| Proposed type | Teaches | Priority |
+|---------------|---------|----------|
+| `build_to_spec` ("draw the circuit") | Synthesis; validated by the sim, accepts any valid topology | high |
+| `fix_the_circuit` | Repair (distinct from spot_error's diagnosis) | high |
+| `trace_current` | Complete-loop rule; kills "current gets used up" | high |
+| `place_missing_component` ("draw the missing component") | Component roles + polarity | medium |
+| `match_image` | Schematic symbol ↔ real-part photo ↔ name; bridges to the live tutor | medium |
+| `read_waveform` / `annotate_signal` | PWM, duty cycle, timing (signal units) | medium |
+
+**The variety mandate:** no single type should dominate a lesson; lead with `teach`,
+reinforce with a *mix* (favour the predict/build/draw family), end on a synthesis step.
+Target: multiple_choice well under half of graded steps once the retrofit is done.
+
+**Core principle:** because our diagrams are *executable code, not pictures*, the
+highest-value exercises are **predict → commit → reveal** — the learner commits to a
+prediction and the circuit truthfully responds. A misconception only dies when a truthful
+simulation contradicts the wrong prediction.
+
+---
+
+## 6. Difficulty, mastery & progression
+
+**Difficulty tiers (per question):** `difficulty: 1 | 2 | 3`. Tier 1 = recall, Tier 2 =
+one calculation/application, Tier 3 = multi-step reasoning or real computation. A deep,
+tiered pool lets replays escalate.
+
+**Four difficulty regimes across the path:**
+- **A — Intuition** (U1–2): numbers given, no math required to pass.
+- **B — First real calculation** (mid-U1→U3): Ohm's law as a tool, divider math, E12 picks.
+- **C — Multi-step design with constraints** (U6+): coupled equations + a parts choice
+  (τ=RC, transistor biasing, op-amp gain, regulator dissipation).
+- **D — Spec-driven / open-ended** (top units): given a spec, pick topology AND values AND
+  justify. Interview-grade.
+
+**Leveling (Bronze → Silver → Gold):** the next lesson unlocks after one pass (Bronze).
+Replays reach Silver then Gold for more XP; each level is harder (Silver drops the teach
+steps and shuffles to pure recall; Gold does the same with fewer hearts). Deep tiered
+pools make replays draw *different, harder* questions. (`data/levels.ts`.)
+
+**Mastery (shipped model):** a lesson is mastered by getting through all steps without
+losing all hearts; lose them and restart that lesson. Each unit ends in a **checkpoint**
+(cumulative, no teach steps, bonus XP) which gates the next unit. *(Planned upgrade: 80%
+pass with a remixed targeted retry of only the missed steps; per-skill strength.)*
+
+**Gating the ramp (planned, task #42):** a `rigor` flag (calculator/datasheet glyph),
+real `prerequisite` locks (not just order), graded *design-problem* checkpoints in U6+,
+and two **gateway exams** (after U5, after U10). On hard lessons, require the calculation
+AND the vision-verified build AND the running result to pass.
+
+---
+
+## 7. Spaced repetition & review
+
+Right-sized for skill mastery (not raw vocab HLR):
+
+- **Within a lesson — interleaving.** Reserve 1–2 steps to retrieve a *prior* skill; end
+  on a cumulative step.
+- **Across the path — Leitner skill-strength.** Each skill carries `strength ∈ [0,1]`,
+  decaying on an expanding schedule (1 → 3 → 7 → 16 → 35 days). When it crosses a
+  threshold the path surfaces a short **Refresh node** (4–5 interleaved steps, not a
+  replay). Ship Leitner now; graduate to a fitted model once we have traces.
+- **Unit checkpoints** pay disproportionate XP (the "Legendary" moment).
+- **Ohmlet divergence:** a camera-verified real build is the strongest retrieval event.
+  A quiz pass restores strength to ~0.9; a verified live build restores 1.0 and jumps two
+  Leitner boxes.
+
+---
+
+## 8. Visual strategy & the Circuit DSL
 
 | Medium | Use for | Share |
 |--------|---------|-------|
-| **Code-driven interactive SVG** (the workhorse) | Topology, current flow, cause-effect, anything to predict or manipulate; schematic symbols | ~70% |
-| **Real photo / faithful illustration** (narrow, mandatory) | Where physical appearance IS the objective: resistor colour bands, electrolytic vs ceramic cap, breadboard rails, LED leg polarity, real Arduino pins | small |
-| **3D sandbox** | Free synthesis + physical layout intuition, AFTER a unit. Practice, not instruction. Does not duplicate authored lessons | — |
-| **Live camera tutor** | The reality bridge: seeing the learner's actual bench and catching real-world errors. Reserved for the real build (Unit 9+), not for re-teaching theory (wasteful of model cost) | — |
+| **Code-driven interactive SVG** (workhorse) | Topology, current flow, cause/effect, anything to predict or manipulate; schematic symbols | ~70% |
+| **Real photo / faithful illustration** (narrow, mandatory) | Where physical appearance IS the objective: resistor colour bands, electrolytic vs ceramic, breadboard rails, LED leg polarity, real Arduino pins | small |
+| **3D sandbox** | Free synthesis + layout intuition, AFTER a unit (practice, not instruction) | — |
+| **Live camera tutor** | The reality bridge: the learner's actual bench, real-world errors. Reserved for real builds, not re-teaching theory | — |
 
-Rule of thumb: if the schematic symbol is a deliberate simplification of something
-the learner must recognise in their hand, you need the photo. A schematic resistor
-is a zigzag; a real one is striped, and they must learn both.
+**The Circuit DSL** (`circuits/spec.ts` + `specs.ts` + `SpecCircuit.tsx`): diagrams are
+*data* (`nodes` + `wires`), drawn from shared primitives. Region ids = node ids, so the
+linter validates `spot_error`/`identify_component` targets for free. New diagrams are data
+an agent can emit and a human can read. Curated hand-coded SVGs (the original 8) are the
+escape hatch for irregular one-offs.
 
----
-
-## 5b. LAUNCH PLAN: the full unit map (locked 2026-06-18)
-
-The committed target for launch. 12 units, ~143 lessons. Levels ramp
-beginner → intermediate → advanced (re-tag Unit 5 down to intermediate; advanced
-is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
-
-| #  | Unit                            | Level        | Status   | Lessons |
-|----|---------------------------------|--------------|----------|---------|
-| 1  | Foundations                     | beginner     | ✅ built  | 13 |
-| 2  | On the Breadboard               | beginner     | ✅ built  | 11 |
-| 3  | Sensors & Signals               | intermediate | ✅ built  | 11 |
-| 4  | Meet the Arduino                | intermediate | ✅ built  | 11 |
-| 5  | Inputs, Outputs & Code          | intermediate | ✅ built  | 10 |
-| 6  | Capacitors, RC & Timing         | intermediate | ✅ built  | 12 |
-| 7  | Transistors & Switching         | intermediate | ✅ built  | 12 |
-| 8  | Op-Amps & Signal Conditioning   | advanced     | ✅ built  | 12 |
-| 9  | Filters, Oscillators & Signals  | advanced     | ✅ built  | 12 |
-| 10 | Power Supplies & Regulation     | advanced     | ✅ built  | 11 |
-| 11 | Digital Logic & Embedded        | advanced     | planned  | 14 |
-| 12 | Comms, Motors & Robotics        | advanced     | planned  | 13 |
-
-**Milestones:**
-- **Built now:** 5 units, 56 lessons (~2 hrs).
-- **Launch core (Units 1–8):** 8 units, ~93 lessons. The minimum to honestly sell a
-  monthly Pro subscription.
-- **Full v1 (Units 1–12):** 12 units, ~143 lessons. Unlocks the annual plan and
-  makes max / Interview Mode credible (embedded + hardware peripherals land in
-  Units 11–12).
-- **Still to author:** 87 lessons across Units 6–12.
-
-This sits above the pricing council's 120-lesson floor and approaches its 180–220
-"good" target; the remaining gap to 180+ is closed post-launch by deepening units
-and adding the labelled advanced tracks (RTOS, FPGA, RF) noted in §6.
-
-Counts are targets, not contracts: a unit may land at ±2 lessons as the material
-dictates. The 12-unit shape and the level ramp are the fixed commitments.
-
-## 5c. Scale ceiling and the engagement multiplier (target: 450–650 lessons)
-
-The committed long-term goal is the **reasonable ceiling: ~450–650 lessons across
-~35–45 units**, a genuine Brilliant-scale product. v1 (~143 lessons) is the launch
-floor; this is where the curriculum is headed.
-
-**What the 9 books on hand can support** (~1.41M words):
-
-| Scenario | Lessons | Units | What it means |
-|----------|---------|-------|---------------|
-| Worst case | ~250–350 | ~20–25 | Only clearly in-scope, non-redundant material |
-| **Reasonable (target)** | **~450–650** | **~35–45** | Full beginner→advanced + components + robotics tracks |
-| Best case | ~900–1,200 | ~70–90 | Mine every drop (incl. reference drills, adapted grad material) |
-
-The pure word-count ceiling is ~1,000–1,200 lessons; it's discounted for
-cross-book redundancy (~30–40% overlap on fundamentals) and out-of-scope grad
-material (much of *Art of Electronics*). Adding 2–3 more books (robotics, digital
-logic) pushes the reasonable target past 800.
-
-**The engagement multiplier (Bronze → Silver → Gold), shipped 2026-06-18.** Duolingo's
-"repeat the circle" is not 3–5 new lessons; it is the same content replayed at
-rising difficulty. We do the same, adapted for a skill app, so **felt depth is
-2–4× the authored lesson count** without authoring 2–4× the lessons:
-
-- The next lesson unlocks after a single pass (**Bronze**) — no forced grinding.
-- A learner can replay any lesson to reach **Silver** then **Gold** for more XP.
-- Each level is harder: Silver drops the teach steps and shuffles the practice
-  steps + their options into a pure-recall run; Gold does the same with fewer
-  hearts. (`components/ohmlet/data/levels.ts`.)
-- The path shows a medal per lesson (bronze/silver/gold) with level pips and a
-  "mastery" counter (gold points / total). Per-lesson levels persist per user.
-
-So engagement hours scale on two independent axes: **authored lessons** (toward the
-450–650 ceiling) and **leveling/review** (3× replay per lesson). A 450-lesson
-library with leveling is comparable in playtime to a 1,000+ lesson flat library.
-
-## 6a. What actually shipped vs this outline (reconciliation, 2026-06-18)
-
-The 12-unit sketch below was a fine-grained CONCEPT list. The built curriculum
-deliberately compresses it into **fewer, deeper units** (each ~11–13 lessons, the
-sizing in §1), the Duolingo "section" model, rather than 12 thin units. The
-mapping:
-
-| Built unit | Level | Covers outline units | Lessons |
-|---|---|---|---|
-| 1. Foundations | beginner | 1–5 (loop, V/I/R, Ohm, LEDs, series/parallel) | 13 |
-| 2. On the Breadboard | beginner | 6 + building/debugging | 11 |
-| 3. Sensors & Signals | intermediate | 8–9 (analog sensors + the alarm) | 11 |
-| 4. Meet the Arduino | intermediate | 7 (microcontroller, sketch, Blink, serial) | 11 |
-| 5. Inputs, Outputs & Code | advanced | 10, 12 (PWM, inputs, debug) + code the alarm | 10 |
-
-**Why the Light-Activated Alarm lands at the end of Unit 3, not "Unit 9":** in a
-build-first product, reaching a real, satisfying build EARLY is the point (it
-drives First-Build-Completed and retention, §0). Making learners grind eight units
-first would be the wrong call. So the alarm is the **beginner-arc capstone** as a
-HARDWARE build at the end of Unit 3 (wire it, understand sense/decide/act), and
-then Unit 5 brings it to life in CODE (analogRead → if → digitalWrite) as a
-deliberate callback. Build the circuit, learn the Arduino, code it to life: the way
-real makers actually do it. The "Unit 9" in the outline below was under the old
-12-thin-unit numbering and no longer applies.
-
-## 6. Proposed path outline (first ~12 units)
-
-Discovery-first (Platt's *Make: Electronics* template), with theory pulled in
-just-in-time, broadly tracking Adafruit's validated Arduino lesson order. The path
-**converges on the LDR Light-Activated Alarm as an earned capstone around Unit 9**,
-not a day-one tutorial.
-
-| # | Unit | Core concepts |
-|---|------|---------------|
-| 1 | Current Needs a Loop | Closed circuit, source, complete-loop rule, shorts |
-| 2 | Voltage, Current, Resistance | The three quantities + relationship; water model and its limits |
-| 3 | Light It Up: LEDs & Resistors | LED polarity, current limiting, why no bare LED |
-| 4 | Ohm's Law for Real | V=IR as a design tool, the limiting resistor, colour code |
-| 5 | Series & Parallel | Voltage divides in series, current in parallel |
-| 6 | Switches & Inputs | Switches, pull-up/down, the floating-input problem |
-| 7 | Meet the Microcontroller | What an Arduino is, pins, digitalWrite, Blink |
-| 8 | Reading the World: Analog Sensors | analogRead, divider as sensor interface, the LDR |
-| 9 | ★ Capstone: Light-Activated Alarm | LDR divider → threshold → output; calibration; live build |
-| 10 | Making Things Move & Glow | PWM, analogWrite, fading, transistor as a switch |
-| 11 | Sound & Output | tone(), buzzers, simple displays |
-| 12 | Debugging & Measurement | Multimeter, serial, systematic fault-finding |
-
-Units 1 to 2 deliberately teach the mental model before any Arduino: beginners who
-skip "current is a loop" never recover, and the Arduino's abstraction hides exactly
-what they need to internalise. After Unit 12 the tree can branch (robotics, sensors
-deep-dive, comms).
-
-A safety note for productive-failure exercises: only use "let them fail first"
-framing in the simulation/sandbox where mistakes are free; in live-build guidance,
-teach-then-do (a wrong attempt on real hardware has a real cost).
+**Diagram backlog (deliberate):** the signature advanced schematics — op-amp inverting/
+non-inverting, voltage regulator, bridge rectifier, H-bridge — are **not yet drawn.** They
+need visual iteration to avoid slop, so Units 8–10 currently teach via calculation/concept
+and reuse `rc_low_pass` where it fits. These diagrams are a dedicated, visually-verified
+pass (own task), not something to rush mid-authoring.
 
 ---
 
-## 7. Misconceptions to target (the spot_error / predict backlog)
+## 9. The source books (all 9) + grounding rule
 
-Build `trace_current` / `predict_reading` / `spot_error` exercises around the
-documented beginner killers:
+All in `content/Books/md/`. Lessons are **grounded in** these to author *original*
+content with a per-step citation; **never reproduced verbatim** (the pipeline n-gram check
+enforces this). Per-lesson provenance is tracked in `CURRICULUM_CITATIONS.md`.
 
-1. Current gets "used up" by a component (the most pervasive error).
-2. Batteries are constant-current sources (they are constant-voltage).
+| Key | Book | Strong for |
+|-----|------|-----------|
+| **STG** | All New Electronics Self-Teaching Guide (Kybett & Boysen) | Teach-then-question; DC, Ohm, series/parallel, transistors (β), resonance/filters, rectification, zener |
+| **ME** | Make: Electronics (Platt) | Discovery builds; first circuit, LEDs, breadboard, switches, caps/time, 555 |
+| **MME** | Make: More Electronics (Platt) | Logic chips, op-amps, comparators, sensors (U8, U11) |
+| **EAC1** | Encyclopedia of Electronic Components Vol.1 (Platt) | Resistors, caps, inductors, switches, **regulators/DC-DC**, flyback diode |
+| **EAC2** | Encyclopedia of Electronic Components Vol.2 (Platt & Jansson) | LEDs, audio, **op-amps, comparators**, digital logic, amplification |
+| **EAC3** | Encyclopedia of Electronic Components Vol.3 (Platt & Jansson) | Sensors (LDR, thermistor, etc.) |
+| **PEI** | Practical Electronics for Inventors (Scherz & Monk) | Broad reference; theory, components, op-amps, filters, power |
+| **EA** | Exploring Arduino (Blum) | Arduino code, pins, serial, PWM, inputs (U4–5, U11) |
+| **AoE** | The Art of Electronics (Horowitz & Hill) | Authoritative depth; op-amp golden rules, filters, advanced topics |
+
+Adding 2–3 more books (dedicated robotics, digital logic) pushes the reasonable ceiling
+past 800; current 9 comfortably support ~450–650.
+
+---
+
+## 10. The authoring engine (subagents) + pipeline
+
+**Decided 2026-06-19: author with subagents, one per unit.** Hand-authoring hundreds of
+lessons through a single growing conversation bloats context, causes stalling, and lets
+quality drift. The engine:
+
+```
+consensus spec (this file) + CURRICULUM_AUTHORING.md (rules + quality bar)
+        │
+        ▼
+  per-unit subagent  ← fresh context each time
+    • reads the relevant book chapter(s) deeply (not grep-and-cite)
+    • drafts the unit's lessons to the schema + quality bar
+    • runs npm run lint:lessons until 0/0
+    • writes per-step citations to CURRICULUM_CITATIONS.md
+        │
+        ▼
+  HUMAN APPROVAL GATE at /author  ← renders through the real LessonRunner
+        │
+        ▼
+  merged into lessons.ts + curriculum.ts; changelog entry in metadata/
+```
+
+This makes the **books actually drive** the content (each agent reads chapters without
+drowning the main context) and removes the stall-after-one-unit pattern. Run agents in
+parallel where units are independent; never merge an unreviewed unit; never run more than
+one batch ahead of review.
+
+**The rails (already built, the durable high-leverage pieces):**
+1. **Linter** — `npm run lint:lessons` (`lessonSchema.ts` + `scripts/lint-lessons.mjs`):
+   schema valid, one in-range correct answer, region ids resolve, choose_resistor/divider
+   math computes, no "longest answer" tell, hints don't contain the answer, ≥6 graded.
+   Malformed lessons can't merge.
+2. **Circuit DSL** — diagrams as data (§8).
+3. **`/author` preview** — review rendered lessons (not JSON), ~3–5 min each; the approval gate.
+
+---
+
+## 11. The quality bar (summary; full detail in CURRICULUM_AUTHORING.md)
+
+Non-negotiable, partly linter-enforced:
+
+- **Balanced distractors.** All options similar in length/grammar/plausibility; the correct
+  answer must NOT be the longest. Practical rule: write at least one distractor as long as
+  the correct option.
+- **Distractors are common mistakes** (e.g. forgetting an LED's Vf → `5/220`). A plausible
+  distractor teaches; a silly one gives the answer away.
+- **Hints nudge the method, never name the answer** (watch digit substrings: "1000"
+  contains "10").
+- **Depth:** aim 8+ graded; 12+ for a tiered pool that levels well.
+- **Real difficulty, not just a harder topic** (tiers 1/2/3).
+
+Reference lessons that set the bar: **The Closed Loop** (tiered beginner pool) and
+**Powering an LED Safely** (real calculations, common-mistake distractors).
+
+---
+
+## 12. Misconceptions to target (the predict / spot_error backlog)
+
+Build `trace_current` / `predict_reading` / `spot_error` around the documented beginner
+killers, baking in predict → commit → reveal:
+
+1. Current gets "used up" by a component (most pervasive).
+2. Batteries are constant-current (they're constant-voltage).
 3. No current-limiting resistor on an LED.
 4. LED polarity ignored / reversed.
 5. Higher voltage always means more current (ignores resistance).
 6. No complete loop / switch in the wrong place / unintended short.
 7. Floating digital input (forgot the pull-up/down).
 8. One resistor "covers" parallel LEDs.
-9. Conventional current vs electron flow (teach once, do not over-test).
-
-Meta-principle: bake **predict → commit → reveal** into all of these.
+9. Conventional current vs electron flow (teach once, don't over-test).
 
 ---
 
-## 8. Content pipeline (summary)
-
-Full operational detail in [`CURRICULUM_AUTHORING.md`](./CURRICULUM_AUTHORING.md).
-The discipline that keeps this from becoming a full-time job: **never write a lesson
-or a diagram by hand, and never manually QA correctness.** Tooling and an AI critic
-do the grunt work; the human only judges at the gate.
-
-```
-books (markdown, DONE: content/Books/md/)
-   │  chunk + tag with provenance {book, chapter, page, concept}
-   ▼
-   you author the Unit→Skill tree by hand   ← the one creative human step (the spine)
-   ▼
-   LLM drafts each lesson, grounded ONLY in the relevant chunks,
-     with a citation on every factual step   ← anti-hallucination: no claim without a source
-   ▼
-   automated QA lint (deterministic, no LLM):
-     schema valid · MC has one in-range correct · diagram region ids resolve ·
-     every step cited · n-gram verbatim/copyright check
-   ▼
-   LLM-as-critic pass (scores correctness against cited chunks only)
-   ▼
-   single HUMAN APPROVAL GATE at a /author preview route
-     (renders through the real LessonRunner + citations + critic flags)
-   ▼
-   approved (status + content hash) → ships. Nothing unapproved ships.
-```
-
-Books are reference/grounding to author *original* lessons, never reproduced
-verbatim (the n-gram check enforces this mechanically).
-
----
-
-## 9. Circuit DSL (the scaling unlock for diagrams)
-
-Today `CircuitDiagram.tsx` is a hardcoded `if (circuit === 'ldr_alarm')` switch over
-a `CircuitId` union: every new diagram needs an engineer. We replace the switch with
-a thin **circuit DSL**: declarative JSON (`nodes` + `wires`) that drives the SVG
-primitives we already have (battery, resistor, LED, LDR, wire, Arduino pin). We are
-not writing a renderer; we are putting a data layer in front of the one we built.
-
-```ts
-type CircuitSpec = {
-  id: string;
-  viewBox: [number, number];
-  nodes: CircuitNode[];
-  wires: { from: PortRef; to: PortRef; color?: string; error?: boolean }[];
-};
-type CircuitNode = {
-  id: string;                    // == clickable-region / correctComponent id (auto-validates)
-  type: 'battery'|'resistor'|'led'|'ldr'|'arduino_pin'|'ground'|'junction'|'buzzer';
-  at: [number, number];
-  rotation?: 0|90|180|270;
-  label?: string;
-  props?: { value?: string; color?: string; pin?: string };
-  highlight?: boolean; error?: boolean;
-};
-type PortRef = { node: string; port?: 'a'|'b'|'+'|'-' };
-```
-
-Payoffs: a new diagram becomes **data an LLM can emit and a human can read**, and the
-`correctRegion`/`correctComponent` ids in exercises **validate automatically**
-because they must equal a `node.id`. Current-flow animation works because wires form
-a traceable graph. Hand-placed `at` coordinates are fine for an authored curriculum;
-auto-layout is a later nicety. We do NOT LLM-generate raw SVG (unthemeable,
-unverifiable, slop) and we do NOT use photos as the primary mechanism.
-
-Reference patterns (do not adopt wholesale, they are PCB-grade): tscircuit /
-Circuit JSON, netlistsvg.
-
----
-
-## 10. Build order
-
-Build the rails first so every later lesson is cheap and safe.
-
-- **Week 1 — Foundations, no LLM yet.** Generate a Zod schema from the TS step union;
-  write the lesson linter (`npm run lint:lessons`); build the `/author` preview
-  route. Author the `curriculum.ts` tree by hand for ONE full path (Fundamentals →
-  LDR Alarm, ~8 skills).
-- **Week 2 — DSL renderer.** Refactor `CircuitDiagram` from the if-chain to the
-  `CircuitSpec` registry + node map. Port the existing 8 circuits to DSL data.
-- **Week 3 — Pipeline, manual first.** Chunk + tag the 2 to 3 books covering the
-  first path. Write the draft prompt and the critic prompt. Run ONE lesson end to
-  end through the gate.
-- **Week 4+ — Batch with the gate.** Assembly line: LLM drafts a skill's lessons →
-  auto QA → critic → you approve/edit at `/author`. Realistic solo throughput: a
-  skill (5 to 8 lessons) per focused session.
-
----
-
-## 11b. Council II — launch scale, difficulty ramp, and how we build it (2026-06-18)
-
-A second LLM council (pricing/value, difficulty/scope, pipeline/execution)
-deliberated "how many lessons to launch with, how hard should they get, and how
-do we produce them." They converged.
-
-### Launch scale (pricing lens)
-- 57 lessons (~2 hrs) is a demo, not a sellable annual subscription.
-- **Floor: ~120 lessons (~12 engaged hrs)** to honestly sell a monthly Pro.
-- **Good: ~180–220 lessons (~25–30 hrs)** with a real advanced track to justify
-  the **annual** plan and make **max / Interview Mode** non-embarrassing.
-- Do NOT chase Duolingo's launch count (~247 short language drills); chase
-  **Brilliant's depth × breadth** (that is the price band, ~$162/yr, we match).
-- Lesson count buys *trust at point of sale*; the live tutor + retention loop buy
-  *renewal*. Need both. Sell the visible roadmap ("more builds shipping monthly").
-- Gating: if not at target by launch, ship Pro **monthly only** and withhold the
-  **annual discount + max/Interview Mode** until the advanced units exist.
-
-### The difficulty ramp (curriculum lens)
-Current 56 top out at ~high-school-maker level; "advanced" on Unit 5 is generous.
-Four regimes:
-- **A Intuition** (U1–2, 3–8 min): numbers given, no math to pass.
-- **B First real calculation** (mid-U1→U3, 8–14 min): first calc at "Powering an
-  LED Safely" (R = (Vsupply−Vf)/I, non-round values, pick E12, predict current);
-  then divider math.
-- **C Multi-step design with constraints** (new units, 12–20 min): coupled
-  equations + a parts choice (RC τ=RC, transistor biasing, op-amp gain, regulator
-  dissipation).
-- **D Spec-driven / open-ended** (top units, 20–35 min, multi-part): given a spec,
-  pick topology AND values AND justify. Interview-grade.
-
-A genuinely hard lesson (the target for ~lesson 80): *"Drive the Relay"* — Arduino
-pin sources 20mA at 5V, switch a 12V 120mA relay coil; size the NPN base resistor
-for saturation (β_min given), orient the flyback diode, vision-verify the build,
-confirm the relay clicks and pin current stayed safe. Two calculations, a parts
-choice, a polarity gotcha, a verified build. (~25 min.)
-
-### Full roadmap: 12 units, ~130 lessons (complete beginner→advanced v1)
-Existing U1–5 stay; **add 7 units** (books strongly support each; AoE alone could
-justify hundreds more, so ~130 is a confident v1 ceiling, not a stretch):
-
-| # | Unit | Level | Sources |
-|---|------|-------|---------|
-| 6 | Capacitors, RC & Timing | intermediate | AoE ch.1, PEI ch.2–3, 555 |
-| 7 | Transistors & Switching | intermediate→adv | AoE ch.2, PEI ch.4 |
-| 8 | Op-Amps & Signal Conditioning | advanced | AoE ch.4, PEI ch.8 |
-| 9 | Filters, Oscillators & Signals | advanced | AoE ch.6, PEI ch.9–10 |
-| 10 | Power Supplies & Regulation | advanced | AoE ch.9, PEI ch.11 |
-| 11 | Digital Logic & Embedded Deep-Dive | advanced | AoE ch.10–11, Blum |
-| 12 | Comms, Motors & Robotics | advanced | Blum, PEI ch.14, EoEC |
-
-Re-tag levels honestly: beginner U1–2, intermediate U3–7, advanced U8–12.
-**Interview Mode is honest with U11–12 shipped**, scoped to hardware fundamentals +
-embedded peripherals (I2C/SPI/UART, interrupts, timers/PWM, GPIO/ADC) + embedded-C
-basics — explicitly NOT RTOS/FPGA/RF (a later labelled max track).
-**Launch v1 = U1–8 (~78 lessons); fast-follow U9–12** to unlock annual + Interview Mode.
-
-### Gating the ramp so it feels earned
-Add a `rigor` flag (calculator / datasheet glyph on the node); enforce real
-`prerequisite` locks (not just order); make U6+ checkpoints graded design problems,
-not recall; add two **gateway exams** (after U5, after U10); on hard lessons require
-the calculation AND the vision-verified build AND the running result to pass.
-
-### How we build it (execution lens) — THE KEY CALL
-**Stop hand-authoring; build the rails.** We are at 57, the threshold where
-hand-authoring stops being rational is ~40–60. Rails = a few build days; then it
-becomes *review, not authoring* at ~80–120 lessons/week, so 57 → ~130–200 in a few
-weeks. Minimum viable rails:
-1. **Schema-as-law**: Zod/TS schema + `npm run lint:lessons` (indices in range, one
-   correct answer, region ids resolve, choose_resistor/divider math actually
-   computes, difficulty monotonic). Makes malformed lessons impossible to merge.
-2. **Grounded drafts with per-step citations** from the 9 books (no citation →
-   reject); a deterministic linter + an LLM faithfulness critic before a single
-   human approval gate.
-3. **`/author` preview route**: review rendered lessons (not JSON), ~3–5 min each.
-4. **Circuit DSL** (the real bottleneck): ~130 lessons need **40–70 diagrams, not
-   8**. DSL renders ~30–40 parameterised topologies as data; a **curated-SVG escape
-   hatch** (~15) covers irregular advanced circuits (op-amp stages, H-bridges).
-   Build the DSL first; add curated SVGs lazily for advanced units.
-
-Pragmatic note: the generation model is the assistant itself, so the heavy RAG +
-vector-DB version is optional. The durable, high-leverage rails are the **linter +
-the circuit DSL + the `/author` preview**; with those, batch-authoring grounded in
-the books (with citations) is fast and consistent. Never generate more than one
-batch ahead of review.
-
-## 11. Open decisions / next actions
-
-- Confirm or tweak the 12-unit outline in §6 before committing the spine.
-- Refine the task list into concrete pieces: circuit DSL (#13 area), authoring
-  tooling + linter + `/author` route, the new exercise types, the first unit.
-- Recommended first build: the rails (schema validator, `/author` preview, circuit
-  DSL), NOT lesson generation. Rails turn this from a content job into an approval
-  queue.
-
----
-
-## Sources
+## Sources (learning-science & pedagogy references)
 
 Learning science: [Duolingo HLR (ACL 2016)](https://research.duolingo.com/papers/settles.acl16.pdf) ·
 [DAS3H (arXiv 1905.06873)](https://arxiv.org/pdf/1905.06873) ·
 [Brilliant — learn by doing](https://brilliant.org/about/) ·
-[Retrieval practice in real classrooms (Frontiers 2025)](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1632206/full)
+[Retrieval practice (Frontiers 2025)](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1632206/full)
 
 Electronics pedagogy: [Common electricity misconceptions (Furry Elephant)](https://www.furryelephant.com/content/electricity/teaching-learning/misconceptions/) ·
 [SparkFun — Ohm's Law](https://learn.sparkfun.com/tutorials/voltage-current-resistance-and-ohms-law/all) ·
-[Platt, Make: Electronics](https://www.oreilly.com/library/view/make-electronics/9781449377267/) ·
 [Adafruit Arduino lesson order](https://learn.adafruit.com/lesson-0-getting-started/the-lessons)
 
-Pipeline / diagrams-as-code: [Instructional Agents (arXiv 2508.19611)](https://arxiv.org/pdf/2508.19611) ·
-[tscircuit / Circuit JSON](https://github.com/tscircuit/circuit-json) ·
-[netlistsvg](https://github.com/nturley/netlistsvg) ·
-[JSON Schema](https://json-schema.org/)
+Pipeline / diagrams-as-code: [tscircuit / Circuit JSON](https://github.com/tscircuit/circuit-json) ·
+[netlistsvg](https://github.com/nturley/netlistsvg) · [JSON Schema](https://json-schema.org/)
+
+*(The day-by-day build history — snapshots, council notes, what-shipped reconciliations —
+lives in [`metadata/curriculum-changelog.md`](../metadata/curriculum-changelog.md).)*
