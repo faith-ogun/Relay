@@ -53,14 +53,26 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
     case 'teach': {
       if (!isNonEmpty(step.title)) err('teach: empty title');
       if (!isNonEmpty(step.body)) err('teach: empty body');
+      if (step.hotspots && step.hotspots.length > 0) {
+        if (!step.circuitDiagram) err('teach: hotspots need a circuitDiagram to point at');
+        else {
+          const valid = regionsFor(step.circuitDiagram);
+          step.hotspots.forEach((h, hi) => {
+            if (!isNonEmpty(h.label) || !isNonEmpty(h.detail)) err(`teach: hotspot ${hi} needs a label and detail`);
+            if (!valid.includes(h.region)) err(`teach: hotspot ${hi} region "${h.region}" is not a clickable region of ${step.circuitDiagram} (valid: ${valid.join(', ')})`);
+          });
+        }
+      }
       break;
     }
     case 'multiple_choice':
     case 'predict_reading':
     case 'predict_behavior':
     case 'choose_resistor': {
-      const s = step as { question: string; options: string[]; correct: number; explanation: string };
+      const s = step as { question: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
       if (!isNonEmpty(s.question)) err(`${step.type}: empty question`);
+      if (s.optionImages && s.optionImages.length !== (s.options?.length ?? 0))
+        err(`${step.type}: optionImages must have one entry per option (${s.optionImages.length} vs ${s.options?.length ?? 0})`);
       if (!Array.isArray(s.options) || s.options.length < 2) err(`${step.type}: needs at least 2 options`);
       else {
         if (s.options.some((o) => !isNonEmpty(o))) err(`${step.type}: has an empty option`);
@@ -106,6 +118,7 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
         });
         const lefts = step.pairs.map((p) => p[0]);
         if (new Set(lefts).size !== lefts.length) warn('match: duplicate left labels (confusing even though right-side duplicates are fine)');
+        if (step.images && step.images.length !== step.pairs.length) err(`match: images must have one entry per pair (${step.images.length} vs ${step.pairs.length})`);
       }
       break;
     }

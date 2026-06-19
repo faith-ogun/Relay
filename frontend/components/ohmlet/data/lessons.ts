@@ -1,19 +1,27 @@
 // ── Interactive lesson system (Duolingo-style) ──
 
-export type LessonStepTeach = { type: 'teach'; title: string; body: string; diagram?: string; circuitDiagram?: string; showCurrentFlow?: boolean };
-export type LessonStepMC = { type: 'multiple_choice'; question: string; options: string[]; correct: number; explanation: string; circuitDiagram?: string };
+// hotspots turn a "read this" teach card into an active one: the learner taps each
+// labelled part of the circuit to reveal what it does, and can only continue once
+// every part has been explored. Reading becomes light doing.
+export type LessonStepTeach = { type: 'teach'; title: string; body: string; diagram?: string; circuitDiagram?: string; showCurrentFlow?: boolean; hotspots?: Array<{ region: string; label: string; detail: string }> };
+// optionImages (when present, one per option) renders the choices as a picture grid
+// ("tap the resistor") instead of a text list. Falls back to the text option if an
+// image is missing or fails to load, so a question is never broken by absent art.
+export type LessonStepMC = { type: 'multiple_choice'; question: string; options: string[]; optionImages?: string[]; correct: number; explanation: string; circuitDiagram?: string };
 export type LessonStepTF = { type: 'true_false'; statement: string; correct: boolean; explanation: string; circuitDiagram?: string };
 export type LessonStepFill = { type: 'fill_blank'; prompt: string; blank: string; answer: string; hint: string; circuitDiagram?: string };
-export type LessonStepMatch = { type: 'match'; instruction: string; pairs: Array<[string, string]> };
+// images (when present, one per pair) shows a picture for each left item, so match
+// becomes symbol/photo -> name. Falls back to the text left label when an image is absent.
+export type LessonStepMatch = { type: 'match'; instruction: string; pairs: Array<[string, string]>; images?: string[] };
 export type LessonStepSpotError = { type: 'spot_error'; question: string; circuitDiagram: string; correctRegion: string; explanation: string };
 export type LessonStepIdentify = { type: 'identify_component'; question: string; circuitDiagram: string; correctComponent: string; explanation: string };
 export type LessonStepDraw = { type: 'draw_connection'; instruction: string; terminals: Array<{ x: number; y: number; label: string; id: string }>; expectedConnections: Array<[string, string]>; explanation: string };
 export type LessonStepDragOrder = { type: 'drag_order'; instruction: string; items: string[]; correctOrder: number[] };
 // Prediction family: the learner commits to a prediction, then the circuit reveals the truth.
 // This is the highest-value pattern for killing misconceptions (predict → commit → reveal).
-export type LessonStepPredictReading = { type: 'predict_reading'; question: string; circuitDiagram?: string; options: string[]; correct: number; explanation: string };
-export type LessonStepPredictBehavior = { type: 'predict_behavior'; question: string; circuitDiagram?: string; options: string[]; correct: number; explanation: string };
-export type LessonStepChooseResistor = { type: 'choose_resistor'; question: string; circuitDiagram?: string; options: string[]; correct: number; explanation: string };
+export type LessonStepPredictReading = { type: 'predict_reading'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
+export type LessonStepPredictBehavior = { type: 'predict_behavior'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
+export type LessonStepChooseResistor = { type: 'choose_resistor'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
 // Construction / repair / tracing family: the learner manipulates a circuit
 // directly rather than picking from a text list. These kill the misconceptions a
 // multiple-choice question cannot reach.
@@ -99,7 +107,11 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   'Resistors and Ohm\'s Law': {
     xpReward: 25,
     steps: [
-      { type: 'teach', title: 'What a Resistor Does', body: 'A resistor pushes back against current. It turns electrical energy into a little heat and, in doing so, limits how much current flows. Every LED, sensor, and microcontroller pin relies on resistors to keep current in a safe range.', circuitDiagram: 'series_circuit', showCurrentFlow: true },
+      { type: 'teach', title: 'What a Resistor Does', body: 'A resistor pushes back against current, turning some electrical energy into heat and limiting how much current flows. Tap each part of this loop to see the job it does.', circuitDiagram: 'series_circuit', hotspots: [
+        { region: 'battery', label: 'Battery — the source', detail: 'It provides the voltage: the push that drives current around the loop.' },
+        { region: 'resistor', label: 'Resistor — the limiter', detail: 'It pushes back against the current, setting a safe level so nothing downstream burns out.' },
+        { region: 'led', label: 'LED — the load', detail: 'It lights when current flows through it. The resistor is what keeps that current safe.' },
+      ] },
       { type: 'multiple_choice', question: 'What unit is resistance measured in?', options: ['Volts (V)', 'Amps (A)', 'Ohms (Ω)', 'Farads (F)'], correct: 2, explanation: 'Resistance is measured in ohms (Ω), named after Georg Ohm.' },
       { type: 'teach', title: 'Ohm\'s Law', body: 'The single most useful equation in electronics:\n\nV = I × R\n\nVoltage equals current times resistance. Rearranged: I = V / R, and R = V / I. Know any two and you can find the third.' },
       { type: 'fill_blank', prompt: 'A 1kΩ (1000Ω) resistor with 5V across it. Current = V / R = 5 / 1000 = ___ mA', blank: '___', answer: '5', hint: '5 / 1000 = 0.005 A. Convert amps to milliamps by multiplying by 1000.' },

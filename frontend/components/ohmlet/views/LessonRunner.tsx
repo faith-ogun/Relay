@@ -80,6 +80,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [drawSel, setDrawSel] = useState<string | null>(null);
   const [traced, setTraced] = useState<string[]>([]); // trace_current: tapped regions in order
   const [placed, setPlaced] = useState<number[]>([]); // build_to_spec: palette index in each filled slot
+  const [revealed, setRevealed] = useState<Set<string>>(new Set()); // teach hotspots explored
 
   const step = steps[stepIndex];
 
@@ -98,6 +99,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setDrawSel(null);
     setTraced([]);
     setPlaced([]);
+    setRevealed(new Set());
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
     if (step?.type === 'match') {
       // Shuffle BOTH columns (each off its original order) so answers never line
@@ -190,6 +192,10 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setChecked(true);
     if (!ok) setHearts((h) => Math.max(0, h - 1));
   };
+
+  // An interactive teach step (with hotspots) gates Continue until every part is explored.
+  const teachHotspots = step?.type === 'teach' ? step.hotspots : undefined;
+  const teachGated = !!teachHotspots && teachHotspots.length > 0 && revealed.size < teachHotspots.length;
 
   const earnedXp = content ? xpForLevel(content.xpReward, level) : 0;
 
@@ -320,6 +326,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
           setTraced={setTraced}
           placed={placed}
           setPlaced={setPlaced}
+          revealed={revealed}
+          setRevealed={setRevealed}
         />
       </div>
 
@@ -334,13 +342,18 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
             <Feedback step={step} correct={correct} />
           ) : (
             <span className="text-sm font-semibold text-ohmlet-ink-soft">
-              {isTeach(step) ? 'Read, then continue.' : 'Pick your answer.'}
+              {teachGated
+                ? `Tap each part to continue · ${revealed.size}/${teachHotspots!.length}`
+                : isTeach(step)
+                ? 'Read, then continue.'
+                : 'Pick your answer.'}
             </span>
           )}
           {isTeach(step) || checked ? (
             <button
               onClick={handleContinue}
-              className="inline-flex shrink-0 items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none"
+              disabled={teachGated}
+              className="inline-flex shrink-0 items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
             >
               {stepIndex + 1 >= steps.length ? 'Finish' : 'Continue'}
               <ArrowRight className="h-4 w-4" />
@@ -421,6 +434,8 @@ interface StepViewProps {
   setTraced: (s: string[]) => void;
   placed: number[];
   setPlaced: (p: number[]) => void;
+  revealed: Set<string>;
+  setRevealed: (s: Set<string>) => void;
 }
 
 const StepView: React.FC<StepViewProps> = (p) => {
@@ -428,6 +443,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
 
   switch (step.type) {
     case 'teach':
+      if (step.hotspots && step.hotspots.length > 0 && step.circuitDiagram) return <ExploreStep {...p} step={step} />;
       return (
         <div className="ohmlet-rise">
           <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
@@ -578,26 +594,128 @@ const Option: React.FC<{
 // it as a prediction ("Predict the reading"), which is what makes predict_* feel
 // distinct from a plain quiz: you commit, then the answer + explanation reveal.
 const ChoiceStep: React.FC<
-  { step: { question: string; options: string[]; correct: number; circuitDiagram?: string }; eyebrow?: string } & StepViewProps
-> = ({ step, eyebrow, choice, setChoice, checked }) => (
-  <div className="ohmlet-rise">
-    {eyebrow && <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">{eyebrow}</p>}
-    <Prompt>{step.question}</Prompt>
-    {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
-    <div className="mt-6 grid gap-3">
-      {step.options.map((opt, i) => {
-        const sel = choice === i;
-        const reveal = checked && i === step.correct;
-        const wrong = checked && sel && i !== step.correct;
-        return (
-          <Option key={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)}>
-            {opt}
-          </Option>
-        );
-      })}
+  { step: { question: string; options: string[]; optionImages?: string[]; correct: number; circuitDiagram?: string }; eyebrow?: string } & StepViewProps
+> = ({ step, eyebrow, choice, setChoice, checked }) => {
+  const useImages = !!step.optionImages && step.optionImages.length === step.options.length;
+  return (
+    <div className="ohmlet-rise">
+      {eyebrow && <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">{eyebrow}</p>}
+      <Prompt>{step.question}</Prompt>
+      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
+      {useImages ? (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2">
+          {step.options.map((opt, i) => {
+            const sel = choice === i;
+            const reveal = checked && i === step.correct;
+            const wrong = checked && sel && i !== step.correct;
+            return (
+              <ImageChoice key={opt} src={step.optionImages![i]} label={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)} />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-3">
+          {step.options.map((opt, i) => {
+            const sel = choice === i;
+            const reveal = checked && i === step.correct;
+            const wrong = checked && sel && i !== step.correct;
+            return (
+              <Option key={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)}>
+                {opt}
+              </Option>
+            );
+          })}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
+
+// Image option card (Duolingo "tap the picture"): picture + label. If the image is
+// missing or fails to load, the label alone still answers the question — never broken.
+const ImageChoice: React.FC<{
+  src: string;
+  label: string;
+  selected: boolean;
+  reveal?: boolean;
+  wrong?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}> = ({ src, label, selected, reveal, wrong, disabled, onClick }) => {
+  const [broken, setBroken] = useState(false);
+  let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
+  if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
+  else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
+  else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative flex flex-col items-center gap-2.5 rounded-2xl border-2 p-4 shadow-soft transition-all ${look} ${disabled ? '' : 'hover:-translate-y-0.5'}`}
+    >
+      {(reveal || wrong) && (
+        <span className={`absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full ${reveal ? 'bg-ohmlet-green' : 'bg-ohmlet-red'} text-white`}>
+          {reveal ? <Check className="h-4 w-4" strokeWidth={3} /> : <X className="h-4 w-4" strokeWidth={3} />}
+        </span>
+      )}
+      {!broken && <img src={src} alt="" draggable={false} onError={() => setBroken(true)} className="h-24 w-auto object-contain" />}
+      <span className="text-center text-sm font-black text-ohmlet-ink">{label}</span>
+    </button>
+  );
+};
+
+// ── Explore step (interactive teach) ──
+// A teach card with hotspots: tap each labelled part of the circuit to reveal what
+// it does. Continue is gated (in the footer) until all are explored, so the intro
+// "read this" wall becomes active learning.
+const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & StepViewProps> = ({ step, revealed, setRevealed }) => {
+  const hotspots = step.hotspots ?? [];
+  const reveal = (region: string) => {
+    if (!revealed.has(region)) setRevealed(new Set([...revealed, region]));
+  };
+  const last = [...revealed][revealed.size - 1];
+  const lastHot = hotspots.find((h) => h.region === last);
+  return (
+    <div className="ohmlet-rise">
+      <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
+      <p className="mt-3 whitespace-pre-line text-base font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+        <CircuitDiagram circuit={step.circuitDiagram!} clickable onRegionClick={reveal} highlightRegion={last ?? null} className="mx-auto w-full max-w-xl" />
+      </div>
+      {lastHot ? (
+        <div className="ohmlet-rise mt-4 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-4 shadow-soft">
+          <p className="text-sm font-black text-ohmlet-ink">{lastHot.label}</p>
+          <p className="mt-1 text-sm font-semibold leading-snug text-ohmlet-ink-soft">{lastHot.detail}</p>
+        </div>
+      ) : (
+        <p className="mt-4 text-center text-sm font-semibold text-ohmlet-ink-soft">Tap each labelled part to learn what it does.</p>
+      )}
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {hotspots.map((h) => {
+          const on = revealed.has(h.region);
+          return (
+            <span
+              key={h.region}
+              className={`rounded-full border-2 px-3 py-1 text-xs font-black transition-colors ${
+                on ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft'
+              }`}
+            >
+              {h.label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Match-card thumbnail: hides itself if the image is missing, leaving the text label.
+const MatchThumb: React.FC<{ src: string }> = ({ src }) => {
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  return <img src={src} alt="" draggable={false} onError={() => setBroken(true)} className="h-16 w-auto object-contain" />;
+};
 
 // ── Match step ──
 const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & StepViewProps> = ({
@@ -656,6 +774,7 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
         <div className="space-y-3">
           {leftOrder.map((pairIdx) => {
             const left = step.pairs[pairIdx][0];
+            const img = step.images?.[pairIdx];
             const on = matched.has(pairIdx);
             const sel = matchSel?.side === 'l' && matchSel.idx === pairIdx;
             return (
@@ -663,8 +782,9 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
                 key={pairIdx}
                 disabled={on}
                 onClick={() => select('l', pairIdx)}
-                className={`w-full rounded-2xl border-2 px-4 py-3 text-left text-sm font-bold transition-all ${cls(on, sel, wrong?.l === pairIdx)}`}
+                className={`w-full rounded-2xl border-2 px-4 py-3 text-sm font-bold transition-all ${img ? 'flex flex-col items-center gap-2 text-center' : 'text-left'} ${cls(on, sel, wrong?.l === pairIdx)}`}
               >
+                {img && <MatchThumb src={img} />}
                 {left}
               </button>
             );
