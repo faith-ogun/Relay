@@ -23,9 +23,15 @@ export type LessonStepDraw = { type: 'draw_connection'; instruction: string; ter
 export type LessonStepDragOrder = { type: 'drag_order'; instruction: string; items: string[]; correctOrder: number[] };
 // Prediction family: the learner commits to a prediction, then the circuit reveals the truth.
 // This is the highest-value pattern for killing misconceptions (predict → commit → reveal).
-export type LessonStepPredictReading = { type: 'predict_reading'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
+// meter (when present) replaces the option list with a needle gauge + slider: the
+// learner dials in the reading and is correct within tolerance of the target. A real
+// "set the value" interaction instead of picking a number from a list.
+export type LessonStepPredictReading = { type: 'predict_reading'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string; meter?: { unit: string; min: number; max: number; step?: number; target: number; tolerance: number } };
 export type LessonStepPredictBehavior = { type: 'predict_behavior'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
-export type LessonStepChooseResistor = { type: 'choose_resistor'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
+// bands (when present) replaces the option list with an interactive 4-band resistor:
+// the learner sets the colour bands to encode targetOhms. The signature electronics
+// skill, made tactile.
+export type LessonStepChooseResistor = { type: 'choose_resistor'; question: string; circuitDiagram?: string; options: string[]; optionImages?: string[]; correct: number; explanation: string; bands?: { targetOhms: number } };
 // Construction / repair / tracing family: the learner manipulates a circuit
 // directly rather than picking from a text list. These kill the misconceptions a
 // multiple-choice question cannot reach.
@@ -290,8 +296,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       // ── Tier 2: one calculation ──
       { type: 'fill_blank', difficulty: 2, prompt: 'On a 5V supply, an LED drops 2V. The resistor must drop ___ V.', blank: '___', answer: '3', hint: 'It takes whatever the LED leaves: supply minus the LED drop.' },
       { type: 'fix_the_circuit', difficulty: 2, question: 'This LED is about to burn out. Tap the problem, then choose the repair.', circuitDiagram: 'led_no_resistor', faultRegion: 'missing_resistor', fixes: ['Add a series current-limiting resistor (about 220Ω)', 'Add a second LED in parallel to share the load', 'Raise the supply voltage to push more current', 'Reverse the LED so it points the other way'], correctFix: 0, explanation: 'There is no current-limiting resistor, so the LED draws far too much current. A series resistor (about 220Ω on 5V) sets a safe current. The other options either change nothing or make it worse.' },
-      { type: 'choose_resistor', difficulty: 2, question: '5V supply, LED dropping 2V, target about 15 mA. Which resistor?', circuitDiagram: 'series_circuit', options: ['22 Ω', '220 Ω', '2.2 kΩ', '22 kΩ'], correct: 1, explanation: '(5 − 2) / 0.015 = 200Ω, so 220Ω. 22Ω passes ~10× too much; the kΩ values choke it to a dim glow.' },
-      { type: 'predict_reading', difficulty: 2, question: '5V supply, LED Vf 2V, a 220Ω resistor. What current flows? (I = (V−Vf)/R)', circuitDiagram: 'series_circuit', options: ['≈ 14 mA', '≈ 23 mA', '≈ 7 mA', '≈ 36 mA'], correct: 0, explanation: '(5 − 2) / 220 = 13.6 mA. Picking 23 mA means you forgot to subtract the 2V LED drop (5/220).' },
+      { type: 'choose_resistor', difficulty: 2, question: 'Set the resistor bands for 220 Ω (the safe value for a 5V LED at ~15 mA).', circuitDiagram: 'series_circuit', options: ['22 Ω', '220 Ω', '2.2 kΩ', '22 kΩ'], correct: 1, bands: { targetOhms: 220 }, explanation: '220Ω is red-red-brown: digits 2 and 2, then ×10. That comes from (5 − 2) / 0.015 = 200Ω, rounded to the common 220Ω.' },
+      { type: 'predict_reading', difficulty: 2, question: '5V supply, LED Vf 2V, a 220Ω resistor. Dial the current that flows. (I = (V−Vf)/R)', circuitDiagram: 'series_circuit', options: ['≈ 14 mA', '≈ 23 mA', '≈ 7 mA', '≈ 36 mA'], correct: 0, meter: { unit: 'mA', min: 0, max: 30, step: 0.5, target: 13.6, tolerance: 1.5 }, explanation: '(5 − 2) / 220 = 13.6 mA. Reading ~23 mA means you forgot to subtract the 2V LED drop (5/220).' },
       { type: 'choose_resistor', difficulty: 2, question: 'Now a 9V supply, the same 2V LED, target ~15 mA. Which resistor?', circuitDiagram: 'series_circuit', options: ['150 Ω', '220 Ω', '470 Ω', '1 kΩ'], correct: 2, explanation: '(9 − 2) / 0.015 = 467Ω → 470Ω. The higher supply leaves more voltage for the resistor to drop, so R is larger.' },
       { type: 'predict_behavior', difficulty: 2, question: 'You grab a 22Ω resistor instead of 220Ω on that 5V LED. What happens?', circuitDiagram: 'series_circuit', options: ['Far too much current flows, risking burnout', 'Nothing changes, it is perfectly fine', 'It will not light up at all', 'It glows very faintly'], correct: 0, explanation: 'A resistor 10× too small passes ~10× the current (~136 mA), far over the LED\'s limit. It runs hot and can fail.' },
 

@@ -86,6 +86,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [revealed, setRevealed] = useState<Set<string>>(new Set()); // teach hotspots explored
   const [asyncMsg, setAsyncMsg] = useState<string | null>(null); // dynamic feedback from a graded draw_circuit
   const [tileSeq, setTileSeq] = useState<number[]>([]); // fill_blank tile-assembly: tile indices in placed order
+  const [meterVal, setMeterVal] = useState<number | null>(null); // predict_reading meter: dialed-in reading
+  const [bands, setBands] = useState<number[]>([0, 0, 0]); // choose_resistor: [digit1, digit2, multiplier] colour indices
 
   const step = steps[stepIndex];
 
@@ -107,6 +109,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setRevealed(new Set());
     setAsyncMsg(null);
     setTileSeq([]);
+    setMeterVal(null);
+    setBands([0, 0, 0]);
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
     if (step?.type === 'match') {
       // Shuffle BOTH columns (each off its original order) so answers never line
@@ -133,9 +137,13 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const evaluate = (): boolean => {
     switch (step.type) {
       case 'multiple_choice':
-      case 'predict_reading':
       case 'predict_behavior':
+        return choice === step.correct;
+      case 'predict_reading':
+        if (step.meter) return meterVal !== null && Math.abs(meterVal - step.meter.target) <= step.meter.tolerance;
+        return choice === step.correct;
       case 'choose_resistor':
+        if (step.bands) return (bands[0] * 10 + bands[1]) * 10 ** bands[2] === step.bands.targetOhms;
         return choice === step.correct;
       case 'true_false':
         return tf === step.correct;
@@ -172,10 +180,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const canCheck = (): boolean => {
     switch (step.type) {
       case 'multiple_choice':
-      case 'predict_reading':
       case 'predict_behavior':
-      case 'choose_resistor':
         return choice !== null;
+      case 'predict_reading':
+        return step.meter ? meterVal !== null : choice !== null;
+      case 'choose_resistor':
+        return step.bands ? true : choice !== null;
       case 'true_false':
         return tf !== null;
       case 'fill_blank':
@@ -351,6 +361,10 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
           onAsyncResult={handleAsyncResult}
           tileSeq={tileSeq}
           setTileSeq={setTileSeq}
+          meterVal={meterVal}
+          setMeterVal={setMeterVal}
+          bands={bands}
+          setBands={setBands}
         />
       </div>
 
@@ -468,6 +482,10 @@ interface StepViewProps {
   onAsyncResult: (ok: boolean, message: string) => void;
   tileSeq: number[];
   setTileSeq: (s: number[]) => void;
+  meterVal: number | null;
+  setMeterVal: (n: number) => void;
+  bands: number[];
+  setBands: (b: number[]) => void;
 }
 
 const StepView: React.FC<StepViewProps> = (p) => {
@@ -494,10 +512,12 @@ const StepView: React.FC<StepViewProps> = (p) => {
     // Prediction family: commit a prediction, then the circuit reveals the truth —
     // the diagram animates its current flow once you've answered.
     case 'predict_reading':
+      if (step.meter) return <MeterStep {...p} step={step} />;
       return <ChoiceStep {...p} step={step} eyebrow="Predict the reading" revealFlow />;
     case 'predict_behavior':
       return <ChoiceStep {...p} step={step} eyebrow="Predict what happens" revealFlow />;
     case 'choose_resistor':
+      if (step.bands) return <ResistorBandStep {...p} step={step} />;
       return <ChoiceStep {...p} step={step} eyebrow="Choose the component" />;
 
     case 'true_false':
@@ -1397,6 +1417,120 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
         </div>
       )}
       {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+    </div>
+  );
+};
+
+// ── Meter step (needle gauge + slider) ──
+// predict_reading with a `meter`: dial the needle to the reading instead of picking
+// a number from a list. Correct within tolerance of the target.
+const fmtNum = (v: number) => (Number.isInteger(v) ? `${v}` : v.toFixed(2));
+
+const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' }> } & StepViewProps> = ({ step, meterVal, setMeterVal, checked, correct }) => {
+  const m = step.meter!;
+  const tick = m.step ?? Math.max((m.max - m.min) / 100, 0.0001);
+  const val = meterVal ?? m.min;
+  const frac = (val - m.min) / (m.max - m.min);
+  const cx = 120;
+  const cy = 120;
+  const r = 92;
+  const ang = Math.PI * (1 - frac);
+  const angT = Math.PI * (1 - (m.target - m.min) / (m.max - m.min));
+  const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14201e';
+  return (
+    <div className="ohmlet-rise">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Dial in the reading</p>
+      <Prompt>{step.question}</Prompt>
+      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} showCurrentFlow={checked} />}
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+        <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">
+          <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={10} strokeLinecap="round" />
+          {Array.from({ length: 5 }).map((_, i) => {
+            const a = Math.PI * (1 - i / 4);
+            return <line key={i} x1={cx + (r - 9) * Math.cos(a)} y1={cy - (r - 9) * Math.sin(a)} x2={cx + r * Math.cos(a)} y2={cy - r * Math.sin(a)} stroke="#94a3b8" strokeWidth={2} />;
+          })}
+          {checked && <line x1={cx} y1={cy} x2={cx + r * Math.cos(angT)} y2={cy - r * Math.sin(angT)} stroke="#16a34a" strokeWidth={2} strokeDasharray="4 3" />}
+          <line x1={cx} y1={cy} x2={cx + r * Math.cos(ang)} y2={cy - r * Math.sin(ang)} stroke={needle} strokeWidth={4} strokeLinecap="round" style={{ transition: 'all 0.12s' }} />
+          <circle cx={cx} cy={cy} r={7} fill={needle} />
+        </svg>
+        <div className="mt-1 text-center">
+          <span className="text-3xl font-black tabular-nums text-ohmlet-ink">{meterVal === null ? '—' : fmtNum(val)}</span>
+          <span className="ml-1 text-lg font-black text-ohmlet-ink-soft">{m.unit}</span>
+        </div>
+        <input
+          type="range"
+          min={m.min}
+          max={m.max}
+          step={tick}
+          value={val}
+          disabled={checked}
+          onChange={(e) => setMeterVal(parseFloat(e.target.value))}
+          className="mt-4 w-full accent-ohmlet-gold-deep"
+        />
+        <div className="flex justify-between text-xs font-bold text-ohmlet-ink-soft">
+          <span>{m.min} {m.unit}</span>
+          <span>{m.max} {m.unit}</span>
+        </div>
+      </div>
+      {checked && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Target: {fmtNum(m.target)} {m.unit} (±{m.tolerance})</p>}
+    </div>
+  );
+};
+
+// ── Resistor colour-band step ──
+// choose_resistor with `bands`: set the 4-band resistor's colours to encode the
+// target value. Tap a band to cycle its colour; the live value updates as you go.
+const DIGIT_COLORS = [
+  { n: 'black', c: '#1a1a1a' },
+  { n: 'brown', c: '#7c3f00' },
+  { n: 'red', c: '#ef4444' },
+  { n: 'orange', c: '#f97316' },
+  { n: 'yellow', c: '#facc15' },
+  { n: 'green', c: '#22c55e' },
+  { n: 'blue', c: '#3b82f6' },
+  { n: 'violet', c: '#8b5cf6' },
+  { n: 'grey', c: '#9ca3af' },
+  { n: 'white', c: '#f8fafc' },
+];
+const fmtOhms = (v: number) => (v >= 1e6 ? `${+(v / 1e6).toFixed(2)} MΩ` : v >= 1e3 ? `${+(v / 1e3).toFixed(2)} kΩ` : `${v} Ω`);
+
+const ResistorBandStep: React.FC<{ step: Extract<LessonStep, { type: 'choose_resistor' }> } & StepViewProps> = ({ step, bands, setBands, checked, correct }) => {
+  const cycle = (i: number) => {
+    if (checked) return;
+    const next = [...bands];
+    next[i] = (next[i] + 1) % (i === 2 ? 7 : 10);
+    setBands(next);
+  };
+  const value = (bands[0] * 10 + bands[1]) * 10 ** bands[2];
+  const target = step.bands!.targetOhms;
+  const bandX = [72, 96, 120];
+  return (
+    <div className="ohmlet-rise">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Set the colour bands</p>
+      <Prompt>{step.question}</Prompt>
+      <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">Tap a band to change its colour, until the value matches {fmtOhms(target)}.</p>
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+        <svg viewBox="0 0 220 90" className="mx-auto w-full max-w-sm">
+          <line x1={6} y1={45} x2={48} y2={45} stroke="#94a3b8" strokeWidth={3} />
+          <line x1={172} y1={45} x2={214} y2={45} stroke="#94a3b8" strokeWidth={3} />
+          <rect x={48} y={24} width={124} height={42} rx={14} fill="#d8b98c" stroke="#b08e63" strokeWidth={2} />
+          {[0, 1, 2].map((i) => (
+            <g key={i} onClick={() => cycle(i)} className={checked ? '' : 'cursor-pointer'}>
+              <rect x={bandX[i] - 6} y={20} width={12} height={50} rx={2} fill={DIGIT_COLORS[bands[i]].c} stroke="#0a0a0a" strokeWidth={0.75} />
+            </g>
+          ))}
+          <rect x={158} y={24} width={9} height={42} rx={2} fill="#d4af37" />
+        </svg>
+        <div className="mt-3 text-center">
+          <span className={`text-2xl font-black tabular-nums ${checked ? (correct ? 'text-ohmlet-green-deep' : 'text-ohmlet-red') : 'text-ohmlet-ink'}`}>{fmtOhms(value)}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs font-bold text-ohmlet-ink-soft">
+          <span>1st: {DIGIT_COLORS[bands[0]].n} ({bands[0]})</span>
+          <span>2nd: {DIGIT_COLORS[bands[1]].n} ({bands[1]})</span>
+          <span>×10^{bands[2]}: {DIGIT_COLORS[bands[2]].n}</span>
+        </div>
+      </div>
+      {checked && !correct && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Target was {fmtOhms(target)}.</p>}
     </div>
   );
 };

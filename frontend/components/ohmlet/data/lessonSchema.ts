@@ -92,6 +92,22 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
         }
       }
       if (!isNonEmpty(s.explanation)) warn(`${step.type}: empty explanation`);
+      const meter = (step as { meter?: { unit: string; min: number; max: number; target: number; tolerance: number } }).meter;
+      if (meter) {
+        if (typeof meter.min !== 'number' || typeof meter.max !== 'number' || meter.min >= meter.max) err('predict_reading: meter needs min < max');
+        else if (meter.target < meter.min || meter.target > meter.max) err('predict_reading: meter target is outside [min, max]');
+        if (typeof meter.tolerance !== 'number' || meter.tolerance <= 0) err('predict_reading: meter tolerance must be positive');
+        if (!isNonEmpty(meter.unit)) warn('predict_reading: meter has no unit');
+      }
+      const bands = (step as { bands?: { targetOhms: number } }).bands;
+      if (bands) {
+        const t = bands.targetOhms;
+        let ok = false;
+        for (let k = 0; k <= 7 && !ok; k++)
+          for (let a = 0; a <= 9 && !ok; a++)
+            for (let b = 0; b <= 9 && !ok; b++) if ((a * 10 + b) * 10 ** k === t) ok = true;
+        if (!ok) err(`choose_resistor: bands.targetOhms ${t} is not encodable as a 2-significant-digit resistor value`);
+      }
       break;
     }
     case 'true_false': {
