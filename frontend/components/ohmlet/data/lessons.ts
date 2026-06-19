@@ -1029,4 +1029,267 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each capacitor job to its description.', pairs: [['Smoothing', 'Fills supply dips (big electrolytic)'], ['Decoupling', 'Steadies a chip pin (100 nF)'], ['Coupling', 'Passes AC, blocks DC'], ['Timing', 'Sets a delay with a resistor']] },
     ],
   },
+
+  // ═══════════════════ Unit 7: Transistors & Switching ═══════════════════
+  // Grounded in STG Ch.3 (BJT, beta), EAC Vol.1 (flyback/freewheeling diode),
+  // PEI Ch.4 (transistors/MOSFETs). See content/CURRICULUM_CITATIONS.md.
+
+  'What a Transistor Is': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Current-Controlled Valve', body: 'A bipolar transistor (BJT) is a three-terminal part: base, collector, and emitter. A small current into the base controls a much larger current flowing from collector to emitter. Think of the base as a valve handle: a little effort there controls a big flow. The common NPN type is the one you will meet first.' },
+      { type: 'teach', title: 'Base Current Lets Collector Current Flow', body: 'The rule for an NPN: collector current only flows when base current flows. No base current, no collector current (the transistor is off). Push enough base current and the collector current flows freely (the transistor is on). That control is the whole point.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'How many terminals does a bipolar transistor have?', options: ['Three: base, collector, emitter', 'Two, like a plain resistor', 'Four, like a small bridge', 'One, a single shared pin'], correct: 0, explanation: 'A BJT has three terminals: base, collector, and emitter.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'In an NPN transistor, what controls the collector current?', options: ['A small current into the base', 'The colour of the package', 'The length of the emitter lead', 'The ambient room lighting'], correct: 0, explanation: 'A small base current controls the much larger collector-to-emitter current.' },
+      { type: 'true_false', difficulty: 1, statement: 'In an NPN transistor, collector current flows only when base current flows.', correct: true, explanation: 'Yes. No base current means the transistor is off and no collector current flows.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'You remove the base current from a conducting NPN transistor. What happens to the collector current?', options: ['It stops, the transistor turns off', 'It rises to its maximum value', 'It stays exactly the same', 'It reverses its direction'], correct: 0, explanation: 'With no base drive, the transistor switches off and the collector current stops.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why call a transistor a "current amplifier" in this mode?', options: ['A tiny base current commands a much bigger one', 'It physically makes the wires carry more', 'It raises the supply voltage internally', 'It stores energy and releases it later'], correct: 0, explanation: 'A small base current controls a far larger collector current, so a small signal commands a big one.' },
+      { type: 'identify_component', difficulty: 2, question: 'Click the transistor in this switching circuit.', circuitDiagram: 'transistor_switch', correctComponent: 'transistor', explanation: 'That is the NPN transistor; its base is driven through Rb, and it switches the collector current.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A transistor is described as "two diodes back to back" (base-emitter and base-collector). Why is it still more than just two diodes?', options: ['Base current lets a much larger collector current flow', 'Diodes can never be built into one package', 'It blocks current in both directions equally', 'It only works with alternating current'], correct: 0, explanation: 'The junctions interact: a small base-emitter current enables a large collector current. Two separate diodes cannot do that.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each transistor terminal or idea to its role.', pairs: [['Base', 'The control input'], ['Collector', 'Where the big current enters'], ['Emitter', 'Where the current leaves'], ['No base current', 'Transistor is off'], ['Enough base current', 'Transistor is on']] },
+    ],
+  },
+
+  'The Transistor as a Switch': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Fully On or Fully Off', body: 'Used as a switch, a transistor lives at two extremes. Off (cutoff): no base current, so no collector current, like an open switch. On (saturation): plenty of base current, so the collector current is limited only by the load, like a closed switch with a tiny voltage drop across it. A microcontroller pin drives the base to flip between the two.' },
+      { type: 'teach', title: 'Why Not Drive the Load Directly?', body: 'An Arduino pin can only source about 20 to 40 mA at 5V. A motor, relay, or bright lamp needs far more current, or a higher voltage. The transistor lets the weak pin control a strong load: the pin drives the base, the load runs from its own supply through the collector.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'As a switch, a transistor operates in which two states?', options: ['Fully off (cutoff) and fully on (saturation)', 'Constantly half-on, hovering between the two states', 'Only ever partly on, never reaching either end', 'Off in one direction and reversed in the other'], correct: 0, explanation: 'Switching uses the two extremes: cutoff (off) and saturation (fully on).' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Roughly how much current can a single Arduino pin safely source?', options: ['About 20 to 40 mA', 'About 2 to 4 amps', 'About 500 mA', 'Effectively unlimited'], correct: 0, explanation: 'A pin handles tens of milliamps; bigger loads need a transistor.' },
+      { type: 'true_false', difficulty: 1, statement: 'A saturated (fully on) transistor acts roughly like a closed switch.', correct: true, explanation: 'Yes. In saturation it drops only a small voltage and passes the load current, like a closed switch.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'A pin drives a transistor base HIGH through a resistor. The transistor saturates. What does the load do?', circuitDiagram: 'transistor_switch', options: ['It turns on, drawing current through the collector', 'It stays off no matter how hard the base is driven', 'It runs at exactly half power, dim and steady', 'It draws its current entirely from the base pin'], correct: 0, explanation: 'Saturated, the transistor connects the load to its supply, so the load turns on.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why use a transistor to switch a 1A motor from a 5V pin?', options: ['The pin is too weak to drive the motor directly', 'A pin cannot output any voltage at all', 'Motors only run on transistor current', 'It makes the motor spin in reverse'], correct: 0, explanation: 'The pin cannot source an amp; the transistor lets the weak pin control the strong motor.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'The pin goes LOW, removing base drive. What happens to the load?', circuitDiagram: 'transistor_switch', options: ['It turns off (transistor in cutoff)', 'It stays fully on as if nothing changed', 'It dims to roughly half brightness and holds', 'It briefly speeds up before settling down'], correct: 0, explanation: 'No base current means cutoff, so the collector current stops and the load turns off.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'You want a transistor as a clean switch, not a dimmer. Why aim for full saturation rather than a partial "on"?', options: ['Saturation drops little voltage so it runs cool; partial-on wastes power as heat', 'A partly-on transistor cannot pass any current to the load, so nothing happens', 'Full saturation is the one and only permitted way you may use a transistor', 'A partly-on transistor instantly and permanently damages the load every time'], correct: 0, explanation: 'Half-on, the transistor drops significant voltage while passing current, so P = V×I heats it up. Full saturation minimises that loss.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A pin sources 20 mA. You must switch a 12V, 120 mA relay coil. The pin alone is wrong on two counts. Which?', options: ['It cannot supply 120 mA and cannot reach 12V', 'It supplies too much current and too high a voltage', 'It is too fast and too precise for the relay', 'It only works with capacitors, not coils'], correct: 0, explanation: 'The pin tops out near 20 mA and at 5V; the coil needs 120 mA at 12V. A transistor switches the coil from the 12V supply.' },
+    ],
+  },
+
+  'Current Gain (Beta)': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Beta Ties the Two Currents', body: 'The collector current is a fixed multiple of the base current. That multiple is the current gain, written β (beta), sometimes labelled hFE on a datasheet:\n\nβ = Ic / Ib\n\nTypical values run from about 10 to 300. So a base current of 1 mA with β = 100 allows up to 100 mA of collector current.' },
+      { type: 'teach', title: 'Working Backwards', body: 'For switching you usually know the load (collector) current you need and want the base current to ask for. Rearrange:\n\nIb = Ic / β\n\nUse the LOWEST β the part might have, so you guarantee enough base current even for a weak sample. Then deliberately drive a bit more to force full saturation.' },
+
+      // Tier 1: recall
+      { type: 'fill_blank', difficulty: 1, prompt: 'Current gain is collector current divided by base current: β = Ic / ___.', blank: '___', answer: 'Ib', hint: 'The control current, into the base.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'On a datasheet, the DC current gain is often labelled...', options: ['hFE', 'Vcc', 'ESR', 'RPM'], correct: 0, explanation: 'hFE is the datasheet name for the DC current gain, β.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A typical small-signal transistor β is in roughly what range?', options: ['About 10 to 300', 'About 0.1 to 1', 'About 5,000 to 9,000', 'Exactly 1 every time'], correct: 0, explanation: 'Real β values commonly land between about 10 and 300.' },
+
+      // Tier 2: one calculation
+      { type: 'fill_blank', difficulty: 2, prompt: 'Base current 1 mA, collector current 150 mA. The current gain β is ___.', blank: '___', answer: '150', hint: 'Divide the collector current by the base current.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Ic = 200 mA and Ib = 2 mA. What is β?', options: ['100', '400', '40', '10'], correct: 0, explanation: 'β = Ic / Ib = 200 / 2 = 100.' },
+      { type: 'predict_reading', difficulty: 2, question: 'You need Ic = 300 mA and the transistor\'s β is 150. What base current does that require, as a minimum?', options: ['2 mA', '20 mA', '0.5 mA', '45 mA'], correct: 0, explanation: 'Ib = Ic / β = 300 / 150 = 2 mA (minimum; drive a little more to saturate).' },
+      { type: 'multiple_choice', difficulty: 2, question: 'When sizing base current for a switch, which β should you assume?', options: ['The lowest β the part might have', 'The single highest β ever measured on a good sample', 'Exactly β = 1 in every single case', 'Any random value, since it makes no difference'], correct: 0, explanation: 'Designing for the lowest β guarantees enough base current for every sample.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A circuit relies on exactly β = 200 to just barely saturate. Why is that fragile?', options: ['β varies part to part and with heat, so a low-β sample misses saturation', 'β is fixed at exactly 200 for every sample, so the design is completely safe', 'β has no effect whatsoever on whether the transistor saturates', 'A higher β value would simply burn out the base junction'], correct: 0, explanation: 'β scatters widely and drifts with temperature. Design for the minimum β and overdrive the base so any part saturates.' },
+      { type: 'predict_reading', difficulty: 3, question: 'Load needs Ic = 120 mA. To force hard saturation you drive 5× the minimum base current, assuming β = 100. What base current is that?', options: ['6 mA', '1.2 mA', '24 mA', '0.6 mA'], correct: 0, explanation: 'Ib(min) = 120 / 100 = 1.2 mA; 5× overdrive = 6 mA, which guarantees full saturation.' },
+    ],
+  },
+
+  'Sizing the Base Resistor': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Why the Base Needs a Resistor', body: 'The base-emitter junction behaves like a diode: once it conducts, it holds about 0.7V and would pass unlimited current if you let it. So you never connect a pin straight to the base. A series base resistor sets the base current, just like a resistor sets an LED\'s current.' },
+      { type: 'teach', title: 'The Base Resistor Formula', body: 'The resistor drops whatever the pin voltage has left after the 0.7V base-emitter drop:\n\nRb = (Vpin − 0.7) / Ib\n\nExample: a 5V pin, wanting Ib = 4.3 mA:\nRb = (5 − 0.7) / 0.0043 ≈ 1000 Ω → a 1 kΩ base resistor.\n\nThe trap: forgetting the 0.7V drop, just like forgetting an LED\'s forward voltage.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'Why never connect a pin directly to a transistor\'s base?', options: ['The base-emitter junction would draw excessive current', 'The base needs a higher voltage than the pin gives', 'Bases only work with alternating current', 'It would make the transistor too cold'], correct: 0, explanation: 'The base-emitter junction is like a diode; without a resistor it would pass huge, damaging current.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'The base-emitter junction, once conducting, holds about ___ volts.', blank: '___', answer: '0.7', hint: 'The usual silicon junction forward drop.' },
+      { type: 'true_false', difficulty: 1, statement: 'A base resistor sets the base current, much as a resistor sets an LED\'s current.', correct: true, explanation: 'Yes. Both use a series resistor to set a safe current into a diode-like junction.' },
+
+      // Tier 2: one calculation
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 5V pin drives the base. After the 0.7V drop, the resistor must drop ___ volts.', blank: '___', answer: '4.3', hint: 'The pin voltage minus the base-emitter drop.' },
+      { type: 'choose_resistor', difficulty: 2, question: '5V pin, base-emitter 0.7V, target base current about 4.3 mA. Pick the base resistor.', circuitDiagram: 'transistor_switch', options: ['1 kΩ', '100 Ω', '10 kΩ', '100 kΩ'], correct: 0, explanation: 'Rb = (5 − 0.7) / 0.0043 ≈ 1000 Ω = 1 kΩ. 100 Ω passes far too much; 10 kΩ+ starves the base.' },
+      { type: 'predict_reading', difficulty: 2, question: '5V pin, 0.7V base drop, a 2.2 kΩ base resistor. The base current is closest to...', options: ['≈ 2 mA', '≈ 4 mA', '≈ 0.5 mA', '≈ 10 mA'], correct: 0, explanation: 'Ib = (5 − 0.7) / 2200 ≈ 1.95 mA ≈ 2 mA.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'Same 5V pin, but you now want about 2 mA of base current. Pick the resistor.', circuitDiagram: 'transistor_switch', options: ['2.2 kΩ', '220 Ω', '22 kΩ', '47 kΩ'], correct: 0, explanation: 'Rb = (5 − 0.7) / 0.002 ≈ 2150 Ω; the nearest standard value is 2.2 kΩ.' },
+
+      // Tier 3: multi-step
+      { type: 'multiple_choice', difficulty: 3, question: 'Load Ic = 100 mA, transistor β(min) = 100, 5V pin. You want roughly 2× overdrive on the base. Which base resistor is closest?', options: ['About 2.2 kΩ', 'About 22 kΩ', 'About 220 Ω', 'About 47 kΩ'], correct: 0, explanation: 'Ib(min) = 100/100 = 1 mA; 2× = 2 mA. Rb = (5 − 0.7)/0.002 ≈ 2.15 kΩ → 2.2 kΩ.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You forget the 0.7V drop and instead use Rb = 5 / Ib. Compared with the correct value, your resistor is...', options: ['Slightly too large, giving a bit less base current', 'Far too small, dangerously overdriving the base', 'Exactly correct, the drop does not matter', 'Irrelevant, base resistors do nothing'], correct: 0, explanation: 'Using 5 instead of 4.3 makes Rb larger, so Ib is a little lower. It is a small error here, but the habit (subtract the junction drop) matters when the supply is low.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'In a saturated switch, why is collector current set by the LOAD and supply, not by β × Ib?', options: ['Fully on in saturation, so the load limits the current', 'In saturation the transistor\'s β value suddenly becomes infinite', 'The base resistor itself takes over and sets the collector current', 'Saturation completely disconnects the collector from the load'], correct: 0, explanation: 'Once saturated, the transistor cannot pass more, so the load and supply set Ic. β × Ib only predicts Ic in the active region, before saturation.' },
+    ],
+  },
+
+  'Low-Side vs High-Side Switching': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Where the Switch Sits', body: 'An NPN transistor is usually wired as a low-side switch: the load connects to the positive supply, and the transistor sits between the load and ground. When it turns on, it completes the path to ground and the load runs. The load\'s "low" side is what gets switched, hence low-side.' },
+      { type: 'teach', title: 'High-Side and Its Catch', body: 'A high-side switch sits between the positive supply and the load instead. It is handy when the load shares a common ground, but switching the high side with an NPN is awkward (the base would need to sit above the supply). High-side switching is usually done with a PNP or a P-channel MOSFET.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'In an NPN low-side switch, the transistor sits...', options: ['Between the load and ground', 'Between the supply and the load', 'Inside the power supply', 'Across the base resistor'], correct: 0, explanation: 'Low-side: load to V+, transistor from load down to ground.' },
+      { type: 'true_false', difficulty: 1, statement: 'An NPN transistor is most naturally used as a low-side switch.', correct: true, explanation: 'Yes. NPN low-side switching is the simplest and most common arrangement.' },
+      { type: 'identify_component', difficulty: 1, question: 'Click the load (the relay coil) being switched in this low-side circuit.', circuitDiagram: 'transistor_switch', correctComponent: 'relay', explanation: 'The relay coil is the load; it connects to +12V on top and to the transistor collector below.' },
+
+      // Tier 2: apply
+      { type: 'multiple_choice', difficulty: 2, question: 'A high-side switch (between supply and load) is usually built with a...', options: ['PNP or P-channel MOSFET', 'A second NPN with no changes', 'A plain resistor', 'A capacitor to ground'], correct: 0, explanation: 'High-side switching needs a PNP or P-channel device; an NPN there is awkward to drive.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'In an NPN low-side switch, the transistor turns on. What does it do to the load\'s ground side?', circuitDiagram: 'transistor_switch', options: ['Connects it to ground, completing the loop', 'Lifts it up to the supply voltage', 'Leaves it floating, doing nothing', 'Shorts it to the base'], correct: 0, explanation: 'Turning on, the transistor pulls the load\'s low side to ground, so current flows and the load runs.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is NPN low-side switching so common in beginner projects?', options: ['Simple: the base drive shares the logic\'s ground reference', 'It is genuinely the only way that any load anywhere can be switched', 'It needs no base resistor and no separate supply at all', 'It makes the load run at roughly double its voltage'], correct: 0, explanation: 'The base drive is referenced to the same ground as the logic, so a pin drives it directly through a resistor.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why is it hard to switch the high side with an NPN?', options: ['Its base would have to sit above the supply to turn on', 'NPN transistors cannot conduct any current', 'The high side has no current to switch', 'NPN parts only work below 1V'], correct: 0, explanation: 'To turn fully on as a high-side switch, the NPN base would need a voltage above the supply rail, which is impractical, so a PNP/P-MOSFET is used.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each switch arrangement to its description.', pairs: [['NPN low-side', 'Load to V+, transistor to ground'], ['PNP high-side', 'Transistor from V+ to load'], ['Saturated switch', 'Fully on, low voltage drop'], ['Cutoff switch', 'Fully off, no current']] },
+    ],
+  },
+
+  'Switching Bigger Loads': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'When One Transistor Is Not Enough', body: 'A small transistor switches tens to a few hundred milliamps. Bigger loads (large motors, many LEDs, heaters) need more: a power transistor or, more often today, a MOSFET, which can switch many amps with almost no drive current. Either way, the principle is the same: a weak control signal commands a strong load on its own supply.' },
+      { type: 'teach', title: 'Heat and Ratings', body: 'A real switch is not perfect: it drops a little voltage while passing current, so it dissipates power (P = V × I) as heat. Pick a device rated for more than your load current and voltage, and add a heatsink if the power gets high. Running a part near its limit is how it fails.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'For switching several amps with very little drive current, a common modern choice is a...', options: ['MOSFET', 'Single small-signal BJT', 'Plain resistor', 'Ceramic capacitor'], correct: 0, explanation: 'MOSFETs switch large currents and are driven by voltage, needing almost no steady gate current.' },
+      { type: 'true_false', difficulty: 1, statement: 'A switching device drops some voltage while conducting, so it gives off heat.', correct: true, explanation: 'Yes. The small on-state voltage times the load current is power dissipated as heat.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'When choosing a switching transistor, you should pick one rated for...', options: ['More than the load\'s current and voltage', 'Exactly the load current, no margin', 'Far less than the load needs', 'Only the base current'], correct: 0, explanation: 'Headroom above the load\'s current and voltage keeps the part cool and reliable.' },
+
+      // Tier 2: apply
+      { type: 'predict_reading', difficulty: 2, question: 'A switch drops 0.2V while passing 2A. How much power does it dissipate as heat?', options: ['0.4 W', '4 W', '0.04 W', '40 W'], correct: 0, explanation: 'P = V × I = 0.2 × 2 = 0.4 W.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Your transistor runs hot switching a motor. A reasonable fix is to...', options: ['Use a lower-drop device and add a heatsink', 'Remove the base resistor entirely', 'Lower the base current until it barely turns on', 'Swap the motor for a bigger one'], correct: 0, explanation: 'A lower on-state drop and better heat-sinking cut the temperature; barely turning it on (partial saturation) makes heating worse.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why does a MOSFET need almost no steady drive current?', options: ['It is controlled by gate voltage, not a steady current', 'It simply runs on a tiny bit of stored charge forever after', 'It has no real terminals that need to be driven at all', 'It quietly amplifies its own base current internally'], correct: 0, explanation: 'A MOSFET is voltage-controlled at its gate, so once charged it draws virtually no steady current.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A transistor barely saturates and drops 1V at 2A. What is the heat, and why is full saturation better?', options: ['2 W; full saturation drops less voltage, so far less heat', '0.5 W; a partial-on transistor somehow always runs much cooler', '20 W; whether it saturates has no effect on the heat at all', '0.02 W; the small voltage drop never really matters here'], correct: 0, explanation: 'P = 1 × 2 = 2 W is a lot for a small part. Driving it to full saturation cuts the on-state drop and the heat.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You run a switching transistor right at its rated maximum current with no headroom. The likely outcome over time is...', options: ['It runs hot and is prone to early failure', 'It performs better than a rated part', 'Nothing, ratings are only suggestions', 'It draws less current than expected'], correct: 0, explanation: 'No margin means high temperature and stress; parts run near their limit fail early. Always leave headroom.' },
+    ],
+  },
+
+  'Back-EMF from Coils': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Coils Fight a Change in Current', body: 'A coil, the winding inside a relay, solenoid, or motor, stores energy in a magnetic field while current flows. An inductor opposes a CHANGE in its current (the mirror image of a capacitor opposing a change in voltage). Switch the current off suddenly and the collapsing field fights back hard.' },
+      { type: 'teach', title: 'The Voltage Spike', body: 'When you switch off a coil, its magnetic field collapses and tries to keep the current flowing. With nowhere to go, it generates a large reverse voltage spike, the back-EMF, that can be many times the supply voltage. That spike can punch through and destroy the transistor switching it.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'A coil (inductor) opposes a change in its...', options: ['Current', 'Colour', 'Temperature', 'Resistance value'], correct: 0, explanation: 'An inductor opposes a change in current, just as a capacitor opposes a change in voltage.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Switching off a coil suddenly produces a...', options: ['Large reverse voltage spike (back-EMF)', 'Gentle drop to zero with no spike', 'Steady rise in supply voltage', 'Permanent magnetic charge'], correct: 0, explanation: 'The collapsing field generates a back-EMF spike, often many times the supply voltage.' },
+      { type: 'true_false', difficulty: 1, statement: 'The back-EMF spike from a coil can be much larger than the supply voltage.', correct: true, explanation: 'Yes, that is exactly why it is dangerous to the switching transistor.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'A relay coil is switched off by a bare NPN transistor with no protection. What is the risk?', circuitDiagram: 'transistor_switch', options: ['The back-EMF spike can destroy the transistor', 'The relay simply switches faster', 'The supply voltage drops to zero forever', 'Nothing, coils are always safe'], correct: 0, explanation: 'The unprotected spike appears across the transistor and can break it down.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Which loads produce a damaging back-EMF spike when switched off?', options: ['Coils: relays, solenoids, motors', 'Plain resistors and LEDs', 'Ceramic capacitors', 'Lengths of straight wire'], correct: 0, explanation: 'Inductive (coil) loads store magnetic energy and kick back; purely resistive loads do not.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is an inductor often called the "mirror image" of a capacitor?', options: ['It opposes a current change; a capacitor opposes a voltage change', 'It stores electric charge on plates in precisely the same way a capacitor does', 'It has no real effect on any circuit it sits in', 'It only ever works when supplied with steady DC'], correct: 0, explanation: 'Inductor: resists current change, stores a magnetic field. Capacitor: resists voltage change, stores charge.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the spike appear specifically at switch-OFF, not at switch-on?', options: ['The collapsing field forces the current to keep flowing into a sudden open', 'The coil only ever stores any of its energy while it is switched off', 'Switch-on is actually the moment with the far larger, faster current change', 'The whole supply suddenly reverses its own polarity at switch-off'], correct: 0, explanation: 'At turn-off the current is forced to change fast with nowhere to go, so the inductor produces a huge voltage trying to maintain it.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You switch a small motor with a transistor and it works for a while, then the transistor fails. The most likely cause is...', options: ['Repeated back-EMF spikes with no flyback diode', 'The base resistor being slightly too large', 'The motor being painted the wrong colour', 'Too little current through the LED'], correct: 0, explanation: 'A motor is inductive; without a flyback diode the repeated turn-off spikes gradually destroy the transistor.' },
+    ],
+  },
+
+  'The Flyback Diode': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Give the Spike a Path', body: 'The fix for back-EMF is a flyback (freewheeling) diode placed directly across the coil. In normal operation it is reverse-biased and does nothing. At switch-off, the coil\'s reversed voltage forward-biases the diode, giving the collapsing current a safe loop to circulate in until it dies away, instead of spiking across the transistor.' },
+      { type: 'teach', title: 'Orientation Is Everything', body: 'The diode must be wired so it BLOCKS the normal supply current and only conducts the reverse spike. Across a coil fed from +V, the diode\'s cathode (the banded end) goes to +V and the anode to the transistor side. Wire it backwards and it shorts the supply the moment you power on.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'A flyback (freewheeling) diode is placed...', options: ['Directly across the coil', 'In series with the base resistor', 'Across the power supply only', 'Between two ground pins'], correct: 0, explanation: 'It goes across the inductive load to catch the back-EMF.' },
+      { type: 'identify_component', difficulty: 1, question: 'Click the flyback diode protecting the transistor from the coil\'s spike.', circuitDiagram: 'transistor_switch', correctComponent: 'diode', explanation: 'That diode sits across the relay coil to absorb the back-EMF at switch-off.' },
+      { type: 'true_false', difficulty: 1, statement: 'In normal operation the flyback diode is reverse-biased and carries no current.', correct: true, explanation: 'Yes. It only conducts the reverse spike at switch-off; otherwise it blocks.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'With a correctly fitted flyback diode, what happens to the coil current at switch-off?', circuitDiagram: 'transistor_switch', options: ['It circulates through the diode and decays safely', 'It spikes across the transistor as before', 'It reverses the motor permanently', 'It charges the base resistor'], correct: 0, explanation: 'The diode gives the current a loop to circulate in, so it decays gently instead of spiking.' },
+      { type: 'spot_error', difficulty: 2, question: 'In this relay driver, which component, if wired backwards, would short the supply at power-on?', circuitDiagram: 'transistor_switch', correctRegion: 'diode', explanation: 'A reversed flyback diode conducts the normal supply current, shorting the rail. Orientation is critical.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Across a coil fed from +V, the flyback diode\'s banded end (cathode) connects to...', options: ['The +V side', 'The ground side', 'The base resistor', 'The Arduino pin'], correct: 0, explanation: 'Cathode to +V means the diode blocks the normal current and only conducts the reverse spike.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the flyback diode point the "wrong way" for normal current (cathode to +V)?', options: ['So it blocks the supply but conducts the reverse spike at switch-off', 'So that it carries the entire load current continuously, the whole time', 'So that it lights up brightly like an indicator LED would', 'So that it pushes the coil voltage up much higher'], correct: 0, explanation: 'Normal current is blocked; the back-EMF reverses the voltage across the coil, which forward-biases the diode and is safely shunted.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'In an AC circuit you cannot use a simple flyback diode across the load. What is used instead?', options: ['An RC snubber (a resistor and capacitor)', 'A second identical diode in series', 'A larger base resistor', 'Nothing is ever needed'], correct: 0, explanation: 'Because AC reverses each cycle, a diode would conduct half the time; an RC snubber tames the switching transient instead.' },
+    ],
+  },
+
+  'Drive the Relay': {
+    xpReward: 45,
+    steps: [
+      { type: 'teach', title: 'The Whole Job at Once', body: 'Time to put it together. An Arduino pin sources only ~20 mA at 5V, but you must switch a 12V relay coil that draws 120 mA. The plan: an NPN low-side switch, a base resistor sized to saturate it, and a flyback diode across the coil. This is the real-world pattern for switching any beefy load from a microcontroller.', circuitDiagram: 'transistor_switch' },
+      { type: 'teach', title: 'The Numbers', body: 'Coil: 120 mA at 12V. Transistor β(min) = 100, so Ib(min) = 120/100 = 1.2 mA. Overdrive ~3.5× for solid saturation → about 4.3 mA. Base resistor: Rb = (5 − 0.7)/0.0043 ≈ 1 kΩ. Add a flyback diode across the coil, cathode to +12V. Done.', circuitDiagram: 'transistor_switch' },
+
+      // Tier 1: recall the structure
+      { type: 'identify_component', difficulty: 1, question: 'Click the transistor doing the switching.', circuitDiagram: 'transistor_switch', correctComponent: 'transistor', explanation: 'The NPN switches the coil current to ground when its base is driven.' },
+      { type: 'identify_component', difficulty: 1, question: 'Click the base resistor that sets the base current.', circuitDiagram: 'transistor_switch', correctComponent: 'base_resistor', explanation: 'Rb between the pin and the base sets the base current that saturates the transistor.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Why can the Arduino pin not drive the relay coil directly?', options: ['The coil needs 120 mA at 12V, well beyond a pin', 'The pin outputs too much current for the coil', 'Relays only run from transistors, never supplies', 'The pin voltage is far too high for the coil'], correct: 0, explanation: 'A pin tops out near 20 mA at 5V; the coil needs 120 mA at 12V, so a transistor switches it from the 12V rail.' },
+
+      // Tier 2: the calculations
+      { type: 'predict_reading', difficulty: 2, question: 'Coil current 120 mA, β(min) = 100. The minimum base current is...', options: ['1.2 mA', '12 mA', '0.12 mA', '120 mA'], correct: 0, explanation: 'Ib(min) = Ic / β = 120 / 100 = 1.2 mA. Drive a few times more to fully saturate.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'For about 4.3 mA of base current from a 5V pin (0.7V base drop), pick Rb.', circuitDiagram: 'transistor_switch', options: ['1 kΩ', '100 Ω', '10 kΩ', '100 kΩ'], correct: 0, explanation: 'Rb = (5 − 0.7) / 0.0043 ≈ 1000 Ω = 1 kΩ.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Which way does the flyback diode go across the coil?', options: ['Cathode (band) to +12V, anode to the collector', 'Anode to +12V, cathode to the collector', 'Either way, it does not matter', 'In series with the coil, not across it'], correct: 0, explanation: 'Cathode to +12V blocks the normal current and conducts only the back-EMF.' },
+
+      // Tier 3: the gotchas and verification
+      { type: 'spot_error', difficulty: 3, question: 'A new build clicks once, then the transistor dies. With the resistor and saturation correct, click the part most likely missing or reversed.', circuitDiagram: 'transistor_switch', correctRegion: 'diode', explanation: 'No flyback diode (or a reversed one) lets the coil\'s back-EMF destroy the transistor at switch-off.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'You drove the base with only the 1.2 mA minimum. The relay buzzes and the transistor warms up. Why?', options: ['Too little overdrive: not fully saturated, so it drops voltage and heats', 'The flyback diode is somehow conducting the full coil current the entire time', 'The base resistor value chosen is far, far too small for this', 'The 12V supply is simply too low to drive the relay coil'], correct: 0, explanation: 'At the bare minimum Ib, a low-β sample sits in the active region, dropping voltage (heat) and switching unreliably. Overdrive the base.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'How do you confirm the finished build is correct, beyond "the relay clicks"?', options: ['Confirm the coil switches AND the pin current stayed within its limit', 'Simply listen for the click once and then immediately call the build done', 'Just measure the indicator LED brightness on its own', 'Only check that the resistor colour bands look neat'], correct: 0, explanation: 'A correct design switches the load AND keeps the pin within its current limit, with the diode protecting the transistor. Verify both, ideally on camera with the live tutor.' },
+    ],
+  },
+
+  'MOSFETs vs BJTs': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Two Ways to Switch', body: 'A BJT (the bipolar transistor you have been using) is controlled by base CURRENT. A MOSFET is controlled by gate VOLTAGE and draws almost no steady gate current. For switching power, MOSFETs are now the default: a "logic-level" MOSFET turns fully on from a 5V (or even 3.3V) gate and has a very low on-resistance, so it runs cool.' },
+      { type: 'teach', title: 'Picking Between Them', body: 'BJTs are cheap, simple, and fine for small loads and signal work. MOSFETs win for switching larger currents efficiently. The MOSFET\'s terminals are gate, drain, and source (the rough counterparts of base, collector, emitter). The flyback-diode rule for inductive loads is exactly the same for both.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'A MOSFET is controlled by its gate...', options: ['Voltage', 'Current', 'Temperature', 'Colour'], correct: 0, explanation: 'MOSFETs are voltage-controlled at the gate; BJTs are current-controlled at the base.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A BJT is controlled by its base...', options: ['Current', 'Voltage only', 'Resistance', 'Frequency'], correct: 0, explanation: 'A BJT needs a base current to turn on.' },
+      { type: 'true_false', difficulty: 1, statement: 'A MOSFET draws almost no steady current at its gate.', correct: true, explanation: 'Yes. Once the gate is charged, it draws virtually no steady current.' },
+
+      // Tier 2: apply
+      { type: 'multiple_choice', difficulty: 2, question: 'You must switch 5A efficiently from a 5V logic pin. Best general choice?', options: ['A logic-level MOSFET', 'A tiny small-signal BJT', 'A plain resistor', 'A coupling capacitor'], correct: 0, explanation: 'A logic-level MOSFET turns fully on from 5V and switches amps with low loss.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'The MOSFET terminals (gate, drain, source) roughly correspond to which BJT terminals?', options: ['Base, collector, emitter', 'Emitter, base, collector', 'Anode, cathode, gate', 'Plus, minus, ground'], correct: 0, explanation: 'Gate≈base (control), drain≈collector, source≈emitter.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Switching an inductive load with a MOSFET, what protection do you still need?', options: ['A flyback diode across the load', 'Nothing, MOSFETs are immune', 'A second gate resistor only', 'A larger source capacitor'], correct: 0, explanation: 'Back-EMF does not care which switch you use; the flyback diode rule is the same.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a low on-resistance matter most when switching large currents?', options: ['Heat is I²×R, so at high current even a small resistance gets hot', 'On-resistance only ever matters when the current happens to be very low', 'It quietly changes the load\'s maximum voltage rating', 'It sets how much steady gate current is needed'], correct: 0, explanation: 'Power lost in the switch rises with the square of the current, so a low on-resistance keeps a high-current switch cool.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why insist on a "logic-level" MOSFET for a 5V Arduino pin?', options: ['A standard MOSFET may not fully turn on from only 5V at the gate', 'Logic-level MOSFETs are the only kind that exist', 'It makes the gate draw a large current', 'It removes the need for any load supply'], correct: 0, explanation: 'Many MOSFETs need a higher gate voltage to saturate; a logic-level part is specified to turn fully on at ~5V (or less).' },
+    ],
+  },
+
+  'NPN vs PNP': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Two Polarities of BJT', body: 'BJTs come in two flavours. An NPN turns on when the base is pulled HIGH (above the emitter) and is the natural low-side switch. A PNP turns on when the base is pulled LOW (below the emitter) and is the natural high-side switch. They are mirror images: the supply and current directions are reversed.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'An NPN transistor turns on when its base is...', options: ['Pulled HIGH, above the emitter', 'Pulled LOW, below the emitter', 'Left completely floating', 'Disconnected from the circuit'], correct: 0, explanation: 'NPN: base high (above the emitter) turns it on.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A PNP transistor turns on when its base is...', options: ['Pulled LOW, below the emitter', 'Pulled HIGH, above the emitter', 'Held at exactly the supply', 'Heated up'], correct: 0, explanation: 'PNP: base low (below the emitter) turns it on.' },
+      { type: 'true_false', difficulty: 1, statement: 'NPN and PNP transistors use opposite supply polarities and current directions.', correct: true, explanation: 'Yes. A PNP is the mirror image of an NPN.' },
+
+      // Tier 2: apply
+      { type: 'multiple_choice', difficulty: 2, question: 'For a natural high-side switch (between supply and load), which BJT fits?', options: ['PNP', 'NPN', 'Either, polarity is irrelevant', 'Neither can switch high-side'], correct: 0, explanation: 'A PNP is the natural high-side switch; an NPN is the natural low-side switch.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You drop an NPN into a circuit designed for a PNP without changing anything. What happens?', options: ['It will not switch correctly; the polarity is wrong', 'It works completely identically, with no difference at all', 'It runs at roughly double its normal speed', 'It quietly turns itself into a MOSFET'], correct: 0, explanation: 'NPN and PNP need opposite drive and supply arrangements; swapping one for the other without rewiring fails.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why are NPN low-side switches the beginner default?', options: ['The base drive shares the logic\'s ground reference', 'PNP transistors are genuinely very rare and hard to source', 'NPN parts need no base resistor at all', 'NPN loads always run at a higher voltage'], correct: 0, explanation: 'A ground-referenced base is easy to drive straight from a pin, so NPN low-side is the simplest start.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A load must connect permanently to ground and be switched from the +V side. Which device and why?', options: ['A PNP (or P-MOSFET), because it switches the high side cleanly', 'An NPN low-side, because ground is already connected', 'A resistor, because no switching is needed', 'A capacitor, to block the DC'], correct: 0, explanation: 'A ground-referenced load that must be switched on its supply side needs a high-side switch: a PNP or P-channel MOSFET.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each device to how you turn it on / where it sits.', pairs: [['NPN', 'Base HIGH; low-side switch'], ['PNP', 'Base LOW; high-side switch'], ['N-MOSFET', 'Gate HIGH; low-side switch'], ['P-MOSFET', 'Gate LOW; high-side switch']] },
+    ],
+  },
+
+  'Unit 7 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'In an NPN transistor, a small base current controls...', options: ['A much larger collector current', 'The supply voltage value', 'The colour of the LED', 'The room temperature'], correct: 0, explanation: 'Base current controls the larger collector current.' },
+      { type: 'multiple_choice', question: 'Current gain β is defined as...', options: ['Ic divided by Ib', 'Ib divided by Ic', 'Vcc divided by Ic', 'Ic times Ib'], correct: 0, explanation: 'β = Ic / Ib.' },
+      { type: 'fill_blank', prompt: 'Collector current 200 mA, base current 2 mA. β = ___.', blank: '___', answer: '100', hint: 'Divide the collector current by the base current.' },
+      { type: 'choose_resistor', question: '5V pin, 0.7V base drop, target ~4.3 mA base current. Pick Rb.', circuitDiagram: 'transistor_switch', options: ['1 kΩ', '100 Ω', '10 kΩ', '100 kΩ'], correct: 0, explanation: 'Rb = (5 − 0.7) / 0.0043 ≈ 1 kΩ.' },
+      { type: 'identify_component', question: 'Click the flyback diode protecting the transistor.', circuitDiagram: 'transistor_switch', correctComponent: 'diode', explanation: 'The diode across the coil absorbs the back-EMF.' },
+      { type: 'spot_error', question: 'A relay driver kills its transistor at switch-off. Click the part most likely missing or reversed.', circuitDiagram: 'transistor_switch', correctRegion: 'diode', explanation: 'No flyback diode means the coil\'s back-EMF destroys the transistor.' },
+      { type: 'multiple_choice', question: 'A MOSFET is controlled by gate ___, a BJT by base ___.', options: ['voltage; current', 'current; voltage', 'resistance; voltage', 'voltage; voltage'], correct: 0, explanation: 'MOSFET = gate voltage; BJT = base current.' },
+      { type: 'match', instruction: 'Match each part to its role in a relay driver.', pairs: [['NPN transistor', 'Switches the coil to ground'], ['Base resistor', 'Sets the base current'], ['Flyback diode', 'Absorbs the back-EMF'], ['Relay coil', 'The inductive load']] },
+    ],
+  },
 };

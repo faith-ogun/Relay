@@ -379,6 +379,67 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'transistors',
+    title: 'Transistors & Switching',
+    subtitle: 'Let a weak signal command a strong load',
+    level: 'intermediate',
+    accent: 'green',
+    skills: [
+      {
+        id: 'the-transistor',
+        title: 'The Transistor',
+        description: 'A small current that controls a big one.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'What a Transistor Is', title: 'What a Transistor Is', summary: 'Base, collector, emitter; the control valve.', estMinutes: 10 },
+          { id: 'The Transistor as a Switch', title: 'The Transistor as a Switch', summary: 'Cutoff and saturation: fully off, fully on.', estMinutes: 12 },
+          { id: 'Current Gain (Beta)', title: 'Current Gain (Beta)', summary: 'β = Ic / Ib, and designing for the minimum.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'driving-loads',
+        title: 'Driving Loads',
+        description: 'Size the drive and place the switch.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'Sizing the Base Resistor', title: 'Sizing the Base Resistor', summary: 'Rb = (Vpin − 0.7) / Ib; force saturation.', estMinutes: 14 },
+          { id: 'Low-Side vs High-Side Switching', title: 'Low-Side vs High-Side', summary: 'Where the transistor sits, and why.', estMinutes: 12 },
+          { id: 'Switching Bigger Loads', title: 'Switching Bigger Loads', summary: 'Power transistors, MOSFETs, heat, ratings.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'inductive-protection',
+        title: 'Inductive Loads & Protection',
+        description: 'Tame the spike from coils, relays, and motors.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'Back-EMF from Coils', title: 'Back-EMF from Coils', summary: 'Why a switched-off coil bites back.', estMinutes: 12 },
+          { id: 'The Flyback Diode', title: 'The Flyback Diode', summary: 'A safe path for the spike; orientation matters.', estMinutes: 12 },
+          { id: 'Drive the Relay', title: 'Drive the Relay', summary: 'Capstone: switch a 12V coil from a 5V pin.', estMinutes: 18 },
+        ],
+      },
+      {
+        id: 'transistor-variety',
+        title: 'Transistor Variety',
+        description: 'MOSFETs, and the two BJT polarities.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'MOSFETs vs BJTs', title: 'MOSFETs vs BJTs', summary: 'Voltage control, low on-resistance, power.', estMinutes: 12 },
+          { id: 'NPN vs PNP', title: 'NPN vs PNP', summary: 'Mirror images; low-side vs high-side.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'transistors-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can drive a real load safely.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 7 Checkpoint', title: 'Unit 7 Checkpoint', summary: 'A mixed test of transistors and switching.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

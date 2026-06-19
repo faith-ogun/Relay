@@ -15,6 +15,19 @@
 
 Where the curriculum actually stands, for whoever picks this up next:
 
+- **Unit 7 authored to the quality bar (2026-06-19): "Transistors & Switching"**,
+  12 lessons (the BJT, transistor-as-switch, β, base-resistor sizing, low/high-side,
+  bigger loads/MOSFETs, back-EMF, the flyback diode, the **"Drive the Relay"
+  capstone** from §11b, MOSFETs vs BJTs, NPN vs PNP, checkpoint). Difficulty-tiered,
+  balanced distractors, method-only hints; **new unit lints 0/0**. Grounded in STG
+  Ch.3, EAC Vol.1, PEI Ch.4. Uses the `transistor_switch` DSL diagram.
+- **7 units, 80 lessons built.** v1 target ~143 (12 units); ceiling ~450–650.
+- **Authoring note (confirmed):** the "longest answer" linter check is strict
+  (correct must not be the unique longest AND within ~1.6×/12 chars of the average).
+  Fastest clean path: make ONE distractor at least as long as the correct option.
+- **Still to do this push:** rebuild the 54 pre-bar Units 1–5 lessons (the 89 lint
+  warnings are the worklist) and author Units 8–12 (+ extra units toward the ceiling).
+
 - **Unit 6 authored to the quality bar (2026-06-19): "Capacitors, RC & Timing"**,
   12 lessons (caps, farad units, polarity, charging, τ = RC, RC design, smoothing/
   decoupling, coupling, the RC low-pass filter, RC timing, the 555, checkpoint).
@@ -249,7 +262,7 @@ is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
 | 4  | Meet the Arduino                | intermediate | ✅ built  | 11 |
 | 5  | Inputs, Outputs & Code          | intermediate | ✅ built  | 10 |
 | 6  | Capacitors, RC & Timing         | intermediate | ✅ built  | 12 |
-| 7  | Transistors & Switching         | intermediate | planned  | 13 |
+| 7  | Transistors & Switching         | intermediate | ✅ built  | 12 |
 | 8  | Op-Amps & Signal Conditioning   | advanced     | planned  | 12 |
 | 9  | Filters, Oscillators & Signals  | advanced     | planned  | 12 |
 | 10 | Power Supplies & Regulation     | advanced     | planned  | 11 |

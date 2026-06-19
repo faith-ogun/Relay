@@ -288,6 +288,56 @@ pools, balanced distractors, method-only hints); lints clean.
   0.7·R·C figure verified (10 kΩ, 100 µF ≈ 0.7 s/phase).
 - **Unit 6 Checkpoint** (new) — mixed retrieval over the unit; no new claims.
 
+## Unit 7 — Transistors & Switching
+
+Grounded in **STG** Ch.3 (Kybett & Boysen, the BJT, base/collector/emitter, β),
+**EAC Vol.1** (Platt, flyback/freewheeling diode for back-EMF), and **PEI** Ch.4
+(Scherz & Monk, transistors and MOSFETs). Authored to the quality bar; lints clean.
+Uses the `transistor_switch` DSL diagram (NPN low-side switch + relay coil +
+flyback diode).
+
+- **What a Transistor Is** (new) — BJT has base, collector, emitter; a small base
+  current controls a large collector current; NPN: collector current flows only
+  when base current flows: STG Ch.3 ("when base current flows in a transistor,
+  collector current will also flow"). Verified.
+- **The Transistor as a Switch** (new) — cutoff (off) vs saturation (fully on); an
+  Arduino pin sources only ~20–40 mA so big loads need a transistor: STG Ch.3/4
+  (transistor as a switch); Arduino pin limits (Exploring Arduino). Verified.
+- **Current Gain (Beta)** (new) — β = Ic/Ib, typical 10–300, datasheet hFE; Ib =
+  Ic/β; design for the minimum β: STG Ch.3 ("ratio of collector current to base
+  current… called the current gain… β… Typical values of β range from 10 to 300";
+  "referred to as hFE"; worked Ib = Ic/β). Verified arithmetic.
+- **Sizing the Base Resistor** (new) — base-emitter ~0.7V; Rb = (Vpin − 0.7)/Ib;
+  in saturation Ic is set by the load, not β×Ib: STG Ch.3 (base current via the
+  base resistor; ~0.7V junction drop); Ohm's law. Worked values verified
+  ((5−0.7)/0.0043 ≈ 1 kΩ).
+- **Low-Side vs High-Side Switching** (new) — NPN low-side (load to V+, transistor
+  to ground); high-side needs PNP/P-MOSFET because an NPN base would sit above the
+  supply: standard practice; PEI Ch.4. Verified.
+- **Switching Bigger Loads** (new) — power BJT vs MOSFET; on-state drop → heat
+  (P = V×I); pick a part with current/voltage headroom: PEI Ch.4; EAC. Verified.
+- **Back-EMF from Coils** (new) — an inductor opposes a change in current and kicks
+  back a large reverse spike at switch-off, mirror image of a capacitor: EAC Vol.1
+  (inductor/back-EMF; "inductive load that generates back-EMF when… switched"). Verified.
+- **The Flyback Diode** (new) — rectifier diode across the coil, cathode to +V, so
+  it blocks normal current and only conducts the reverse spike; AC needs an RC
+  snubber instead: EAC Vol.1 p.961 ("a rectifier diode in parallel with the load
+  (with its polarity blocking normal current flow)… flyback diode or freewheeling
+  diode… In AC circuits… a snubber"). Verified.
+- **Drive the Relay** (new, CAPSTONE) — the council's showcase hard lesson: switch a
+  12V/120 mA coil from a 5V/20 mA pin. Ib(min)=120/100=1.2 mA, ~3.5× overdrive →
+  4.3 mA, Rb=(5−0.7)/0.0043 ≈ 1 kΩ, flyback diode cathode to +12V; verify the coil
+  switches AND the pin current stayed safe: synthesis of STG (β, Rb) + EAC (flyback).
+  All numbers verified. Matches CURRICULUM_PLAN §11b "Drive the Relay" spec.
+- **MOSFETs vs BJTs** (new) — MOSFET = voltage-controlled gate, ~no steady gate
+  current, low on-resistance (I²R heat), logic-level part turns on at 5V; gate/
+  drain/source ≈ base/collector/emitter; flyback rule unchanged: PEI Ch.4
+  (MOSFETs). Verified.
+- **NPN vs PNP** (new) — NPN turns on with base HIGH (low-side); PNP with base LOW
+  (high-side); mirror-image supply/current: STG Ch.3 ("difference in using a PNP
+  versus an NPN… the polarity of the supply voltage… is reversed"). Verified.
+- **Unit 7 Checkpoint** (new) — mixed retrieval over the unit; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the
