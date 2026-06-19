@@ -9,7 +9,11 @@ export type LessonStepTeach = { type: 'teach'; title: string; body: string; diag
 // image is missing or fails to load, so a question is never broken by absent art.
 export type LessonStepMC = { type: 'multiple_choice'; question: string; options: string[]; optionImages?: string[]; correct: number; explanation: string; circuitDiagram?: string };
 export type LessonStepTF = { type: 'true_false'; statement: string; correct: boolean; explanation: string; circuitDiagram?: string };
-export type LessonStepFill = { type: 'fill_blank'; prompt: string; blank: string; answer: string; hint: string; circuitDiagram?: string };
+// tiles (when present) turns the blank into a word/number/unit bank: the learner
+// assembles the answer by tapping tiles (Duolingo's word-bank), instead of typing.
+// The answer is built by joining the tapped tiles with spaces. Falls back to a text
+// input when tiles is absent.
+export type LessonStepFill = { type: 'fill_blank'; prompt: string; blank: string; answer: string; hint: string; circuitDiagram?: string; tiles?: string[] };
 // images (when present, one per pair) shows a picture for each left item, so match
 // becomes symbol/photo -> name. Falls back to the text left label when an image is absent.
 export type LessonStepMatch = { type: 'match'; instruction: string; pairs: Array<[string, string]>; images?: string[] };
@@ -118,6 +122,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       ] },
       { type: 'multiple_choice', question: 'What unit is resistance measured in?', options: ['Volts (V)', 'Amps (A)', 'Ohms (Ω)', 'Farads (F)'], correct: 2, explanation: 'Resistance is measured in ohms (Ω), named after Georg Ohm.' },
       { type: 'teach', title: 'Ohm\'s Law', body: 'The single most useful equation in electronics:\n\nV = I × R\n\nVoltage equals current times resistance. Rearranged: I = V / R, and R = V / I. Know any two and you can find the third.' },
+      { type: 'fill_blank', prompt: 'Build Ohm\'s Law: voltage equals current times resistance.', blank: '___', answer: 'V = I × R', tiles: ['V', '=', 'I', '×', 'R', '+', '÷', 'P'], hint: 'Voltage on the left; on the right, current and resistance multiplied together.' },
       { type: 'fill_blank', prompt: 'A 1kΩ (1000Ω) resistor with 5V across it. Current = V / R = 5 / 1000 = ___ mA', blank: '___', answer: '5', hint: '5 / 1000 = 0.005 A. Convert amps to milliamps by multiplying by 1000.' },
       { type: 'multiple_choice', question: 'To reduce the current in a circuit, you should...', options: ['Add more resistance', 'Remove resistance', 'Add more LEDs', 'Increase the voltage'], correct: 0, explanation: 'More resistance means less current for the same voltage: I = V / R.' },
       { type: 'identify_component', question: 'Click the component that limits the current in this circuit.', circuitDiagram: 'series_circuit', correctComponent: 'resistor', explanation: 'The resistor limits current to protect the LED.' },

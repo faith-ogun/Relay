@@ -85,6 +85,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [placed, setPlaced] = useState<number[]>([]); // build_to_spec: palette index in each filled slot
   const [revealed, setRevealed] = useState<Set<string>>(new Set()); // teach hotspots explored
   const [asyncMsg, setAsyncMsg] = useState<string | null>(null); // dynamic feedback from a graded draw_circuit
+  const [tileSeq, setTileSeq] = useState<number[]>([]); // fill_blank tile-assembly: tile indices in placed order
 
   const step = steps[stepIndex];
 
@@ -105,6 +106,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setPlaced([]);
     setRevealed(new Set());
     setAsyncMsg(null);
+    setTileSeq([]);
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
     if (step?.type === 'match') {
       // Shuffle BOTH columns (each off its original order) so answers never line
@@ -137,8 +139,11 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
         return choice === step.correct;
       case 'true_false':
         return tf === step.correct;
-      case 'fill_blank':
-        return fill.trim().toLowerCase() === step.answer.trim().toLowerCase();
+      case 'fill_blank': {
+        const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (step.tiles && step.tiles.length) return norm(tileSeq.map((i) => step.tiles![i]).join(' ')) === norm(step.answer);
+        return norm(fill) === norm(step.answer);
+      }
       case 'spot_error':
         return region === step.correctRegion;
       case 'identify_component':
@@ -174,7 +179,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       case 'true_false':
         return tf !== null;
       case 'fill_blank':
-        return fill.trim().length > 0;
+        return step.tiles && step.tiles.length ? tileSeq.length > 0 : fill.trim().length > 0;
       case 'spot_error':
       case 'identify_component':
         return region !== null;
@@ -344,6 +349,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
           setRevealed={setRevealed}
           correct={correct}
           onAsyncResult={handleAsyncResult}
+          tileSeq={tileSeq}
+          setTileSeq={setTileSeq}
         />
       </div>
 
@@ -459,6 +466,8 @@ interface StepViewProps {
   setRevealed: (s: Set<string>) => void;
   correct: boolean | null;
   onAsyncResult: (ok: boolean, message: string) => void;
+  tileSeq: number[];
+  setTileSeq: (s: number[]) => void;
 }
 
 const StepView: React.FC<StepViewProps> = (p) => {
@@ -511,6 +520,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
       );
 
     case 'fill_blank':
+      if (step.tiles && step.tiles.length) return <FillTileStep {...p} step={step} />;
       return (
         <div className="ohmlet-rise">
           <Prompt>{step.prompt}</Prompt>
@@ -893,6 +903,65 @@ const OrderStep: React.FC<{ step: Extract<LessonStep, { type: 'drag_order' }> } 
           );
         })}
       </ol>
+    </div>
+  );
+};
+
+// ── Fill-blank tile assembly (word/number bank) ──
+// Build the answer by tapping tiles instead of typing — Duolingo's word bank. The
+// bank is shuffled and includes distractor tokens; tap a placed tile to send it back.
+const FillTileStep: React.FC<{ step: Extract<LessonStep, { type: 'fill_blank' }> } & StepViewProps> = ({ step, tileSeq, setTileSeq, checked }) => {
+  const tiles = step.tiles ?? [];
+  const bank = useMemo(() => shuffle(tiles.map((_, i) => i)), [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  const place = (i: number) => {
+    if (checked || tileSeq.includes(i)) return;
+    setTileSeq([...tileSeq, i]);
+  };
+  const removeAt = (pos: number) => {
+    if (checked) return;
+    setTileSeq(tileSeq.filter((_, k) => k !== pos));
+  };
+  return (
+    <div className="ohmlet-rise">
+      <Prompt>{step.prompt}</Prompt>
+      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
+      {/* Assembled answer */}
+      <div className="mt-6 flex min-h-[60px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-line bg-white px-3 py-3">
+        {tileSeq.length === 0 ? (
+          <span className="px-1 text-sm font-semibold text-ohmlet-ink-soft">Tap tiles to build your answer</span>
+        ) : (
+          tileSeq.map((ti, pos) => (
+            <button
+              key={`${ti}-${pos}`}
+              type="button"
+              disabled={checked}
+              onClick={() => removeAt(pos)}
+              className="rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-3.5 py-2 text-sm font-black text-ohmlet-ink shadow-soft transition-all enabled:hover:-translate-y-0.5"
+            >
+              {tiles[ti]}
+            </button>
+          ))
+        )}
+      </div>
+      {/* Bank */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {bank.map((i) => {
+          const used = tileSeq.includes(i);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={checked || used}
+              onClick={() => place(i)}
+              className={`rounded-xl border-2 px-3.5 py-2 text-sm font-bold shadow-soft transition-all ${
+                used ? 'border-ohmlet-line bg-ohmlet-line/30 text-transparent' : 'border-ohmlet-ink bg-white text-ohmlet-ink hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft'
+              }`}
+            >
+              {tiles[i]}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

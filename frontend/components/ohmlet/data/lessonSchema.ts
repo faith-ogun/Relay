@@ -106,6 +106,17 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
       if (!isNonEmpty(step.hint)) warn('fill_blank: empty hint');
       else if (isNonEmpty(step.answer) && step.answer.trim().length >= 2 && step.hint.toLowerCase().includes(step.answer.trim().toLowerCase()))
         warn('fill_blank: the hint contains the answer (hints should nudge toward the method, not give it away)');
+      if (step.tiles) {
+        if (!Array.isArray(step.tiles) || step.tiles.length < 2) err('fill_blank: tiles needs at least 2 tokens');
+        else {
+          const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+          const answerTokens = norm(step.answer).split(' ');
+          const bank = step.tiles.map(norm);
+          const missing = answerTokens.filter((t) => !bank.includes(t));
+          if (missing.length) err(`fill_blank: tiles cannot build the answer — missing token(s): ${missing.join(', ')}`);
+          if (step.tiles.length <= answerTokens.length) warn('fill_blank: tiles should include distractor tokens (more tiles than the answer needs)');
+        }
+      }
       break;
     }
     case 'match': {
