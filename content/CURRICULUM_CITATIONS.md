@@ -375,6 +375,44 @@ comparator, hysteresis). Calculation/concept-driven (no new diagram); lints clea
   synthesis of the above. Worked gains (0.5V→5V = ×10; 40mV→5V ≈ ×125) verified.
 - **Unit 8 Checkpoint** (new) — mixed retrieval; no new claims.
 
+## Unit 9 — Filters, Oscillators & Signals
+
+Grounded in **STG ch.7** (Kybett & Boysen: resonance, the 0.707 half-power point,
+bandwidth, bandpass/notch), **PEI ch.9-10** (Scherz & Monk: filters, oscillators),
+and **AoE** (filters, RMS, decibels). Calculation/concept-driven; reuses the
+`rc_low_pass` DSL diagram for the filter lessons. Lints clean.
+
+- **Signals and Waveforms** (new) — sine/square/triangle, period and frequency
+  f = 1/T: STG ch.6 (waveforms); standard. Verified.
+- **Measuring AC Voltage** (new) — peak, peak-to-peak (Vpp = 2Vp), RMS; sine
+  conversions Vrms = Vp/√2, Vp = √2·Vrms; 230V RMS ≈ 325V peak: STG ch.6 ("Vp = √2
+  × Vrms … Vpp = 2Vp"). Verified arithmetic.
+- **Thinking in Frequencies** (new) — a signal as a sum of frequencies; tone vs
+  harmonics vs noise; why filter by frequency: AoE / PEI (frequency domain). Verified.
+- **High-Pass and Low-Pass** (new) — RC low-pass (output across C) vs high-pass
+  (swap R/C, output across R, blocks DC); coupling cap = high-pass: PEI ch.9; ties
+  to Unit 6. Verified. Uses `rc_low_pass`.
+- **The Cutoff Frequency** (new) — fc = 1/(2πRC); cutoff = 0.707 = half-power point
+  (0.707² = 0.5): STG ch.7 ("0.707, or 70.7 percent … half power points"). Verified
+  (1.6kΩ, 0.1µF ≈ 1 kHz).
+- **Decibels and Roll-Off** (new) — dB = 20·log10(Vout/Vin); −3dB cutoff, ×10 =
+  +20dB, single-pole roll-off −20dB/decade: AoE (decibels, roll-off). Verified.
+- **Band-Pass and Notch Filters** (new) — bandpass = HP + LP; notch/band-reject;
+  bandwidth BW = f2 − f1: STG ch.7 ("bandpass filter"; "notch filter, or band-reject
+  filter"; "bandwidth … f1 from f2"). Verified (300/3000 Hz → 2700 Hz).
+- **Resonance and LC Circuits** (new) — inductor stores magnetic energy; LC resonant
+  f = 1/(2π√(LC)); tuning a radio; Q/selectivity: STG ch.7 (resonance); PEI. Verified
+  (f ∝ 1/√C, so 4× C halves f).
+- **What an Oscillator Is** (new) — generates a continuous waveform; amplifier +
+  positive feedback: STG ("Oscillator … produces a continuous output signal").
+  Verified; ties to the 555 (Unit 6).
+- **The Relaxation Oscillator** (new) — RC charge/discharge across thresholds gives
+  a square wave; this is the 555 astable: EAC Vol.1 / Make: Electronics (relay/555
+  oscillator). Verified (2× R and C → ¼ frequency).
+- **Reading a Waveform** (new) — scope: volts (vertical) vs time (horizontal),
+  period → frequency, divisions × scale: standard scope practice. Verified arithmetic.
+- **Unit 9 Checkpoint** (new) — mixed retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

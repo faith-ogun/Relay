@@ -1594,4 +1594,226 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each op-amp circuit to its defining feature.', pairs: [['Non-inverting amp', 'Gain 1 + Rf/Rg, in phase'], ['Inverting amp', 'Gain −Rf/Rin, virtual ground'], ['Voltage follower', 'Gain 1, a buffer'], ['Comparator', 'Output swings to a rail']] },
     ],
   },
+
+  // ═══════════════ Unit 9: Filters, Oscillators & Signals ═══════════════
+  // Grounded in STG ch.7 (resonance, half-power/bandwidth, filters), PEI ch.9-10
+  // (filters, oscillators), AoE (filters, RMS). See CURRICULUM_CITATIONS.md.
+
+  'Signals and Waveforms': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Voltage That Changes Over Time', body: 'A signal is a voltage that varies over time. The shape it traces is its waveform. The three you meet most: the sine wave (smooth, the natural shape of AC), the square wave (snaps between two levels, like digital on/off), and the triangle wave (ramps up and down at a steady rate).' },
+      { type: 'teach', title: 'Frequency and Period', body: 'A repeating waveform has a period T, the time for one full cycle, and a frequency f, the number of cycles per second (hertz). They are reciprocals:\n\nf = 1 / T  and  T = 1 / f\n\nSo a faster wave (higher frequency) has a shorter period.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Which waveform is the smooth, natural shape of AC?', options: ['The sine wave', 'The square wave', 'The sawtooth wave', 'The triangle wave'], correct: 0, explanation: 'A sine wave is the fundamental, smooth AC waveform.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Frequency and period are reciprocals: f = 1 / ___.', blank: '___', answer: 'T', hint: 'The time for one full cycle.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Frequency is measured in...', options: ['Hertz (cycles per second)', 'Volts per second exactly', 'Ohms across the load', 'Farads of capacitance'], correct: 0, explanation: 'Frequency is cycles per second, the hertz (Hz).' },
+
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 1 kHz signal has a period T = 1 / f = ___ ms.', blank: '___', answer: '1', hint: 'One over a thousand hertz, expressed in milliseconds.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A mains-style waveform repeats every 20 ms. What is its frequency?', options: ['50 Hz', '20 Hz', '200 Hz', '5 Hz'], correct: 0, explanation: 'f = 1 / T = 1 / 0.020 s = 50 Hz.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A square wave is most like which kind of signal you have already used?', options: ['A digital HIGH/LOW signal', 'A smooth analog sensor reading', 'A steady DC voltage level', 'A slowly drifting offset'], correct: 0, explanation: 'A square wave snaps between two levels, exactly like a digital on/off signal.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'A signal completes 4 full cycles in 2 ms. What is its frequency?', options: ['2 kHz', '4 kHz', '500 Hz', '8 kHz'], correct: 0, explanation: 'Period = 2 ms / 4 = 0.5 ms, so f = 1 / 0.0005 = 2000 Hz = 2 kHz.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each waveform or term to its description.', pairs: [['Sine wave', 'Smooth, natural AC'], ['Square wave', 'Snaps between two levels'], ['Triangle wave', 'Ramps up and down evenly'], ['Period', 'Time for one cycle'], ['Frequency', 'Cycles per second']] },
+    ],
+  },
+
+  'Measuring AC Voltage': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Three Ways to Quote an AC Voltage', body: 'An AC voltage is always changing, so we describe it three ways. Peak (Vp) is the height from zero to the top. Peak-to-peak (Vpp) is the full swing from the bottom to the top, so Vpp = 2 × Vp. RMS (root-mean-square) is the equivalent steady DC value that would deliver the same power.' },
+      { type: 'teach', title: 'The Sine-Wave Conversions', body: 'For a sine wave specifically:\n\nVrms = Vp / √2 ≈ 0.707 × Vp\nVp = √2 × Vrms ≈ 1.414 × Vrms\n\nThat is why "230V AC mains" (an RMS figure) actually peaks at about 325V. Other waveforms have different ratios; these apply to sines.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Peak-to-peak voltage is...', options: ['The full swing, bottom to top', 'Only half of the peak value', 'The same as the RMS value', 'The steady DC offset alone'], correct: 0, explanation: 'Vpp spans the whole waveform, so Vpp = 2 × Vp.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'For any waveform, Vpp = 2 × ___.', blank: '___', answer: 'Vp', hint: 'The peak measured from zero to the top.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'RMS voltage represents...', options: ['The equivalent DC that delivers the same power', 'The very highest instantaneous voltage', 'The total bottom-to-top swing', 'The frequency of the waveform'], correct: 0, explanation: 'RMS is the DC-equivalent heating value of the AC waveform.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'A sine wave has a peak of 10V. Its peak-to-peak value is...', options: ['20V', '10V', '5V', '14.1V'], correct: 0, explanation: 'Vpp = 2 × Vp = 2 × 10 = 20V.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A sine wave has Vp = 10V. Its RMS value is closest to...', options: ['7.07V', '14.1V', '10V', '5V'], correct: 0, explanation: 'Vrms = Vp / √2 = 10 / 1.414 ≈ 7.07V.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A sine wave reads 5V RMS. Its peak is Vp = √2 × 5 ≈ ___ V (one decimal).', blank: '___', answer: '7.1', hint: 'Multiply the RMS value by about 1.414.' },
+
+      { type: 'predict_reading', difficulty: 3, question: '"230V AC" mains is an RMS value. Its peak voltage is closest to...', options: ['≈ 325V', '≈ 230V', '≈ 460V', '≈ 163V'], correct: 0, explanation: 'Vp = √2 × Vrms = 1.414 × 230 ≈ 325V. The peak is much higher than the quoted RMS.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A scope shows a sine wave swinging from −6V to +6V. What is its RMS value?', options: ['≈ 4.24V', '≈ 6V', '≈ 8.49V', '≈ 12V'], correct: 0, explanation: 'Vp = 6V (Vpp = 12V), so Vrms = 6 / √2 ≈ 4.24V.' },
+    ],
+  },
+
+  'Thinking in Frequencies': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'A Signal Is Made of Frequencies', body: 'Any signal can be seen as a sum of sine waves at different frequencies. A clean tone is a single frequency; a square wave is a fundamental plus many higher "harmonics"; noise is a spread of many frequencies. Seeing a signal this way (the frequency domain) is what makes filtering powerful: you keep some frequencies and remove others.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'The "frequency domain" view describes a signal by...', options: ['Which frequencies it contains', 'Its colour on a screen', 'Its total length in metres', 'The wire gauge carrying it'], correct: 0, explanation: 'It expresses a signal as its component frequencies rather than its shape over time.' },
+      { type: 'true_false', difficulty: 1, statement: 'A pure tone is essentially a single frequency.', correct: true, explanation: 'Yes. A clean sine tone is one frequency; complex sounds add more.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Random noise, in the frequency domain, is...', options: ['A spread across many frequencies', 'Always one single frequency', 'No frequency content at all', 'Only the very lowest frequency'], correct: 0, explanation: 'Noise contains energy spread over a wide range of frequencies.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is the frequency view so useful for cleaning up a signal?', options: ['You can keep the wanted frequencies and remove the rest', 'It makes the wire physically shorter and tidier', 'It increases the signal\'s overall voltage', 'It converts the signal into pure DC instantly'], correct: 0, explanation: 'Filtering selects by frequency, so you keep the signal band and reject noise.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A wanted low-frequency signal is buried under high-frequency hiss. What kind of filter recovers it?', options: ['A low-pass filter', 'A high-pass filter', 'No filter can do this', 'A pure amplifier alone'], correct: 0, explanation: 'A low-pass passes the low signal and rejects the high hiss.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A square wave passed through a low-pass filter starts to look rounded. Why?', options: ['Its higher harmonics are being attenuated', 'Its single frequency is being amplified', 'It gains new low frequencies from nowhere', 'The filter converts it to a DC level'], correct: 0, explanation: 'The sharp edges come from high harmonics; removing them rounds the corners.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each signal to its frequency content.', pairs: [['Pure tone', 'One single frequency'], ['Square wave', 'Fundamental plus harmonics'], ['Noise', 'A spread of many frequencies'], ['DC', 'Zero frequency']] },
+    ],
+  },
+
+  'High-Pass and Low-Pass': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Two Mirror-Image Filters', body: 'You met the RC low-pass in Unit 6: resistor in series, capacitor to ground, output across the capacitor, which passes low frequencies and rejects high ones. Swap the two parts (capacitor in series, resistor to ground, output across the resistor) and you get a high-pass filter: it passes high frequencies and blocks low ones (and DC).', circuitDiagram: 'rc_low_pass' },
+      { type: 'teach', title: 'It Comes From the Capacitor', body: 'A capacitor\'s opposition to AC (its reactance) falls as frequency rises. In the low-pass, high frequencies are shunted to ground by the cap. In the high-pass, the series cap blocks low frequencies and DC but lets highs through. Same parts, swapped positions, opposite jobs.', circuitDiagram: 'rc_low_pass' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A low-pass filter passes...', options: ['Low frequencies, rejecting high ones', 'High frequencies, rejecting low ones', 'Every frequency equally', 'No frequencies at all'], correct: 0, explanation: 'Low-pass: lows through, highs attenuated.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A high-pass filter passes...', options: ['High frequencies, rejecting low ones and DC', 'Low frequencies, rejecting high ones', 'Only one exact frequency', 'Everything including DC'], correct: 0, explanation: 'High-pass: highs through, lows and DC blocked.' },
+      { type: 'identify_component', difficulty: 1, question: 'Click the capacitor in this RC filter.', circuitDiagram: 'rc_low_pass', correctComponent: 'capacitor', explanation: 'The capacitor sets the filter behaviour together with the resistor.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'To turn an RC low-pass into a high-pass you...', options: ['Swap the resistor and capacitor positions', 'Double the supply voltage', 'Add a second identical resistor', 'Remove the capacitor entirely'], correct: 0, explanation: 'Cap in series, resistor to ground (output across R) gives a high-pass.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A high-pass filter is fed a steady DC voltage. The output is...', options: ['Essentially zero (DC is blocked)', 'Equal to the full DC input', 'Double the DC input', 'A rising ramp over time'], correct: 0, explanation: 'A high-pass blocks DC (zero frequency), so the output settles near zero.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A coupling capacitor (Unit 6) that passes AC but blocks DC is really a...', options: ['High-pass filter', 'Low-pass filter', 'Band-stop filter', 'Voltage regulator'], correct: 0, explanation: 'Blocking DC and passing the signal is exactly high-pass behaviour.' },
+
+      { type: 'predict_behavior', difficulty: 3, question: 'A signal has a wanted tone plus a slow DC drift. A high-pass filter at a low cutoff will...', options: ['Remove the drift and keep the tone', 'Remove the tone and keep the drift', 'Block both the tone and the drift', 'Amplify the DC drift further'], correct: 0, explanation: 'The drift is near DC (low frequency) so it is blocked; the tone is above the cutoff and passes.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the SAME RC pair give a low-pass or a high-pass depending only on where you take the output?', options: ['Output across C favours lows; output across R favours highs', 'The resistor changes value with frequency', 'The capacitor only works in one circuit', 'Only the supply voltage decides it'], correct: 0, explanation: 'Across the cap you get the low-pass response; across the resistor you get the complementary high-pass.' },
+    ],
+  },
+
+  'The Cutoff Frequency': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Where the Filter Turns Over', body: 'The cutoff (corner) frequency marks the boundary of a filter\'s action:\n\nfc = 1 / (2π × R × C)\n\nAt the cutoff the output has dropped to about 70.7% (0.707) of the input. That point is also called the half-power point, because 0.707 of the voltage corresponds to half the power.' },
+      { type: 'teach', title: 'The 0.707 / Half-Power Point', body: 'Why 0.707? Power goes as voltage squared, and 0.707² = 0.5. So at the cutoff the filter passes half the power, hence "half-power point". Below a low-pass\'s cutoff signals pass nearly fully; well above it they are strongly attenuated.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'The RC cutoff frequency is fc = 1 / (2π × R × ___).', blank: '___', answer: 'C', hint: 'The capacitance in the filter.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'At the cutoff frequency, the output has fallen to about...', options: ['70.7% of the input (0.707)', '100% of the input', '50% of the input voltage', '10% of the input'], correct: 0, explanation: '0.707 of the input voltage, the half-power point.' },
+      { type: 'true_false', difficulty: 1, statement: 'The cutoff is also called the half-power point.', correct: true, explanation: 'Because 0.707² = 0.5, half the power passes there.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'R = 1.6 kΩ, C = 0.1 µF. Using fc = 1/(2πRC), the cutoff is closest to...', circuitDiagram: 'rc_low_pass', options: ['About 1 kHz', 'About 100 Hz', 'About 10 kHz', 'About 1 MHz'], correct: 0, explanation: 'fc = 1/(2π × 1600 × 1e-7) ≈ 1000 Hz.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You double the capacitor in a low-pass filter. The cutoff frequency...', options: ['Halves (cuts lower frequencies)', 'Doubles to a higher value', 'Stays exactly the same', 'Drops all the way to zero'], correct: 0, explanation: 'fc = 1/(2πRC); doubling C halves fc.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'An input at exactly the cutoff frequency comes out at roughly what fraction of full amplitude?', options: ['About 0.707', 'About 1.0', 'About 0.5', 'About 0.1'], correct: 0, explanation: 'At fc the output is ~0.707 of the input (the half-power point).' },
+
+      { type: 'choose_resistor', difficulty: 3, question: 'You want a low-pass cutoff of about 1.6 kHz with C = 0.1 µF. Pick the resistor.', options: ['1 kΩ', '10 kΩ', '100 Ω', '100 kΩ'], correct: 0, explanation: 'R = 1/(2π·fc·C) = 1/(2π · 1600 · 1e-7) ≈ 1000 Ω = 1 kΩ.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Two low-pass filters: A has fc = 100 Hz, B has fc = 10 kHz. Fed a 1 kHz tone, which passes it?', options: ['B passes it; A attenuates it', 'A passes it; B attenuates it', 'Both block it completely', 'Both pass it fully unchanged'], correct: 0, explanation: '1 kHz is above A\'s 100 Hz cutoff (attenuated) but below B\'s 10 kHz cutoff (passed).' },
+    ],
+  },
+
+  'Decibels and Roll-Off': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Measuring Ratios in Decibels', body: 'Filters and amplifiers span huge ranges, so we use decibels (dB), a logarithmic ratio. For a voltage ratio:\n\ndB = 20 × log10(Vout / Vin)\n\nA few anchors: ×1 is 0 dB, ×10 is +20 dB, ÷2 (0.5) is about −6 dB, and the 0.707 cutoff point is exactly −3 dB.' },
+      { type: 'teach', title: 'Roll-Off Steepness', body: 'Past the cutoff a simple (single-pole) RC filter rolls off at −20 dB per decade: every ten-fold increase in frequency cuts the output by another 20 dB (a factor of ten in voltage). Steeper filters stack more stages to roll off faster, e.g. −40 dB/decade for two poles.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'Voltage gain in decibels is dB = 20 × log10(Vout / ___).', blank: '___', answer: 'Vin', hint: 'The input voltage, on the bottom of the ratio.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The −3 dB point of a filter is the same as its...', options: ['Cutoff (half-power) frequency', 'Maximum passband gain', 'Resonant peak voltage', 'Zero-output frequency'], correct: 0, explanation: '−3 dB corresponds to the 0.707 half-power cutoff.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A gain of ×1 (output equals input) is how many dB?', options: ['0 dB', '1 dB', '10 dB', '20 dB'], correct: 0, explanation: '20 × log10(1) = 0 dB.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'An amplifier has a voltage gain of 10. In decibels that is...', options: ['+20 dB', '+10 dB', '+3 dB', '+100 dB'], correct: 0, explanation: '20 × log10(10) = 20 × 1 = +20 dB.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A single-pole RC filter rolls off at about...', options: ['−20 dB per decade', '−3 dB per decade', '−100 dB per decade', 'It does not roll off'], correct: 0, explanation: 'One pole gives −20 dB/decade beyond the cutoff.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A voltage ratio of 0.5 (halved) is about how many dB?', options: ['−6 dB', '−3 dB', '−20 dB', '−12 dB'], correct: 0, explanation: '20 × log10(0.5) ≈ −6 dB.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'A single-pole low-pass has fc = 1 kHz. Roughly how much is a 100 kHz input attenuated?', options: ['About −40 dB', 'About −20 dB', 'About −3 dB', 'About 0 dB'], correct: 0, explanation: '100 kHz is two decades above 1 kHz; at −20 dB/decade that is about −40 dB.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'You need a much sharper transition than −20 dB/decade gives. The usual approach is to...', options: ['Cascade more filter stages (more poles)', 'Raise the supply voltage', 'Use a single larger capacitor', 'Remove the resistor entirely'], correct: 0, explanation: 'Each added pole steepens the roll-off (e.g. two poles give −40 dB/decade).' },
+    ],
+  },
+
+  'Band-Pass and Notch Filters': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Selecting a Band', body: 'Combine a high-pass and a low-pass and you can pass only a band of frequencies in between: a band-pass filter. The opposite, rejecting a band while passing everything else, is a notch (or band-stop) filter. A radio tuner is a band-pass: it picks one station\'s band out of the whole spectrum.' },
+      { type: 'teach', title: 'Bandwidth', body: 'A band-pass is described by its two −3 dB edges, the lower (f1) and upper (f2) half-power frequencies. The bandwidth is simply the difference:\n\nBW = f2 − f1\n\nA narrow bandwidth is very selective; a wide one passes more.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A band-pass filter passes...', options: ['Only a band of frequencies in between', 'Everything except one band', 'All frequencies equally', 'Only DC and nothing else'], correct: 0, explanation: 'It passes a chosen band and rejects above and below it.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A notch (band-stop) filter does the opposite, it...', options: ['Rejects one band, passes the rest', 'Passes one narrow band only', 'Blocks every frequency present', 'Passes only the lowest frequency'], correct: 0, explanation: 'A notch removes a specific band, e.g. mains hum, and passes the rest.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Bandwidth is the difference of the two half-power frequencies: BW = f2 − ___.', blank: '___', answer: 'f1', hint: 'The lower of the two cutoff frequencies.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'A band-pass has f1 = 300 Hz and f2 = 3000 Hz. Its bandwidth is...', options: ['2700 Hz', '3300 Hz', '300 Hz', '3000 Hz'], correct: 0, explanation: 'BW = f2 − f1 = 3000 − 300 = 2700 Hz.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'To remove 50/60 Hz mains hum from an audio signal you would use a...', options: ['Notch filter at the hum frequency', 'Low-pass filter at 1 Hz', 'Band-pass centred on the hum', 'No filter, it cannot be done'], correct: 0, explanation: 'A notch rejects the hum band while leaving the rest of the audio intact.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A band-pass filter is built by combining a...', options: ['High-pass and a low-pass together', 'Two notch filters in series', 'Pair of identical low-passes', 'Single resistor and nothing more'], correct: 0, explanation: 'A high-pass sets the lower edge and a low-pass the upper edge of the band.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A radio tuner must pick one station and reject its neighbours. It needs a band-pass that is...', options: ['Narrow (small bandwidth) and selective', 'Very wide (large bandwidth)', 'Actually a low-pass at DC', 'A notch at the station\'s frequency'], correct: 0, explanation: 'A narrow band-pass passes one station\'s band and rejects the adjacent ones.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each filter to what it does.', pairs: [['Low-pass', 'Passes lows, blocks highs'], ['High-pass', 'Passes highs, blocks lows'], ['Band-pass', 'Passes a middle band'], ['Notch', 'Rejects one band']] },
+    ],
+  },
+
+  'Resonance and LC Circuits': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'An Inductor Plus a Capacitor', body: 'An inductor (a coil) opposes a change in current and stores energy in a magnetic field, the mirror image of a capacitor storing energy in an electric field. Put them together as an LC circuit and energy sloshes back and forth between them, naturally oscillating at one special frequency: the resonant frequency.' },
+      { type: 'teach', title: 'The Resonant Frequency', body: 'The resonant frequency of an LC circuit is:\n\nf = 1 / (2π × √(L × C))\n\nAt resonance the LC combination strongly favours that one frequency. This is how a radio selects a station: an LC circuit tuned so its resonant frequency matches the wanted broadcast.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'An inductor stores energy in a...', options: ['Magnetic field', 'Electric field on plates', 'Chemical reaction', 'Resistive heat sink'], correct: 0, explanation: 'A coil stores energy in its magnetic field; a capacitor stores it in an electric field.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An LC circuit naturally oscillates at its...', options: ['Resonant frequency', 'Cutoff frequency only', 'Slew rate limit', 'Supply voltage'], correct: 0, explanation: 'Energy sloshes between L and C at the resonant frequency.' },
+      { type: 'true_false', difficulty: 1, statement: 'An inductor opposes a change in current, the mirror of a capacitor opposing a change in voltage.', correct: true, explanation: 'Yes. That duality is why L and C together resonate.' },
+
+      { type: 'fill_blank', difficulty: 2, prompt: 'The LC resonant frequency is f = 1 / (2π × √(L × ___)).', blank: '___', answer: 'C', hint: 'The capacitance, multiplied by the inductance under the root.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You increase the capacitor in an LC circuit. The resonant frequency...', options: ['Falls to a lower value', 'Rises to a higher value', 'Stays exactly the same', 'Drops instantly to zero'], correct: 0, explanation: 'f = 1/(2π√(LC)); a larger C (or L) lowers the resonant frequency.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A radio tunes to a station by adjusting an LC circuit so its resonance...', options: ['Matches the wanted broadcast frequency', 'Falls far below all the stations', 'Sits exactly at zero hertz (DC)', 'Is well above any radio signal'], correct: 0, explanation: 'Matching resonance to the station selects it from the spectrum.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A high-Q (low-loss) LC resonator gives a band-pass that is...', options: ['Very narrow and sharply selective', 'Very wide and gentle, spread over a big range', 'A simple low-pass response instead of a peak', 'Completely flat at every single frequency'], correct: 0, explanation: 'Higher Q means lower losses and a narrower, sharper resonance peak.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'To halve an LC resonant frequency by changing only C, you would...', options: ['Quadruple the capacitance', 'Double the capacitance', 'Halve the capacitance', 'Quarter the capacitance'], correct: 0, explanation: 'f ∝ 1/√C, so to halve f you need 4× the capacitance (√4 = 2).' },
+    ],
+  },
+
+  'What an Oscillator Is': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'A Circuit That Generates a Signal', body: 'An oscillator produces a continuous, repeating output (sine, square, or triangle) all by itself, with no input signal. Where an amplifier needs something to amplify, an oscillator generates its own waveform. Clocks, tones, radio carriers, and the 555 blinker are all oscillators.' },
+      { type: 'teach', title: 'Amplifier Plus Feedback', body: 'The recipe is an amplifier with POSITIVE feedback: a fraction of the output is fed back in phase to the input, so it reinforces itself and sustains a steady oscillation. Sustained oscillation needs the loop to return enough signal, in phase, to keep itself going. Too little and it dies; the circuit is tuned to sit right at sustained output.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'An oscillator is a circuit that...', options: ['Generates a continuous repeating signal on its own', 'Only amplifies an external input signal', 'Blocks all current from flowing', 'Stores a fixed voltage permanently'], correct: 0, explanation: 'It produces its own repeating waveform with no input.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An oscillator is essentially an amplifier with...', options: ['Positive feedback', 'Heavy negative feedback', 'No feedback at all', 'Its output disconnected'], correct: 0, explanation: 'Positive feedback in phase sustains the oscillation.' },
+      { type: 'true_false', difficulty: 1, statement: 'An oscillator needs no input signal to produce an output.', correct: true, explanation: 'It generates its own waveform; that is the whole point.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'The difference between an amplifier and an oscillator is that an oscillator...', options: ['Makes its own signal instead of amplifying one', 'Has a considerably lower gain than any amplifier does', 'Can only ever run when supplied with steady DC', 'Cannot make any use of feedback whatsoever'], correct: 0, explanation: 'An amplifier needs an input; an oscillator generates the signal itself.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'The positive-feedback loop returns too little signal to sustain itself. The oscillation...', options: ['Dies away and stops', 'Grows forever without limit', 'Stays perfectly constant', 'Turns into a pure DC level'], correct: 0, explanation: 'Without enough returned signal the oscillation decays and stops.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Which of these is an oscillator you have already used?', options: ['The 555 in astable mode', 'The voltage follower', 'The current-limiting resistor', 'The flyback diode'], correct: 0, explanation: 'The 555 astable free-runs, generating a square wave: an oscillator.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each block to its role in an oscillator.', pairs: [['Amplifier', 'Provides gain'], ['Positive feedback', 'Returns the output in phase'], ['Frequency-setting parts', 'Set the oscillation rate'], ['Output', 'The continuous waveform']] },
+    ],
+  },
+
+  'The Relaxation Oscillator': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Charge, Trip, Discharge, Repeat', body: 'A relaxation oscillator makes a square wave from RC timing and a threshold device (like a comparator or the 555). A capacitor charges through a resistor until it crosses an upper threshold, the output flips and discharges it until it crosses a lower threshold, the output flips back, and it repeats forever. The RC sets the rate.' },
+      { type: 'teach', title: 'It Is the 555 Astable', body: 'This is exactly how the 555 in astable mode works, and why a bigger R or C slows the blink: the capacitor takes longer to charge and discharge between the thresholds. The output is a square wave; its frequency is set by the timing R and C, not by any input.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A relaxation oscillator produces which waveform?', options: ['A square wave', 'A pure sine wave', 'A steady DC level', 'A single short pulse'], correct: 0, explanation: 'The flip-flop between thresholds gives a square wave output.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'What sets the frequency of a relaxation oscillator?', options: ['The timing resistor and capacitor', 'The colour of the output LED', 'An external input signal', 'The length of the wires'], correct: 0, explanation: 'The RC charge/discharge time sets the rate.' },
+      { type: 'true_false', difficulty: 1, statement: 'The 555 in astable mode is a relaxation oscillator.', correct: true, explanation: 'Yes. It charges and discharges a capacitor between two thresholds.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'You increase the timing capacitor in a relaxation oscillator. The output frequency...', options: ['Falls (slower oscillation)', 'Rises (faster oscillation)', 'Stays exactly the same', 'Stops oscillating entirely'], correct: 0, explanation: 'A bigger C takes longer to charge/discharge, so the rate drops.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'The capacitor flips the output when its voltage crosses...', options: ['An upper or lower threshold', 'Exactly the supply voltage', 'Precisely zero volts only', 'The resistor\'s value in ohms'], correct: 0, explanation: 'Crossing a threshold trips the comparator/555, flipping the output.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'A relaxation oscillator runs at 1 kHz. You double BOTH R and C. The new frequency is about...', options: ['250 Hz', '500 Hz', '2 kHz', '4 kHz'], correct: 0, explanation: 'Time scales with R×C; doubling both makes RC 4× larger, so frequency drops to a quarter: ~250 Hz.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a relaxation oscillator give a square wave rather than a sine?', options: ['The output snaps between two states at each threshold', 'It uses an inductor to round the corners', 'It filters out all the harmonics first', 'It runs from a pure DC supply'], correct: 0, explanation: 'The threshold device switches abruptly between two output levels, producing a square wave.' },
+    ],
+  },
+
+  'Reading a Waveform': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'The Oscilloscope View', body: 'An oscilloscope plots voltage (vertical) against time (horizontal). The vertical scale is volts per division; the horizontal is time per division. To read a signal: measure its height in divisions for amplitude, and the width of one cycle in divisions for the period, then turn the period into frequency with f = 1/T.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'On an oscilloscope, the horizontal axis represents...', options: ['Time', 'Voltage', 'Current', 'Resistance'], correct: 0, explanation: 'Horizontal is time; vertical is voltage.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The vertical axis on a scope shows...', options: ['Voltage', 'Frequency', 'Time', 'Power'], correct: 0, explanation: 'Vertical is voltage (volts per division).' },
+      { type: 'true_false', difficulty: 1, statement: 'You find a signal\'s frequency from its period using f = 1 / T.', correct: true, explanation: 'Measure one cycle\'s time T, then f = 1/T.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'One cycle spans 4 divisions at 0.5 ms per division. The period is...', options: ['2 ms', '0.5 ms', '4 ms', '8 ms'], correct: 0, explanation: '4 div × 0.5 ms/div = 2 ms.' },
+      { type: 'predict_reading', difficulty: 2, question: 'That 2 ms period corresponds to a frequency of...', options: ['500 Hz', '2 kHz', '50 Hz', '5 kHz'], correct: 0, explanation: 'f = 1/T = 1/0.002 = 500 Hz.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A wave is 6 divisions tall at 2 V per division. Its peak-to-peak voltage is...', options: ['12V', '6V', '3V', '8V'], correct: 0, explanation: '6 div × 2 V/div = 12V peak-to-peak.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'A sine is 8 divisions peak-to-peak at 0.5 V/div. Its RMS value is closest to...', options: ['≈ 1.41V', '≈ 4V', '≈ 2.83V', '≈ 2V'], correct: 0, explanation: 'Vpp = 8 × 0.5 = 4V, so Vp = 2V, and Vrms = 2/√2 ≈ 1.41V.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A signal\'s cycle gets wider on the screen (more time per cycle). That means its frequency has...', options: ['Decreased', 'Increased', 'Stayed the same', 'Become infinite'], correct: 0, explanation: 'A longer period means a lower frequency (f = 1/T).' },
+    ],
+  },
+
+  'Unit 9 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'Frequency and period are related by...', options: ['f = 1 / T', 'f = T', 'f = 2T', 'f = T squared'], correct: 0, explanation: 'Frequency is the reciprocal of the period.' },
+      { type: 'predict_reading', question: 'A waveform repeats every 20 ms. Its frequency is...', options: ['50 Hz', '20 Hz', '5 Hz', '200 Hz'], correct: 0, explanation: 'f = 1/0.020 = 50 Hz.' },
+      { type: 'predict_reading', question: 'A sine wave has Vp = 10V. Its RMS value is about...', options: ['7.07V', '14.1V', '5V', '20V'], correct: 0, explanation: 'Vrms = 10/√2 ≈ 7.07V.' },
+      { type: 'multiple_choice', question: 'At a filter\'s cutoff frequency, the output is about... of the input.', options: ['0.707 (the half-power point)', '1.0 (unchanged)', '0.5 of the voltage', '0.1 of the voltage'], correct: 0, explanation: '0.707, the −3 dB half-power point.' },
+      { type: 'predict_reading', question: 'A low-pass with R = 1.6kΩ, C = 0.1µF has a cutoff near...', circuitDiagram: 'rc_low_pass', options: ['1 kHz', '100 Hz', '10 kHz', '1 MHz'], correct: 0, explanation: 'fc = 1/(2π·1600·1e-7) ≈ 1 kHz.' },
+      { type: 'predict_reading', question: 'A band-pass has f1 = 300 Hz, f2 = 3000 Hz. Its bandwidth is...', options: ['2700 Hz', '3300 Hz', '300 Hz', '3000 Hz'], correct: 0, explanation: 'BW = f2 − f1 = 2700 Hz.' },
+      { type: 'multiple_choice', question: 'An oscillator is an amplifier with...', options: ['Positive feedback', 'Negative feedback', 'No feedback', 'No power'], correct: 0, explanation: 'Positive feedback sustains the oscillation.' },
+      { type: 'match', instruction: 'Match each filter to what it passes.', pairs: [['Low-pass', 'Low frequencies'], ['High-pass', 'High frequencies'], ['Band-pass', 'A middle band'], ['Notch', 'Everything but one band']] },
+    ],
+  },
 };

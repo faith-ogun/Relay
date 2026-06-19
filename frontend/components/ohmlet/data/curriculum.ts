@@ -501,6 +501,59 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'filters-oscillators',
+    title: 'Filters, Oscillators & Signals',
+    subtitle: 'Shape signals by frequency and generate your own',
+    level: 'advanced',
+    accent: 'blue',
+    skills: [
+      {
+        id: 'signals',
+        title: 'Signals & AC',
+        description: 'Waveforms, frequency, and how to measure AC.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'Signals and Waveforms', title: 'Signals & Waveforms', summary: 'Sine, square, triangle; f = 1/T.', estMinutes: 12 },
+          { id: 'Measuring AC Voltage', title: 'Measuring AC Voltage', summary: 'Peak, peak-to-peak, and RMS.', estMinutes: 14 },
+          { id: 'Thinking in Frequencies', title: 'Thinking in Frequencies', summary: 'A signal as a sum of frequencies.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'filters',
+        title: 'Filters',
+        description: 'Keep some frequencies, reject others.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'High-Pass and Low-Pass', title: 'High-Pass & Low-Pass', summary: 'Two mirror-image RC filters.', estMinutes: 14 },
+          { id: 'The Cutoff Frequency', title: 'The Cutoff Frequency', summary: 'fc = 1/(2πRC) and the −3dB point.', estMinutes: 14 },
+          { id: 'Decibels and Roll-Off', title: 'Decibels & Roll-Off', summary: 'dB ratios and −20dB/decade.', estMinutes: 12 },
+          { id: 'Band-Pass and Notch Filters', title: 'Band-Pass & Notch', summary: 'Select or reject a band; bandwidth.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'resonance-oscillators',
+        title: 'Resonance & Oscillators',
+        description: 'Tuned circuits and signals that generate themselves.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'Resonance and LC Circuits', title: 'Resonance & LC', summary: 'f = 1/(2π√(LC)); tuning a radio.', estMinutes: 12 },
+          { id: 'What an Oscillator Is', title: 'What an Oscillator Is', summary: 'Amplifier + positive feedback.', estMinutes: 12 },
+          { id: 'The Relaxation Oscillator', title: 'Relaxation Oscillator', summary: 'RC + threshold = a square wave.', estMinutes: 14 },
+          { id: 'Reading a Waveform', title: 'Reading a Waveform', summary: 'The scope: volts, time, frequency.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'filters-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can shape and generate signals.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 9 Checkpoint', title: 'Unit 9 Checkpoint', summary: 'A mixed test of filters, oscillators, and signals.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

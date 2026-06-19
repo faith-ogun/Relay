@@ -15,6 +15,12 @@
 
 Where the curriculum actually stands, for whoever picks this up next:
 
+- **Unit 9 authored: "Filters, Oscillators & Signals" (advanced), 12 lessons** —
+  waveforms (f=1/T), measuring AC (peak/pp/RMS), the frequency domain, high-pass vs
+  low-pass, the cutoff (fc=1/2πRC, 0.707/−3dB), decibels & roll-off, band-pass/notch
+  (BW=f2−f1), LC resonance, what an oscillator is, the relaxation oscillator, reading
+  a scope, checkpoint. Reuses `rc_low_pass`. Grounded in STG ch.7, PEI ch.9-10, AoE.
+  Lints clean; build green. **9 units, 104 lessons.**
 - **Unit 8 authored: "Op-Amps & Signal Conditioning" (advanced), 12 lessons** —
   what an op-amp is, the golden rules, negative feedback, non-inverting (1+Rf/Rg) and
   inverting (−Rf/Rin) amps, the voltage follower, the comparator, hysteresis/Schmitt
@@ -284,7 +290,7 @@ is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
 | 6  | Capacitors, RC & Timing         | intermediate | ✅ built  | 12 |
 | 7  | Transistors & Switching         | intermediate | ✅ built  | 12 |
 | 8  | Op-Amps & Signal Conditioning   | advanced     | ✅ built  | 12 |
-| 9  | Filters, Oscillators & Signals  | advanced     | planned  | 12 |
+| 9  | Filters, Oscillators & Signals  | advanced     | ✅ built  | 12 |
 | 10 | Power Supplies & Regulation     | advanced     | planned  | 11 |
 | 11 | Digital Logic & Embedded        | advanced     | planned  | 14 |
 | 12 | Comms, Motors & Robotics        | advanced     | planned  | 13 |
