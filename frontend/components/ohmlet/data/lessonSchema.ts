@@ -263,6 +263,63 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
   }
 }
 
+// ── Modality classification (the real "does it feel different" metric) ──
+//
+// The lesson didn't feel interactive because four type *names* render the same
+// "pick 1 of 4 text options" UI. So we classify by what the learner actually DOES
+// on screen, not by type name, and enforce variety against that.
+
+/** A coarse key for the input modality of a graded step (teach excluded elsewhere). */
+function modalityOf(step: LessonStep): string {
+  switch (step.type) {
+    case 'multiple_choice':
+    case 'predict_behavior':
+      return 'option';
+    case 'predict_reading':
+      return (step as { meter?: unknown }).meter ? 'meter' : 'option';
+    case 'choose_resistor':
+      return (step as { bands?: unknown }).bands ? 'bands' : 'option';
+    case 'true_false':
+      return 'binary';
+    case 'fill_blank':
+      return (step as { tiles?: unknown }).tiles ? 'tiles' : 'type';
+    case 'match':
+      return 'match';
+    case 'drag_order':
+      return 'order';
+    case 'identify_component':
+    case 'spot_error':
+    case 'trace_current':
+    case 'fix_the_circuit':
+      return 'tapcircuit';
+    case 'draw_connection':
+    case 'draw_circuit':
+      return 'draw';
+    case 'build_to_spec':
+      return 'build';
+    default:
+      return 'teach';
+  }
+}
+
+/** A "tap a text option from a list" step — the modality we cap (incl. the look-alikes). */
+const isOptionPick = (s: LessonStep) => modalityOf(s) === 'option';
+
+/** A genuinely hands-on step: manipulate a circuit, draw, build, dial, set bands,
+ *  assemble from tiles, match, reorder. NOT plain option-pick / binary / typed. */
+const EMBODIED = new Set(['meter', 'bands', 'tiles', 'match', 'order', 'tapcircuit', 'draw', 'build']);
+const isEmbodied = (s: LessonStep) => EMBODIED.has(modalityOf(s));
+
+/** Does a step put something to LOOK at on screen (a diagram, picture, or canvas)? */
+function hasVisual(step: LessonStep): boolean {
+  if ((step as { circuitDiagram?: string }).circuitDiagram) return true;
+  if (step.type === 'draw_circuit' || step.type === 'draw_connection') return true;
+  if (step.type === 'teach' && (step as { hotspots?: unknown[] }).hotspots?.length) return true;
+  if ('optionImages' in step && (step as { optionImages?: unknown[] }).optionImages?.length) return true;
+  if (step.type === 'match' && (step as { images?: unknown[] }).images?.length) return true;
+  return false;
+}
+
 /** Lint a single lesson's content. */
 function lintLesson(lessonId: string, lesson: { steps: LessonStep[]; xpReward: number }, problems: LintProblem[]) {
   const pushLesson = (severity: LintSeverity, message: string) => problems.push({ lessonId, stepIndex: null, severity, message });
@@ -273,20 +330,43 @@ function lintLesson(lessonId: string, lesson: { steps: LessonStep[]; xpReward: n
     return;
   }
 
-  const nonTeach = lesson.steps.filter((s) => s.type !== 'teach').length;
+  const graded = lesson.steps.filter((s) => s.type !== 'teach');
+  const nonTeach = graded.length;
   if (nonTeach === 0) pushLesson('warn', 'lesson has no interactive steps (all teach)');
-  else if (nonTeach < 6) pushLesson('warn', `only ${nonTeach} graded questions; aim for 8+ (12+ for a tiered pool that levels well)`);
+  else if (nonTeach < 10) pushLesson('warn', `only ${nonTeach} graded questions; aim for 10+ (12+ for a tiered pool that levels well)`);
 
-  // Variety: multiple_choice should not dominate. A lesson that is mostly plain MC
-  // reads as a quiz, not the active, varied practice the bar calls for. Flag when MC
-  // is a strict majority of a reasonably-sized graded set, so the rebalance has a
-  // checkable target. (true_false / predict_* / trace / fix / build / match / etc.
-  // all count as not-plain-MC.)
-  if (nonTeach >= 6) {
-    const mc = lesson.steps.filter((s) => s.type === 'multiple_choice').length;
-    if (mc / nonTeach > 0.5)
-      pushLesson('warn', `multiple_choice is ${mc}/${nonTeach} of graded steps (>50%); rebalance toward predict/trace/fix/build/identify so no single type dominates`);
+  // ── Modality variety (the real "feels interactive" bar) ──
+  // Measured by what the learner DOES, not by type name, so relabeling MC as
+  // predict_* cannot game it. These are warnings: they form the re-authoring
+  // worklist without breaking the build.
+  if (nonTeach >= 4) {
+    // 1. Option-pick (tap 1 of N text options) must not dominate. Counts the
+    //    look-alikes (multiple_choice + predict_behavior + text predict_reading +
+    //    text choose_resistor) but NOT their interactive variants (meter, bands).
+    const picks = graded.filter(isOptionPick).length;
+    if (picks / nonTeach > 0.5)
+      pushLesson('warn', `${picks}/${nonTeach} graded steps are tap-an-option (>50%); convert some to meter/bands/tiles/draw/trace/fix/build/match/order/swipe`);
+
+    // 2. Every lesson needs genuinely hands-on steps, not just tap/type/binary.
+    const embodied = graded.filter(isEmbodied).length;
+    if (embodied < 2)
+      pushLesson('warn', `only ${embodied} hands-on step(s); add at least 2 (draw/trace/fix/build/match/order/meter/bands/tiles)`);
+
+    // 3. Something to look at: at least one visual somewhere in the lesson.
+    if (!lesson.steps.some(hasVisual))
+      pushLesson('warn', 'no visual anywhere (no diagram, picture, or canvas); add a circuitDiagram, image options, or a draw/explore step');
   }
+
+  // 4. No more than two graded steps of the same modality back to back (the
+  //    "read, pick one of four, read, pick one of four" monotony).
+  let run = 0;
+  let runKey = '';
+  graded.forEach((step, gi) => {
+    const key = modalityOf(step);
+    run = key === runKey ? run + 1 : 1;
+    runKey = key;
+    if (run === 3) pushLesson('warn', `3 "${key}" steps in a row (graded ${gi - 2}-${gi}); interleave a different modality`);
+  });
 
   let consecutiveTeach = 0;
   lesson.steps.forEach((step, i) => {

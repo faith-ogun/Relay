@@ -27,7 +27,24 @@ in the plan.
 `teach` · `multiple_choice` · `true_false` · `fill_blank` · `match` · `drag_order` ·
 `spot_error` · `identify_component` · `draw_connection` · `predict_reading` ·
 `predict_behavior` · `choose_resistor` · `trace_current` · `fix_the_circuit` ·
-`build_to_spec`.
+`build_to_spec` · `draw_circuit`.
+
+**Interactive variants (optional fields that change the MODALITY — prefer them):**
+- `teach` + `hotspots: [{ region; label; detail }]` (with a `circuitDiagram`) → an
+  explore card: tap each part to reveal it; Continue gated until all explored. Use
+  this for the FIRST teach card of a circuit lesson instead of a wall of text.
+- `multiple_choice`/`predict_*`/`choose_resistor` + `optionImages: string[]` (one per
+  option) → picture-grid answers ("tap the resistor"). Falls back to text.
+- `match` + `images: string[]` (one per pair) → match a picture to its name.
+- `fill_blank` + `tiles: string[]` → assemble the answer from a shuffled token bank
+  (include distractor tiles). The answer must be buildable from the tiles.
+- `predict_reading` + `meter: { unit; min; max; step?; target; tolerance }` → a needle
+  gauge + slider; correct within tolerance. Use instead of listing numeric options.
+- `choose_resistor` + `bands: { targetOhms }` → an interactive 4-band resistor the
+  learner sets; targetOhms must be a 2-sig-fig encodable value (e.g. 220, 4700, 1000000).
+- `draw_circuit` — `{ instruction; expected: string[]; hint; explanation }`. The learner
+  DRAWS the circuit on a canvas and Gemini Vision grades it (names the components it
+  sees vs `expected`). The embodied hero — use it as the synthesis step of a build lesson.
 
 **The construction/repair/trace family (prefer these over multiple_choice where they fit):**
 - `trace_current` — `{ question; circuitDiagram; correctPath: string[]; explanation }`.
@@ -42,8 +59,7 @@ in the plan.
   Assemble a circuit by placing parts from a palette (include DISTRACTOR parts, so
   palette length > slots) into ordered slots. `correct` lists one palette index per
   slot. Synthesis. Example: "Build a Series LED Circuit". (This is the constrained
-  constructor; the open-ended free-wire + live-sim "draw the circuit" is a separate
-  future feature, not this.)
+  constructor; the open-ended free-draw is `draw_circuit`, graded by Vision.)
 
 Each graded step may carry `difficulty: 1 | 2 | 3`. Exact field shapes are the
 `LessonStep*` types at the top of `lessons.ts` — match them exactly (TypeScript
@@ -64,15 +80,24 @@ region id of the referenced `circuitDiagram` (see the region registry).
 3. **Hints nudge the method, never name the answer.** A `fill_blank` hint must not
    contain the answer as a substring — watch digit runs ("1000" contains "10"). Say
    "apply the multiplier band, then convert to kΩ", not "10 × 100".
-4. **Depth: ≥6 graded steps is the floor; aim 8–14**, 12+ for a unit's deep lessons
+4. **Depth: ≥10 graded steps is the floor; aim 10–14**, 12+ for a unit's deep lessons
    so Bronze/Silver/Gold replays draw different, harder slices.
 5. **Real difficulty via tiers.** Tier 1 = recall; Tier 2 = one calculation/
    application; Tier 3 = multi-step reasoning or a real computation. Every deep lesson
    should span all three. "Advanced" means harder *reasoning*, not just a harder topic.
-6. **Vary the exercise type.** Lead with 1–2 `teach`, then a MIX favouring the
-   predict/choose/identify/spot families; end on a `match` or `drag_order` synthesis.
-   multiple_choice should be well under half of graded steps. Never 3 consecutive
-   `teach`. Never a majority-passive lesson.
+6. **Modality variety (the real "feels interactive" bar — the linter measures what the
+   learner DOES, not type names, so relabeling MC as predict_* does not help).**
+   - **Tap-an-option ≤ 50%** of graded steps. This counts `multiple_choice`,
+     `predict_behavior`, and the TEXT forms of `predict_reading`/`choose_resistor`
+     together (they render identically). Using the `meter`/`bands` variants does NOT
+     count against the cap — that is the point.
+   - **≥ 2 genuinely hands-on steps per lesson**: draw_circuit, trace_current,
+     fix_the_circuit, build_to_spec, match, drag_order, meter, bands, or tiles.
+   - **≥ 1 visual somewhere** (a `circuitDiagram`, `optionImages`, match `images`, an
+     explore/draw step). Never an all-text lesson.
+   - **Never 3 of the same modality in a row**, and never 3 consecutive `teach`.
+   Lead with an explore `teach` (hotspots), interleave modalities, end on a synthesis
+   step (draw_circuit / build_to_spec / drag_order).
 7. **No em dashes, no emojis** in any learner-facing copy (project rule). Use commas/
    colons/periods; use lucide/SVG iconography, never emoji glyphs.
 
