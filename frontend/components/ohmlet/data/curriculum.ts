@@ -316,6 +316,15 @@ export const CURRICULUM: CurriculumUnit[] = [
           { id: 'Unit 5 Checkpoint', title: 'Unit 5 Checkpoint', summary: 'A mixed test of inputs, outputs, and alarm code.', estMinutes: 10 },
         ],
       },
+      {
+        id: 'foundations-gateway',
+        title: 'Foundations Gateway',
+        description: 'A cumulative exam across Units 1–5. Prove the foundations before the analog core.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Gateway Exam: Foundations', title: 'Gateway Exam: Foundations', summary: 'Cumulative test across everything so far.', estMinutes: 15 },
+        ],
+      },
     ],
   },
   {
@@ -601,6 +610,15 @@ export const CURRICULUM: CurriculumUnit[] = [
         icon: 'Trophy',
         lessons: [
           { id: 'Unit 10 Checkpoint', title: 'Unit 10 Checkpoint', summary: 'A mixed test of power supplies and regulation.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'analog-gateway',
+        title: 'Analog Core Gateway',
+        description: 'A cumulative exam across Units 6–10. Prove the analog core before digital & embedded.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Gateway Exam: Analog Core', title: 'Gateway Exam: Analog Core', summary: 'Cumulative test of the whole analog core.', estMinutes: 15 },
         ],
       },
     ],

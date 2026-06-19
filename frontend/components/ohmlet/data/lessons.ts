@@ -854,6 +854,41 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
     ],
   },
 
+  // ═══════════════════ Gateway Exam: Foundations (Units 1-5) ═══════════════════
+  // Cumulative cross-unit retrieval exam gating beginner -> intermediate (task #42).
+  // No teach steps. Grounded in the same sources as Units 1-5 (STG, ME, PEI, AoE,
+  // EAC, Exploring Arduino); introduces no new concepts. See CURRICULUM_CITATIONS.md.
+
+  'Gateway Exam: Foundations': {
+    xpReward: 50,
+    steps: [
+      // Tier 1: the loop / Ohm's law recall, framed cumulatively
+      { type: 'true_false', difficulty: 1, statement: 'For a fixed supply voltage, doubling the resistance halves the current.', correct: true, explanation: 'I = V / R, so with V fixed, twice the resistance gives half the current.' },
+      // Tier 2: Ohm's law as a tool
+      { type: 'predict_reading', difficulty: 2, question: 'A 9V supply drives a single 1.5kΩ resistor. Predict the current.', circuitDiagram: 'series_circuit', options: ['About 6 mA', 'About 60 mA', 'About 0.6 mA', 'About 13.5 mA'], correct: 0, explanation: 'I = V / R = 9 / 1500 = 0.006 A = 6 mA. The 13.5 mA value comes from multiplying instead of dividing.' },
+      // Tier 2: current-limiting resistor sizing (design)
+      { type: 'choose_resistor', difficulty: 2, question: '5V supply, a red LED dropping about 2V, target current about 15 mA. Pick the resistor.', circuitDiagram: 'series_circuit', options: ['220 Ω', '47 Ω', '3.3 kΩ', '33 kΩ'], correct: 0, explanation: '(5 − 2) / 0.015 = 200 Ω, so 220 Ω is the standard pick. Forgetting the LED drop (5 / 0.015) would point you far too low.' },
+      // Tier 3: diagnose AND repair a real circuit (fix_the_circuit)
+      { type: 'fix_the_circuit', difficulty: 3, question: 'This LED is about to burn out. Tap the fault, then choose the repair.', circuitDiagram: 'led_no_resistor', faultRegion: 'missing_resistor', fixes: ['Add a series current-limiting resistor of about 220 Ω', 'Raise the supply voltage to push more current through', 'Add a second identical LED wired in parallel with it', 'Reverse the LED so its legs face the other way round'], correctFix: 0, explanation: 'There is no current-limiting resistor, so the LED draws far too much current. A series resistor (about 220 Ω on 5V) sets a safe current. The other options change nothing useful or make it worse.' },
+      // Tier 2: divider prediction (sensors)
+      { type: 'predict_reading', difficulty: 2, question: 'Two equal resistors form a divider across a 9V supply. Predict the midpoint voltage.', circuitDiagram: 'voltage_divider', options: ['4.5 V', '9 V', '2.25 V', '0 V'], correct: 0, explanation: 'Equal resistors split the supply evenly: 9 / 2 = 4.5 V at the midpoint.' },
+      // Tier 3: LDR + divider behaviour (sense stage)
+      { type: 'predict_behavior', difficulty: 3, question: 'An LDR is the top resistor of a divider, with a fixed resistor to ground (output taken at the midpoint). The room goes dark, so the LDR resistance rises sharply. The output voltage...', circuitDiagram: 'voltage_divider', options: ['Falls, because the LDR now takes most of the supply', 'Rises, because more resistance always means more volts out', 'Stays exactly the same, since it is only a sensor', 'Climbs above the supply voltage as the LDR heats up'], correct: 0, explanation: 'With the LDR on top, a large LDR resistance drops most of the supply across it, leaving less across the bottom resistor, so the midpoint output falls. Dark gives a low reading.' },
+      // Tier 1: Arduino structure recall
+      { type: 'true_false', difficulty: 1, statement: 'setup() runs once at start-up, and loop() then repeats forever.', correct: true, explanation: 'setup() initialises things once; loop() runs again and again after it.' },
+      // Tier 2: analogRead range / scaling
+      { type: 'predict_reading', difficulty: 2, question: 'A divider sits at 1.0V and feeds A0 on a 5V Arduino with a 0 to 1023 reading. Predict analogRead(A0).', options: ['About 205', 'About 1023', 'About 512', 'About 20'], correct: 0, explanation: '1.0V is one fifth of 5V, and one fifth of 1023 is about 205.' },
+      // Tier 2: identify the read point on the real alarm
+      { type: 'identify_component', difficulty: 2, question: 'On the light alarm, click the pin that reads the divider voltage.', circuitDiagram: 'ldr_alarm', correctComponent: 'a0', explanation: 'The analog pin A0 reads the LDR divider midpoint voltage; that reading is what the code compares to a threshold.' },
+      // Tier 3: the coded alarm decision (code reasoning)
+      { type: 'predict_behavior', difficulty: 3, question: 'In if (reading < threshold) digitalWrite(ALARM, HIGH); with threshold 500 and reading 620, the alarm pin goes...', circuitDiagram: 'ldr_alarm', options: ['LOW, because 620 is not less than 500', 'HIGH, because any reading at all trips the alarm', 'HIGH, because 620 is the larger of the two numbers', 'It throws an error and the sketch stops running'], correct: 0, explanation: '620 < 500 is false, so the digitalWrite never runs and the alarm pin stays LOW. The condition fires only when the reading falls below the threshold.' },
+      // Tier 2: PWM recall as application
+      { type: 'fill_blank', difficulty: 2, prompt: 'analogWrite() sets brightness with a duty-cycle value from 0 up to ___.', blank: '___', answer: '255', hint: 'It is an 8-bit value, so count the largest number eight bits can hold.' },
+      // Tier 3: synthesis across the whole sense-decide-act arc
+      { type: 'drag_order', difficulty: 3, instruction: 'Order one pass of the light-alarm loop, from reading the world to acting on it.', items: ['Read the divider voltage with analogRead(A0)', 'Compare that reading against the threshold', 'If it is below the threshold, decide to alarm', 'Drive the buzzer pin HIGH with digitalWrite'], correctOrder: [0, 1, 2, 3] },
+    ],
+  },
+
   // ═══════════════════ Unit 6: Capacitors, RC & Timing ═══════════════════
   // Grounded in EAC Vol.1 (Capacitor), Make: Electronics (Exp. 8-10), PEI §2.23.
   // See content/CURRICULUM_CITATIONS.md.
@@ -2008,6 +2043,41 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'multiple_choice', question: 'A switching regulator is more efficient because it...', options: ['Switches fully on/off, wasting little power', 'Burns off the excess voltage entirely as heat', 'Only ever runs at a very low output current', 'Uses no inductor or capacitor at all inside'], correct: 0, explanation: 'A fully-on/off switch dissipates little, unlike a linear regulator.' },
       { type: 'choose_resistor', question: 'Vin = 12V, 5.1V zener, target 5 mA. The series resistor is...', options: ['1.4 kΩ', '140 Ω', '14 kΩ', '100 Ω'], correct: 0, explanation: 'R = (12 − 5.1)/0.005 ≈ 1.4 kΩ.' },
       { type: 'match', instruction: 'Match each block of a power supply to its job.', pairs: [['Rectifier', 'AC to pulsed DC'], ['Reservoir cap', 'Smooths the pulses'], ['Regulator', 'Steady, clean output'], ['Decoupling cap', 'Fast spikes at the chip']] },
+    ],
+  },
+
+  // ═══════════════════ Gateway Exam: Analog Core (Units 6-10) ═══════════════════
+  // Cumulative cross-unit retrieval exam gating into the digital/embedded section
+  // (task #42). No teach steps. Grounded in the same sources as Units 6-10 (STG, ME,
+  // PEI, AoE, EAC); introduces no new concepts. See CURRICULUM_CITATIONS.md.
+
+  'Gateway Exam: Analog Core': {
+    xpReward: 50,
+    steps: [
+      // Tier 2: RC time constant calculation (Unit 6)
+      { type: 'predict_reading', difficulty: 2, question: 'A 10kΩ resistor charges a 100µF capacitor. Using τ = RC, the time constant is closest to...', circuitDiagram: 'rc_low_pass', options: ['1 second', '1 millisecond', '1000 seconds', '10 seconds'], correct: 0, explanation: 'τ = R × C = 10000 × 100e-6 = 1 s. Forgetting to convert µF (treating C as 100) gives the wrong huge answer.' },
+      // Tier 3: charging behaviour reasoning (Unit 6)
+      { type: 'predict_behavior', difficulty: 3, question: 'A capacitor charges through a resistor toward a 5V supply, starting from empty. After one time constant τ, the capacitor voltage is closest to...', circuitDiagram: 'rc_low_pass', options: ['About 3.2 V, roughly 63 percent of the way there', 'A full 5 V, since one τ means fully charged', 'Still 0 V, because charging only begins after τ', 'About 2.5 V, exactly half of the supply voltage'], correct: 0, explanation: 'After one τ a charging capacitor reaches about 63 percent of the final voltage: 0.63 × 5 ≈ 3.2 V. It needs roughly 5τ to be considered fully charged.' },
+      // Tier 2: base resistor sizing (Unit 7)
+      { type: 'choose_resistor', difficulty: 2, question: 'A 5V pin drives an NPN base (Vbe about 0.7V) and you want about 4.3 mA of base current. Pick the base resistor.', circuitDiagram: 'transistor_switch', options: ['1 kΩ', '100 Ω', '12 kΩ', '100 kΩ'], correct: 0, explanation: 'Rb = (5 − 0.7) / 0.0043 ≈ 1000 Ω = 1 kΩ. 100 Ω passes far too much current; 12 kΩ and up starve the base.' },
+      // Tier 3: diagnose AND repair the relay driver (Unit 7) using transistor_switch
+      { type: 'fix_the_circuit', difficulty: 3, question: 'This relay driver shorts the supply the instant it powers on. Tap the faulty part, then choose the fix.', circuitDiagram: 'transistor_switch', faultRegion: 'diode', fixes: ['Turn the flyback diode around so it blocks the normal supply', 'Remove the base resistor so the transistor switches faster', 'Replace the relay coil with a plain length of jumper wire', 'Raise the supply to 24V so the diode can handle the spike'], correctFix: 0, explanation: 'A backwards flyback diode conducts the normal supply current and shorts the rail. It must be reverse-biased in normal operation (cathode to the positive supply) so it only conducts the coil back-EMF at switch-off.' },
+      // Tier 1: op-amp golden rule recall (Unit 8)
+      { type: 'true_false', difficulty: 1, statement: 'With negative feedback, an ideal op-amp drives its two inputs to the same voltage.', correct: true, explanation: 'The golden rules: with feedback the inputs sit at the same voltage, and (ideally) no current flows into either input.' },
+      // Tier 2: non-inverting gain (Unit 8)
+      { type: 'predict_reading', difficulty: 2, question: 'A non-inverting amplifier has Rf = 90kΩ and Rg = 10kΩ (gain = 1 + Rf/Rg). An input of 0.1V gives an output of...', options: ['1.0 V', '0.9 V', '9 V', '0.01 V'], correct: 0, explanation: 'Gain = 1 + 90/10 = 10, so out = 10 × 0.1 = 1.0 V. Forgetting the +1 gives a gain of 9 and 0.9 V.' },
+      // Tier 3: inverting gain reasoning (Unit 8)
+      { type: 'predict_behavior', difficulty: 3, question: 'An inverting amplifier has Rin = 10kΩ and Rf = 20kΩ (gain = −Rf/Rin). A steady +0.5V input produces an output of...', options: ['−1.0 V, the sign flips and the size doubles', '+1.0 V, doubled but with the same polarity', '−0.25 V, since the input is divided by the gain', '+10 V, because the op-amp swings to its rail'], correct: 0, explanation: 'Gain = −20/10 = −2, so out = −2 × 0.5 = −1.0 V. Inverting means the output polarity is opposite the input.' },
+      // Tier 2: filter cutoff (Unit 9)
+      { type: 'predict_reading', difficulty: 2, question: 'An RC low-pass filter uses R = 1.6kΩ and C = 0.1µF. Using fc = 1/(2πRC), the cutoff is closest to...', circuitDiagram: 'rc_low_pass', options: ['About 1 kHz', 'About 1 Hz', 'About 100 kHz', 'About 1 MHz'], correct: 0, explanation: 'fc = 1 / (2π × 1600 × 1e-7) ≈ 1 / 0.001 ≈ 1000 Hz = 1 kHz.' },
+      // Tier 2: RMS of a sine (Unit 9)
+      { type: 'fill_blank', difficulty: 2, prompt: 'For a sine wave, the RMS value equals the peak value divided by ___.', blank: '___', answer: 'sqrt(2)', hint: 'It is the root of a small whole number, the same factor that links peak and effective value for a sinusoid.' },
+      // Tier 2: regulator dissipation (Unit 10)
+      { type: 'predict_reading', difficulty: 2, question: 'A linear regulator drops 12V to 5V while passing 0.5A. Using P = (Vin − Vout) × I, the heat it dissipates is...', options: ['3.5 W', '6 W', '2.5 W', '8.5 W'], correct: 0, explanation: 'P = (12 − 5) × 0.5 = 3.5 W burned off as heat. Using the full 12V instead of the difference gives the wrong 6 W.' },
+      // Tier 3: topology choice with a constraint (Unit 10)
+      { type: 'predict_behavior', difficulty: 3, question: 'You must make a steady 5V rail from a single 3.7V lithium cell. Which converter can do it?', options: ['A boost converter, because it steps the voltage up', 'A 7805 linear regulator, which is simple and cheap', 'A bridge rectifier, to clean up the cell voltage', 'A plain series resistor sized to drop the difference'], correct: 0, explanation: '3.7V is below the 5V you need, so you must step up. A linear regulator (or a resistor) can only step down; a boost (switching) converter raises the voltage.' },
+      // Tier 3: synthesis across the analog core (Units 7-10)
+      { type: 'match', instruction: 'Match each analog-core part to the quantity its core formula sets.', pairs: [['Time constant τ = RC', 'How fast an RC charges'], ['Gain = 1 + Rf/Rg', 'A non-inverting amplifier'], ['fc = 1/(2πRC)', 'A filter cutoff frequency'], ['P = (Vin − Vout) × I', 'A linear regulator heat'], ['Rb = (Vpin − 0.7)/Ib', 'A transistor base resistor']] },
     ],
   },
 

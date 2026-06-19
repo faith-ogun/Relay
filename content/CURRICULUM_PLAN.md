@@ -9,7 +9,7 @@
 > and ship one lesson, incl. the quality bar) · [`CURRICULUM_CITATIONS.md`](./CURRICULUM_CITATIONS.md)
 > (per-lesson source grounding) · [`LEARNING_RESOURCES.md`](./LEARNING_RESOURCES.md) (the books).
 >
-> **Status (live):** 12 units · 141 lessons · lint 0 errors / 0 warnings · build green. **v1 complete.**
+> **Status (live):** 12 units · 142 lessons · lint 0 errors / 0 warnings · build green. **v1 complete.**
 
 ---
 
@@ -21,7 +21,7 @@ now stated once, here:
 
 | Milestone | Units | Lessons | What it means |
 |-----------|-------|---------|---------------|
-| **Built now (v1 complete)** | 12 | 141 | Beginner → advanced: analog core + digital/embedded + comms/motors/robotics, all at the quality bar |
+| **Built now (v1 complete)** | 12 | 142 | Beginner → advanced: analog core + digital/embedded + comms/motors/robotics, plus the two gateway exams, all at the quality bar |
 | **v1 launch** | 12 | 141 | ✅ shipped — Units 1–12 (through comms/motors/robotics). The sellable product. |
 | **Ceiling** | ~35–45 | ~450–650 | Brilliant-scale: deepened units + added tracks (robotics, digital, audio, power, RF) |
 
@@ -183,10 +183,12 @@ losing all hearts; lose them and restart that lesson. Each unit ends in a **chec
 (cumulative, no teach steps, bonus XP) which gates the next unit. *(Planned upgrade: 80%
 pass with a remixed targeted retry of only the missed steps; per-skill strength.)*
 
-**Gating the ramp (planned, task #42):** a `rigor` flag (calculator/datasheet glyph),
+**Gating the ramp (task #42):** a `rigor` flag (calculator/datasheet glyph),
 real `prerequisite` locks (not just order), graded *design-problem* checkpoints in U6+,
-and two **gateway exams** (after U5, after U10). On hard lessons, require the calculation
-AND the vision-verified build AND the running result to pass.
+and two **gateway exams** — **BUILT:** *Gateway Exam: Foundations* (after U5, gates the
+analog core) and *Gateway Exam: Analog Core* (after U10, gates digital & embedded), each
+a 12-step cumulative cross-section exam. On hard lessons, require the calculation AND the
+vision-verified build AND the running result to pass.
 
 ---
 

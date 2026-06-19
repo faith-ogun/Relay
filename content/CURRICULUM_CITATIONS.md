@@ -580,6 +580,32 @@ ranging. Lints 0/0.
   ~500 between line 200 / floor 800).
 - **Unit 12 Checkpoint** (new) — mixed cumulative retrieval; no new claims.
 
+## Gateway Exams
+
+Two cumulative cross-unit retrieval exams (task #42) that gate progression between
+sections. They are checkpoint-style (no teach steps, xpReward 50) but larger
+(whole-section) and harder (Tier 2/3 heavy, more synthesis). They introduce **no new
+claims**: every step re-tests material already taught and already cited in the source
+units below, grounded in the same books.
+
+- **Gateway Exam: Foundations** (new) — gates beginner → intermediate; cumulative over
+  Units 1–5. Re-tests the complete loop / Ohm's law / power, LEDs & current-limiting,
+  breadboard wiring & debugging, the sensor voltage divider & LDR alarm, and the
+  Arduino (setup/loop, analogRead, digitalWrite, PWM, the coded alarm decision).
+  Grounded in the same sources as Units 1–5 (STG, ME, PEI, EAC, Exploring Arduino).
+  Numbers re-verified: 9V/1.5kΩ → 6 mA; (5−2)/0.015 ≈ 200Ω → 220Ω; equal divider on
+  9V → 4.5V; 1.0V on a 0–1023/5V ADC ≈ 205; analogWrite max 255.
+- **Gateway Exam: Analog Core** (new) — gates into the digital/embedded section;
+  cumulative over Units 6–10. Re-tests RC timing (τ=RC, the 63% point), transistor
+  switching (base resistor, flyback diode orientation), op-amp golden rules and
+  inverting/non-inverting gain, filter cutoff (fc=1/(2πRC)) and sine RMS, and power
+  supplies (linear dissipation, buck/boost topology choice). Grounded in the same
+  sources as Units 6–10 (STG, ME, PEI, AoE, EAC). Numbers re-verified: 10kΩ×100µF =
+  1s; one τ ≈ 63% (0.63×5 ≈ 3.2V); Rb=(5−0.7)/0.0043 ≈ 1kΩ; gain 1+90/10 = 10 →
+  1.0V; −20/10 = −2 → −1.0V; fc=1/(2π×1600×1e-7) ≈ 1kHz; RMS = Vpk/√2;
+  P=(12−5)×0.5 = 3.5W; 3.7V→5V needs a boost converter. Reuses existing diagrams
+  (rc_low_pass, transistor_switch) with valid regions only.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the
