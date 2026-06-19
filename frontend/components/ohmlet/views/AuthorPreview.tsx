@@ -53,6 +53,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
           key={preview.id}
           lessonId={preview.id}
           accent={preview.accent}
+          preview
           onExit={() => setPreview(null)}
           onComplete={() => setPreview(null)}
         />

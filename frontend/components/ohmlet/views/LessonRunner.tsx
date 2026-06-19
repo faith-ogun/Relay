@@ -22,6 +22,9 @@ interface LessonRunnerProps {
   accent: string;
   /** The level being attempted: 1 Bronze, 2 Silver, 3 Gold. Defaults to 1. */
   level?: number;
+  /** Review mode (the /author preview): adds a Skip control so a reviewer can step
+   *  through every question without answering. Never set in the learner flow. */
+  preview?: boolean;
   onExit: () => void;
   onComplete: (lessonId: string, xp: number, level: number) => void;
 }
@@ -48,7 +51,7 @@ const shuffledOrder = (n: number): number[] => {
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, onExit, onComplete }) => {
+export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, preview = false, onExit, onComplete }) => {
   const lesson = findLesson(lessonId);
   const content = LESSON_CONTENT[lessonId];
   // Steps are transformed for the attempted level (Bronze = as authored;
@@ -343,13 +346,24 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
-            <button
-              onClick={handleCheck}
-              disabled={!canCheck()}
-              className="inline-flex shrink-0 items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
-            >
-              Check
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {preview && (
+                <button
+                  onClick={handleContinue}
+                  className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-dashed border-ohmlet-ink/40 px-4 py-3 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+                  title="Review only: jump to the next step without answering"
+                >
+                  Skip <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={handleCheck}
+                disabled={!canCheck()}
+                className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
+              >
+                Check
+              </button>
+            </div>
           )}
         </div>
       </div>
