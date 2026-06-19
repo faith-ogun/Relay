@@ -1371,4 +1371,227 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each part to its role in a relay driver.', pairs: [['NPN transistor', 'Switches the coil to ground'], ['Base resistor', 'Sets the base current'], ['Flyback diode', 'Absorbs the back-EMF'], ['Relay coil', 'The inductive load']] },
     ],
   },
+
+  // ═══════════════ Unit 8: Op-Amps & Signal Conditioning ═══════════════
+  // Grounded in AoE ch.4 (golden rules, inverting/non-inverting), PEI ch.8
+  // (op-amp circuits), EAC Vol.2 (op-amp, comparator). See CURRICULUM_CITATIONS.md.
+
+  'What an Op-Amp Is': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'A Very High-Gain Amplifier', body: 'An operational amplifier (op-amp) is an integrated circuit with two inputs and one output. It amplifies the DIFFERENCE between its two inputs by an enormous factor (the open-loop gain is often 100,000 or more). The two inputs are the inverting input (marked −) and the non-inverting input (marked +).' },
+      { type: 'teach', title: 'On Its Own It Just Slams', body: 'With that huge gain and no feedback, the tiniest difference between the inputs drives the output all the way to one supply rail or the other. Raw, it is almost an on/off device. The magic comes from wrapping feedback around it, which tames the gain into something useful and predictable.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'How many inputs does a standard op-amp have?', options: ['Two: inverting (−) and non-inverting (+)', 'Just one single signal input', 'Three separate signal inputs', 'None, it only has an output'], correct: 0, explanation: 'An op-amp amplifies the difference between its two inputs, − and +.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An op-amp amplifies which quantity?', options: ['The total of the two input voltages', 'The difference between its two inputs', 'Only the larger of the two inputs', 'The current drawn from the supply'], correct: 1, explanation: 'It amplifies the differential voltage (the difference between + and −).' },
+      { type: 'true_false', difficulty: 1, statement: 'An op-amp\'s open-loop gain is very large, often 100,000 or more.', correct: true, explanation: 'Yes. Without feedback, even a tiny input difference is amplified enormously.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'With no feedback, the + input is 0.01V above the − input. What does the output do?', options: ['Swings hard toward the positive rail', 'Settles gently at exactly 0.01V', 'Stays right in the middle at 0V', 'Mirrors the input at 0.01V out'], correct: 0, explanation: 'The huge open-loop gain multiplies 0.01V until the output hits the positive rail.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is a bare op-amp (no feedback) hard to use as an amplifier?', options: ['Its gain is far too small to be useful', 'Its gain is so huge the output just slams to a rail', 'It draws far too much current to run', 'It only works at one fixed frequency'], correct: 1, explanation: 'Open-loop, the gain is so large the output saturates at a rail for almost any input.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'The + and − symbols on an op-amp label which terminals?', options: ['The positive and negative power supplies', 'The non-inverting and inverting inputs', 'The output and the ground pin', 'The two halves of the output stage'], correct: 1, explanation: '+ is the non-inverting input, − is the inverting input; power pins are separate.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Traditionally an op-amp runs from a dual supply (e.g. +15V and −15V). Why is that useful?', options: ['It lets the output swing both above and below 0V', 'It doubles the available open-loop gain', 'It removes the need for any feedback', 'It makes the inputs draw more current'], correct: 0, explanation: 'A split supply lets the output swing positive AND negative around ground, handy for AC signals.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each op-amp term to its meaning.', pairs: [['Inverting input', 'The − input'], ['Non-inverting input', 'The + input'], ['Open-loop gain', 'The raw gain with no feedback'], ['Output', 'Amplified difference of the inputs'], ['Saturation', 'Output stuck at a supply rail']] },
+    ],
+  },
+
+  'The Golden Rules': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Two Rules That Solve Most Circuits', body: 'When an op-amp has negative feedback, two "golden rules" let you analyse almost any circuit by inspection:\n\nRule 1: The output does whatever it takes to make the two inputs equal in voltage.\nRule 2: The inputs draw no current (the input impedance is effectively infinite).' },
+      { type: 'teach', title: 'How Rule 1 Works', body: 'The op-amp cannot directly set its own input voltages. What it does is swing its output until the feedback brings the voltage difference between the inputs to (near) zero. So with negative feedback you can assume the − input sits at the same voltage as the + input. That assumption unlocks the gain formulas.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Golden rule 1 (with negative feedback) says...', options: ['The two inputs end up at the same voltage', 'The output is always stuck at a supply rail', 'The inputs are always exactly 0.7V apart', 'The output equals the supply voltage'], correct: 0, explanation: 'The op-amp drives its output so the inputs are forced to (nearly) equal voltage.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Golden rule 2 says the op-amp inputs...', options: ['Draw essentially no current', 'Draw a large, steady current', 'Each draw exactly 1 mA', 'Short directly to ground'], correct: 0, explanation: 'The inputs have effectively infinite impedance, so no current flows into them.' },
+      { type: 'true_false', difficulty: 1, statement: 'The golden rules apply when the op-amp has negative feedback.', correct: true, explanation: 'Yes. Rule 1 in particular relies on negative feedback being present.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'A non-inverting amp has +2V on its + input and negative feedback. What is the − input voltage?', options: ['About 2V (the inputs match)', 'About 0V at all times', 'About the supply voltage', 'Roughly half of 2V, so 1V'], correct: 0, explanation: 'By rule 1, the output adjusts until the − input also sits at ~2V.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'Using rule 2, how much current flows into the − input node from the op-amp input itself?', options: ['Essentially zero current', 'A large current into the input', 'Half the feedback current', 'All of the output current'], correct: 0, explanation: 'Rule 2: the inputs draw no current, so all the feedback current flows through the resistors, not into the pin.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why are the golden rules so useful?', options: ['They let you solve op-amp circuits by inspection', 'They make the op-amp run without any power', 'They remove the need for feedback resistors', 'They double the circuit\'s output voltage'], correct: 0, explanation: 'Assume equal inputs and no input current, and the gain formulas fall right out.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'In an inverting amp the + input is grounded. By rule 1, the − input is a "virtual ground". What does that mean?', options: ['The − input sits at ~0V without being wired to ground', 'The − input is physically connected to ground', 'The − input floats at the supply voltage', 'The − input draws current straight to ground'], correct: 0, explanation: 'Feedback holds the − input at ~0V (matching the grounded + input), so it acts like ground without a wire to it.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the op-amp NOT actually force voltage onto its own input pins to make them equal?', options: ['It can only move its output; feedback then equalises the inputs', 'It directly drives current into both input pins', 'It shorts the two inputs together internally', 'It raises the supply until the inputs match'], correct: 0, explanation: 'The op-amp only controls its output. The external feedback network is what brings the inputs to equality.' },
+    ],
+  },
+
+  'Negative Feedback': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Feeding the Output Back', body: 'Negative feedback means routing some of the output back to the INVERTING (−) input. If the output rises too far, the fed-back signal pushes the − input up, which (because it is the inverting input) pulls the output back down. The circuit self-corrects to a stable, predictable gain set by the feedback resistors, not by the op-amp\'s wild open-loop gain.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Negative feedback routes part of the output back to which input?', options: ['The inverting (−) input', 'The non-inverting (+) input', 'The positive supply pin', 'The output pin again'], correct: 0, explanation: 'Feedback to the − input is negative feedback; it stabilises the gain.' },
+      { type: 'true_false', difficulty: 1, statement: 'Negative feedback lets you set a predictable gain with external resistors.', correct: true, explanation: 'Yes. The resistor ratio sets the gain, instead of the op-amp\'s huge raw gain.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Negative feedback also prevents the output from...', options: ['Saturating at the supply rails', 'Ever reaching the input voltage', 'Drawing current from the inputs', 'Being amplified at all'], correct: 0, explanation: 'It keeps the output in a controlled range instead of slamming to a rail.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'In a negative-feedback amp the output drifts slightly too high. What happens next?', options: ['Feedback nudges it back down toward the right value', 'It keeps climbing all the way to the rail', 'The inputs swap their roles entirely', 'The supply voltage rises to follow it'], correct: 0, explanation: 'That is the self-correcting action of negative feedback: it opposes the change.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'If you instead fed the output back to the + input, you would have...', options: ['Positive feedback, which tends to latch or oscillate', 'Exactly the same stable negative feedback behaviour as before', 'No feedback effect of any kind whatsoever', 'A perfectly clean linear amplifier still'], correct: 0, explanation: 'Feedback to the + input is positive feedback, used for comparators with hysteresis and oscillators, not linear amps.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does negative feedback make the gain depend on resistors rather than the op-amp itself?', options: ['The huge raw gain is "spent" forcing the inputs equal, leaving the resistor ratio to set the gain', 'The external feedback resistors physically reach inside and increase the op-amp\'s own internal raw gain stage', 'Feedback completely disconnects the op-amp\'s internal amplifier so that only the resistors are left working', 'The feedback resistors quietly supply all of the extra output power that the amplified signal will need'], correct: 0, explanation: 'With near-infinite open-loop gain, the inputs are held equal, and the external network sets the closed-loop gain.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each feedback idea to its result.', pairs: [['Negative feedback', 'Stable, set gain'], ['Positive feedback', 'Latching / oscillation'], ['No feedback', 'Output slams to a rail'], ['Feedback resistors', 'Set the closed-loop gain']] },
+    ],
+  },
+
+  'The Non-Inverting Amplifier': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Gain Without Inverting', body: 'The non-inverting amplifier feeds the input signal into the + input, and feeds the output back through a divider (Rf from output to the − input, Rg from the − input to ground). The output is in phase with the input. Its gain is:\n\nAv = 1 + Rf / Rg\n\nNote it can never go below 1.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'The non-inverting amplifier gain is Av = 1 + Rf / ___.', blank: '___', answer: 'Rg', hint: 'The resistor from the inverting input to ground.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'In a non-inverting amp, the output is...', options: ['In phase with the input', 'Inverted relative to the input', 'Always stuck at zero volts', 'Shifted by exactly 90 degrees'], correct: 0, explanation: 'Non-inverting means the output follows the input in phase.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The smallest gain a non-inverting amplifier can have is...', options: ['Exactly 1 (cannot go below it)', 'Exactly 0, the output can be fully nulled out', 'Negative one, since it inverts at minimum', 'There is genuinely no lower limit at all'], correct: 0, explanation: 'Av = 1 + Rf/Rg, and Rf/Rg ≥ 0, so the gain is at least 1.' },
+
+      { type: 'fill_blank', difficulty: 2, prompt: 'Rf = 10kΩ, Rg = 10kΩ. The non-inverting gain Av = 1 + Rf/Rg = ___.', blank: '___', answer: '2', hint: 'Add one to the resistor ratio.' },
+      { type: 'predict_reading', difficulty: 2, question: 'Rf = 90kΩ, Rg = 10kΩ. What is the gain?', options: ['10', '9', '8', '90'], correct: 0, explanation: 'Av = 1 + 90/10 = 1 + 9 = 10.' },
+      { type: 'predict_reading', difficulty: 2, question: 'An input of 0.5V goes into a non-inverting amp with gain 4. What is the output?', options: ['2V', '0.5V', '4V', '8V'], correct: 0, explanation: 'Vout = gain × Vin = 4 × 0.5 = 2V.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'You want a gain of 11 with Rg = 1kΩ. What Rf?', options: ['10 kΩ', '11 kΩ', '1 kΩ', '110 kΩ'], correct: 0, explanation: '11 = 1 + Rf/1k → Rf/1k = 10 → Rf = 10 kΩ.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'Rf = 47kΩ, Rg = 10kΩ, input 100 mV. The output is closest to...', options: ['≈ 570 mV', '≈ 470 mV', '≈ 4.7 V', '≈ 100 mV'], correct: 0, explanation: 'Av = 1 + 47/10 = 5.7; Vout = 5.7 × 100 mV = 570 mV.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'You set Rf = 0 and remove Rg (open). What gain results, and what circuit is that?', options: ['Gain 1: a voltage follower (buffer)', 'Gain 0: the output is dead', 'Infinite gain: a comparator', 'Negative gain: an inverter'], correct: 0, explanation: 'With Rf = 0 (and Rg open) Av = 1 + 0 = 1, the unity-gain buffer.' },
+    ],
+  },
+
+  'The Inverting Amplifier': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Gain With a Sign Flip', body: 'The inverting amplifier sends the input through Rin into the − input, with Rf as feedback from output to the − input, and the + input grounded. The − input becomes a virtual ground (~0V). The gain is:\n\nAv = − Rf / Rin\n\nThe minus sign means the output is inverted (flipped) relative to the input.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'The inverting amplifier gain is Av = − Rf / ___.', blank: '___', answer: 'Rin', hint: 'The input resistor that feeds the inverting node.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'In an inverting amp, the output is...', options: ['Inverted relative to the input', 'In phase with the input', 'Always equal to the input', 'Always stuck at the rail'], correct: 0, explanation: 'The negative sign in the gain means the output is flipped.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The − input of an inverting amp behaves as a...', options: ['Virtual ground at about 0V', 'Fixed source of 5V', 'Floating, undefined node', 'Direct short to the output'], correct: 0, explanation: 'With the + input grounded, feedback holds the − input at ~0V: a virtual ground.' },
+
+      { type: 'fill_blank', difficulty: 2, prompt: 'Rf = 100kΩ, Rin = 10kΩ. The inverting gain Av = −Rf/Rin = ___.', blank: '___', answer: '-10', hint: 'Negative of the resistor ratio.' },
+      { type: 'predict_reading', difficulty: 2, question: 'Rf = 22kΩ, Rin = 10kΩ, input +1V. What is the output?', options: ['−2.2V', '+2.2V', '−1V', '+22V'], correct: 0, explanation: 'Av = −22/10 = −2.2; Vout = −2.2 × 1V = −2.2V.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'You need a gain of −5 with Rin = 10kΩ. What Rf?', options: ['50 kΩ', '5 kΩ', '15 kΩ', '2 kΩ'], correct: 0, explanation: '−5 = −Rf/10k → Rf = 50 kΩ.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You feed +0.5V into an inverting amp of gain −4. The output goes...', options: ['Negative, to about −2V', 'Positive, to about +2V', 'To zero and stays there', 'To the positive rail'], correct: 0, explanation: 'Vout = −4 × 0.5 = −2V; the sign flips.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'Rf = 100kΩ, Rin = 4.7kΩ, input −50 mV. The output is closest to...', options: ['≈ +1.06 V', '≈ −1.06 V', '≈ +0.5 V', '≈ −50 mV'], correct: 0, explanation: 'Av = −100/4.7 ≈ −21.3; Vout = −21.3 × (−50 mV) ≈ +1.06 V (two sign flips give positive).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why can you sum several inputs by feeding each through its own resistor into the − (virtual-ground) node?', options: ['At the virtual ground their currents simply add, and Rf converts the total back to a voltage', 'The op-amp internally measures and averages all of the separate input pins together for you', 'Only the single largest of the several inputs ever actually makes it through to the output', 'The various inputs cancel each other out completely unless they happen to be equal'], correct: 0, explanation: 'Because the − node is held at 0V, each input current is Vin/Rin; they sum and flow through Rf. That is the summing amplifier.' },
+    ],
+  },
+
+  'The Voltage Follower': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Gain of One, On Purpose', body: 'A voltage follower (or buffer) wires the output straight back to the − input, with the signal on the + input. The gain is exactly 1: the output simply copies the input. Useless as an amplifier, but invaluable because it has a very high input impedance and a low output impedance.' },
+      { type: 'teach', title: 'Why a Gain of One Matters', body: 'A buffer lets a weak, high-impedance source (like a sensor divider) drive a heavier load without sagging. The follower draws almost nothing from the source (golden rule 2) yet can supply current to the load from the output. It "isolates" one stage from loading down the next.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'A voltage follower has a gain of ___.', blank: '___', answer: '1', hint: 'The output simply copies the input, one to one.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A voltage follower is most useful because it has...', options: ['High input impedance and low output impedance', 'A very large voltage gain that it applies to the signal', 'A negative, inverting output relative to its input', 'Only a simple built-in current limit and nothing else'], correct: 0, explanation: 'It buffers: takes almost no current in, can drive a load out.' },
+      { type: 'true_false', difficulty: 1, statement: 'In a voltage follower the output is wired back to the inverting input.', correct: true, explanation: 'Yes. Full feedback from output to − input gives unity gain.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'A sensor divider sags badly when its load is connected directly. You add a voltage follower between them. What happens?', options: ['The divider holds its voltage; the buffer drives the load', 'The divider sags even more than before', 'The load voltage doubles unexpectedly', 'Nothing changes at all in the circuit'], correct: 0, explanation: 'The follower draws almost no current from the divider but supplies the load, so the divider no longer sags.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Feeding a high-impedance sensor into an Arduino ADC, a follower helps because...', options: ['It presents an easy, low-impedance source to the ADC', 'It amplifies the signal by a factor of ten', 'It converts the analog signal to digital', 'It removes the need for the ADC entirely'], correct: 0, explanation: 'The ADC sees a low-impedance buffered source, which it samples cleanly.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A voltage follower is just a special case of which amplifier, with what resistors?', options: ['A non-inverting amp with Rf = 0 (gain 1 + 0)', 'An inverting amp with Rf = Rin', 'A comparator with no feedback', 'A summing amp with two inputs'], correct: 0, explanation: 'Non-inverting gain is 1 + Rf/Rg; with Rf = 0 the gain is exactly 1, the follower.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You try to read a 1 MΩ sensor divider directly with a load that draws real current. Without a buffer, the reading is...', options: ['Wrong: the load drags the high-impedance node down', 'Perfectly accurate as long as wired correctly', 'Always exactly half the true value', 'Higher than the true source voltage'], correct: 0, explanation: 'A high-impedance source cannot supply load current without sagging; a buffer fixes it.' },
+    ],
+  },
+
+  'The Comparator': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Which Input Is Higher?', body: 'A comparator compares two voltages and reports which is larger. Its output swings to one extreme (near the positive rail) when the + input is above the − input, and to the other extreme (near the negative rail or ground) when the + input is below. It is essentially an op-amp run open-loop, or a chip purpose-built for the job.' },
+      { type: 'teach', title: 'Op-Amp vs Dedicated Comparator', body: 'You can use an op-amp as a comparator, but dedicated comparator chips switch faster and many have an open-collector output that needs a pull-up resistor. Set a reference on one input and the signal on the other, and you have turned an analog level into a clean digital HIGH/LOW.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A comparator\'s output tells you...', options: ['Which of its two inputs is higher', 'The exact sum of its two inputs', 'The precise difference in millivolts', 'The average of the two inputs'], correct: 0, explanation: 'It outputs HIGH or LOW depending on which input is larger.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A comparator is essentially an op-amp used...', options: ['Open-loop (no negative feedback)', 'With heavy negative feedback', 'As a unity-gain buffer', 'With its inputs shorted together'], correct: 0, explanation: 'Without feedback the huge gain makes the output swing fully one way or the other.' },
+      { type: 'true_false', difficulty: 1, statement: 'Many dedicated comparators have an open-collector output that needs a pull-up resistor.', correct: true, explanation: 'Yes. The pull-up sets the HIGH level; without it the output cannot go high.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'Reference 2.5V on the − input. The + input rises to 3V. The output...', options: ['Swings HIGH (+ input is above the reference)', 'Swings LOW (+ input is above the reference)', 'Sits exactly at 2.5V', 'Oscillates continuously'], correct: 0, explanation: '+ input (3V) > − input (2.5V), so the output goes HIGH.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A comparator turns an analog level into a clean...', options: ['Digital HIGH/LOW signal', 'Smooth ramping voltage', 'Sine wave output', 'Higher analog voltage'], correct: 0, explanation: 'It is effectively a 1-bit analog-to-digital decision around the reference.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A dedicated comparator output stays stuck LOW and never goes HIGH. The likely cause?', options: ['A missing pull-up resistor on an open-collector output', 'The reference voltage applied to it has been set far too low', 'The supply voltage to the chip is somewhat too high', 'The two input connections have been swapped over'], correct: 0, explanation: 'Open-collector outputs can only pull low; without a pull-up they never reach HIGH.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Your LDR alarm is built entirely in hardware (no Arduino). How does a comparator replace the "decide" stage?', options: ['It compares the divider voltage to a reference and switches the output at the threshold', 'It amplifies the divider voltage by a large fixed gain and then passes it straight onward to the load', 'It quietly stores the divider voltage away inside itself for retrieval much later on', 'It converts the steady divider voltage into a proportional output frequency instead'], correct: 0, explanation: 'Feed the LDR divider to one input and a threshold reference to the other; the comparator output is the alarm decision.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each part of a hardware light alarm to its job.', pairs: [['LDR divider', 'Sense (light to voltage)'], ['Comparator', 'Decide (compare to threshold)'], ['Reference voltage', 'Sets the threshold'], ['Output load', 'Act (LED or buzzer)']] },
+    ],
+  },
+
+  'Adding Hysteresis': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'The Chatter Problem', body: 'A plain comparator misbehaves when the input hovers right at the threshold: noise pushes it back and forth, so the output rapidly chatters between HIGH and LOW. A slowly changing or noisy signal makes this worse. The fix is hysteresis.' },
+      { type: 'teach', title: 'Two Thresholds, Not One', body: 'Adding a little POSITIVE feedback (a resistor from the output back to the + input) creates hysteresis: the threshold to switch ON is higher than the threshold to switch OFF. Once it flips, the input must move a clear amount the other way before it flips back. That dead band kills the chatter. A comparator with hysteresis is a Schmitt trigger.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Hysteresis gives a comparator...', options: ['Two separate switching thresholds', 'A single exact threshold point', 'Infinite voltage gain', 'A smooth analog output'], correct: 0, explanation: 'The ON and OFF thresholds differ, creating a dead band.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Hysteresis is created by adding which kind of feedback?', options: ['A little positive feedback to the + input', 'Heavy negative feedback to the − input', 'No feedback whatsoever', 'Feedback through a large capacitor only'], correct: 0, explanation: 'Positive feedback to the + input shifts the threshold after each switch.' },
+      { type: 'true_false', difficulty: 1, statement: 'A comparator with hysteresis is called a Schmitt trigger.', correct: true, explanation: 'Yes. The two-threshold behaviour defines a Schmitt trigger.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'A noisy signal sits right at a plain comparator\'s threshold. The output...', options: ['Chatters rapidly between HIGH and LOW', 'Stays perfectly steady at HIGH', 'Settles smoothly halfway', 'Turns off completely'], correct: 0, explanation: 'Noise repeatedly crosses the single threshold, so the output flickers. Hysteresis fixes it.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'With hysteresis, once the output has switched HIGH, the input must...', options: ['Fall clearly below a lower threshold to switch back', 'Rise even higher to switch back', 'Return to exactly the same point', 'Reach the supply rail to switch back'], correct: 0, explanation: 'The OFF threshold is lower than the ON threshold, so a small dip will not flip it back.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A light alarm flickers on and off at dusk as the light slowly fades. The best fix is to...', options: ['Add hysteresis so on and off thresholds differ', 'Increase the comparator\'s open-loop gain', 'Remove the reference voltage entirely', 'Lower the supply voltage to the chip'], correct: 0, explanation: 'A slowly changing signal at one threshold chatters; hysteresis gives a clean single transition.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each idea to its effect.', pairs: [['Hysteresis', 'Two thresholds, a dead band'], ['Positive feedback', 'Creates the hysteresis'], ['Schmitt trigger', 'Comparator with hysteresis'], ['No hysteresis', 'Chatter at the threshold']] },
+    ],
+  },
+
+  'Real Op-Amp Limits': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'The Ideal Is Not Real', body: 'The golden rules assume an ideal op-amp. Real ones have limits: a small input offset voltage (the output is not exactly zero for equal inputs), a tiny input bias current (the inputs draw a little current), a finite slew rate (the output can only change so fast), and an output that cannot quite reach the supply rails.' },
+      { type: 'teach', title: 'Slew Rate and Bandwidth', body: 'Slew rate is how fast the output voltage can move, in volts per microsecond. Push a big, fast signal beyond it and the output turns into a slow ramp instead of a clean shape. Gain also trades against bandwidth: the higher the gain you set, the lower the frequency at which the amp still delivers it.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Input offset voltage means...', options: ['The output is not exactly zero when the inputs are equal', 'The two input terminals always sit a fixed 0.7V apart from each other', 'The power supply itself must be offset away from ground', 'The output is permanently offset by exactly one volt'], correct: 0, explanation: 'A small internal imbalance gives a nonzero output for equal inputs.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Slew rate describes...', options: ['How fast the output voltage can change', 'How much current the inputs draw', 'The maximum supply voltage allowed', 'The exact gain set by feedback'], correct: 0, explanation: 'Slew rate is the maximum rate of output change, in V/µs.' },
+      { type: 'true_false', difficulty: 1, statement: 'A real op-amp\'s output usually cannot swing all the way to the supply rails.', correct: true, explanation: 'Most op-amps fall a volt or two short; "rail-to-rail" parts get closer.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'You ask the output to make a large, very fast jump beyond its slew rate. The output...', options: ['Ramps up as a slanted line, not a clean step', 'Jumps instantly and perfectly to the new level with no delay', 'Stays completely flat and does not move at all', 'Inverts the whole signal instead of following it'], correct: 0, explanation: 'Limited slew rate turns a fast edge into a ramp; the output cannot keep up.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'You set a very high gain and the high frequencies disappear. This is due to...', options: ['The gain-bandwidth tradeoff', 'The input offset voltage', 'The output rail limit', 'The input bias current'], correct: 0, explanation: 'Gain × bandwidth is roughly constant, so more gain means less bandwidth.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'For a 3.3V single-supply circuit, why pick a "rail-to-rail" op-amp?', options: ['Its output can swing close to 0V and 3.3V, using the small range', 'It has a considerably higher input offset voltage than other parts', 'It completely removes the need for any feedback network at all', 'It is able to run only when given a dual positive and negative supply'], correct: 0, explanation: 'With little headroom, you need an output that reaches near both rails.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A high-precision DC measurement drifts slightly with temperature. The most likely real-op-amp culprit is...', options: ['Input offset voltage and its drift', 'The slew rate being too low', 'The gain-bandwidth product', 'The output rail limit'], correct: 0, explanation: 'Offset voltage (and its temperature drift) directly corrupts a precision DC reading; slew rate and bandwidth affect speed, not slow DC.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each non-ideal effect to what it limits.', pairs: [['Input offset voltage', 'DC accuracy'], ['Slew rate', 'How fast the output moves'], ['Gain-bandwidth product', 'Gain available at high frequency'], ['Output rail limit', 'How far the output can swing']] },
+    ],
+  },
+
+  'Single-Supply Op-Amps': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'No Negative Rail', body: 'Microcontroller projects usually have only a single positive supply (say 5V) and ground, not the +/− dual supply op-amps traditionally expect. On a single supply the output can only swing between 0V and the rail, so it cannot represent a signal that goes negative around ground.' },
+      { type: 'teach', title: 'Bias to Mid-Rail', body: 'The fix is to create a "virtual ground" at half the supply (e.g. 2.5V on a 5V rail) and reference the signal to that. The op-amp then swings above and below 2.5V instead of around 0V, so an AC signal fits inside the 0 to 5V range. A simple divider plus a buffer makes that mid-rail reference.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'On a single 5V supply, the op-amp output can swing between...', options: ['Roughly 0V and 5V only', 'Negative 5V and positive 5V', 'Zero and 10V', 'Any voltage at all'], correct: 0, explanation: 'With no negative rail, the output stays between ground and the positive rail.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'To handle an AC signal on a single supply, you reference it to...', options: ['A mid-rail bias around half the supply', 'The negative supply rail down below the ground line', 'Exactly the positive supply rail at the very top', 'A reference point placed somewhere below ground'], correct: 0, explanation: 'Biasing to mid-rail lets the signal swing up and down within 0 to Vcc.' },
+      { type: 'true_false', difficulty: 1, statement: 'A single-supply circuit cannot directly represent a voltage below ground.', correct: true, explanation: 'Correct. There is no negative rail, so signals must be shifted up to a positive bias.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'An AC signal centred on 0V is fed straight into a single-supply amp. What happens to the negative half?', options: ['It is clipped off at ground', 'It is amplified normally', 'It becomes positive automatically', 'It doubles the gain'], correct: 0, explanation: 'The output cannot go below 0V, so the negative half is clipped. Bias to mid-rail to fix it.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'On a 5V single supply, a sensible mid-rail bias point is...', options: ['About 2.5V', 'About 0V', 'About 5V', 'About 10V'], correct: 0, explanation: 'Half of 5V is 2.5V, giving equal swing room up and down.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Why buffer the mid-rail divider instead of using the two resistors directly as the reference?', options: ['Loading the divider would shift the reference; a buffer holds it steady', 'A buffer steps the reference all the way up to the full supply rail voltage', 'The divider is completely unable to produce 2.5V without a buffer present', 'A buffer turns the steady DC reference into an alternating AC signal'], correct: 0, explanation: 'A raw divider sags under load; a follower presents a stiff, low-impedance 2.5V reference.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A microphone signal (a few mV, centred on 0V) must be read by a 0 to 5V ADC. The conditioning chain is...', options: ['Bias to 2.5V, then amplify around that mid-rail point', 'Amplify around 0V, then clip the negatives', 'Feed it straight to the ADC unchanged', 'Invert it and read the negative half'], correct: 0, explanation: 'Shift to mid-rail and amplify there, so the swing lands inside the ADC\'s 0 to 5V window.' },
+    ],
+  },
+
+  'Conditioning a Sensor Signal': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Making a Weak Signal Readable', body: 'Many sensors give a signal that is too small, sits at the wrong level, or comes from a high-impedance source. Signal conditioning fixes that before the ADC: BUFFER a high-impedance source, AMPLIFY a tiny signal, LEVEL-SHIFT it to fit 0 to 5V, and optionally FILTER out noise. Op-amps do all four.' },
+      { type: 'teach', title: 'Match the Signal to the ADC', body: 'The goal is to use the ADC\'s full range. If a sensor only ever produces 0 to 0.5V, you are wasting 90% of a 0 to 5V ADC and getting coarse readings. A gain of about 10 stretches that 0.5V up to 5V, so small changes become many ADC counts: better resolution.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Signal conditioning prepares a sensor signal for...', options: ['The analog-to-digital converter (ADC)', 'The main power supply rail that feeds the board', 'The flyback diode across an inductive load', 'The long power and ground rails of the breadboard'], correct: 0, explanation: 'Conditioning shapes the signal so the ADC can read it well.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Which is NOT a typical signal-conditioning job?', options: ['Generating the circuit\'s main power', 'Amplifying a weak signal', 'Buffering a high-impedance source', 'Level-shifting to fit the ADC range'], correct: 0, explanation: 'Conditioning shapes the signal; it does not generate the supply.' },
+      { type: 'true_false', difficulty: 1, statement: 'Using more of the ADC\'s input range gives finer resolution.', correct: true, explanation: 'Spreading the signal across more counts means smaller changes are distinguishable.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'A sensor outputs 0 to 0.5V. You want 0 to 5V at the ADC. What non-inverting gain do you need?', options: ['10', '5', '2', '0.5'], correct: 0, explanation: '5V / 0.5V = 10. A gain of 10 maps the full sensor range onto the ADC.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'For that non-inverting gain of 10 with Rg = 1kΩ, pick Rf.', options: ['9 kΩ', '10 kΩ', '1 kΩ', '90 kΩ'], correct: 0, explanation: 'Av = 1 + Rf/Rg → 10 = 1 + Rf/1k → Rf = 9 kΩ.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A sensor from a 1 MΩ source reads wrong on the ADC. The first conditioning step is to...', options: ['Buffer it with a voltage follower', 'Amplify it by a gain of 100', 'Add a large series resistor', 'Connect a second sensor in parallel'], correct: 0, explanation: 'A high-impedance source must be buffered so the ADC can sample it without loading it down.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A thermocouple gives 0 to 40 mV. Read on a 0 to 5V ADC, what conditioning best uses the range?', options: ['A gain of about 125 to map 40 mV up to 5V', 'A gain of 1, then read it directly', 'A gain of 10, which is plenty', 'Attenuate it before the ADC'], correct: 0, explanation: '5V / 0.04V = 125. Without big gain, 40 mV barely moves the ADC and resolution is terrible.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Order the conditioning chain for a tiny, noisy, high-impedance sensor signal.', options: ['Buffer, then amplify, then low-pass filter into the ADC', 'Filter first, then drive the ADC, then buffer', 'Amplify the noise first, then read it raw', 'Send it straight to the ADC unconditioned'], correct: 0, explanation: 'Buffer the weak source, amplify to use the range, then filter noise before the ADC samples it.' },
+    ],
+  },
+
+  'Unit 8 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'An op-amp amplifies...', options: ['The difference between its two inputs', 'The sum of its two input voltages', 'Only the larger input voltage', 'The current from its supply pin'], correct: 0, explanation: 'It amplifies the differential input voltage.' },
+      { type: 'multiple_choice', question: 'Golden rule 2 says the inputs...', options: ['Draw essentially no current', 'Draw a large steady current', 'Sit 0.7V apart always', 'Short to the output'], correct: 0, explanation: 'Inputs have effectively infinite impedance.' },
+      { type: 'fill_blank', prompt: 'Non-inverting gain: Av = 1 + Rf / ___', blank: '___', answer: 'Rg', hint: 'The resistor from the − input to ground.' },
+      { type: 'predict_reading', question: 'Non-inverting amp, Rf = 90kΩ, Rg = 10kΩ. The gain is...', options: ['10', '9', '91', '1'], correct: 0, explanation: 'Av = 1 + 90/10 = 10.' },
+      { type: 'fill_blank', prompt: 'Inverting gain: Av = − Rf / ___', blank: '___', answer: 'Rin', hint: 'The input resistor feeding the − node.' },
+      { type: 'predict_reading', question: 'Inverting amp, Rf = 100kΩ, Rin = 10kΩ, input +1V. Output is...', options: ['−10V', '+10V', '−1V', '+100V'], correct: 0, explanation: 'Av = −100/10 = −10; Vout = −10 × 1 = −10V (clipped by the rails in practice).' },
+      { type: 'multiple_choice', question: 'A comparator with hysteresis is called a...', options: ['Schmitt trigger', 'Voltage follower', 'Summing amplifier', 'Integrator'], correct: 0, explanation: 'Hysteresis (two thresholds) defines a Schmitt trigger.' },
+      { type: 'multiple_choice', question: 'A voltage follower is used to...', options: ['Buffer a high-impedance source', 'Amplify a signal by ten', 'Invert the input signal', 'Compare two voltages'], correct: 0, explanation: 'Gain 1, high input impedance, low output impedance: a buffer.' },
+      { type: 'match', instruction: 'Match each op-amp circuit to its defining feature.', pairs: [['Non-inverting amp', 'Gain 1 + Rf/Rg, in phase'], ['Inverting amp', 'Gain −Rf/Rin, virtual ground'], ['Voltage follower', 'Gain 1, a buffer'], ['Comparator', 'Output swings to a rail']] },
+    ],
+  },
 };

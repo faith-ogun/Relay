@@ -440,6 +440,67 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'op-amps',
+    title: 'Op-Amps & Signal Conditioning',
+    subtitle: 'Amplify, compare, and clean up real signals',
+    level: 'advanced',
+    accent: 'red',
+    skills: [
+      {
+        id: 'opamp-basics',
+        title: 'The Op-Amp',
+        description: 'A huge-gain amplifier and the rules that tame it.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'What an Op-Amp Is', title: 'What an Op-Amp Is', summary: 'Two inputs, one output, enormous gain.', estMinutes: 12 },
+          { id: 'The Golden Rules', title: 'The Golden Rules', summary: 'Inputs equal, inputs draw no current.', estMinutes: 14 },
+          { id: 'Negative Feedback', title: 'Negative Feedback', summary: 'Feed the output back to set the gain.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'opamp-amplifiers',
+        title: 'The Amplifier Circuits',
+        description: 'The three workhorse op-amp configurations.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'The Non-Inverting Amplifier', title: 'Non-Inverting Amp', summary: 'Gain = 1 + Rf/Rg, in phase.', estMinutes: 14 },
+          { id: 'The Inverting Amplifier', title: 'Inverting Amp', summary: 'Gain = −Rf/Rin, the virtual ground.', estMinutes: 14 },
+          { id: 'The Voltage Follower', title: 'The Voltage Follower', summary: 'Gain 1: the buffer that stops loading.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'opamp-comparators',
+        title: 'Comparing & Switching',
+        description: 'Turn an analog level into a clean decision.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'The Comparator', title: 'The Comparator', summary: 'Which input is higher? A 1-bit decision.', estMinutes: 12 },
+          { id: 'Adding Hysteresis', title: 'Adding Hysteresis', summary: 'Two thresholds: the Schmitt trigger.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'opamp-real-world',
+        title: 'Real Op-Amps & Conditioning',
+        description: 'Limits, single supplies, and prepping a sensor.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'Real Op-Amp Limits', title: 'Real Op-Amp Limits', summary: 'Offset, slew rate, bandwidth, rails.', estMinutes: 12 },
+          { id: 'Single-Supply Op-Amps', title: 'Single-Supply Op-Amps', summary: 'Bias to mid-rail with no negative supply.', estMinutes: 12 },
+          { id: 'Conditioning a Sensor Signal', title: 'Conditioning a Sensor', summary: 'Buffer, amplify, level-shift for the ADC.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'opamps-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can amplify, compare, and condition.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 8 Checkpoint', title: 'Unit 8 Checkpoint', summary: 'A mixed test of op-amps and signal conditioning.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

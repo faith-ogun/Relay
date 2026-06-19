@@ -15,6 +15,17 @@
 
 Where the curriculum actually stands, for whoever picks this up next:
 
+- **Unit 8 authored: "Op-Amps & Signal Conditioning" (advanced), 12 lessons** —
+  what an op-amp is, the golden rules, negative feedback, non-inverting (1+Rf/Rg) and
+  inverting (−Rf/Rin) amps, the voltage follower, the comparator, hysteresis/Schmitt
+  trigger, real op-amp limits, single-supply biasing, sensor conditioning, checkpoint.
+  Calculation/concept-driven (no new diagram). Grounded in AoE ch.4, PEI ch.8, EAC
+  Vol.2. Lints clean; build green. **8 units, 92 lessons.**
+- **DIAGRAM BACKLOG (deliberate):** Units 8+ would be stronger with their signature
+  schematics (op-amp inverting/non-inverting, regulator, H-bridge). The DSL + OpAmp
+  primitive support them, but a correct op-amp schematic needs visual iteration, so
+  these are deferred to a dedicated, visually-verified diagram pass rather than risk
+  slop mid-batch. Lessons teach fully via calculation/concept in the meantime.
 - **ALL 46 pre-bar Units 1–5 lessons rebuilt to the quality bar (2026-06-19).**
   The "longest answer" tells were fixed (distractors padded so the correct option
   is never the lone longest) and every short lesson was deepened with genuine extra
@@ -272,7 +283,7 @@ is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
 | 5  | Inputs, Outputs & Code          | intermediate | ✅ built  | 10 |
 | 6  | Capacitors, RC & Timing         | intermediate | ✅ built  | 12 |
 | 7  | Transistors & Switching         | intermediate | ✅ built  | 12 |
-| 8  | Op-Amps & Signal Conditioning   | advanced     | planned  | 12 |
+| 8  | Op-Amps & Signal Conditioning   | advanced     | ✅ built  | 12 |
 | 9  | Filters, Oscillators & Signals  | advanced     | planned  | 12 |
 | 10 | Power Supplies & Regulation     | advanced     | planned  | 11 |
 | 11 | Digital Logic & Embedded        | advanced     | planned  | 14 |

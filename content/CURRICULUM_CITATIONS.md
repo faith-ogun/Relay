@@ -338,6 +338,43 @@ flyback diode).
   versus an NPN… the polarity of the supply voltage… is reversed"). Verified.
 - **Unit 7 Checkpoint** (new) — mixed retrieval over the unit; no new claims.
 
+## Unit 8 — Op-Amps & Signal Conditioning
+
+Grounded in **AoE ch.4** (Horowitz & Hill: the golden rules, inverting/non-inverting
+amplifiers, the follower), **PEI ch.8** (Scherz & Monk: op-amp circuits, gain
+formulas, single-supply biasing), and **EAC Vol.2** (Platt & Jansson: op-amp,
+comparator, hysteresis). Calculation/concept-driven (no new diagram); lints clean.
+
+- **What an Op-Amp Is** (new) — two inputs (− inverting, + non-inverting), one
+  output, huge open-loop gain (~100k+), dual supply traditionally: AoE 4.1; PEI 8.
+- **The Golden Rules** (new) — (I) with negative feedback the inputs are forced
+  equal; (II) the inputs draw no current: AoE 4.1.3 ("The inputs draw no current";
+  the output swings so the input difference is ~0). Verified.
+- **Negative Feedback** (new) — output fed back to the − input sets a stable gain
+  and prevents saturation: PEI 8 ("negative feedback… the gain of an op amp can be
+  controlled"). Verified.
+- **The Non-Inverting Amplifier** (new) — Av = 1 + Rf/Rg, in phase, min gain 1:
+  AoE 4.2 / PEI 8.4.2. All worked gains verified.
+- **The Inverting Amplifier** (new) — Av = −Rf/Rin, virtual ground at the − input,
+  summing extension: AoE 4.2.1 ("Vout/R2 = −Vin/R1"); PEI 8 ("−RF/Rin"). Verified.
+- **The Voltage Follower** (new) — unity gain buffer, high Zin / low Zout, stops a
+  high-impedance source sagging under load: AoE 4.2.3; PEI 8. Verified.
+- **The Comparator** (new) — compares two inputs, output swings to a rail; op-amp
+  open-loop vs dedicated comparator (open-collector needs a pull-up): EAC Vol.2 ch.6
+  (Comparator). Verified.
+- **Adding Hysteresis** (new) — positive feedback gives two thresholds (a Schmitt
+  trigger), killing chatter at the threshold: EAC Vol.2 ch.6 (Hysteresis). Verified.
+- **Real Op-Amp Limits** (new) — input offset voltage, input bias current, finite
+  slew rate (V/µs), gain-bandwidth tradeoff, output rail limits / rail-to-rail:
+  PEI 8 (offset, bias current); AoE 4 (slew rate, GBW). Verified.
+- **Single-Supply Op-Amps** (new) — no negative rail, output 0 to Vcc only, bias to
+  mid-rail (~Vcc/2) with a buffered divider so AC fits: PEI 8 (single-supply
+  operation). Verified.
+- **Conditioning a Sensor Signal** (new) — buffer high-Z, amplify weak signals to
+  use the ADC range, level-shift, filter; ties back to the LDR/thermistor units:
+  synthesis of the above. Worked gains (0.5V→5V = ×10; 40mV→5V ≈ ×125) verified.
+- **Unit 8 Checkpoint** (new) — mixed retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the
