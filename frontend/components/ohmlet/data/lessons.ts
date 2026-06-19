@@ -1816,4 +1816,183 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each filter to what it passes.', pairs: [['Low-pass', 'Low frequencies'], ['High-pass', 'High frequencies'], ['Band-pass', 'A middle band'], ['Notch', 'Everything but one band']] },
     ],
   },
+
+  // ═══════════════ Unit 10: Power Supplies & Regulation ═══════════════
+  // Grounded in STG ch.2 & 11 (zener, rectification), EAC Vol.1 ch.17&19
+  // (voltage regulator, DC-DC converter), PEI ch.11. See CURRICULUM_CITATIONS.md.
+
+  'Why Regulate': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Circuits Want a Steady Voltage', body: 'Most circuits need a stable, clean supply. A microcontroller expects a steady 5V or 3.3V; too high can damage it, too low and it resets. But real sources are messy: a battery sags as it drains, a wall adapter is noisy, and the current a circuit draws changes moment to moment. Voltage regulation turns a messy input into a steady output.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'What does a voltage regulator do?', options: ['Turns a messy input into a steady output voltage', 'Increases the current without limit', 'Converts DC into AC for the mains', 'Stores energy like a big battery'], correct: 0, explanation: 'A regulator holds its output steady despite input and load changes.' },
+      { type: 'true_false', difficulty: 1, statement: 'A battery\'s voltage sags as it drains.', correct: true, explanation: 'Its terminal voltage drops over time and under load, which is one reason to regulate.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Why does a microcontroller need a regulated supply?', options: ['Too high can damage it, too low makes it reset', 'It only runs on alternating current', 'It generates its own steady voltage', 'Regulation makes its code run faster'], correct: 0, explanation: 'Logic needs a voltage inside a safe window to run reliably.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'A 5V circuit runs from a battery that slowly drops from 6V to 4V with no regulator. What happens?', options: ['The supply falls with the battery and the circuit eventually misbehaves', 'The circuit somehow holds a perfect, steady 5V for the whole time anyway', 'The rail voltage actually rises higher to keep the circuit happy', 'Nothing changes at all, because batteries simply never sag'], correct: 0, explanation: 'Without regulation the rail follows the battery; once it drops too low the circuit resets or fails.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A regulator keeps the output steady when which things change?', options: ['Both the input voltage and the load current', 'Only the particular colour of the connecting wires', 'Only the amount of ambient lighting in the room', 'Nothing at all, since it cannot adjust itself'], correct: 0, explanation: 'Good regulation holds the output against input (line) and load changes.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A sensitive analog sensor reads noisily when a motor runs on the same battery. Beyond decoupling, the deeper fix is...', options: ['Regulate (and isolate) the sensor\'s supply so motor noise does not reach it', 'Make the sensor wires considerably longer so the noise has further to travel along them', 'Remove the sensor\'s ground connection from the rest of the circuit entirely', 'Run the motor at a higher voltage so it draws less current overall'], correct: 0, explanation: 'A clean, regulated (ideally separate) rail keeps the motor\'s noise and dips off the sensor supply.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each supply problem to its description.', pairs: [['Battery sag', 'Voltage falls as it drains'], ['Ripple', 'Leftover AC on a DC supply'], ['Load transient', 'A sudden change in current draw'], ['Regulation', 'Holding the output steady']] },
+    ],
+  },
+
+  'From AC to DC': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Rectification', body: 'Wall power is AC, but circuits need DC. A diode passes current only one way, so it can chop off one half of the AC waveform. Using a single diode (a half-wave rectifier) keeps only one half of each cycle, giving a lumpy, pulsed DC. It works, but it wastes half the waveform and is hard to smooth.' },
+      { type: 'teach', title: 'Full-Wave and the Bridge', body: 'A full-wave rectifier uses the whole waveform by flipping the negative halves up to positive, so you get twice as many DC humps per cycle. The usual way is a bridge rectifier: four diodes arranged so current always reaches the load the same way round, whichever way the AC is swinging. Full-wave is smoother and more efficient than half-wave.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'Rectification converts...', options: ['AC into pulsed DC', 'DC into clean AC', 'A small voltage into a big one', 'Current into resistance'], correct: 0, explanation: 'A rectifier uses diodes to turn AC into one-direction (pulsed DC) output.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A half-wave rectifier keeps...', options: ['Only one half of each AC cycle', 'Both halves of every cycle', 'None of the waveform at all', 'Only the very peaks of the wave'], correct: 0, explanation: 'A single diode passes one half and blocks the other.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A bridge rectifier is built from...', options: ['Four diodes', 'A single resistor', 'Two capacitors', 'One inductor coil'], correct: 0, explanation: 'Four diodes route current to the load the same way on both half-cycles.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is full-wave rectification better than half-wave?', options: ['It uses both halves, so it is smoother and more efficient', 'It needs no diodes at all in order to do its job', 'It cleverly turns the DC output back into clean AC', 'It doubles the input voltage entirely for free'], correct: 0, explanation: 'Using both halves gives more DC humps per cycle, easier to smooth.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'Straight after a rectifier (before smoothing), the output is...', options: ['Lumpy, pulsing DC', 'A perfectly flat DC level', 'Clean AC again', 'Zero volts'], correct: 0, explanation: 'Rectified output pulses; a smoothing capacitor is still needed to flatten it.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a bridge rectifier deliver current to the load the same way round on BOTH halves of the AC cycle?', options: ['Its four diodes steer whichever input half is positive to the same output terminal', 'It physically reverses the polarity of the whole AC source twice during every cycle', 'It quietly stores the negative half of the wave and then releases it again much later', 'Only one of its four diodes ever actually conducts any current at all'], correct: 0, explanation: 'The diode arrangement routes the current so the load always sees the same polarity.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A full-wave rectified 50 Hz mains produces ripple at what rate, and why?', options: ['100 Hz, because both half-cycles produce a hump', '50 Hz, exactly the same as the input frequency', '25 Hz, which is half of the input rate', '0 Hz, because it is already perfectly flat'], correct: 0, explanation: 'Full-wave gives two humps per input cycle, so the ripple is at twice the line frequency (100 Hz).' },
+    ],
+  },
+
+  'Smoothing the DC': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Filling the Gaps', body: 'Rectified DC still pulses up and down. A large reservoir (smoothing) capacitor across the output charges up on each hump and discharges into the load between humps, filling the gaps. The leftover wobble that remains is called ripple. A bigger capacitor, or a smaller load current, leaves less ripple.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A smoothing (reservoir) capacitor on a rectifier output...', options: ['Fills the gaps between humps, reducing ripple', 'Converts the rectified DC straight back into AC', 'Increases the output frequency of the supply', 'Blocks the DC from reaching the load entirely'], correct: 0, explanation: 'It holds the voltage up between the rectifier humps.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The leftover wobble on a smoothed supply is called...', options: ['Ripple', 'Gain', 'Bandwidth', 'Slew'], correct: 0, explanation: 'Ripple is the residual AC variation on the DC.' },
+      { type: 'true_false', difficulty: 1, statement: 'A bigger smoothing capacitor leaves less ripple.', correct: true, explanation: 'More stored charge holds the voltage up better between humps.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'You draw more current from a smoothed supply. The ripple...', options: ['Increases (the cap drains faster between humps)', 'Decreases steadily toward zero as you load it', 'Stays at exactly the same level regardless', 'Turns into a clean AC waveform instead'], correct: 0, explanation: 'A heavier load discharges the reservoir more between humps, so ripple grows.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Which is the type for a large smoothing reservoir capacitor?', options: ['A large electrolytic', 'A tiny ceramic disc', 'A film coupling cap', 'A variable trimmer cap'], correct: 0, explanation: 'Big µF values for energy storage mean an electrolytic, exactly as in Unit 6.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'After smoothing there is still ripple AND it must feed a sensitive 5V circuit. The next stage should be...', options: ['A voltage regulator to remove the ripple and hold 5V', 'A second identical rectifier placed after the first one', 'A high-pass filter feeding straight into the load', 'Nothing further, because ripple is always perfectly fine'], correct: 0, explanation: 'A regulator after the reservoir cap rejects the remaining ripple and pins the output at 5V.' },
+      { type: 'match', difficulty: 3, instruction: 'Order the typical mains-to-DC chain by role.', pairs: [['Transformer', 'Lowers the AC voltage'], ['Rectifier', 'AC to pulsed DC'], ['Reservoir cap', 'Smooths the pulses'], ['Regulator', 'Holds a steady, clean output']] },
+    ],
+  },
+
+  'The Zener Reference': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'A Diode That Holds a Voltage', body: 'A zener diode is built to break down at a precise reverse voltage, the zener voltage Vz, and then hold that voltage across itself. Wired in reverse with a series resistor to set the current, it pins its node at Vz. A few milliamps through it is enough. That makes it a simple voltage reference or a basic regulator for light loads.' },
+      { type: 'teach', title: 'Sizing the Series Resistor', body: 'The series resistor drops the difference between the input and Vz, and sets the zener current:\n\nR = (Vin − Vz) / I\n\nToo little current and the zener will not hold Vz; too much wastes power as heat. The zener works well only for small loads; bigger loads need a proper regulator.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A zener diode is used (in reverse) to...', options: ['Hold a constant voltage (Vz) across itself', 'Amplify a small input signal up to a larger one', 'Store electrical charge on plates like a capacitor', 'Generate a continuous AC waveform on its own'], correct: 0, explanation: 'It breaks down at Vz and maintains that voltage, a simple reference.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A zener voltage reference always needs a...', options: ['Series resistor to set its current', 'Large mains transformer placed in front of it', 'Second matching zener wired in parallel', 'Microcontroller to actively drive it'], correct: 0, explanation: 'The series resistor sets the zener current and drops the excess voltage.' },
+      { type: 'true_false', difficulty: 1, statement: 'A zener is wired in reverse for it to regulate at Vz.', correct: true, explanation: 'It operates in reverse breakdown at the zener voltage.' },
+
+      { type: 'fill_blank', difficulty: 2, prompt: 'The zener series resistor: R = (Vin − Vz) / ___.', blank: '___', answer: 'I', hint: 'The zener current you want to flow.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'Vin = 12V, a 5.1V zener, target current 5 mA. Pick the series resistor.', options: ['1.4 kΩ', '140 Ω', '14 kΩ', '100 Ω'], correct: 0, explanation: 'R = (12 − 5.1) / 0.005 = 6.9/0.005 = 1380 Ω ≈ 1.4 kΩ.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You connect a heavy load to a simple zener reference. The output voltage...', options: ['Sags below Vz as the load steals the current', 'Rises up to well above the zener voltage Vz', 'Stays perfectly accurate under any load at all', 'Doubles to roughly twice the zener voltage'], correct: 0, explanation: 'If the load takes the current the zener needs, the reference can no longer hold Vz, so it sags.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'Vin = 9V, a 3.3V zener. The series resistor must drop how many volts?', options: ['5.7V', '3.3V', '9V', '12.3V'], correct: 0, explanation: 'The resistor drops Vin − Vz = 9 − 3.3 = 5.7V.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why is a plain zener reference a poor choice for a circuit drawing 500 mA?', options: ['Holding Vz at high current wastes a lot of power and the output sags under load', 'Zener diodes only function at all when the input voltage is well above one hundred volts', 'It would always output a voltage far higher than the rated zener value', 'A zener diode is simply unable to drop any voltage across itself whatsoever'], correct: 0, explanation: 'Zeners suit small loads/references; at high current they are lossy and regulate poorly. Use a real regulator.' },
+    ],
+  },
+
+  'The Linear Regulator': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'A Chip That Does It For You', body: 'A linear voltage regulator (like the classic 7805) is a 3-pin chip: input, ground, output. Feed it a higher, roughly-smoothed DC and it delivers a steady fixed output (the 7805 gives 5V) over a range of input and load. Inside, it continuously adjusts a pass transistor to hold the output constant. Add a small capacitor on input and output and it just works.' },
+      { type: 'teach', title: 'The Dropout Voltage', body: 'A linear regulator needs the input to stay a certain amount ABOVE the output: the dropout voltage. A standard 7805 needs roughly 2V of headroom, so it needs about 7V or more in to give a clean 5V out. Drop the input below that and the output falls out of regulation.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A 7805 linear regulator outputs...', options: ['A steady 5V', 'A steady 12V', 'Whatever the input is', 'A square wave'], correct: 0, explanation: 'The 78xx number gives the output: 7805 = 5V.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The dropout voltage of a linear regulator is...', options: ['How far the input must stay above the output', 'The output ripple in millivolts', 'The maximum output current', 'The chip\'s internal clock rate'], correct: 0, explanation: 'Input must exceed output by at least the dropout voltage to regulate.' },
+      { type: 'true_false', difficulty: 1, statement: 'A linear regulator needs the input voltage higher than the output.', correct: true, explanation: 'It can only drop voltage, never boost it, plus the dropout headroom.' },
+
+      { type: 'predict_behavior', difficulty: 2, question: 'A 7805 (≈2V dropout) is fed 6V. The output is...', options: ['Below 5V, out of regulation (not enough headroom)', 'A perfectly clean, steady 5V output just as normal', 'A boosted 7V, higher than the input it was given', 'Exactly the 6V input, passed straight through'], correct: 0, explanation: '6V minus ~2V dropout leaves under 5V, so it cannot hold 5V.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'For a clean 5V from a 7805, the input should be at least about...', options: ['7V', '5V', '4V', '5.5V'], correct: 0, explanation: '5V output + ~2V dropout ≈ 7V minimum input.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A linear regulator can only ever...', options: ['Lower the voltage (drop it), never raise it', 'Both raise and lower the voltage as needed', 'Convert a DC input into an AC output', 'Store energy internally for use later on'], correct: 0, explanation: 'A linear regulator drops the excess; it cannot boost above its input.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'You must make 5V from a 3.7V lithium battery. Why is a standard 7805 the wrong choice?', options: ['It can only drop voltage, and 3.7V is already below 5V plus dropout', 'It would instead output around 12V, which is far too high for the circuit', 'It is only able to operate when fed an alternating-current input', 'It requires a full four-diode bridge rectifier in front of it first'], correct: 0, explanation: 'A linear regulator cannot boost; from 3.7V you need a boost (switching) converter.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Two 5V regulators: a standard 7805 (≈2V dropout) and an LDO (≈0.3V dropout), both from a draining battery. Which keeps regulating to a lower battery voltage?', options: ['The LDO, because it needs far less headroom', 'The 7805, because its larger dropout actually helps here', 'They both drop out at exactly the same battery voltage', 'Neither one is able to regulate from a battery at all'], correct: 0, explanation: 'The LDO regulates down to ~5.3V in; the 7805 needs ~7V, so the LDO works longer as the battery sags.' },
+    ],
+  },
+
+  'Linear Regulator Heat': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'The Voltage It Drops Becomes Heat', body: 'A linear regulator throws away the difference between input and output as heat. The power it dissipates is:\n\nP = (Vin − Vout) × Iout\n\nThe bigger the voltage drop or the load current, the more heat. That heat is the linear regulator\'s main weakness, and why a big drop at high current needs a heatsink, or a switching regulator instead.' },
+
+      { type: 'fill_blank', difficulty: 1, prompt: 'A linear regulator\'s heat is P = (Vin − Vout) × ___.', blank: '___', answer: 'Iout', hint: 'The load current flowing through it.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A linear regulator gets rid of the excess voltage as...', options: ['Heat', 'Light', 'Sound', 'Stored charge'], correct: 0, explanation: 'The dropped voltage times the current is dissipated as heat.' },
+      { type: 'true_false', difficulty: 1, statement: 'A larger input-to-output voltage gap makes a linear regulator run hotter.', correct: true, explanation: 'P = (Vin − Vout) × Iout, so a bigger drop means more heat at a given current.' },
+
+      { type: 'predict_reading', difficulty: 2, question: 'A 7805 drops 12V to 5V at 0.5A. How much power does it dissipate?', options: ['3.5 W', '6 W', '2.5 W', '0.5 W'], correct: 0, explanation: 'P = (12 − 5) × 0.5 = 7 × 0.5 = 3.5 W, a lot of heat for a small chip.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A 7805 drops 9V to 5V at 0.1A. The dissipation is...', options: ['0.4 W', '4 W', '0.9 W', '1.4 W'], correct: 0, explanation: 'P = (9 − 5) × 0.1 = 4 × 0.1 = 0.4 W.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A regulator is dropping 3.5W and getting very hot. A reasonable fix is to...', options: ['Add a heatsink or lower the input voltage', 'Increase the input voltage further', 'Draw even more load current', 'Remove the output capacitor'], correct: 0, explanation: 'Less voltage drop (lower Vin) or better heat-sinking reduces the temperature.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A linear regulator\'s efficiency is roughly Vout/Vin. Stepping 12V to 5V, the efficiency is about...', options: ['≈ 42%', '≈ 90%', '≈ 70%', '≈ 100%'], correct: 0, explanation: '5/12 ≈ 0.42, so ~42%. The other ~58% of the power becomes heat.' },
+      { type: 'predict_reading', difficulty: 3, question: 'You step 12V to 5V at 1A with a linear regulator. The wasted heat is...', options: ['7 W', '5 W', '12 W', '1 W'], correct: 0, explanation: 'P = (12 − 5) × 1 = 7 W wasted as heat: this is exactly where a switching regulator wins.' },
+    ],
+  },
+
+  'Switching Regulators': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Switch Fast, Waste Little', body: 'A switching regulator does not burn off the excess as heat. Instead it rapidly switches the input on and off into an inductor and capacitor, storing and releasing energy to build the desired output. Because the switch is either fully on (low loss) or fully off (no current), very little power is wasted. Efficiencies of 85 to 95% are common.' },
+      { type: 'teach', title: 'Buck, Boost, and the Catch', body: 'A buck converter steps the voltage DOWN; a boost converter steps it UP (something a linear regulator can never do); a buck-boost can do either. The price is more complexity and switching noise on the output, so switchers often need extra filtering for sensitive analog circuits.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A switching regulator is more efficient because it...', options: ['Switches fully on/off instead of burning off the excess', 'Uses a considerably bigger heatsink than a linear one does', 'Only ever runs at a very low output current level', 'Converts the wasted energy harmlessly into light'], correct: 0, explanation: 'A fully-on or fully-off switch wastes little power, unlike a linear regulator.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A buck converter...', options: ['Steps the voltage down', 'Steps the voltage up to a higher level', 'Converts the DC supply into AC', 'Only filters out the noise on a rail'], correct: 0, explanation: 'Buck = step-down; boost = step-up.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Which can a boost converter do that a linear regulator cannot?', options: ['Produce an output higher than the input', 'Drop the voltage down to a lower level', 'Dissipate energy as heat', 'Pass DC straight through'], correct: 0, explanation: 'A boost steps the voltage up; linear regulators can only drop it.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'The main downside of a switching regulator versus a linear one is...', options: ['More complexity and switching noise on the output', 'It can never reach a useful level of efficiency', 'It is completely unable to change the voltage', 'It will only ever work from an AC input'], correct: 0, explanation: 'Switchers are efficient but noisier and more complex than a simple linear.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You need 5V at 2A from a 12V supply with minimal heat. The better choice is...', options: ['A buck (switching) converter', 'A linear 7805 with no heatsink', 'A plain zener reference', 'A bridge rectifier alone'], correct: 0, explanation: 'A linear would burn (12−5)×2 = 14W; a buck converter handles it efficiently and cool.' },
+
+      { type: 'predict_reading', difficulty: 3, question: 'A 90%-efficient buck makes 5V at 2A (10W out) from 12V. The input current is roughly...', options: ['≈ 0.93 A', '≈ 2 A', '≈ 0.42 A', '≈ 5 A'], correct: 0, explanation: 'Pin = Pout/eff = 10/0.9 ≈ 11.1W; Iin = 11.1/12 ≈ 0.93A. A linear would draw the full 2A in.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'To run a 5V circuit from a single 3.7V lithium cell, you need a...', options: ['Boost converter (steps 3.7V up to 5V)', 'Buck converter (steps it down)', 'Linear 7805 regulator', 'Simple zener reference'], correct: 0, explanation: '3.7V is below 5V, so you must step up: a boost converter.' },
+    ],
+  },
+
+  'Linear vs Switching': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Choosing the Right Regulator', body: 'Linear regulators are simple, cheap, and quiet (low noise), but waste the dropped voltage as heat, so they suit small drops at modest current, and noise-sensitive analog supplies. Switching regulators are efficient and can step up or down, but are more complex and noisier, so they suit big voltage changes, high current, and battery-powered gear where efficiency matters.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A linear regulator\'s big advantages are...', options: ['Simplicity and low output noise', 'High efficiency at big voltage drops', 'The ability to boost voltage', 'No heat at any current'], correct: 0, explanation: 'Linear regulators are simple and quiet, but inefficient at large drops.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A switching regulator\'s big advantages are...', options: ['High efficiency and it can step up or down', 'The lowest possible output noise', 'Having no inductor or capacitor', 'Being simpler than a linear'], correct: 0, explanation: 'Switchers are efficient and flexible, at the cost of noise and complexity.' },
+      { type: 'true_false', difficulty: 1, statement: 'For a noise-sensitive analog supply with a small voltage drop, a linear regulator is often the better pick.', correct: true, explanation: 'Its low noise and simplicity win when the drop and current are small.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'A battery-powered device must squeeze maximum runtime from its cells. Which regulator?', options: ['A switching regulator, for its efficiency', 'A linear regulator, for its heat', 'A zener reference, for its accuracy', 'No regulator, run it raw'], correct: 0, explanation: 'Efficiency directly extends battery life, so a switcher is preferred.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Dropping 5.2V to 5.0V at 50 mA for a clean sensor rail. Best pick?', options: ['A low-dropout linear regulator', 'A switching buck converter', 'A bridge rectifier', 'A boost converter'], correct: 0, explanation: 'A tiny drop, low current, noise-sensitive: a quiet LDO is ideal (and a switcher\'s noise would hurt).' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'A design steps 24V down to 3.3V at 1.5A. Why is a linear regulator a poor choice here?', options: ['It would dissipate over 30W as heat ((24−3.3)×1.5)', 'It cannot reach 3.3V output at all', 'It would boost the voltage too high', 'It only works below 5V input'], correct: 0, explanation: '(24 − 3.3) × 1.5 ≈ 31W of heat: wildly impractical. A switching buck is the right tool.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each scenario to the better regulator.', pairs: [['Big drop, high current', 'Switching'], ['Tiny drop, low-noise analog', 'Linear / LDO'], ['Need to step voltage up', 'Switching (boost)'], ['Cheap, simple, small drop', 'Linear']] },
+    ],
+  },
+
+  'A Clean Supply': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Regulation Is Not the End', body: 'Even after a regulator, a real supply needs help to stay clean at the point of use. Bulk capacitors near the regulator handle slow, large current swings; small decoupling (bypass) capacitors right at each chip handle the fast current spikes (exactly the Unit 6 idea). A solid, low-impedance ground ties it all together.' },
+
+      { type: 'multiple_choice', difficulty: 1, question: 'A small decoupling capacitor at a chip\'s power pins handles...', options: ['Fast current spikes the chip demands', 'The slow drift of the battery', 'Converting AC to DC', 'Boosting the supply voltage'], correct: 0, explanation: 'Local bypass caps supply fast transients before the rail can sag, as in Unit 6.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A bulk capacitor near the regulator handles...', options: ['Slower, larger current swings', 'Only radio-frequency noise', 'The chip\'s ground reference', 'Stepping the voltage up'], correct: 0, explanation: 'Bulk caps cover slower, bigger demands; small ceramics cover the fast spikes.' },
+      { type: 'true_false', difficulty: 1, statement: 'A solid, low-impedance ground is part of a clean supply.', correct: true, explanation: 'Shared, low-impedance ground keeps reference voltages stable across the board.' },
+
+      { type: 'multiple_choice', difficulty: 2, question: 'Why pair a bulk electrolytic with small ceramics across a board\'s supply?', options: ['Each covers a different speed of current demand', 'It looks more professional on the PCB', 'The ceramic recharges the electrolytic', 'It doubles the regulator\'s output'], correct: 0, explanation: 'Bulk caps are slow but large; ceramics are fast: together they cover all timescales (Unit 6).' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A board glitches when a chip switches hard, despite a good regulator. The likely missing piece is...', options: ['Local decoupling capacitors at the chip', 'A second voltage regulator wired up in series', 'A noticeably larger input fuse on the supply line', 'A considerably longer ground return wire'], correct: 0, explanation: 'Without local bypass caps the rail dips on fast spikes; add 100 nF at each chip.' },
+
+      { type: 'multiple_choice', difficulty: 3, question: 'Order a robust supply chain from a noisy DC input to a sensitive chip.', options: ['Bulk cap, regulator, bulk cap, local 100 nF decoupling at the chip', 'Put the chip first, then the regulator, then any caps at the very end', 'Just the regulator on its own, with no capacitors anywhere at all', 'A decoupling cap first, sitting ahead of the raw noisy input'], correct: 0, explanation: 'Smooth the input, regulate, hold the output with a bulk cap, and decouple right at the chip.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each part of a clean supply to its job.', pairs: [['Regulator', 'Holds a steady output voltage'], ['Bulk capacitor', 'Slow, large current swings'], ['Decoupling cap', 'Fast spikes at the chip'], ['Low-impedance ground', 'A stable shared reference']] },
+    ],
+  },
+
+  'Unit 10 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'A voltage regulator...', options: ['Turns a messy input into a steady output', 'Converts DC into mains AC', 'Stores energy like a battery', 'Amplifies a small signal'], correct: 0, explanation: 'It holds the output steady against input and load changes.' },
+      { type: 'multiple_choice', question: 'A bridge rectifier uses how many diodes?', options: ['Four', 'One', 'Two', 'Eight'], correct: 0, explanation: 'Four diodes give full-wave rectification.' },
+      { type: 'multiple_choice', question: 'The leftover wobble on a smoothed DC supply is called...', options: ['Ripple', 'Gain', 'Dropout', 'Slew'], correct: 0, explanation: 'Ripple is the residual AC variation.' },
+      { type: 'fill_blank', prompt: 'A linear regulator\'s heat: P = (Vin − Vout) × ___', blank: '___', answer: 'Iout', hint: 'The load current through it.' },
+      { type: 'predict_reading', question: 'A 7805 drops 12V to 5V at 0.5A. The power dissipated is...', options: ['3.5 W', '6 W', '2.5 W', '0.5 W'], correct: 0, explanation: 'P = (12 − 5) × 0.5 = 3.5 W.' },
+      { type: 'multiple_choice', question: 'To make 5V from a 3.7V cell you need a...', options: ['Boost (switching) converter', 'Standard linear 7805 regulator', 'Simple zener diode reference', 'Four-diode bridge rectifier'], correct: 0, explanation: '3.7V is below 5V, so you must step up: a boost converter.' },
+      { type: 'multiple_choice', question: 'A switching regulator is more efficient because it...', options: ['Switches fully on/off, wasting little power', 'Burns off the excess voltage entirely as heat', 'Only ever runs at a very low output current', 'Uses no inductor or capacitor at all inside'], correct: 0, explanation: 'A fully-on/off switch dissipates little, unlike a linear regulator.' },
+      { type: 'choose_resistor', question: 'Vin = 12V, 5.1V zener, target 5 mA. The series resistor is...', options: ['1.4 kΩ', '140 Ω', '14 kΩ', '100 Ω'], correct: 0, explanation: 'R = (12 − 5.1)/0.005 ≈ 1.4 kΩ.' },
+      { type: 'match', instruction: 'Match each block of a power supply to its job.', pairs: [['Rectifier', 'AC to pulsed DC'], ['Reservoir cap', 'Smooths the pulses'], ['Regulator', 'Steady, clean output'], ['Decoupling cap', 'Fast spikes at the chip']] },
+    ],
+  },
 };

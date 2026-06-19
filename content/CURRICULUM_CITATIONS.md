@@ -413,6 +413,41 @@ and **AoE** (filters, RMS, decibels). Calculation/concept-driven; reuses the
   period → frequency, divisions × scale: standard scope practice. Verified arithmetic.
 - **Unit 9 Checkpoint** (new) — mixed retrieval; no new claims.
 
+## Unit 10 — Power Supplies & Regulation
+
+Grounded in **STG ch.2 & 11** (Kybett & Boysen: zener diode, rectification),
+**EAC Vol.1 ch.17 & 19** (Platt: DC-DC converter, voltage regulator, LDO,
+dropout), and **PEI ch.11** (Scherz & Monk: power supplies). Calculation/
+concept-driven; lints clean.
+
+- **Why Regulate** (new) — circuits need a steady clean rail; batteries sag,
+  supplies are noisy, loads change: EAC Vol.1 ch.19; general. Verified.
+- **From AC to DC** (new) — half-wave (one diode), full-wave/bridge (four diodes);
+  full-wave ripple at 2× line frequency: STG ch.11 ("half-wave rectifier"; bridge);
+  EAC Vol.1 (Bridge Rectifier). Verified.
+- **Smoothing the DC** (new) — reservoir/smoothing capacitor fills the gaps,
+  leaving ripple; heavier load = more ripple: EAC Vol.1 (Smoothing Capacitor);
+  ties to Unit 6. Verified.
+- **The Zener Reference** (new) — zener holds Vz in reverse breakdown, needs a
+  series resistor R = (Vin − Vz)/I, a few mA; sags under heavy load: STG ch.2 ("zener
+  diodes… At the zener voltage, a small current will flow… used to maintain a
+  constant voltage"). Verified ((12−5.1)/0.005 ≈ 1.4 kΩ).
+- **The Linear Regulator** (new) — 7805 = fixed 5V, 3-pin; dropout voltage (~2V for
+  a 7805, so Vin ≥ ~7V); can only drop, never boost: EAC Vol.1 ch.19 ("Low-Dropout
+  Linear Regulators"; dropout). Verified.
+- **Linear Regulator Heat** (new) — P = (Vin − Vout) × Iout dissipated as heat;
+  efficiency ≈ Vout/Vin: EAC Vol.1 ch.19 (heat management); Ohm/power. Verified
+  (12→5V at 0.5A = 3.5W; 5/12 ≈ 42%).
+- **Switching Regulators** (new) — switch on/off into L+C, 85–95% efficient; buck
+  (down), boost (up), buck-boost; noisier: EAC Vol.1 ch.17 (DC-DC converter, buck/
+  boost, efficiency, ripple/noise). Verified (90% buck, 10W out from 12V ≈ 0.93A in).
+- **Linear vs Switching** (new) — linear: simple, quiet, lossy at big drops;
+  switching: efficient, flexible, noisier: EAC Vol.1 ch.17/19. Verified (24→3.3V at
+  1.5A ≈ 31W in a linear).
+- **A Clean Supply** (new) — bulk caps (slow swings) + decoupling ceramics (fast
+  spikes) + low-impedance ground: EAC Vol.1; ties to Unit 6 decoupling. Verified.
+- **Unit 10 Checkpoint** (new) — mixed retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

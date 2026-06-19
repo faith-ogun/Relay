@@ -554,6 +554,57 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'power-supplies',
+    title: 'Power Supplies & Regulation',
+    subtitle: 'Turn a messy input into a clean, steady rail',
+    level: 'advanced',
+    accent: 'gold',
+    skills: [
+      {
+        id: 'making-dc',
+        title: 'Making Clean DC',
+        description: 'Why regulate, and how AC becomes smooth DC.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'Why Regulate', title: 'Why Regulate', summary: 'Circuits need a steady, clean voltage.', estMinutes: 10 },
+          { id: 'From AC to DC', title: 'From AC to DC', summary: 'Half-wave, full-wave, and the bridge.', estMinutes: 12 },
+          { id: 'Smoothing the DC', title: 'Smoothing the DC', summary: 'Reservoir caps and ripple.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'linear-regulation',
+        title: 'Linear Regulation',
+        description: 'References, fixed regulators, and their heat.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'The Zener Reference', title: 'The Zener Reference', summary: 'A diode that holds a voltage; size the resistor.', estMinutes: 12 },
+          { id: 'The Linear Regulator', title: 'The Linear Regulator', summary: 'The 7805 and the dropout voltage.', estMinutes: 14 },
+          { id: 'Linear Regulator Heat', title: 'Linear Regulator Heat', summary: 'P = (Vin − Vout) × Iout.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'switching-regulation',
+        title: 'Switching & Choosing',
+        description: 'Efficient converters, and which to pick.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'Switching Regulators', title: 'Switching Regulators', summary: 'Buck, boost, and high efficiency.', estMinutes: 14 },
+          { id: 'Linear vs Switching', title: 'Linear vs Switching', summary: 'Efficiency vs noise and simplicity.', estMinutes: 12 },
+          { id: 'A Clean Supply', title: 'A Clean Supply', summary: 'Bulk caps, decoupling, and ground.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'power-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can design a clean, safe supply.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 10 Checkpoint', title: 'Unit 10 Checkpoint', summary: 'A mixed test of power supplies and regulation.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

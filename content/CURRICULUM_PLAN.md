@@ -15,6 +15,13 @@
 
 Where the curriculum actually stands, for whoever picks this up next:
 
+- **Unit 10 authored: "Power Supplies & Regulation" (advanced), 11 lessons** —
+  why regulate, AC→DC rectification (half/full-wave, bridge), smoothing & ripple,
+  the zener reference (R=(Vin−Vz)/I), the linear regulator (7805, dropout), regulator
+  heat (P=(Vin−Vout)·Iout), switching regulators (buck/boost, efficiency), linear vs
+  switching, a clean supply (bulk + decoupling + ground), checkpoint. Grounded in STG
+  ch.2&11, EAC Vol.1 ch.17&19, PEI ch.11. Lints clean; build green.
+  **10 units, 115 lessons.** Units 11–12 remain for full v1 (~143).
 - **Unit 9 authored: "Filters, Oscillators & Signals" (advanced), 12 lessons** —
   waveforms (f=1/T), measuring AC (peak/pp/RMS), the frequency domain, high-pass vs
   low-pass, the cutoff (fc=1/2πRC, 0.707/−3dB), decibels & roll-off, band-pass/notch
@@ -291,7 +298,7 @@ is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
 | 7  | Transistors & Switching         | intermediate | ✅ built  | 12 |
 | 8  | Op-Amps & Signal Conditioning   | advanced     | ✅ built  | 12 |
 | 9  | Filters, Oscillators & Signals  | advanced     | ✅ built  | 12 |
-| 10 | Power Supplies & Regulation     | advanced     | planned  | 11 |
+| 10 | Power Supplies & Regulation     | advanced     | ✅ built  | 11 |
 | 11 | Digital Logic & Embedded        | advanced     | planned  | 14 |
 | 12 | Comms, Motors & Robotics        | advanced     | planned  | 13 |
 
