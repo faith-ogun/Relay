@@ -229,6 +229,17 @@ function lintLesson(lessonId: string, lesson: { steps: LessonStep[]; xpReward: n
   if (nonTeach === 0) pushLesson('warn', 'lesson has no interactive steps (all teach)');
   else if (nonTeach < 6) pushLesson('warn', `only ${nonTeach} graded questions; aim for 8+ (12+ for a tiered pool that levels well)`);
 
+  // Variety: multiple_choice should not dominate. A lesson that is mostly plain MC
+  // reads as a quiz, not the active, varied practice the bar calls for. Flag when MC
+  // is a strict majority of a reasonably-sized graded set, so the rebalance has a
+  // checkable target. (true_false / predict_* / trace / fix / build / match / etc.
+  // all count as not-plain-MC.)
+  if (nonTeach >= 6) {
+    const mc = lesson.steps.filter((s) => s.type === 'multiple_choice').length;
+    if (mc / nonTeach > 0.5)
+      pushLesson('warn', `multiple_choice is ${mc}/${nonTeach} of graded steps (>50%); rebalance toward predict/trace/fix/build/identify so no single type dominates`);
+  }
+
   let consecutiveTeach = 0;
   lesson.steps.forEach((step, i) => {
     consecutiveTeach = step.type === 'teach' ? consecutiveTeach + 1 : 0;
