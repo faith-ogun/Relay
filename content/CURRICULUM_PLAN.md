@@ -11,9 +11,27 @@
 
 ---
 
-## Status snapshot (2026-06-18)
+## Status snapshot (2026-06-19)
 
 Where the curriculum actually stands, for whoever picks this up next:
+
+- **Unit 6 authored to the quality bar (2026-06-19): "Capacitors, RC & Timing"**,
+  12 lessons (caps, farad units, polarity, charging, τ = RC, RC design, smoothing/
+  decoupling, coupling, the RC low-pass filter, RC timing, the 555, checkpoint).
+  Difficulty-tiered pools, balanced distractors, method-only hints; **lints 0
+  errors / 0 warnings on the new unit** (the 89 remaining warnings are all the
+  pre-bar Units 1–5 backlog). Grounded in EAC Vol.1, Make: Electronics, PEI
+  (see CURRICULUM_CITATIONS.md). Reuses the `rc_low_pass` DSL diagram.
+- **6 units, 68 lessons built.** v1 target ~143 (12 units); ceiling ~450–650.
+- **Still to do this push:** rebuild the 54 pre-bar Units 1–5 lessons (the 89 lint
+  warnings are the worklist), and author Units 7–12 (+ extra units toward the
+  ceiling). Authoring tip learned: write one distractor as long as the correct
+  option up front, keep the correct option concise — avoids the "longest answer"
+  rework the linter flags.
+
+## Status snapshot (2026-06-18)
+
+Where the curriculum actually stood the day before:
 
 - **5 units, 56 lessons built.** v1 target ~143 (12 units); ceiling ~450–650 (§5b/§5c).
 - **Authoring rails live:** `npm run lint:lessons` (schema + quality checks), the
@@ -230,7 +248,7 @@ is reserved for Units 8–12). Lesson counts include each unit's checkpoint.
 | 3  | Sensors & Signals               | intermediate | ✅ built  | 11 |
 | 4  | Meet the Arduino                | intermediate | ✅ built  | 11 |
 | 5  | Inputs, Outputs & Code          | intermediate | ✅ built  | 10 |
-| 6  | Capacitors, RC & Timing         | intermediate | planned  | 12 |
+| 6  | Capacitors, RC & Timing         | intermediate | ✅ built  | 12 |
 | 7  | Transistors & Switching         | intermediate | planned  | 13 |
 | 8  | Op-Amps & Signal Conditioning   | advanced     | planned  | 12 |
 | 9  | Filters, Oscillators & Signals  | advanced     | planned  | 12 |

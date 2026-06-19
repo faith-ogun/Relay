@@ -242,6 +242,52 @@ Grounded in **EA** (Exploring Arduino, Blum) Ch.2–3.
   Verified.
 - **Unit 5 Checkpoint** (new) — mixed retrieval; no new claims.
 
+## Unit 6 — Capacitors, RC & Timing
+
+Grounded in **EAC Vol.1** (Charles Platt, "Capacitor" chapter), **ME** (Make:
+Electronics, Experiments 8–10 on capacitors, time, and the relay/555 oscillator),
+and **PEI** §2.23 (capacitors). Authored to the quality bar (difficulty-tiered
+pools, balanced distractors, method-only hints); lints clean.
+
+- **What a Capacitor Does** (new) — stores charge on two plates separated by a
+  dielectric; opposes a sudden change in voltage; holds charge when disconnected;
+  passes AC / blocks DC: EAC Vol.1 "Capacitor — How It Works"; PEI §2.23. Verified.
+- **Farads and Capacitor Values** (new) — farad is huge; 1 F = 1,000,000 µF,
+  1 µF = 1,000 nF = 1,000,000 pF; "104" = 100 nF = 0.1 µF: EAC Vol.1 "Values /
+  Farads" ("1F = 1,000,000μF, and 1μF = 1,000,000pF"). Verified.
+- **Capacitor Types and Polarity** (new) — ceramic non-polarised, electrolytic
+  polarised (negative lead marked, can fail/vent if reversed; poor for AC): ME
+  p.1467 ("Ceramic capacitors have no polarity… Electrolytics do have polarity");
+  PEI §2.23.2 (negative lead marked; not for AC). Verified.
+- **Charging Through a Resistor** (new) — series R limits current so Vc rises
+  gradually (fast then slowing), approaching but never quite reaching the supply;
+  charged cap blocks steady DC: EAC Vol.1 "The Time Constant"; STG Ch.1 (RC). Verified.
+- **The Time Constant** (new) — τ = R × C (ohms × farads = seconds); ~63% per τ;
+  ~99% (treated as full) after 5τ: EAC Vol.1 ("the number of seconds… to acquire
+  approximately 63% of the difference… five time constants are considered adequate");
+  STG Ch.1 ("time constant (τ)"). Arithmetic verified (1 kΩ × 1000 µF = 1 s, etc.).
+- **Calculating RC Timing** (new) — rearrange τ = RC for R or C; the µF→farad
+  conversion trap; 5τ for full charge: same sources. All worked values verified.
+- **Smoothing and Decoupling** (new) — reservoir/smoothing electrolytic fills
+  supply dips; 100 nF ceramic decoupling at chip power pins supplies fast bursts;
+  pairing big + small covers both timescales: EAC Vol.1 "How To Use It — Bypass /
+  Smoothing Capacitor"; standard practice. Verified.
+- **Coupling and Blocking DC** (new) — series cap blocks DC, passes AC; reactance
+  Xc = 1/(2πfC) falls with frequency and → ∞ at DC: EAC Vol.1 "Coupling Capacitor /
+  Capacitive Reactance"; PEI §2.23. Verified.
+- **The RC Low-Pass Filter** (new) — R series + C to ground, output across C;
+  fc = 1/(2πRC); swap → high-pass: EAC Vol.1 "Low-Pass / High-Pass Filter"; PEI
+  Ch.2. fc worked example (1.6 kΩ, 0.1 µF ≈ 1 kHz) verified. Uses the `rc_low_pass`
+  DSL diagram.
+- **RC Timing in Practice** (new) — RC as delay/debounce/fade; RC vs millis()/delay()
+  in code: ME (relay oscillator / time experiments); Exploring Arduino (Blum, code
+  timing). Reasoning verified.
+- **The 555 Timer** (new) — timer/oscillator chip, astable (free-running) vs
+  monostable (one-shot), timing set by external R and C, t ≈ 0.7·R·C per phase:
+  ME (Hans Camenzind / 555 oscillator experiment); standard 555 reference. The
+  0.7·R·C figure verified (10 kΩ, 100 µF ≈ 0.7 s/phase).
+- **Unit 6 Checkpoint** (new) — mixed retrieval over the unit; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

@@ -318,6 +318,67 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'capacitors-rc',
+    title: 'Capacitors, RC & Timing',
+    subtitle: 'Store charge, shape signals, make time',
+    level: 'intermediate',
+    accent: 'blue',
+    skills: [
+      {
+        id: 'meet-capacitor',
+        title: 'Meet the Capacitor',
+        description: 'What stores charge, how it is measured, and how to wire it.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'What a Capacitor Does', title: 'What a Capacitor Does', summary: 'Stores charge; resists a change in voltage.', estMinutes: 10 },
+          { id: 'Farads and Capacitor Values', title: 'Farads & Values', summary: 'F, µF, nF, pF, and reading them.', estMinutes: 10 },
+          { id: 'Capacitor Types and Polarity', title: 'Types & Polarity', summary: 'Ceramic vs electrolytic; mind the stripe.', estMinutes: 10 },
+        ],
+      },
+      {
+        id: 'rc-charging',
+        title: 'Charging & the Time Constant',
+        description: 'How an RC circuit charges, and the one number that times it.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'Charging Through a Resistor', title: 'Charging Through a Resistor', summary: 'The gradual charging curve.', estMinutes: 12 },
+          { id: 'The Time Constant', title: 'The Time Constant', summary: 'τ = R × C, 63%, and five taus.', estMinutes: 14 },
+          { id: 'Calculating RC Timing', title: 'Calculating RC Timing', summary: 'Design a delay; mind the farad conversion.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'caps-at-work',
+        title: 'Capacitors at Work',
+        description: 'Smoothing, coupling, and filtering real signals.',
+        icon: 'Wrench',
+        lessons: [
+          { id: 'Smoothing and Decoupling', title: 'Smoothing & Decoupling', summary: 'Steady the supply; bypass a chip.', estMinutes: 12 },
+          { id: 'Coupling and Blocking DC', title: 'Coupling & Blocking DC', summary: 'Pass the wiggle, block the level.', estMinutes: 12 },
+          { id: 'The RC Low-Pass Filter', title: 'The RC Low-Pass Filter', summary: 'Cutoff frequency and smoothing noise.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'timing-555',
+        title: 'Timing & the 555',
+        description: 'Turn RC into delays, oscillators, and the classic timer chip.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'RC Timing in Practice', title: 'RC Timing in Practice', summary: 'Delays, debounce, fades; RC vs code.', estMinutes: 12 },
+          { id: 'The 555 Timer', title: 'The 555 Timer', summary: 'Astable and monostable, set by RC.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'capacitors-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can size, place, and time with capacitors.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 6 Checkpoint', title: 'Unit 6 Checkpoint', summary: 'A mixed test of capacitors, RC, and timing.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

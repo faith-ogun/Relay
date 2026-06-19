@@ -759,4 +759,274 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'true_false', statement: 'Sense, decide, act maps to analogRead, if, digitalWrite.', correct: true, explanation: 'Exactly the shape of the alarm sketch.' },
     ],
   },
+
+  // ═══════════════════ Unit 6: Capacitors, RC & Timing ═══════════════════
+  // Grounded in EAC Vol.1 (Capacitor), Make: Electronics (Exp. 8-10), PEI §2.23.
+  // See content/CURRICULUM_CITATIONS.md.
+
+  'What a Capacitor Does': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'A Tiny Charge Store', body: 'A capacitor stores electrical charge. Inside are two conducting plates separated by an insulator called the dielectric. Connect it to a voltage and charge piles up on the plates; the voltage across the capacitor rises until it matches the supply. Disconnect it and the charge stays, so a charged capacitor holds its voltage.' },
+      { type: 'teach', title: 'It Resists a Change in Voltage', body: 'The key behaviour: a capacitor opposes a sudden change in its voltage. It cannot jump instantly, it has to charge or discharge. That single property is behind everything a capacitor does, from smoothing a supply to timing a blink.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'What does a capacitor store?', options: ['Electrical charge', 'A magnetic field', 'Heat energy', 'Resistance'], correct: 0, explanation: 'A capacitor stores charge on its two plates; an inductor is the one that stores a magnetic field.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The insulating layer between a capacitor\'s plates is called the...', options: ['Dielectric', 'Electrolyte', 'Conductor', 'Substrate'], correct: 0, explanation: 'The dielectric is the insulator between the plates; its material sets much of the capacitance.' },
+      { type: 'true_false', difficulty: 1, statement: 'A capacitor opposes a sudden change in the voltage across it.', correct: true, explanation: 'Yes. Its voltage can only rise or fall as it charges or discharges, never instantly.' },
+      { type: 'true_false', difficulty: 1, statement: 'A charged capacitor loses its voltage the instant you disconnect it.', correct: false, explanation: 'It holds the charge, so the voltage stays until something lets it discharge. Big capacitors can hold a dangerous charge for a long time.' },
+
+      // Tier 2: apply
+      { type: 'multiple_choice', difficulty: 2, question: 'You connect an empty capacitor across a 5V supply. What does its voltage do?', options: ['Rises toward 5V, then holds there', 'Jumps straight to 5V with no delay', 'Stays at 0V and never charges up', 'Overshoots 5V and climbs to 10V'], correct: 0, explanation: 'It charges up toward the supply and settles at 5V; it cannot exceed the supply or jump there instantly.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A capacitor is charged to 5V. You connect a resistor across it. What happens?', options: ['It discharges, its voltage falling toward 0V', 'Its voltage rises above 5V', 'Nothing, capacitors cannot discharge', 'It stays at exactly 5V'], correct: 0, explanation: 'The resistor gives the stored charge a path out, so the capacitor discharges and its voltage decays toward 0V.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Which property makes a capacitor useful for smoothing a wobbly supply voltage?', options: ['It resists sudden voltage changes', 'It increases the voltage', 'It blocks all current', 'It generates its own charge'], correct: 0, explanation: 'Because it opposes fast voltage changes, it fills in the dips and shaves the peaks, smoothing the supply.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a capacitor pass an AC signal but block a steady DC voltage?', options: ['Once charged, steady DC stops, but AC keeps charging it', 'It internally rectifies the incoming AC into smooth DC', 'A DC voltage is simply too small to enter the capacitor', 'An AC signal always carries far more voltage than DC'], correct: 0, explanation: 'Steady DC charges it once and then current stops. AC constantly reverses, so the capacitor charges and discharges continuously, letting the changing current through.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'A capacitor sits across the power pins of a chip. The chip suddenly draws a burst of current. What does the capacitor do?', options: ['Supplies the burst from its stored charge to steady it', 'Blocks the chip from drawing any current at all', 'Pushes the whole supply rail to a higher voltage', 'Does nothing useful while the burst happens'], correct: 0, explanation: 'It dumps stored charge to cover the sudden demand, so the local voltage barely dips. That is exactly what a decoupling capacitor is for.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each part or idea to what it is.', pairs: [['Plates', 'Conductors that hold the charge'], ['Dielectric', 'The insulator between them'], ['Charging', 'Voltage rising toward the supply'], ['Discharging', 'Voltage falling toward zero'], ['Stored charge', 'Why a cap holds its voltage']] },
+    ],
+  },
+
+  'Farads and Capacitor Values': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'The Farad Is Huge', body: 'Capacitance is measured in farads (F). One farad is enormous, so real parts use tiny fractions:\n\n• microfarad (µF) = one millionth of a farad\n• nanofarad (nF) = one thousandth of a µF\n• picofarad (pF) = one thousandth of a nF\n\nSo 1 F = 1,000,000 µF, and 1 µF = 1,000 nF = 1,000,000 pF.' },
+      { type: 'teach', title: 'Reading the Steps', body: 'Each step down is ×1000:\n\npF → nF → µF → F\n\nA "100 nF" ceramic (very common for decoupling) is the same as 0.1 µF. A "10 µF" electrolytic is 10,000 nF. Getting the prefix right matters: a 1000× error in C is a 1000× error in your timing.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'What is the unit of capacitance?', options: ['Farad (F)', 'Henry (H)', 'Ohm (Ω)', 'Volt (V)'], correct: 0, explanation: 'Capacitance is measured in farads, named after Michael Faraday.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Why are most real capacitors rated in µF, nF, or pF rather than farads?', options: ['One farad is a very large amount of capacitance', 'Farads are illegal to use', 'Small capacitors cannot store charge', 'The farad is an old unit no longer used'], correct: 0, explanation: 'A whole farad is huge, so practical parts are tiny fractions of one.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Going up the prefixes, each step (pF → nF → µF) multiplies by ___.', blank: '___', answer: '1000', hint: 'Three zeros per step.' },
+
+      // Tier 2: convert
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 100 nF capacitor expressed in microfarads is ___ µF.', blank: '___', answer: '0.1', hint: 'There are 1000 nF in a µF, so divide by 1000.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'How many nanofarads are in 10 µF?', options: ['10,000 nF', '10 nF', '100 nF', '1,000,000 nF'], correct: 0, explanation: '1 µF = 1000 nF, so 10 µF = 10,000 nF.' },
+      { type: 'fill_blank', difficulty: 2, prompt: '4700 pF written in nanofarads is ___ nF.', blank: '___', answer: '4.7', hint: 'There are 1000 pF in a nF.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A schematic calls for 0.1 µF. Which marking on a part is the same value?', options: ['100 nF', '10 nF', '1 nF', '1000 pF'], correct: 0, explanation: '0.1 µF × 1000 = 100 nF. The common "104" ceramic is exactly this.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'You needed 10 µF in a timing circuit but fitted 10 nF by mistake. What happens to the timing?', options: ['It runs about 1000× faster than intended', 'It runs about 1000× slower', 'No change, nF and µF are the same', 'The circuit will not power on'], correct: 0, explanation: '10 nF is 1000× smaller than 10 µF, so the time constant (and the delay) is about 1000× shorter.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A "104" ceramic capacitor uses the same digit-digit-multiplier idea as a resistor, in picofarads: 10 followed by 4 zeros. What is its value?', options: ['100,000 pF, the same as 100 nF or 0.1 µF', 'Just 104 pF, reading the number literally', 'About 10.4 µF, a fairly large value', 'Only 14 pF, a very tiny value'], correct: 0, explanation: '"104" means 10 × 10,000 pF = 100,000 pF = 100 nF = 0.1 µF, the workhorse decoupling cap.' },
+    ],
+  },
+
+  'Capacitor Types and Polarity': {
+    xpReward: 25,
+    steps: [
+      { type: 'teach', title: 'Two Families You Will Meet', body: 'Ceramic capacitors are small, cheap, and have NO polarity, so either lead can go either way. They are used for small values (pF to a few µF) and for decoupling. Electrolytic capacitors pack a large value into a small can (µF to thousands of µF) but they ARE polarised: one lead is positive, one negative.' },
+      { type: 'teach', title: 'Mind the Stripe', body: 'An electrolytic must be wired the right way round. The negative lead is marked, usually with a stripe down the can, and is often the shorter leg. Wire one backwards and it can fail, sometimes venting or popping. Ceramics have no such rule.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'Which capacitor type is polarised (orientation matters)?', options: ['Electrolytic', 'Ceramic', 'Both equally', 'Neither'], correct: 0, explanation: 'Electrolytics are polarised; ceramics are not.' },
+      { type: 'true_false', difficulty: 1, statement: 'A ceramic capacitor can be connected either way round.', correct: true, explanation: 'Yes. Ceramics are non-polarised, so either lead can face either way.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'On an electrolytic capacitor, the stripe down the can usually marks the...', options: ['Negative lead', 'Positive lead', 'Hottest point', 'Value in µF'], correct: 0, explanation: 'The stripe marks the negative lead; the shorter leg is often negative too.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'You wire a 100 µF electrolytic in backwards and power up. What is the likely result?', options: ['It can overheat, fail, and even pop', 'It works better than normal', 'It quietly becomes a resistor', 'Nothing ever happens'], correct: 0, explanation: 'A reversed electrolytic can break down, heat up, and vent or burst. Always observe its polarity.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'You need 1000 µF to smooth a power supply. Which type fits best?', options: ['Electrolytic', 'Ceramic', 'Either, value does not matter', 'Neither can do µF values'], correct: 0, explanation: 'Large µF values in a small package mean an electrolytic; ceramics rarely reach 1000 µF affordably.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'You need 100 nF right next to a chip\'s power pin for decoupling. Best choice?', options: ['Ceramic', 'Large electrolytic', 'A polarised tantalum only', 'No capacitor needed'], correct: 0, explanation: 'A small ceramic is ideal for decoupling: small value, no polarity, fast response.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'Why are electrolytics generally a poor choice for a plain AC signal that swings both positive and negative?', options: ['An AC signal reverses polarity, which they cannot take', 'Their capacitance is far too small to work with AC', 'No capacitor of any kind can pass an AC signal', 'An electrolytic capacitor contains no dielectric'], correct: 0, explanation: 'An AC signal reverses polarity each cycle, but a standard electrolytic needs one lead always positive. (Special non-polarised electrolytics exist for this.)' },
+      { type: 'match', difficulty: 3, instruction: 'Match each capacitor to the better job for it.', pairs: [['Ceramic 100 nF', 'Decoupling a chip'], ['Electrolytic 1000 µF', 'Smoothing a supply'], ['Small ceramic pF', 'High-frequency timing'], ['Reversed electrolytic', 'A part about to fail']] },
+    ],
+  },
+
+  'Charging Through a Resistor': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'A Resistor Sets the Pace', body: 'Connect a capacitor to a supply through a resistor and it cannot charge instantly. The resistor limits the current, so the capacitor voltage climbs gradually, fast at first, then slowing as it approaches the supply. This smooth climb is a charging curve, and it is the heart of timing circuits.' },
+      { type: 'teach', title: 'The Shape of the Curve', body: 'The voltage rises quickly at first because the gap to the supply is large, then crawls as the gap shrinks. It approaches the supply but, in theory, never quite reaches it. Discharging through a resistor is the mirror image: a quick drop that slows as it nears zero.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'What does adding a series resistor do to how a capacitor charges?', options: ['Slows the charging to a gradual climb', 'Makes it charge instantly', 'Stops it charging at all', 'Charges it above the supply voltage'], correct: 0, explanation: 'The resistor limits the current, so the voltage rises gradually instead of jumping.' },
+      { type: 'true_false', difficulty: 1, statement: 'A capacitor charging through a resistor rises fastest at the very start.', correct: true, explanation: 'Yes. The gap to the supply is largest at first, so the current and the rate of rise are highest then.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'As the capacitor voltage approaches the supply, the charging current...', options: ['Falls toward zero', 'Rises toward infinity', 'Stays constant', 'Reverses direction'], correct: 0, explanation: 'The smaller the remaining gap, the smaller the current, so it tapers off toward zero.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'You increase the series resistor. How does the charging change?', options: ['It charges more slowly', 'It charges more quickly', 'It charges to a higher voltage', 'No change at all'], correct: 0, explanation: 'A larger resistor passes less current, so the capacitor charges more slowly.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You swap in a larger capacitor, same resistor. How does the charging change?', options: ['It charges more slowly', 'It charges more quickly', 'It cannot charge at all', 'It charges past the supply'], correct: 0, explanation: 'A bigger capacitor needs more charge to reach the same voltage, so with the same current it takes longer.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'To make a capacitor charge FASTER, you could...', options: ['Use a smaller resistor or a smaller capacitor', 'Use a larger resistor to slow the current', 'Use a larger capacitor that holds more', 'Lower the supply voltage feeding it'], correct: 0, explanation: 'Less resistance or less capacitance both shorten the charging time.' },
+
+      // Tier 3: reason
+      { type: 'predict_behavior', difficulty: 3, question: 'A capacitor charges through a resistor toward 5V. After it settles, how much steady current flows through the resistor?', options: ['Essentially zero', 'A large steady current', 'Exactly half the starting current', 'It keeps rising'], correct: 0, explanation: 'Once charged to the supply, there is no voltage across the resistor, so no more current flows. A charged cap blocks steady DC.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the charging curve flatten out instead of being a straight line?', options: ['The current shrinks as the gap to the supply shrinks', 'The resistor heats up and gradually stops working', 'The capacitor simply runs out of plates to fill', 'The supply voltage quietly drops away over time'], correct: 0, explanation: 'Charging current is proportional to the remaining gap; as the gap closes the current falls, so the rise slows, giving the curved shape.' },
+    ],
+  },
+
+  'The Time Constant': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'One Number for the Speed', body: 'The time constant, written with the Greek letter tau (τ), captures how fast an RC circuit charges:\n\nτ = R × C\n\nResistance in ohms, capacitance in farads, gives τ in seconds. One time constant is the time to charge to about 63% of the way to the supply.' },
+      { type: 'teach', title: 'The 63% Rule and "Five Taus"', body: 'In one τ the capacitor reaches ~63% of the supply. In each further τ it covers ~63% of the remaining gap: about 63%, 86%, 95%, 98%, then 99% after five time constants. So the rule of thumb is that a capacitor is "fully" charged after about 5τ.' },
+
+      // Tier 1: recall
+      { type: 'fill_blank', difficulty: 1, prompt: 'The formula for the time constant is τ = R × ___.', blank: '___', answer: 'C', hint: 'The capacitance.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'After one time constant, a charging capacitor reaches about what fraction of the supply?', options: ['63%', '100%', '50%', '10%'], correct: 0, explanation: 'One τ takes it to roughly 63% of the way to the supply voltage.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A capacitor is treated as "fully charged" after about how many time constants?', options: ['5', '1', '2', '20'], correct: 0, explanation: 'After ~5τ it is about 99% charged, close enough to call it full.' },
+      { type: 'true_false', difficulty: 1, statement: 'With R in ohms and C in farads, τ = R × C comes out in seconds.', correct: true, explanation: 'Yes. Ohms times farads gives seconds directly.' },
+
+      // Tier 2: apply (watch the farad conversion)
+      { type: 'fill_blank', difficulty: 2, prompt: 'R = 1 kΩ (1000 Ω) and C = 1000 µF (0.001 F). τ = R × C = ___ second(s).', blank: '___', answer: '1', hint: 'Multiply 1000 by 0.001.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'R = 10 kΩ, C = 100 µF. What is the time constant?', options: ['1 second', '0.1 second', '10 seconds', '1000 seconds'], correct: 0, explanation: 'τ = 10,000 × 0.0001 F = 1 s. The classic trap is forgetting to convert µF to farads.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A 5V supply charges an RC circuit with τ = 2 s. About what voltage is on the capacitor after 2 seconds (one τ)?', options: ['About 3.2 V', 'About 5 V', 'About 0.5 V', 'About 2 V'], correct: 0, explanation: 'After one τ it reaches ~63% of 5V ≈ 3.2 V.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'You want τ = 1 s using a 100 µF capacitor. Which resistor?', options: ['10 kΩ', '100 Ω', '1 kΩ', '1 MΩ'], correct: 0, explanation: 'R = τ / C = 1 / 0.0001 = 10,000 Ω = 10 kΩ.' },
+
+      // Tier 3: reason
+      { type: 'predict_reading', difficulty: 3, question: 'A 10V supply, τ = 1 s. About what voltage is on the capacitor after 2 seconds (two τ)?', options: ['About 8.6 V', 'About 6.3 V', 'About 10 V', 'About 5 V'], correct: 0, explanation: 'After 1τ: 63% of 10 = 6.3V. The second τ covers 63% of the remaining 3.7V (~2.3V), giving ~8.6V (the 86% point).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Two RC circuits: A is 1 kΩ + 1000 µF, B is 100 kΩ + 10 µF. How do their time constants compare?', options: ['They are equal (both 1 s)', 'A is 10× faster', 'B is 100× faster', 'A is 100× slower'], correct: 0, explanation: 'A: 1000 × 0.001 = 1 s. B: 100,000 × 0.00001 = 1 s. Same τ from a small-R-big-C versus big-R-small-C trade.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'You halve R and double C. What happens to the time constant?', options: ['It stays the same', 'It doubles', 'It halves', 'It quadruples'], correct: 0, explanation: 'τ = R × C. Halving one and doubling the other leaves the product unchanged.' },
+    ],
+  },
+
+  'Calculating RC Timing': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Designing a Delay', body: 'Turn the time constant around to design timing. To hit a target τ, pick two of R, C, τ and solve for the third:\n\nτ = R × C → R = τ / C → C = τ / R\n\nThe only trap is units: convert µF to farads (÷1,000,000) before you multiply, or your answer is off by a million.' },
+
+      // Tier 1: recall
+      { type: 'fill_blank', difficulty: 1, prompt: 'Rearranged for resistance: R = τ / ___.', blank: '___', answer: 'C', hint: 'Divide the time constant by the capacitance.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Before multiplying R × C, what must you do with a value in µF?', options: ['Convert it to farads, dividing by a million', 'Multiply the value up by a million first', 'Leave it in µF and multiply as is', 'Convert the capacitance into ohms'], correct: 0, explanation: 'The formula needs farads, so 100 µF becomes 0.0001 F first.' },
+      { type: 'true_false', difficulty: 1, statement: 'For a fixed capacitor, a bigger resistor gives a longer time constant.', correct: true, explanation: 'Yes. τ = R × C, so raising R raises τ.' },
+
+      // Tier 2: one calculation
+      { type: 'fill_blank', difficulty: 2, prompt: 'R = 47 kΩ, C = 10 µF. τ = R × C = ___ seconds. (47,000 × 0.00001)', blank: '___', answer: '0.47', hint: '47,000 × 0.00001.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'You want a 0.5 s time constant with a 10 µF capacitor. Pick the resistor.', options: ['50 kΩ', '5 kΩ', '500 kΩ', '500 Ω'], correct: 0, explanation: 'R = τ / C = 0.5 / 0.00001 = 50,000 Ω = 50 kΩ.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'R = 1 MΩ (1,000,000 Ω) and C = 1 µF. What is τ?', options: ['1 second', '1 millisecond', '1000 seconds', '0.001 second'], correct: 0, explanation: 'τ = 1,000,000 × 0.000001 = 1 s.' },
+      { type: 'predict_reading', difficulty: 2, question: 'τ = 0.2 s on a 5V supply. Roughly how long until the capacitor is "fully" charged (≈5τ)?', options: ['About 1 second', 'About 0.2 second', 'About 5 seconds', 'About 0.04 second'], correct: 0, explanation: '5τ = 5 × 0.2 = 1 s for the cap to reach ~99% of 5V.' },
+
+      // Tier 3: multi-step
+      { type: 'multiple_choice', difficulty: 3, question: 'You need a capacitor to reach ~63% of the supply in 1 ms, using a 10 kΩ resistor. Which capacitor?', options: ['0.1 µF (100 nF)', '10 µF', '1 µF', '100 µF'], correct: 0, explanation: 'τ = 1 ms = 0.001 s. C = τ / R = 0.001 / 10,000 = 1e-7 F = 0.1 µF = 100 nF.' },
+      { type: 'choose_resistor', difficulty: 3, question: 'A 555-style timer needs τ ≈ 1.1 s using a 100 µF capacitor. Pick the nearest standard resistor.', options: ['10 kΩ', '1 kΩ', '100 kΩ', '1 MΩ'], correct: 0, explanation: 'R = τ / C = 1.1 / 0.0001 = 11,000 Ω; the nearest common value is 10 kΩ.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'A delay using 100 µF runs twice as long as you want. Keeping the same capacitor, what fixes it?', options: ['Halve the resistor', 'Double the resistor', 'Double the capacitor', 'Raise the supply voltage'], correct: 0, explanation: 'Delay scales with τ = R × C. Halving R halves τ and so halves the delay; changing the supply does not move τ.' },
+    ],
+  },
+
+  'Smoothing and Decoupling': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Steadying the Supply', body: 'Two of the most common capacitor jobs both lean on "resists voltage change":\n\n• A smoothing (reservoir) capacitor across a supply fills in dips and shaves ripple, turning a bumpy voltage into a steadier one. These are large electrolytics.\n• A decoupling (bypass) capacitor sits right beside a chip\'s power pins and supplies sudden current bursts locally, so the chip does not yank the whole rail down. These are small ceramics, often 100 nF.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'A smoothing capacitor across a supply is used to...', options: ['Reduce ripple and fill in voltage dips', 'Raise the supply to a higher voltage', 'Add extra resistance into the rail', 'Block all current from flowing'], correct: 0, explanation: 'It stores charge and releases it during dips, smoothing the supply.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A decoupling (bypass) capacitor belongs...', options: ['Right next to a chip\'s power pins', 'As far from the chip as possible', 'In series with the signal', 'Across the crystal only'], correct: 0, explanation: 'Placed close to the pins, it supplies fast current bursts locally before the rail can sag.' },
+      { type: 'true_false', difficulty: 1, statement: 'A 100 nF ceramic is a typical decoupling capacitor value.', correct: true, explanation: 'Yes. The ubiquitous 100 nF ("104") ceramic sits beside almost every logic chip.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'A motor on the same supply makes a chip reset randomly. Adding a decoupling capacitor near the chip likely...', options: ['Steadies the local voltage and stops the resets', 'Speeds the motor up noticeably as a bonus', 'Increases the overall supply voltage level', 'Has no real effect on the problem'], correct: 0, explanation: 'The cap absorbs the motor\'s noise and supplies the chip during dips, keeping its voltage stable.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'For a power-supply reservoir that must hold up the rail through big dips, you want...', options: ['A large electrolytic of several thousand µF', 'A tiny 10 pF ceramic disc capacitor', 'No capacitor on that supply rail at all', 'An ordinary resistor used in its place'], correct: 0, explanation: 'Holding up a rail needs lots of stored charge, so a large electrolytic.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why pair a big electrolytic with a small ceramic on the same rail?', options: ['The electrolytic covers slow dips, the ceramic fast noise', 'Two capacitors simply look more professional on a board', 'The small ceramic is there to charge up the electrolytic', 'Putting them together doubles the supply voltage'], correct: 0, explanation: 'Big caps are slow but hold lots of charge; small ceramics respond fast. Together they cover both timescales.' },
+
+      // Tier 3: reason
+      { type: 'predict_behavior', difficulty: 3, question: 'You remove all decoupling caps from a fast digital board. What is the likely symptom?', options: ['Glitches and resets as the rail dips on spikes', 'The board now runs cooler and a bit faster', 'Nothing changes at all in its behaviour', 'The supply voltage rises higher than before'], correct: 0, explanation: 'Without local charge stores, fast current demands make the rail sag and bounce, causing logic glitches and resets.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each capacitor role to its description.', pairs: [['Smoothing (reservoir)', 'Large electrolytic, fills supply dips'], ['Decoupling (bypass)', 'Small ceramic at the chip pins'], ['100 nF ceramic', 'Fast high-frequency noise'], ['1000 µF electrolytic', 'Slow, large energy storage']] },
+    ],
+  },
+
+  'Coupling and Blocking DC': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Pass the Wiggle, Block the Level', body: 'A capacitor in series with a signal blocks steady DC but lets the changing (AC) part through. Once charged to the DC level, no more steady current flows, but any wiggle on top keeps charging and discharging it, so the wiggle passes. This is a coupling (or DC-blocking) capacitor.' },
+      { type: 'teach', title: 'Why It Matters', body: 'Audio and sensor stages often ride a small signal on top of a DC bias. A coupling capacitor passes the signal from one stage to the next while stripping off the DC offset, so the next stage sees only the wiggle. The lower the frequency, the larger the capacitor you need to pass it cleanly.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'A series (coupling) capacitor blocks ___ and passes ___.', options: ['the steady DC level; the changing AC signal', 'the changing AC signal; the steady DC level', 'all of the current; none of the current', 'the voltage entirely; the current entirely'], correct: 0, explanation: 'It blocks the steady DC level and passes the changing part of the signal.' },
+      { type: 'true_false', difficulty: 1, statement: 'Once a series capacitor charges to a steady DC voltage, no further steady current flows through it.', correct: true, explanation: 'Yes. Steady DC charges it once and then stops; that is why it blocks DC.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A capacitor used to pass a signal from one stage to the next is called a...', options: ['Coupling capacitor', 'Smoothing capacitor', 'Decoupling capacitor', 'Timing capacitor'], correct: 0, explanation: 'Coupling (DC-blocking) capacitors carry the signal between stages.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'An audio signal sits on a 2.5V DC bias. After a coupling capacitor, what does the next stage see?', options: ['The wiggle alone, with the DC offset removed', 'Only the steady 2.5V bias, with no signal', 'Double the original voltage, offset and all', 'Nothing at all, the signal is gone'], correct: 0, explanation: 'The cap blocks the 2.5V DC and passes the AC wiggle, so the next stage sees the signal without the offset.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A coupling capacitor passes high frequencies fine but weakens low frequencies. To pass lower frequencies, you should...', options: ['Use a larger capacitor', 'Use a smaller capacitor', 'Remove the capacitor', 'Add a resistor in series'], correct: 0, explanation: 'A capacitor\'s opposition to AC (reactance) is larger at low frequencies; a bigger cap lowers it, passing lows better.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'How does a capacitor\'s opposition to AC (its reactance) change as frequency rises?', options: ['It falls, so high frequencies pass more easily', 'It rises, so high frequencies are blocked more', 'It stays constant no matter the frequency', 'It becomes infinite once frequency is high'], correct: 0, explanation: 'Reactance Xc = 1/(2πfC) falls as frequency rises, so a cap passes higher frequencies more easily.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'To DC, frequency is effectively zero. What is a capacitor\'s reactance at 0 Hz, and what does that mean?', options: ['Infinite, so it blocks steady DC completely', 'Zero, so it passes steady DC straight through', 'Exactly equal to its capacitance value', 'Negative, so it feeds energy back in'], correct: 0, explanation: 'Xc = 1/(2πfC); as f → 0 the reactance → infinity, so a capacitor blocks steady DC.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each capacitor use to where it sits and what it does.', pairs: [['Coupling', 'In series; passes AC, blocks DC'], ['Decoupling', 'To ground; steadies a supply pin'], ['Smoothing', 'Across the rail; fills supply dips'], ['Timing', 'With a resistor; sets a delay']] },
+    ],
+  },
+
+  'The RC Low-Pass Filter': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'A Resistor and Cap That Filter', body: 'Put a resistor in series and a capacitor to ground, and take the output across the capacitor: that is an RC low-pass filter. Slow (low-frequency) signals charge the cap and appear at the output; fast (high-frequency) wiggles are shorted to ground by the cap and are attenuated. It smooths and removes high-frequency noise.', circuitDiagram: 'rc_low_pass' },
+      { type: 'teach', title: 'The Cutoff Frequency', body: 'The cutoff (corner) frequency is where the filter starts cutting:\n\nfc = 1 / (2π × R × C)\n\nBelow fc, signals pass; above it, they are increasingly attenuated. Swap R and C positions (cap in series, resistor to ground) and you get a high-pass filter instead.', circuitDiagram: 'rc_low_pass' },
+
+      // Tier 1: recall
+      { type: 'identify_component', difficulty: 1, question: 'Click the component that shunts high frequencies to ground in this low-pass filter.', circuitDiagram: 'rc_low_pass', correctComponent: 'capacitor', explanation: 'The capacitor to ground passes high frequencies to ground, leaving the slow signal at the output.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A low-pass filter lets which signals through to the output?', options: ['Low frequencies', 'High frequencies', 'Only DC, nothing else', 'No signals at all'], correct: 0, explanation: 'Low frequencies pass; high frequencies are attenuated, hence "low-pass".' },
+      { type: 'true_false', difficulty: 1, statement: 'In an RC low-pass filter, the output is taken across the capacitor.', correct: true, explanation: 'Yes. The voltage across the cap is the filtered (smoothed) output.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'A noisy sensor signal has a slow trend plus high-frequency hash. After an RC low-pass filter, the output shows...', circuitDiagram: 'rc_low_pass', options: ['The slow trend, with the hash smoothed away', 'Only the fast hash, with the trend removed', 'Nothing useful, the whole signal is lost', 'A doubled copy of the original signal'], correct: 0, explanation: 'The filter passes the slow trend and attenuates the fast hash, cleaning the signal.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'You raise the capacitor value in a low-pass filter. The cutoff frequency...', options: ['Falls, giving more aggressive smoothing', 'Rises, letting more high frequencies through', 'Stays the same regardless of the value', 'Becomes negative and inverts the signal'], correct: 0, explanation: 'fc = 1/(2πRC); a larger C lowers fc, so it cuts more of the higher frequencies.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Swapping the resistor and capacitor positions (cap in series, R to ground) turns it into a...', options: ['High-pass filter', 'Voltage doubler', 'Rectifier', 'Lower-value low-pass'], correct: 0, explanation: 'Cap in series blocks lows and passes highs, the opposite job: a high-pass filter.' },
+
+      // Tier 3: reason
+      { type: 'predict_reading', difficulty: 3, question: 'R = 1.6 kΩ and C = 0.1 µF. Using fc = 1/(2πRC), the cutoff is closest to...', circuitDiagram: 'rc_low_pass', options: ['About 1 kHz', 'About 1 Hz', 'About 1 MHz', 'About 10 kHz'], correct: 0, explanation: 'fc = 1/(2π × 1600 × 1e-7) ≈ 1/(0.001) ≈ 1000 Hz = 1 kHz.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A PWM dimming signal switches fast but you want a steady average voltage out. Which filter, and roughly which cutoff?', options: ['A low-pass with cutoff well below the PWM frequency', 'A high-pass with a high cutoff', 'A low-pass with cutoff above the PWM frequency', 'No filter can do this'], correct: 0, explanation: 'A low-pass with fc far below the switching rate averages the pulses into a smooth DC level.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does the very same RC pair describe both a "time constant" and a "filter cutoff"?', options: ['Both come from how fast the cap charges through R', 'They are unrelated and merely happen to share letters', 'The filter behaviour actually ignores the capacitor', 'Time constants only apply to DC and never to AC'], correct: 0, explanation: 'They are two views of one behaviour: τ = RC sets the speed, and fc = 1/(2πRC) is its frequency view. A slow RC means a low cutoff.' },
+    ],
+  },
+
+  'RC Timing in Practice': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Turning a Curve Into a Delay', body: 'A charging capacitor crosses a chosen voltage at a predictable time, so RC is a simple way to make a delay or a slow ramp. Connect the RC midpoint to something that reacts at a threshold and you get a timed event: an LED that fades, a delay before a circuit triggers, or the soft start of a signal.' },
+      { type: 'teach', title: 'RC vs the Microcontroller', body: 'On an Arduino you usually time with millis() or delay() in code, which is precise and easy to change. Pure RC timing still matters: it sets debounce times, fade rates, filter behaviour, and the timing of analog chips like the 555. Knowing both lets you choose the right tool.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'An RC circuit makes a good simple...', options: ['Delay or timing element', 'Steady voltage source', 'Signal amplifier', 'Digital logic gate'], correct: 0, explanation: 'The predictable charging curve is naturally a timing element.' },
+      { type: 'true_false', difficulty: 1, statement: 'On an Arduino, millis() and delay() are usually easier to adjust than a hardware RC delay.', correct: true, explanation: 'Yes. Code timing is precise and changed by editing a number; RC timing means swapping parts.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Which of these still relies on RC timing even when a microcontroller is present?', options: ['Hardware button debounce and signal filtering', 'Storing the compiled program in memory', 'Doing the floating-point math in code', 'Driving the USB data port to the host'], correct: 0, explanation: 'Debounce networks and filters use RC even alongside code.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'You add an RC network to a bouncing button so the voltage cannot jump instantly. What does this achieve?', options: ['It smooths the bounce so one press reads as one event', 'It makes the button respond noticeably faster', 'It removes the need for any pull resistor', 'It supplies the power the button needs'], correct: 0, explanation: 'The RC slows the edge so the rapid bounce is filtered out, a hardware debounce.' },
+      { type: 'choose_resistor', difficulty: 2, question: 'You want roughly a 0.1 s RC debounce using a 1 µF capacitor. Pick the resistor.', options: ['100 kΩ', '1 kΩ', '10 kΩ', '1 MΩ'], correct: 0, explanation: 'R = τ / C = 0.1 / 0.000001 = 100,000 Ω = 100 kΩ.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'An RC-faded LED fades too quickly. To slow the fade you should...', options: ['Increase R or C', 'Decrease R and C', 'Raise the supply voltage', 'Use a smaller LED'], correct: 0, explanation: 'A longer time constant (bigger R or C) stretches the fade.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A hardware RC debounce works but you also want to change the debounce time often during testing. The better approach is...', options: ['Debounce in code with millis(), just editing a number', 'Solder a different resistor in for each new test', 'Remove the button from the circuit entirely', 'Swap in a larger LED to slow things down'], correct: 0, explanation: 'Code timing is trivially adjustable; this is exactly when you prefer millis() over a fixed RC.' },
+      { type: 'predict_behavior', difficulty: 3, question: 'A circuit must wait ~1 s after power-up before enabling, with no microcontroller. A reasonable analog approach is...', options: ['An RC that crosses a threshold in ~1 s to enable it', 'A bare wire straight from power to the enable pin', 'A larger LED placed in series with the load', 'A second battery added to the supply rail'], correct: 0, explanation: 'Size R and C so the cap crosses the enable threshold around 1τ–2τ ≈ 1 s, a classic analog power-on delay.' },
+    ],
+  },
+
+  'The 555 Timer': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'The Timing Chip', body: 'The 555 is a classic timer chip built around RC timing. You hang a resistor (or two) and a capacitor on it, and it produces precise timing without a microcontroller. It has two main modes:\n\n• Monostable: one output pulse of a set length when triggered (a one-shot).\n• Astable: a free-running square wave that oscillates on its own (a blinker or tone source).' },
+      { type: 'teach', title: 'RC Sets the Timing', body: 'In both modes the external resistor(s) and capacitor set the times through the time constant you already know. Bigger R or C means longer pulses or slower oscillation. The 555 just watches the capacitor charge and discharge between two internal thresholds and flips its output accordingly.' },
+
+      // Tier 1: recall
+      { type: 'multiple_choice', difficulty: 1, question: 'The 555 is best described as a...', options: ['Timer / oscillator chip', 'Voltage regulator', 'Microcontroller', 'Type of capacitor'], correct: 0, explanation: 'It is a dedicated timing chip used for one-shots and oscillators.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Which 555 mode produces a continuous square wave on its own?', options: ['Astable', 'Monostable', 'Bistable only', 'It cannot oscillate'], correct: 0, explanation: 'Astable mode free-runs, producing a repeating square wave.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Which 555 mode gives a single output pulse when triggered?', options: ['Monostable (one-shot)', 'Astable', 'Free-running', 'Continuous'], correct: 0, explanation: 'Monostable fires one pulse of a set length per trigger.' },
+      { type: 'true_false', difficulty: 1, statement: 'The 555\'s timing is set by an external resistor and capacitor.', correct: true, explanation: 'Yes. The external RC sets the pulse length or oscillation rate.' },
+
+      // Tier 2: apply
+      { type: 'predict_behavior', difficulty: 2, question: 'In a 555 astable LED blinker, you increase the timing capacitor. The LED blinks...', options: ['More slowly', 'More quickly', 'Brighter', 'Not at all'], correct: 0, explanation: 'A larger C lengthens the charge/discharge times, so the oscillation slows and the blink rate drops.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'You want a 555 blinker to run faster. Two valid changes are...', options: ['A smaller timing resistor or a smaller capacitor', 'A larger resistor along with a larger capacitor', 'Raising only the supply voltage to the chip', 'Fitting a physically bigger indicator LED'], correct: 0, explanation: 'Both shorten the RC times, raising the oscillation frequency.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why might you choose a 555 over an Arduino just to blink an LED?', options: ['It is cheap and needs no code for a fixed timer', 'It is much faster at doing floating-point math', 'It has far more program memory available', 'It can run a complete operating system'], correct: 0, explanation: 'For a single fixed timing job, a 555 is a cheap, code-free, rugged solution.' },
+
+      // Tier 3: reason
+      { type: 'multiple_choice', difficulty: 3, question: 'A 555 astable uses roughly t ≈ 0.7 × R × C for its timing. With R = 10 kΩ and C = 100 µF, each phase lasts about...', options: ['About 0.7 s', 'About 7 s', 'About 70 ms', 'About 7 ms'], correct: 0, explanation: '0.7 × 10,000 × 0.0001 = 0.7 s per phase, so a roughly 1.4 s period (slow, visible blink).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'You need timing you can reprogram on the fly and log over serial. 555 or Arduino?', options: ['Arduino: its timing is software you can change and report', '555: it is the only one that can be reprogrammed', 'Neither part is able to time anything at all', 'Both are exactly identical in their flexibility'], correct: 0, explanation: 'When you need adjustable, observable, logic-rich timing, the microcontroller wins; the 555 shines for fixed, simple, cheap timing.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['Astable', 'Free-running oscillator'], ['Monostable', 'One pulse per trigger'], ['Timing R and C', 'Set the pulse or rate'], ['Larger C', 'Slower, longer timing']] },
+    ],
+  },
+
+  'Unit 6 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'A capacitor stores...', options: ['Electrical charge', 'A magnetic field', 'Resistance', 'Heat'], correct: 0, explanation: 'Charge on its plates.' },
+      { type: 'multiple_choice', question: 'Which capacitor type is polarised?', options: ['Electrolytic', 'Ceramic', 'Both', 'Neither'], correct: 0, explanation: 'Electrolytics must be wired the right way round.' },
+      { type: 'fill_blank', prompt: '0.1 µF written in nanofarads is ___ nF.', blank: '___', answer: '100', hint: 'A microfarad is a thousand nanofarads; take a tenth.' },
+      { type: 'multiple_choice', question: 'R = 10 kΩ, C = 100 µF. The time constant τ is...', options: ['1 second', '0.1 second', '10 seconds', '100 seconds'], correct: 0, explanation: 'τ = 10,000 × 0.0001 = 1 s.' },
+      { type: 'multiple_choice', question: 'After one time constant, a charging capacitor reaches about...', options: ['63% of the supply', '100% of the supply', '50% of the supply', '10% of the supply'], correct: 0, explanation: 'One τ ≈ 63% of the way there.' },
+      { type: 'choose_resistor', question: 'You want τ = 1 s with a 100 µF capacitor. Pick R.', options: ['10 kΩ', '1 kΩ', '100 kΩ', '1 MΩ'], correct: 0, explanation: 'R = τ / C = 1 / 0.0001 = 10 kΩ.' },
+      { type: 'identify_component', question: 'Click the component that shunts high frequencies to ground in this low-pass filter.', circuitDiagram: 'rc_low_pass', correctComponent: 'capacitor', explanation: 'The capacitor to ground passes highs to ground.' },
+      { type: 'predict_behavior', question: 'In a 555 astable blinker, a larger timing capacitor makes the LED blink...', options: ['More slowly', 'More quickly', 'Brighter', 'Not at all'], correct: 0, explanation: 'Bigger C means longer RC times, so slower oscillation.' },
+      { type: 'match', instruction: 'Match each capacitor job to its description.', pairs: [['Smoothing', 'Fills supply dips (big electrolytic)'], ['Decoupling', 'Steadies a chip pin (100 nF)'], ['Coupling', 'Passes AC, blocks DC'], ['Timing', 'Sets a delay with a resistor']] },
+    ],
+  },
 };
