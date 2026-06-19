@@ -43,7 +43,15 @@ screenshots/
 submission/
 !submission/gcp_proof.mov
 tasks/
+metadata/
 
 # Brand assets (kept out of the repo — managed separately)
 design/
+
+# Source textbooks — copyright reference/grounding only, never distributed (~325MB)
+content/Books/
+# Personal marketing drafts / screenshots
+content/LinkedIn/
+# Session handoff scratch doc (superseded by CLAUDE.md / AGENTS.md / curriculum plan)
+HANDOFF.md
 
