@@ -668,6 +668,67 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'comms-motors-robotics',
+    title: 'Comms, Motors & Robotics',
+    subtitle: 'Driving motors, sensing the world, and closing the loop on a robot',
+    level: 'advanced',
+    accent: 'blue',
+    skills: [
+      {
+        id: 'driving-motors',
+        title: 'Driving Motors',
+        description: 'Switching, powering, and reversing real motors safely.',
+        icon: 'Cog',
+        lessons: [
+          { id: 'DC Motors and Drivers', title: 'DC Motors & Drivers', summary: 'How a DC motor works and why a pin cannot drive it.', estMinutes: 13 },
+          { id: 'Powering Motors Safely', title: 'Powering Motors Safely', summary: 'Separate supply, common ground, decoupling.', estMinutes: 13 },
+          { id: 'The H-Bridge', title: 'The H-Bridge', summary: 'Four switches to reverse a motor, brake vs coast.', estMinutes: 13 },
+        ],
+      },
+      {
+        id: 'speed-and-precision',
+        title: 'Speed & Precision',
+        description: 'Controlling how fast and how far a motor turns.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'PWM Motor Speed Control', title: 'PWM Speed Control', summary: 'Duty cycle sets the average voltage and speed.', estMinutes: 13 },
+          { id: 'Servo Motors', title: 'Servo Motors', summary: 'Position control via pulse width, the Servo library.', estMinutes: 13 },
+          { id: 'Stepper Motors', title: 'Stepper Motors', summary: 'Coils in sequence for precise, counted steps.', estMinutes: 13 },
+        ],
+      },
+      {
+        id: 'robot-sensing-comms',
+        title: 'Robot Sensing & Comms',
+        description: 'Measuring the world and talking to modules.',
+        icon: 'Radar',
+        lessons: [
+          { id: 'Distance Sensing', title: 'Distance Sensing', summary: 'Ultrasonic time-of-flight and IR reflectance.', estMinutes: 13 },
+          { id: 'Talking to Modules', title: 'Talking to Modules', summary: 'Reading sensors and drivers over I2C, SPI, UART.', estMinutes: 13 },
+        ],
+      },
+      {
+        id: 'robot-control',
+        title: 'Robot Control',
+        description: 'Sense, decide, act, and close the loop with feedback.',
+        icon: 'Bot',
+        lessons: [
+          { id: 'The Robot Control Loop', title: 'The Control Loop', summary: 'Sense-decide-act scaled up, polling vs interrupts.', estMinutes: 14 },
+          { id: 'Closing the Loop with Feedback', title: 'Closing the Loop', summary: 'Open vs closed loop, encoders beat dead reckoning.', estMinutes: 14 },
+          { id: 'The Line-Follower', title: 'The Line-Follower', summary: 'Capstone: IR sensors, threshold, differential drive.', estMinutes: 17 },
+        ],
+      },
+      {
+        id: 'robotics-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can reason about motors, sensing, and robot control.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 12 Checkpoint', title: 'Unit 12 Checkpoint', summary: 'A mixed test of comms, motors, and robotics.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──

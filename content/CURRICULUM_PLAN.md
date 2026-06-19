@@ -9,7 +9,7 @@
 > and ship one lesson, incl. the quality bar) · [`CURRICULUM_CITATIONS.md`](./CURRICULUM_CITATIONS.md)
 > (per-lesson source grounding) · [`LEARNING_RESOURCES.md`](./LEARNING_RESOURCES.md) (the books).
 >
-> **Status (live):** 11 units · 129 lessons · lint 0 errors / 0 warnings · build green.
+> **Status (live):** 12 units · 141 lessons · lint 0 errors / 0 warnings · build green. **v1 complete.**
 
 ---
 
@@ -21,8 +21,8 @@ now stated once, here:
 
 | Milestone | Units | Lessons | What it means |
 |-----------|-------|---------|---------------|
-| **Built now** | 11 | 129 | Beginner → advanced analog core + digital/embedded, all at the quality bar |
-| **v1 launch** | 12 | ~145 | + Units 11–12 (digital/embedded, comms/motors/robotics). The sellable product. |
+| **Built now (v1 complete)** | 12 | 141 | Beginner → advanced: analog core + digital/embedded + comms/motors/robotics, all at the quality bar |
+| **v1 launch** | 12 | 141 | ✅ shipped — Units 1–12 (through comms/motors/robotics). The sellable product. |
 | **Ceiling** | ~35–45 | ~450–650 | Brilliant-scale: deepened units + added tracks (robotics, digital, audio, power, RF) |
 
 - **Felt depth multiplier:** Bronze → Silver → Gold leveling replays each lesson at
@@ -83,7 +83,7 @@ the 12-unit shape and the level ramp are fixed.
 | 9  | Filters, Oscillators & Signals | advanced | ✅ built | 12 |
 | 10 | Power Supplies & Regulation | advanced | ✅ built | 11 |
 | 11 | Digital Logic & Embedded | advanced | ✅ built | 14 |
-| 12 | Comms, Motors & Robotics | advanced | planned | ~13 |
+| 12 | Comms, Motors & Robotics | advanced | ✅ built | 12 |
 
 **Launch core (U1–8)** is the minimum to honestly sell monthly Pro; **full v1 (U1–12)**
 unlocks the annual plan and makes max / Interview Mode credible (embedded peripherals +

@@ -508,6 +508,78 @@ Exploring Arduino (Blum) for the embedded bridge. Lints 0/0.
   comparison to I2C/UART), ch.7 (UART/USART, baud). Verified.
 - **Unit 11 Checkpoint** (new) — mixed cumulative retrieval; no new claims.
 
+## Unit 12 — Comms, Motors & Robotics
+
+Advanced, concept/robotics-driven. Reuses `transistor_switch` (inductive load +
+flyback diode) for the DC motor drive; H-bridge, servo, and stepper are taught via
+teach body text (schematics deferred per §8). Primary source Exploring Arduino
+(Blum), with PEI for ultrasonic time-of-flight and EAC Vol.1/Vol.3 for motors and
+ranging. Lints 0/0.
+
+- **DC Motors and Drivers** (new) — brushed DC motor (rotor coil pulled by stator
+  magnets, brushes flip polarity each half turn); a pin cannot drive it (too much
+  current + inductive back-EMF spike), so a transistor switches it with a flyback
+  diode (callback to Unit 7); a motor is also a generator; gearbox trades speed for
+  torque; stall current spikes when back-EMF disappears: Blum ch.4 (brushed DC,
+  inductive load, back-EMF/flyback diode, generator effect, gearbox); EAC Vol.1
+  (DC motors, protection diode). Verified.
+- **Powering Motors Safely** (new) — separate motor supply sized for stall current;
+  common ground between the two supplies; bulk decoupling cap rides out surges; brush
+  noise caps; sharing the Arduino 5V rail browns out the regulator (callback to Unit
+  10): Blum ch.4 (secondary supply, isolate motor from Arduino, common ground,
+  decoupling). Verified.
+- **The H-Bridge** (new) — four switches (transistors) around the motor reverse the
+  current = direction; four states (open/coast, forward, backward, brake-by-shorting);
+  shoot-through (both switches one side) = dead short supply→ground; L293D packs the
+  switches + built-in flyback diodes + thermal shutdown: Blum ch.4 (H-bridge operation,
+  four states, shoot-through warning, L293D quad half-H, built-in diodes/thermal).
+  Verified.
+- **PWM Motor Speed Control** (new) — PWM switches the supply fully on/off; duty cycle
+  sets average voltage (avg = duty × supply); analogWrite 0–255 (callback to Unit 5);
+  PWM efficient vs a series resistor; starting torque > running torque: Blum ch.4 +
+  ch.3 (PWM speed control, analogWrite 0–255, duty cycle). Verified (0.5×9=4.5V,
+  64/255≈0.25→3V on 12V, ~170/255≈0.67→6V on 9V).
+- **Servo Motors** (new) — servo holds a commanded ANGLE (not speed); pulse width sets
+  position, refreshed ~every 20 ms; 1 ms ≈ 0°, 1.5 ms ≈ 90°, 2 ms ≈ 180°; Servo
+  library generates the timing; servos vary so endpoints need calibration; no pulses →
+  goes limp: Blum ch.5 (servo 1/1.5/2 ms pulses, 20 ms refresh, Servo library, angle
+  range). Verified against the book figures exactly.
+- **Stepper Motors** (new) — brushless; coils/phases energised in sequence pull the
+  rotor one fixed, repeatable step; counting steps gives position (open-loop, no
+  sensor); steps/rev → degrees/step; strong torque at low speed; missed steps under
+  load drift silently: Blum ch.5 (bipolar stepper, phases energised in sequence,
+  repeatable step, open-loop velocity-control caveat, NEMA-17); EAC Vol.1 (stepper
+  steps/rev). Verified (360/200 = 1.8°/step; 50 steps = 90°; 100 steps = 180°).
+- **Distance Sensing** (new) — ultrasonic time-of-flight: distance = (speed_of_sound ×
+  echo_time)/2 (divide by 2 for the round trip); ~40 kHz pulse, speed ≈ 340 m/s; IR
+  reflectance gives an analog voltage vs distance; speed-of-sound drift with temp,
+  soft/angled surfaces scatter: PEI §6.3.2 (ultrasonic, worked example 340 × 0.01 / 2
+  = 1.7 m, HC-SR04 µs/58 → cm, temp dependence); Blum ch.3 (Sharp IR distance, analog
+  out). Verified (340×0.01/2=1.7 m; 340×0.002/2=0.34 m; 6 ms→1.02 m).
+- **Talking to Modules** (new) — robot modules talk over UART/I2C/SPI (callback to
+  Unit 11); I2C address picks one device on two shared wires (scales), SPI needs a
+  chip-select per device, UART is point-to-point with agreed baud; same-address clash;
+  match the bus to the need: Blum ch.10/11 (I2C addressing/pull-ups, SPI chip-select,
+  bus comparison). Verified.
+- **The Robot Control Loop** (new) — sense → decide → act scaled up (callback to Units
+  3/5); ACT drives motors/H-bridge/servo; polling vs interrupts (callback to Unit 11):
+  fast/brief events (encoder pulses) need interrupts, slow inputs can poll; blocking
+  delay() freezes the loop; reaction time set by loop rate: Blum ch.13 (interrupts vs
+  polling, missing brief events, short ISRs) + ch.4/5 (driving actuators). Verified.
+- **Closing the Loop with Feedback** (new) — open-loop (command and trust) vs closed-
+  loop (measure result, feed back, correct); encoders count actual rotation and beat
+  dead reckoning; low battery / slip / load throw open-loop off unnoticed; stepper's
+  counted steps approximate feedback, a DC motor needs an encoder: Blum ch.5 (open-loop
+  velocity vs position control, "without an encoder you never know absolute position").
+  Verified.
+- **The Line-Follower** (CAPSTONE, new) — closes the robotics arc per §4: IR reflectance
+  sensors (dark line reads low, light floor high) → threshold/calibration → differential
+  drive via H-bridge; off-line recovery; over-correction oscillation; proportional steer
+  = closed-loop feedback applied: Blum ch.3 (IR thresholds, calibration range), ch.4
+  (differential drive via H-bridge), light-controlled car project. Verified (threshold
+  ~500 between line 200 / floor 800).
+- **Unit 12 Checkpoint** (new) — mixed cumulative retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the
