@@ -19,7 +19,9 @@ import {
   Junction,
   LDRSymbol,
   LED,
+  Motor,
   OpAmp,
+  Regulator,
   Resistor,
   Switch,
   TransistorNPN,
@@ -49,6 +51,8 @@ const RING_BOX: Record<string, { w: number; h: number }> = {
   diode: { w: 24, h: 16 },
   transistor_npn: { w: 28, h: 26 },
   opamp: { w: 32, h: 22 },
+  regulator: { w: 29, h: 24 },
+  motor: { w: 20, h: 18 },
   arduino_pin: { w: 16, h: 10 },
   buzzer: { w: 22, h: 18 },
   switch: { w: 22, h: 16 },
@@ -82,6 +86,10 @@ function renderNode(node: SpecNode, props: SpecCircuitProps) {
       return <TransistorNPN {...common} label={label} />;
     case 'opamp':
       return <OpAmp {...common} label={label} />;
+    case 'regulator':
+      return <Regulator {...common} label={label} />;
+    case 'motor':
+      return <Motor {...common} label={label} />;
     case 'arduino_pin':
       return <ArduinoPin {...common} pin={node.pin ?? '?'} />;
     case 'buzzer':

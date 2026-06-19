@@ -18,6 +18,8 @@ export type ComponentKind =
   | 'diode'
   | 'transistor_npn'
   | 'opamp'
+  | 'regulator'
+  | 'motor'
   | 'ground'
   | 'junction'
   | 'arduino_pin'

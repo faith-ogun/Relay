@@ -137,6 +137,87 @@ export const SPEC_CIRCUITS: Record<string, CircuitSpec> = {
       { x: 200, y: 203, text: 'Vout = (1 + Rf / Rg) · Vin', size: 11 },
     ],
   },
+
+  // ── Unit 11: linear voltage regulator (7805): Vin -> REG -> fixed 5V out ──
+  // DRAFT diagram (pending visual review). Regulator ports: IN at (cx-37, cy),
+  // OUT at (cx+37, cy), GND at (cx, cy+32). Caps are rotated 90 (leads vertical).
+  voltage_regulator: {
+    id: 'voltage_regulator',
+    title: 'Linear Voltage Regulator',
+    width: 420,
+    height: 220,
+    nodes: [
+      { id: 'in', kind: 'arduino_pin', x: 50, y: 90, pin: 'Vin' },
+      { id: 'node_in', kind: 'junction', x: 110, y: 90, clickable: false },
+      { id: 'cin', kind: 'capacitor', x: 110, y: 150, rotation: 90, polarized: true, label: 'Cin' },
+      { id: 'gnd_in', kind: 'ground', x: 110, y: 185, clickable: false },
+      { id: 'reg', kind: 'regulator', x: 210, y: 90, label: '7805' },
+      { id: 'gnd_reg', kind: 'ground', x: 210, y: 122, clickable: false },
+      { id: 'node_out', kind: 'junction', x: 310, y: 90, clickable: false },
+      { id: 'cout', kind: 'capacitor', x: 310, y: 150, rotation: 90, polarized: true, label: 'Cout' },
+      { id: 'gnd_out', kind: 'ground', x: 310, y: 185, clickable: false },
+      { id: 'out', kind: 'arduino_pin', x: 370, y: 90, pin: 'Vout' },
+    ],
+    wires: [
+      { x1: 64, y1: 90, x2: 110, y2: 90 },     // Vin -> input node
+      { x1: 110, y1: 90, x2: 173, y2: 90 },    // input node -> regulator IN
+      { x1: 110, y1: 90, x2: 110, y2: 130 },   // input node down to Cin
+      { x1: 110, y1: 170, x2: 110, y2: 185 },  // Cin -> ground
+      { x1: 247, y1: 90, x2: 310, y2: 90 },    // regulator OUT -> output node
+      { x1: 310, y1: 90, x2: 356, y2: 90 },    // output node -> Vout
+      { x1: 310, y1: 90, x2: 310, y2: 130 },   // output node down to Cout
+      { x1: 310, y1: 170, x2: 310, y2: 185 },  // Cout -> ground
+    ],
+    annotations: [
+      { x: 50, y: 74, text: '9V in', size: 9 },
+      { x: 370, y: 74, text: '5V out', color: '#22c55e', size: 9 },
+      { x: 210, y: 208, text: 'Regulator drops Vin to a fixed 5V; caps tame ripple', size: 10 },
+    ],
+  },
+
+  // ── Unit 12: H-bridge (4 NPN transistors + motor): diagonal pairs set direction ──
+  // DRAFT diagram (pending visual review). Transistor ports (fixed orientation):
+  // collector (top) at (x+10, y-30), emitter (bottom) at (x+10, y+30), base at (x-24, y).
+  h_bridge: {
+    id: 'h_bridge',
+    title: 'H-Bridge Motor Driver',
+    width: 420,
+    height: 320,
+    nodes: [
+      { id: 'q1', kind: 'transistor_npn', x: 130, y: 90 },
+      { id: 'q2', kind: 'transistor_npn', x: 290, y: 90 },
+      { id: 'q3', kind: 'transistor_npn', x: 130, y: 230 },
+      { id: 'q4', kind: 'transistor_npn', x: 290, y: 230 },
+      { id: 'motor', kind: 'motor', x: 210, y: 160, label: 'motor' },
+      { id: 'left_node', kind: 'junction', x: 140, y: 160, clickable: false },
+      { id: 'right_node', kind: 'junction', x: 300, y: 160, clickable: false },
+      { id: 'gnd', kind: 'ground', x: 210, y: 270, clickable: false },
+    ],
+    wires: [
+      // +V rail across the top, joining both high-side collectors
+      { x1: 140, y1: 50, x2: 300, y2: 50, color: '#ef4444' },
+      { x1: 140, y1: 50, x2: 140, y2: 60, color: '#ef4444' },
+      { x1: 300, y1: 50, x2: 300, y2: 60, color: '#ef4444' },
+      // left motor terminal: Q1 emitter -> node -> Q3 collector, motor left lead joins
+      { x1: 140, y1: 120, x2: 140, y2: 200 },
+      { x1: 140, y1: 160, x2: 180, y2: 160 },
+      // right motor terminal: Q2 emitter -> node -> Q4 collector, motor right lead joins
+      { x1: 300, y1: 120, x2: 300, y2: 200 },
+      { x1: 240, y1: 160, x2: 300, y2: 160 },
+      // ground rail across the bottom, joining both low-side emitters
+      { x1: 140, y1: 270, x2: 300, y2: 270 },
+      { x1: 140, y1: 260, x2: 140, y2: 270 },
+      { x1: 300, y1: 260, x2: 300, y2: 270 },
+    ],
+    annotations: [
+      { x: 210, y: 42, text: '+V', color: '#ef4444', size: 10 },
+      { x: 96, y: 86, text: 'Q1', size: 10, align: 'end' },
+      { x: 324, y: 86, text: 'Q2', size: 10, align: 'start' },
+      { x: 96, y: 226, text: 'Q3', size: 10, align: 'end' },
+      { x: 324, y: 226, text: 'Q4', size: 10, align: 'start' },
+      { x: 210, y: 305, text: 'Q1+Q4 on: spin one way · Q2+Q3 on: reverse · never both on one side', size: 10 },
+    ],
+  },
 };
 
 export const SPEC_CIRCUIT_IDS = Object.keys(SPEC_CIRCUITS);

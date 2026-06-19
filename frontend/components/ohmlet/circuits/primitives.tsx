@@ -204,6 +204,41 @@ export function TransistorNPN({ x, y, label, highlight, onClick, id }: { x: numb
   );
 }
 
+/** 3-pin linear regulator (e.g. 7805): IN lead on the left, OUT on the right, GND at the bottom. */
+export function Regulator({ x, y, label, highlight, onClick, id }: { x: number; y: number; label?: string } & ClickProps) {
+  return (
+    <g transform={`translate(${x},${y})`} onClick={() => onClick?.(id || 'regulator')} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      {onClick && <rect x={-37} y={-24} width={74} height={58} fill="transparent" />}
+      {/* leads: IN (left), OUT (right), GND (bottom) */}
+      <line x1={-37} y1={0} x2={-25} y2={0} stroke="currentColor" strokeWidth={2} />
+      <line x1={25} y1={0} x2={37} y2={0} stroke="currentColor" strokeWidth={2} />
+      <line x1={0} y1={20} x2={0} y2={32} stroke="currentColor" strokeWidth={2} />
+      {/* body */}
+      <rect x={-25} y={-20} width={50} height={40} rx={4} fill="none" stroke="currentColor" strokeWidth={2} />
+      <text x={0} y={-7} textAnchor="middle" fontSize={9} fill="currentColor" fontWeight={700}>{label || '7805'}</text>
+      <text x={-15} y={9} textAnchor="middle" fontSize={7} fill="currentColor" fontWeight={600}>IN</text>
+      <text x={16} y={9} textAnchor="middle" fontSize={7} fill="currentColor" fontWeight={600}>OUT</text>
+      <text x={0} y={16} textAnchor="middle" fontSize={6.5} fill="currentColor" fontWeight={600}>GND</text>
+      {highlight && <rect x={-29} y={-24} width={58} height={48} rx={6} fill="none" stroke="#f3e515" strokeWidth={2.5} strokeDasharray="4 2" className="circuit-pulse" />}
+    </g>
+  );
+}
+
+/** DC motor: circle with an M, leads on the left and right. */
+export function Motor({ x, y, label, highlight, onClick, id }: { x: number; y: number; label?: string } & ClickProps) {
+  return (
+    <g transform={`translate(${x},${y})`} onClick={() => onClick?.(id || 'motor')} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      {onClick && <rect x={-30} y={-18} width={60} height={36} fill="transparent" />}
+      <line x1={-30} y1={0} x2={-16} y2={0} stroke="currentColor" strokeWidth={2} />
+      <line x1={16} y1={0} x2={30} y2={0} stroke="currentColor" strokeWidth={2} />
+      <circle cx={0} cy={0} r={16} fill="none" stroke="currentColor" strokeWidth={2} />
+      <text x={0} y={5} textAnchor="middle" fontSize={14} fill="currentColor" fontWeight={700}>M</text>
+      {label && <text x={0} y={30} textAnchor="middle" fontSize={9} fill="currentColor" fontWeight={500}>{label}</text>}
+      {highlight && <circle cx={0} cy={0} r={20} fill="none" stroke="#f3e515" strokeWidth={2.5} strokeDasharray="4 2" className="circuit-pulse" />}
+    </g>
+  );
+}
+
 /** Op-amp triangle. Inputs on the left (− top, + bottom), output on the right tip. */
 export function OpAmp({ x, y, label, highlight, onClick, id }: { x: number; y: number; label?: string } & ClickProps) {
   return (

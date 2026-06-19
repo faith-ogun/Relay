@@ -1945,7 +1945,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   'The Linear Regulator': {
     xpReward: 35,
     steps: [
-      { type: 'teach', title: 'A Chip That Does It For You', body: 'A linear voltage regulator (like the classic 7805) is a 3-pin chip: input, ground, output. Feed it a higher, roughly-smoothed DC and it delivers a steady fixed output (the 7805 gives 5V) over a range of input and load. Inside, it continuously adjusts a pass transistor to hold the output constant. Add a small capacitor on input and output and it just works.' },
+      { type: 'teach', title: 'A Chip That Does It For You', body: 'A linear voltage regulator (like the classic 7805) is a 3-pin chip: input, ground, output. Feed it a higher, roughly-smoothed DC and it delivers a steady fixed output (the 7805 gives 5V) over a range of input and load. Inside, it continuously adjusts a pass transistor to hold the output constant. Add a small capacitor on input and output and it just works.', circuitDiagram: 'voltage_regulator' },
       { type: 'teach', title: 'The Dropout Voltage', body: 'A linear regulator needs the input to stay a certain amount ABOVE the output: the dropout voltage. A standard 7805 needs roughly 2V of headroom, so it needs about 7V or more in to give a clean 5V out. Drop the input below that and the output falls out of regulation.' },
 
       { type: 'fill_blank', difficulty: 1, prompt: 'The 78xx part number gives the output, so a 7805 puts out a steady ___ V.', blank: '___', answer: '5', hint: 'Read the last two digits of the part number as the output voltage.' },
@@ -2440,7 +2440,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   // Encyclopedia of Electronic Components Vol.1 + Vol.3 (DC/stepper motors,
   // protection diodes, ultrasonic ranging). See CURRICULUM_CITATIONS.md.
   // Concept/robotics: reuses transistor_switch (inductive load + flyback diode);
-  // H-bridge, servo, stepper taught via teach text (diagrams deferred per §8).
+  // H-bridge has its own DSL diagram (h_bridge); servo, stepper taught via teach text.
 
   'DC Motors and Drivers': {
     xpReward: 35,
@@ -2495,7 +2495,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   'The H-Bridge': {
     xpReward: 35,
     steps: [
-      { type: 'teach', title: 'Four Switches Around a Motor', body: 'A single transistor can only switch a motor on and off in one direction. To make a wheel go both ways you need an H-bridge: four switches (really transistors) arranged so the motor sits in the crossbar of an H. Close the top-left and bottom-right pair and current flows one way through the motor; close the other diagonal and current flows the opposite way, so the motor reverses.' },
+      { type: 'teach', title: 'Four Switches Around a Motor', body: 'A single transistor can only switch a motor on and off in one direction. To make a wheel go both ways you need an H-bridge: four switches (really transistors) arranged so the motor sits in the crossbar of an H. Close the top-left and bottom-right pair and current flows one way through the motor; close the other diagonal and current flows the opposite way, so the motor reverses.', circuitDiagram: 'h_bridge' },
       { type: 'teach', title: 'Four States, and One Forbidden Move', body: 'An H-bridge has four useful states: open (all switches off, motor coasts), forward, backward, and brake (both low-side or both high-side closed, shorting the motor to stop it fast). The forbidden move is shoot-through: closing both switches on one side at once shorts the supply straight to ground, a dead short that can destroy the bridge. On a bridge built from four separate transistors, a software bug really can command this. Integrated drivers like the L293D package all four switches plus the flyback diodes and drive each side from a single input through internal logic, so both same-side switches can never be on together; thermal shutdown is an added backstop against overheating, not what prevents the short.' },
 
       // ── Tier 1: recall ──
