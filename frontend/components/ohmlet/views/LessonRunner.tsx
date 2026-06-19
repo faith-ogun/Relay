@@ -443,7 +443,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
 
   switch (step.type) {
     case 'teach':
-      if (step.hotspots && step.hotspots.length > 0 && step.circuitDiagram) return <ExploreStep {...p} step={step} />;
+      if (step.hotspots && step.hotspots.length > 0 && step.circuitDiagram) return <ExploreStep key={step.title} {...p} step={step} />;
       return (
         <div className="ohmlet-rise">
           <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
@@ -671,38 +671,50 @@ const ImageChoice: React.FC<{
 // "read this" wall becomes active learning.
 const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & StepViewProps> = ({ step, revealed, setRevealed }) => {
   const hotspots = step.hotspots ?? [];
-  const reveal = (region: string) => {
+  // `selected` is the part currently shown; `revealed` is the set explored (for the
+  // Continue gate). Tapping any part — even one already revealed — re-shows it, so a
+  // learner can freely re-read parts and revisit in any order.
+  const [selected, setSelected] = useState<string | null>(null);
+  const show = (region: string) => {
+    setSelected(region);
     if (!revealed.has(region)) setRevealed(new Set([...revealed, region]));
   };
-  const last = [...revealed][revealed.size - 1];
-  const lastHot = hotspots.find((h) => h.region === last);
+  const current = hotspots.find((h) => h.region === selected);
   return (
     <div className="ohmlet-rise">
       <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
       <p className="mt-3 whitespace-pre-line text-base font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
       <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-        <CircuitDiagram circuit={step.circuitDiagram!} clickable onRegionClick={reveal} highlightRegion={last ?? null} className="mx-auto w-full max-w-xl" />
+        <CircuitDiagram circuit={step.circuitDiagram!} clickable onRegionClick={show} highlightRegion={selected} className="mx-auto w-full max-w-xl" />
       </div>
-      {lastHot ? (
+      {current ? (
         <div className="ohmlet-rise mt-4 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-4 shadow-soft">
-          <p className="text-sm font-black text-ohmlet-ink">{lastHot.label}</p>
-          <p className="mt-1 text-sm font-semibold leading-snug text-ohmlet-ink-soft">{lastHot.detail}</p>
+          <p className="text-sm font-black text-ohmlet-ink">{current.label}</p>
+          <p className="mt-1 text-sm font-semibold leading-snug text-ohmlet-ink-soft">{current.detail}</p>
         </div>
       ) : (
         <p className="mt-4 text-center text-sm font-semibold text-ohmlet-ink-soft">Tap each labelled part to learn what it does.</p>
       )}
+      {/* Chips double as a legend AND a way to jump back to any part. */}
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {hotspots.map((h) => {
-          const on = revealed.has(h.region);
+          const explored = revealed.has(h.region);
+          const active = selected === h.region;
           return (
-            <span
+            <button
               key={h.region}
+              type="button"
+              onClick={() => show(h.region)}
               className={`rounded-full border-2 px-3 py-1 text-xs font-black transition-colors ${
-                on ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft'
+                active
+                  ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink'
+                  : explored
+                  ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
+                  : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
               }`}
             >
               {h.label}
-            </span>
+            </button>
           );
         })}
       </div>
