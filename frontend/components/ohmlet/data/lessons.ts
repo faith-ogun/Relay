@@ -34,7 +34,11 @@ export type LessonStepChooseResistor = { type: 'choose_resistor'; question: stri
 export type LessonStepTraceCurrent = { type: 'trace_current'; question: string; circuitDiagram: string; correctPath: string[]; explanation: string };
 export type LessonStepFixCircuit = { type: 'fix_the_circuit'; question: string; circuitDiagram: string; faultRegion: string; fixes: string[]; correctFix: number; explanation: string };
 export type LessonStepBuildToSpec = { type: 'build_to_spec'; instruction: string; palette: string[]; slots: number; correct: number[]; explanation: string; circuitDiagram?: string };
-export type LessonStep = LessonStepTeach | LessonStepMC | LessonStepTF | LessonStepFill | LessonStepMatch | LessonStepSpotError | LessonStepIdentify | LessonStepDraw | LessonStepDragOrder | LessonStepPredictReading | LessonStepPredictBehavior | LessonStepChooseResistor | LessonStepTraceCurrent | LessonStepFixCircuit | LessonStepBuildToSpec;
+// draw_circuit — the embodied hero: the learner DRAWS the circuit on a canvas and
+// Gemini Vision grades it (the orphaned hackathon capability, now in the lessons).
+// `expected` lists the component keywords the model should find in the drawing.
+export type LessonStepDrawCircuit = { type: 'draw_circuit'; instruction: string; expected: string[]; hint: string; explanation: string };
+export type LessonStep = LessonStepTeach | LessonStepMC | LessonStepTF | LessonStepFill | LessonStepMatch | LessonStepSpotError | LessonStepIdentify | LessonStepDraw | LessonStepDragOrder | LessonStepPredictReading | LessonStepPredictBehavior | LessonStepChooseResistor | LessonStepTraceCurrent | LessonStepFixCircuit | LessonStepBuildToSpec | LessonStepDrawCircuit;
 
 // Difficulty tier for a question (used by leveling: Bronze favours tier 1, Silver
 // tier 2, Gold tier 3). Untagged steps default to tier 1. A lesson with a deep,
@@ -292,6 +296,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'predict_reading', difficulty: 3, question: 'Those two series LEDs (3.6V total) on 5V through a 120Ω resistor draw about:', circuitDiagram: 'series_circuit', options: ['≈ 12 mA', '≈ 42 mA', '≈ 28 mA', '≈ 6 mA'], correct: 0, explanation: '(5 − 3.6) / 120 = 11.7 mA ≈ 12 mA. The 42 mA answer ignores both LED drops (5/120).' },
       { type: 'multiple_choice', difficulty: 3, question: 'A 220Ω resistor drops 3V at 14 mA. Its power, and is a 1/4 W part OK?', options: ['≈ 42 mW, fine for a 1/4 W part', '≈ 420 mW, too much for 1/4 W', '≈ 3 W, it needs a big resistor', '≈ 0.5 mW, basically nothing'], correct: 0, explanation: 'P = V × I = 3 × 0.014 = 0.042 W = 42 mW, comfortably under the 250 mW a 1/4 W resistor handles.' },
       { type: 'fill_blank', difficulty: 3, prompt: 'An LED drops 2V at 20 mA. Its power use, P = V × I, is ___ W.', blank: '___', answer: '0.04', hint: 'Volts times amps; convert the milliamps to amps first.' },
+      { type: 'draw_circuit', instruction: 'Draw a safe LED circuit yourself.', expected: ['power source', 'resistor', 'led'], hint: 'A power source, a resistor, and an LED in one series loop. Draw the wires connecting them all the way round.', explanation: 'A safe LED circuit is one loop: supply -> resistor -> LED -> back to the supply. The resistor in series is what keeps the current safe.' },
     ],
   },
 

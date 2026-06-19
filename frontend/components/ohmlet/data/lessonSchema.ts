@@ -222,6 +222,14 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
       if (!isNonEmpty(s.explanation)) warn('build_to_spec: empty explanation');
       break;
     }
+    case 'draw_circuit': {
+      if (!isNonEmpty(step.instruction)) err('draw_circuit: empty instruction');
+      if (!Array.isArray(step.expected) || step.expected.length < 1) err('draw_circuit: expected needs at least 1 component keyword for Vision to look for');
+      else if (step.expected.some((c) => !isNonEmpty(c))) err('draw_circuit: has an empty expected component');
+      if (!isNonEmpty(step.hint)) warn('draw_circuit: empty hint (learners need a nudge on what to draw)');
+      if (!isNonEmpty(step.explanation)) warn('draw_circuit: empty explanation');
+      break;
+    }
     default: {
       err(`unknown step type "${(step as { type: string }).type}"`);
     }

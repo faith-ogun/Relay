@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Heart, RotateCcw, X, Zap } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
 import { LEVEL_META, buildLeveledSteps, heartsForLevel, xpForLevel } from '../data/levels';
+import { assessDrawing } from '../../../services/quizEngineClient';
+
+const QUIZ_API_ROOT = (import.meta.env.VITE_OHMLET_QUIZ_API_BASE_URL as string) || 'http://localhost:8083';
 
 /**
  * LessonRunner — the interactive lesson engine for the new workspace.
@@ -81,6 +84,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [traced, setTraced] = useState<string[]>([]); // trace_current: tapped regions in order
   const [placed, setPlaced] = useState<number[]>([]); // build_to_spec: palette index in each filled slot
   const [revealed, setRevealed] = useState<Set<string>>(new Set()); // teach hotspots explored
+  const [asyncMsg, setAsyncMsg] = useState<string | null>(null); // dynamic feedback from a graded draw_circuit
 
   const step = steps[stepIndex];
 
@@ -100,6 +104,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setTraced([]);
     setPlaced([]);
     setRevealed(new Set());
+    setAsyncMsg(null);
     if (step?.type === 'drag_order') setOrder(shuffle(step.items.map((_, i) => i)));
     if (step?.type === 'match') {
       // Shuffle BOTH columns (each off its original order) so answers never line
@@ -188,6 +193,15 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
 
   const handleCheck = () => {
     const ok = evaluate();
+    setCorrect(ok);
+    setChecked(true);
+    if (!ok) setHearts((h) => Math.max(0, h - 1));
+  };
+
+  // draw_circuit grades asynchronously (Vision call inside the step). The step reports
+  // its result here so hearts + the Continue rhythm behave exactly like any other step.
+  const handleAsyncResult = (ok: boolean, message: string) => {
+    setAsyncMsg(message);
     setCorrect(ok);
     setChecked(true);
     if (!ok) setHearts((h) => Math.max(0, h - 1));
@@ -328,6 +342,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
           setPlaced={setPlaced}
           revealed={revealed}
           setRevealed={setRevealed}
+          correct={correct}
+          onAsyncResult={handleAsyncResult}
         />
       </div>
 
@@ -339,13 +355,15 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       >
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4">
           {checked ? (
-            <Feedback step={step} correct={correct} />
+            <Feedback step={step} correct={correct} message={asyncMsg} />
           ) : (
             <span className="text-sm font-semibold text-ohmlet-ink-soft">
               {teachGated
                 ? `Tap each part to continue · ${revealed.size}/${teachHotspots!.length}`
                 : isTeach(step)
                 ? 'Read, then continue.'
+                : step.type === 'draw_circuit'
+                ? 'Draw your circuit, then submit below.'
                 : 'Pick your answer.'}
             </span>
           )}
@@ -369,13 +387,16 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
                   Skip <ArrowRight className="h-4 w-4" />
                 </button>
               )}
-              <button
-                onClick={handleCheck}
-                disabled={!canCheck()}
-                className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
-              >
-                Check
-              </button>
+              {/* draw_circuit grades via its own Submit button in the step body. */}
+              {step.type !== 'draw_circuit' && (
+                <button
+                  onClick={handleCheck}
+                  disabled={!canCheck()}
+                  className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
+                >
+                  Check
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -385,9 +406,9 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
 };
 
 // ── Feedback line ──
-const Feedback: React.FC<{ step: LessonStep; correct: boolean | null }> = ({ step, correct }) => {
+const Feedback: React.FC<{ step: LessonStep; correct: boolean | null; message?: string | null }> = ({ step, correct, message }) => {
   const explanation =
-    'explanation' in step ? step.explanation : correct ? 'Nice work.' : 'Not quite. Review it and keep going.';
+    message || ('explanation' in step ? step.explanation : correct ? 'Nice work.' : 'Not quite. Review it and keep going.');
   return (
     <div className="flex items-start gap-2.5">
       <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${correct ? 'bg-ohmlet-green' : 'bg-ohmlet-red'} text-white`}>
@@ -436,6 +457,8 @@ interface StepViewProps {
   setPlaced: (p: number[]) => void;
   revealed: Set<string>;
   setRevealed: (s: Set<string>) => void;
+  correct: boolean | null;
+  onAsyncResult: (ok: boolean, message: string) => void;
 }
 
 const StepView: React.FC<StepViewProps> = (p) => {
@@ -540,6 +563,9 @@ const StepView: React.FC<StepViewProps> = (p) => {
 
     case 'build_to_spec':
       return <BuildStep {...p} step={step} />;
+
+    case 'draw_circuit':
+      return <DrawCircuitStep {...p} step={step} />;
 
     default:
       return null;
@@ -1096,6 +1122,160 @@ const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }>
       ) : (
         <p className="mt-4 text-center text-sm font-semibold text-ohmlet-ink-soft">Correct build: {step.correct.map((c) => step.palette[c]).join(' → ')}</p>
       )}
+    </div>
+  );
+};
+
+// ── Draw-circuit step (Gemini Vision-graded) ──
+// The embodied hero: the learner DRAWS the circuit on a canvas and Gemini Vision
+// grades it, naming the components it can see. Grades asynchronously, then reports
+// up via onAsyncResult so hearts + the Continue rhythm behave like any other step.
+type CanvasPointer = React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>;
+
+const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circuit' }> } & StepViewProps> = ({ step, checked, onAsyncResult }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastRef = useRef<{ x: number; y: number } | null>(null);
+  const [eraser, setEraser] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasInk, setHasInk] = useState(false);
+
+  const init = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    for (let x = 20; x < canvas.offsetWidth; x += 20)
+      for (let y = 20; y < canvas.offsetHeight; y += 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(init, 60);
+    return () => window.clearTimeout(t);
+  }, [init]);
+
+  const pointFrom = (e: CanvasPointer) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  };
+
+  const start = (e: CanvasPointer) => {
+    if (checked) return;
+    drawingRef.current = true;
+    lastRef.current = pointFrom(e);
+  };
+  const move = (e: CanvasPointer) => {
+    if (!drawingRef.current || !lastRef.current || checked) return;
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const p = pointFrom(e);
+    ctx.save();
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.strokeStyle = eraser ? '#ffffff' : '#14201e';
+    ctx.lineWidth = eraser ? 18 : 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastRef.current.x, lastRef.current.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.restore();
+    lastRef.current = p;
+    if (!eraser) setHasInk(true);
+  };
+  const end = () => {
+    drawingRef.current = false;
+    lastRef.current = null;
+  };
+  const clear = () => {
+    setError(null);
+    setHasInk(false);
+    init();
+  };
+
+  const submit = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const res = await assessDrawing(QUIZ_API_ROOT, {
+        image_base64: base64,
+        expected_components: step.expected,
+        exercise_type: 'draw_circuit',
+      });
+      const found = res.identified_components?.length ? ` (spotted: ${res.identified_components.join(', ')})` : '';
+      onAsyncResult(res.correct, `${res.feedback}${found}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toolBtn = (on: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+    }`;
+
+  return (
+    <div className="ohmlet-rise">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw it yourself</p>
+      <Prompt>{step.instruction}</Prompt>
+      <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
+      <div className="mt-5 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+        <canvas
+          ref={canvasRef}
+          className={`block h-[300px] w-full touch-none ${checked ? 'pointer-events-none opacity-90' : 'cursor-crosshair'}`}
+          onMouseDown={start}
+          onMouseMove={move}
+          onMouseUp={end}
+          onMouseLeave={end}
+          onTouchStart={start}
+          onTouchMove={move}
+          onTouchEnd={end}
+        />
+      </div>
+      {!checked && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setEraser(false)} className={toolBtn(!eraser)}>
+              <Pencil className="h-4 w-4" /> Pen
+            </button>
+            <button type="button" onClick={() => setEraser(true)} className={toolBtn(eraser)}>
+              <Eraser className="h-4 w-4" /> Eraser
+            </button>
+            <button type="button" onClick={clear} className={toolBtn(false)}>
+              <Trash2 className="h-4 w-4" /> Clear
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || !hasInk}
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-2.5 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
+          >
+            {loading ? 'Checking…' : 'Submit drawing'}
+          </button>
+        </div>
+      )}
+      {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
     </div>
   );
 };
