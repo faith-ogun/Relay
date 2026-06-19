@@ -1484,7 +1484,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   'The Non-Inverting Amplifier': {
     xpReward: 35,
     steps: [
-      { type: 'teach', title: 'Gain Without Inverting', body: 'The non-inverting amplifier feeds the input signal into the + input, and feeds the output back through a divider (Rf from output to the − input, Rg from the − input to ground). The output is in phase with the input. Its gain is:\n\nAv = 1 + Rf / Rg\n\nNote it can never go below 1.' },
+      { type: 'teach', title: 'Gain Without Inverting', body: 'The non-inverting amplifier feeds the input signal into the + input, and feeds the output back through a divider (Rf from output to the − input, Rg from the − input to ground). The output is in phase with the input. Its gain is:\n\nAv = 1 + Rf / Rg\n\nNote it can never go below 1.', circuitDiagram: 'opamp_noninverting' },
 
       { type: 'fill_blank', difficulty: 1, prompt: 'The non-inverting amplifier gain is Av = 1 + Rf / ___.', blank: '___', answer: 'Rg', hint: 'The resistor from the inverting input to ground.' },
       { type: 'multiple_choice', difficulty: 1, question: 'In a non-inverting amp, the output is...', options: ['In phase with the input', 'Inverted relative to the input', 'Always stuck at zero volts', 'Shifted by exactly 90 degrees'], correct: 0, explanation: 'Non-inverting means the output follows the input in phase.' },
@@ -1503,7 +1503,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
   'The Inverting Amplifier': {
     xpReward: 35,
     steps: [
-      { type: 'teach', title: 'Gain With a Sign Flip', body: 'The inverting amplifier sends the input through Rin into the − input, with Rf as feedback from output to the − input, and the + input grounded. The − input becomes a virtual ground (~0V). The gain is:\n\nAv = − Rf / Rin\n\nThe minus sign means the output is inverted (flipped) relative to the input.' },
+      { type: 'teach', title: 'Gain With a Sign Flip', body: 'The inverting amplifier sends the input through Rin into the − input, with Rf as feedback from output to the − input, and the + input grounded. The − input becomes a virtual ground (~0V). The gain is:\n\nAv = − Rf / Rin\n\nThe minus sign means the output is inverted (flipped) relative to the input.', circuitDiagram: 'opamp_inverting' },
 
       { type: 'fill_blank', difficulty: 1, prompt: 'The inverting amplifier gain is Av = − Rf / ___.', blank: '___', answer: 'Rin', hint: 'The input resistor that feeds the inverting node.' },
       { type: 'multiple_choice', difficulty: 1, question: 'In an inverting amp, the output is...', options: ['Inverted relative to the input', 'In phase with the input', 'Always equal to the input', 'Always stuck at the rail'], correct: 0, explanation: 'The negative sign in the gain means the output is flipped.' },

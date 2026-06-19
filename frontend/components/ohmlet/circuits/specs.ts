@@ -72,6 +72,71 @@ export const SPEC_CIRCUITS: Record<string, CircuitSpec> = {
       { x: 150, y: 44, text: '+12V', color: '#ef4444', size: 10, align: 'end' },
     ],
   },
+
+  // ── Unit 8: op-amp inverting amplifier (Vout = −(Rf/Rin)·Vin) ──
+  // DRAFT diagram (pending visual review). Geometry computed from the primitive
+  // ports: op-amp −in at (cx-34, cy-10), +in at (cx-34, cy+10), out at (cx+36, cy);
+  // resistor leads at ±25; arduino_pin edges at ±14.
+  opamp_inverting: {
+    id: 'opamp_inverting',
+    title: 'Inverting Amplifier',
+    width: 400,
+    height: 210,
+    nodes: [
+      { id: 'in', kind: 'arduino_pin', x: 55, y: 105, pin: 'Vin' },
+      { id: 'rin', kind: 'resistor', x: 115, y: 105, label: 'Rin' },
+      { id: 'vminus', kind: 'junction', x: 160, y: 105, clickable: false },
+      { id: 'rf', kind: 'resistor', x: 185, y: 55, label: 'Rf' },
+      { id: 'opamp', kind: 'opamp', x: 235, y: 115, label: 'op-amp' },
+      { id: 'out', kind: 'arduino_pin', x: 335, y: 115, pin: 'Vout' },
+      { id: 'gnd', kind: 'ground', x: 201, y: 168, clickable: false },
+    ],
+    wires: [
+      { x1: 69, y1: 105, x2: 90, y2: 105 },    // Vin -> Rin
+      { x1: 140, y1: 105, x2: 160, y2: 105 },  // Rin -> summing node
+      { x1: 160, y1: 105, x2: 201, y2: 105 },  // summing node -> inverting input
+      { x1: 160, y1: 105, x2: 160, y2: 55 },   // summing node up to Rf
+      { x1: 210, y1: 55, x2: 271, y2: 55 },    // Rf -> output rail
+      { x1: 271, y1: 55, x2: 271, y2: 115 },   // rail down to output
+      { x1: 271, y1: 115, x2: 321, y2: 115 },  // output -> Vout
+      { x1: 201, y1: 125, x2: 201, y2: 168 },  // non-inverting input -> ground
+    ],
+    annotations: [
+      { x: 150, y: 99, text: '0V', color: '#3b82f6', size: 9 },
+      { x: 200, y: 198, text: 'Vout = −(Rf / Rin) · Vin', size: 11 },
+    ],
+  },
+
+  // ── Unit 8: op-amp non-inverting amplifier (Vout = (1 + Rf/Rg)·Vin) ──
+  // DRAFT diagram (pending visual review).
+  opamp_noninverting: {
+    id: 'opamp_noninverting',
+    title: 'Non-Inverting Amplifier',
+    width: 400,
+    height: 215,
+    nodes: [
+      { id: 'in', kind: 'arduino_pin', x: 55, y: 125, pin: 'Vin' },
+      { id: 'vminus', kind: 'junction', x: 160, y: 105, clickable: false },
+      { id: 'rf', kind: 'resistor', x: 185, y: 55, label: 'Rf' },
+      { id: 'rg', kind: 'resistor', x: 160, y: 150, rotation: 90, label: 'Rg' },
+      { id: 'opamp', kind: 'opamp', x: 235, y: 115, label: 'op-amp' },
+      { id: 'out', kind: 'arduino_pin', x: 335, y: 115, pin: 'Vout' },
+      { id: 'gnd', kind: 'ground', x: 160, y: 178, clickable: false },
+    ],
+    wires: [
+      { x1: 69, y1: 125, x2: 201, y2: 125 },   // Vin -> non-inverting input
+      { x1: 201, y1: 105, x2: 160, y2: 105 },  // inverting input -> feedback node
+      { x1: 160, y1: 105, x2: 160, y2: 55 },   // feedback node up to Rf
+      { x1: 210, y1: 55, x2: 271, y2: 55 },    // Rf -> output rail
+      { x1: 271, y1: 55, x2: 271, y2: 115 },   // rail down to output
+      { x1: 271, y1: 115, x2: 321, y2: 115 },  // output -> Vout
+      { x1: 160, y1: 105, x2: 160, y2: 125 },  // feedback node down to Rg
+      { x1: 160, y1: 175, x2: 160, y2: 178 },  // Rg -> ground
+    ],
+    annotations: [
+      { x: 200, y: 203, text: 'Vout = (1 + Rf / Rg) · Vin', size: 11 },
+    ],
+  },
 };
 
 export const SPEC_CIRCUIT_IDS = Object.keys(SPEC_CIRCUITS);
