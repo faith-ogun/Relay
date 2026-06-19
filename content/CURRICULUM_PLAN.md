@@ -15,6 +15,15 @@
 
 Where the curriculum actually stands, for whoever picks this up next:
 
+- **ALL 46 pre-bar Units 1–5 lessons rebuilt to the quality bar (2026-06-19).**
+  The "longest answer" tells were fixed (distractors padded so the correct option
+  is never the lone longest) and every short lesson was deepened with genuine extra
+  graded questions to clear the 6-question floor (most now 6–8 graded). **The entire
+  curriculum now lints 0 errors / 0 warnings** (was 89 warnings). Build green.
+  This was the backlog called out in the prior snapshots; it is now closed.
+- **7 units, 80 lessons, every lesson at the quality bar.** v1 target ~143 (12
+  units); ceiling ~450–650. Next: author Units 8–12.
+
 - **Unit 7 authored to the quality bar (2026-06-19): "Transistors & Switching"**,
   12 lessons (the BJT, transistor-as-switch, β, base-resistor sizing, low/high-side,
   bigger loads/MOSFETs, back-EMF, the flyback diode, the **"Drive the Relay"

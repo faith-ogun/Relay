@@ -143,9 +143,19 @@ item-writing research:
 
 Reference rebuilds to copy the bar from: **The Closed Loop** (tiered beginner pool)
 and **Powering an LED Safely** (real calculations with common-mistake distractors).
-The other ~54 lessons predate this bar and are flagged by `npm run lint:lessons`
-(currently ~51 "longest answer" + ~42 "too short") — that is the re-authoring
-backlog.
+
+**Status (2026-06-19): the whole library is at the bar.** All Units 1–5 lessons
+have been rebuilt and Units 6–7 authored to it, so `npm run lint:lessons` now
+reports **0 errors, 0 warnings**. Keep it there: every new or edited lesson must
+lint clean before it ships.
+
+Two authoring habits that keep the linter green:
+- **Balanced distractors:** write at least one distractor as long as (or longer
+  than) the correct option. The "longest answer" check fires when the correct
+  option is the lone longest by a wide margin, so never let it be.
+- **Method-only hints:** a `fill_blank` hint must not contain the answer as a
+  substring (watch digit runs, e.g. "1000" contains "10"). Nudge the method, never
+  the value.
 
 ## Depth target
 
