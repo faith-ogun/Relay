@@ -1995,4 +1995,355 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each block of a power supply to its job.', pairs: [['Rectifier', 'AC to pulsed DC'], ['Reservoir cap', 'Smooths the pulses'], ['Regulator', 'Steady, clean output'], ['Decoupling cap', 'Fast spikes at the chip']] },
     ],
   },
+
+  // ═══════════════ Unit 11: Digital Logic & Embedded ═══════════════
+  // Grounded in EAC Vol.2 (logic gates ch.10, flip-flops ch.11), Make: More
+  // Electronics (Platt: logic, 74HC, counters), The Art of Electronics (Horowitz
+  // & Hill: logic thresholds, noise margin, sequential), Exploring Arduino (Blum:
+  // ADC, GPIO, interrupts, I2C/SPI/UART). See CURRICULUM_CITATIONS.md.
+  // Concept/logic-driven: no new circuitDiagram ids; truth tables live in teach text.
+
+  'Binary and Hex': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Why Digital Counts in Twos', body: 'A digital circuit only ever sees two clean states: HIGH or LOW, on or off. So it counts in base-2 (binary), where each digit (a bit) is just 0 or 1. A wire is either pushed up to the supply or pulled down to ground, nothing in between. That is why everything inside a microcontroller is built from bits.' },
+      { type: 'teach', title: 'Place Values and Hex', body: 'In binary each place is worth twice the one to its right: 1, 2, 4, 8, 16, and so on. So 1011 = 8 + 0 + 2 + 1 = 11.\n\nLong binary strings are hard to read, so we group four bits into one hex (base-16) digit: 0 to 9, then A to F for 10 to 15. Four bits cover 0 to 15, exactly one hex digit. 1011 in binary is B in hex.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A single binary digit (a bit) can be...', options: ['Only 0 or 1', 'Any value from 0 to 9', 'Any value from 0 to 15', 'Only a positive whole number'], correct: 0, explanation: 'A bit is one of two states, 0 or 1, matching LOW or HIGH on a wire.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Digital electronics uses base-2 (binary) because...', options: ['A wire is cleanly either HIGH or LOW', 'Base-2 makes the arithmetic run much faster', 'Humans naturally prefer to count in twos', 'It uses far less copper in the wiring'], correct: 0, explanation: 'Two clean states map directly onto base-2; in-between voltages are avoided.' },
+      { type: 'true_false', difficulty: 1, statement: 'One hex digit represents exactly four bits.', correct: true, explanation: 'Four bits cover 0 to 15, which is one hex digit (0 to F).' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'In hex, the digits go 0 to 9 and then use the letters A to ___.', blank: '___', answer: 'F', hint: 'It is the sixth letter used, standing for fifteen.' },
+
+      // ── Tier 2: one conversion ──
+      { type: 'fill_blank', difficulty: 2, prompt: 'The binary number 1010 equals ___ in decimal (8 + 2).', blank: '___', answer: '10', hint: 'Add the place values where there is a 1: the eights place and the twos place.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'What is the binary number 1100 in decimal?', options: ['12', '6', '11', '24'], correct: 0, explanation: '1100 = 8 + 4 + 0 + 0 = 12. The 1s sit in the eights and fours places.' },
+      { type: 'predict_reading', difficulty: 2, question: 'Convert the hex digit C to decimal.', options: ['12', '10', '14', '16'], correct: 0, explanation: 'Hex runs A=10, B=11, C=12, D=13, E=14, F=15. So C is 12.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'How many distinct values can 8 bits (one byte) represent?', options: ['256', '128', '255', '64'], correct: 0, explanation: '2 to the power 8 = 256 values, counting from 0 to 255.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'The decimal number 5 written in 4-bit binary is 0___1 (4 + 1).', blank: '___', answer: '10', hint: 'Five is four plus one, so set the fours bit and the ones bit, leaving the twos bit clear.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'The hex byte 0xFF equals what in decimal, and why?', options: ['255, because both nibbles are 1111 (15 each: 15×16 + 15)', '256, because two full hex digits always make 256', '16, because each F simply stands for the number sixteen', '99, because FF reads as the largest two-digit value'], correct: 0, explanation: 'F is 15. The high nibble is 15×16 = 240, the low nibble is 15, so 240 + 15 = 255.' },
+      { type: 'predict_reading', difficulty: 3, question: 'A 10-bit ADC value of 1023 in binary is...', options: ['1111111111 (ten 1s)', '1000000000 (a 1 then nine 0s)', '0111111110 (eight 1s in the middle)', '1010101010 (alternating bits)'], correct: 0, explanation: '1023 is the maximum a 10-bit number can hold, which is all ten bits set to 1.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why do programmers write a byte like 1011 0010 as the hex value B2 instead?', options: ['Each group of four bits maps to one hex digit, so it is far shorter to read', 'Hex stores the same value using noticeably fewer transistors inside the chip', 'Hex can represent values that plain binary is simply unable to represent', 'The microcontroller can only ever accept input written in hexadecimal'], correct: 0, explanation: '1011 = B and 0010 = 2, so the byte is B2. Hex is a compact, exact shorthand for binary.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each binary value to its decimal.', pairs: [['0001', '1'], ['0100', '4'], ['1000', '8'], ['1111', '15']] },
+    ],
+  },
+
+  'Logic Levels and Noise Margin': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'HIGH, LOW, and the Gap Between', body: 'A digital input does not need an exact voltage. It only has to be clearly above a HIGH threshold or clearly below a LOW threshold. On classic 5V logic, an input is read as LOW up to about 0.8V and as HIGH from about 2.0V upward. The band in between is a forbidden zone the input should not linger in.' },
+      { type: 'teach', title: 'Noise Margin Buys Robustness', body: 'A gate outputs a strong HIGH (well above 2V) and a strong LOW (well below 0.8V), but only needs the input to clear those thresholds. The leftover gap, between what the output guarantees and what the input demands, is the noise margin. A few hundred millivolts of picked-up noise still leaves the level correct, which is exactly why digital signals survive in noisy real circuits where a fragile analog voltage would not.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A digital input reads a voltage as either...', options: ['A clean HIGH or a clean LOW', 'Any one of ten possible levels', 'A precise analog voltage value', 'Only an exact 5.000 V or 0 V'], correct: 0, explanation: 'Digital inputs decide between two states using threshold voltages.' },
+      { type: 'true_false', difficulty: 1, statement: 'On 5V logic, a 2.5V input is comfortably read as HIGH.', correct: true, explanation: 'It is above the ~2V HIGH threshold, so it reads as a valid HIGH.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Noise margin is...', options: ['The gap between a guaranteed output and the input threshold', 'The maximum current a gate output can ever source', 'The clock speed at which a gate stops working', 'The amount of heat a logic chip gives off'], correct: 0, explanation: 'It is the slack between output levels and input thresholds that tolerates noise.' },
+      { type: 'true_false', difficulty: 1, statement: 'Digital logic tolerates noise better than a fragile analog voltage does.', correct: true, explanation: 'As long as a noisy level still clears the threshold, the bit is read correctly.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'On 5V logic (LOW ≤ 0.8V, HIGH ≥ 2V), an input sits at 0.5V. How is it read?', options: ['As a valid LOW', 'As a valid HIGH', 'As an undefined error state', 'As exactly half of HIGH'], correct: 0, explanation: '0.5V is below the 0.8V LOW threshold, so it is a clean LOW.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'An input sits at 1.4V on 5V logic. Why is that a problem?', options: ['It is in the forbidden zone, neither a valid HIGH nor LOW', 'It is far too high and will instantly damage the input', 'It is read as a perfectly clean and reliable HIGH', 'It is read as a perfectly clean and reliable LOW'], correct: 0, explanation: '1.4V is above 0.8V but below 2V, so it falls in the undefined band between the thresholds.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A clean 5V HIGH picks up 0.4V of noise on the way to a gate, arriving at 4.6V. The gate reads...', options: ['A solid HIGH, the noise is well within the margin', 'A LOW, because the noise corrupted the signal', 'An undefined state in the forbidden zone', 'Nothing at all, the input is now floating'], correct: 0, explanation: '4.6V is far above the 2V HIGH threshold, so the noise margin absorbs the disturbance.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'The band between the LOW and HIGH thresholds, which an input should not sit in, is the ___ zone.', blank: '___', answer: 'forbidden', hint: 'It describes a region a valid logic level must avoid.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'A slowly rising signal lingers in the forbidden zone as it crosses. What can go wrong?', options: ['The output may oscillate or glitch as the input wavers near the threshold', 'The gate speeds up and produces a cleaner edge than usual', 'The gate ignores the input completely until power is cycled', 'The forbidden zone widens and absorbs the slow transition safely'], correct: 0, explanation: 'Near the threshold a tiny wobble can flip the output back and forth, which is why slow edges and Schmitt inputs matter.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does giving an output a strong HIGH well above the input threshold improve reliability?', options: ['It leaves a larger noise margin, so picked-up noise still keeps the level valid', 'It makes the gate switch between its two states noticeably faster', 'It lets the output drive far more inputs before the level sags', 'It lowers the power the gate draws from the supply rail'], correct: 0, explanation: 'The bigger the gap between the driven level and the threshold, the more noise the link can shrug off. Drive strength can affect speed and fan-out, but reliability here comes from the margin itself.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each 5V-logic voltage to how an input reads it.', pairs: [['0.3V', 'Clean LOW'], ['1.4V', 'Forbidden zone'], ['3.3V', 'Clean HIGH'], ['4.9V', 'Clean HIGH']] },
+    ],
+  },
+
+  'Analog to Digital and Back': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Turning the Real World Into Numbers', body: 'The world is analog: a sensor voltage glides smoothly across a range. A microcontroller is digital, so it samples that voltage and rounds it to the nearest of a fixed set of steps. That is an analog-to-digital converter (ADC). The Arduino Uno has a 10-bit ADC, so analogRead maps 0V to 5V onto the whole numbers 0 to 1023 (exactly the 0 to 1023 from Unit 5).' },
+      { type: 'teach', title: 'Resolution and Quantisation', body: 'Rounding to the nearest step is called quantisation, and the rounding error it leaves is quantisation error. More bits means more steps and finer resolution: an n-bit ADC has 2 to the power n steps. A digital-to-analog converter (DAC) runs the process backwards, turning a number back into a stepped voltage. More bits give smoother, more accurate output.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'An ADC converts...', options: ['A continuous voltage into a number', 'A number into a continuous voltage', 'AC mains into smooth DC', 'A small voltage into a larger one'], correct: 0, explanation: 'ADC = analog to digital: it samples a voltage and outputs a number.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The Arduino Uno has an ADC of how many bits?', options: ['10-bit', '8-bit', '12-bit', '16-bit'], correct: 0, explanation: 'The Uno uses a 10-bit ADC, giving 1024 steps (0 to 1023).' },
+      { type: 'true_false', difficulty: 1, statement: 'A DAC does the reverse of an ADC: it turns a number back into a voltage.', correct: true, explanation: 'A digital-to-analog converter reconstructs a stepped voltage from a number.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Rounding a smooth voltage to the nearest available step is called ___.', blank: '___', answer: 'quantisation', hint: 'It shares its root with the word for a fixed amount, a quantum.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_reading', difficulty: 2, question: 'On a 10-bit Uno ADC reading 0 to 5V, what number does 2.5V give? (use 1023 full scale)', options: ['About 512', 'About 256', 'About 1023', 'About 128'], correct: 0, explanation: 'Half of full scale: 2.5/5 × 1023 ≈ 512, which is why the midpoint reads roughly 512.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'How many distinct steps does a 10-bit ADC have?', options: ['1024', '1000', '512', '100'], correct: 0, explanation: '2 to the power 10 = 1024 steps, numbered 0 to 1023.' },
+      { type: 'predict_reading', difficulty: 2, question: 'On the 10-bit, 5V Uno ADC, what does an input of 0V read?', options: ['0', '512', '1023', '1'], correct: 0, explanation: '0V maps to the bottom step, 0; 5V maps to the top step, 1023.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Going from an 8-bit ADC to a 10-bit ADC does what to the resolution?', options: ['Multiplies the number of steps by four', 'Doubles the number of steps', 'Halves the number of steps', 'Leaves the number of steps unchanged'], correct: 0, explanation: '8-bit is 256 steps, 10-bit is 1024 steps: 1024/256 = 4, so four times as many.' },
+
+      // ── Tier 3: reason ──
+      { type: 'predict_reading', difficulty: 3, question: 'A 10-bit ADC spans 0 to 5V over 1024 steps. About how many millivolts is one step?', options: ['≈ 4.9 mV', '≈ 49 mV', '≈ 0.5 mV', '≈ 20 mV'], correct: 0, explanation: '5V / 1024 ≈ 0.00488 V ≈ 4.9 mV per step. Smaller steps mean finer resolution.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Two sensor signals differ by 2 mV. A 10-bit, 5V ADC (≈4.9 mV/step) is fed both. What happens?', options: ['They likely land on the same step, so the ADC cannot tell them apart', 'The ADC reports them as two clearly different and distinct numbers', 'The ADC averages the two readings into a single in-between value', 'The ADC refuses to convert either reading and returns an error'], correct: 0, explanation: '2 mV is smaller than one ~4.9 mV step, so both quantise to the same number: that is a resolution limit.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a higher-bit DAC produce a smoother output than a low-bit one?', options: ['More bits give more, smaller voltage steps, so the staircase looks finer', 'More bits make the output voltage rise to a much higher peak value', 'More bits remove the need for any output filtering whatsoever', 'More bits convert the stepped output into a perfect analog sine'], correct: 0, explanation: 'A DAC builds a staircase; more bits means more, finer steps, so it hugs the intended curve more closely.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['ADC', 'Voltage to a number'], ['DAC', 'A number to a voltage'], ['Quantisation', 'Rounding to the nearest step'], ['Resolution', 'How fine the steps are']] },
+    ],
+  },
+
+  'The Basic Gates': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Gates Make Decisions', body: 'A logic gate takes one or more digital inputs and produces a single digital output, following a fixed rule. The three building blocks:\n\n• AND: output HIGH only when ALL inputs are HIGH.\n• OR: output HIGH when ANY input is HIGH.\n• NOT (inverter): one input, output is the opposite of the input.' },
+      { type: 'teach', title: 'Truth Tables', body: 'A truth table lists every input combination and the output for each. For a 2-input AND (inputs A, B):\n\nA=0 B=0 to 0\nA=0 B=1 to 0\nA=1 B=0 to 0\nA=1 B=1 to 1\n\nOR is the same table but the output is 1 whenever A or B (or both) is 1. NOT just flips its single input.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'An AND gate outputs HIGH when...', options: ['All of its inputs are HIGH', 'Any one of its inputs is HIGH', 'All of its inputs are LOW', 'Its inputs disagree with each other'], correct: 0, explanation: 'AND needs every input HIGH; if any input is LOW, the output is LOW.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An OR gate outputs HIGH when...', options: ['Any one (or more) of its inputs is HIGH', 'Every single one of its inputs is HIGH', 'All of its inputs are held LOW', 'Its two inputs are exactly equal'], correct: 0, explanation: 'OR outputs HIGH if at least one input is HIGH.' },
+      { type: 'true_false', difficulty: 1, statement: 'A NOT gate (inverter) outputs the opposite of its single input.', correct: true, explanation: 'HIGH in gives LOW out, and LOW in gives HIGH out.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A table listing the output for every input combination is called a ___ table.', blank: '___', answer: 'truth', hint: 'It comes from the true and false states of Boolean algebra.' },
+
+      // ── Tier 2: apply a rule ──
+      { type: 'predict_behavior', difficulty: 2, question: 'A 2-input AND gate has A=1, B=0. The output is...', options: ['0 (LOW)', '1 (HIGH)', 'Undefined', 'It toggles back and forth'], correct: 0, explanation: 'AND needs both inputs HIGH; one input is LOW, so the output is LOW.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A 2-input OR gate has A=1, B=0. The output is...', options: ['1 (HIGH)', '0 (LOW)', 'Undefined', 'It toggles back and forth'], correct: 0, explanation: 'OR outputs HIGH if any input is HIGH, and A is HIGH.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A 3-input AND gate has inputs 1, 1, 1. The output is...', options: ['1, because every input is HIGH', '0, because three inputs is too many', '1, because at least one input is HIGH', '0, because AND only ever works with two inputs'], correct: 0, explanation: 'AND can have any number of inputs; with all three HIGH the output is HIGH.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 2-input OR gate outputs LOW only when both inputs are ___.', blank: '___', answer: 'LOW', hint: 'OR is HIGH for any HIGH input, so the only off output is at the all-off corner.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'You feed the same signal into both inputs of a 2-input AND gate. What does the output do?', options: ['It just follows the input (AND of X with X is X)', 'It always stays HIGH no matter what the input does', 'It inverts the input, acting like a NOT gate', 'It always stays LOW no matter what the input does'], correct: 0, explanation: 'X AND X = X, so tying both inputs together makes the gate simply pass the signal through.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A safety interlock must turn a motor on ONLY when both the guard switch AND the start button are pressed. Which gate?', options: ['An AND gate, so both inputs must be HIGH together', 'An OR gate, so either input alone is enough', 'A NOT gate, to invert the start button', 'No gate is needed for two separate switches'], correct: 0, explanation: 'Both conditions required together is exactly the AND rule.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each gate to its rule.', pairs: [['AND', 'HIGH only if all inputs HIGH'], ['OR', 'HIGH if any input HIGH'], ['NOT', 'Output is the opposite of the input'], ['Buffer', 'Output copies the input']] },
+    ],
+  },
+
+  'NAND, NOR, XOR': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Inverted Gates and the Odd One Out', body: 'Add a NOT to the basic gates and you get:\n\n• NAND = AND then inverted: output LOW only when all inputs are HIGH.\n• NOR = OR then inverted: output HIGH only when all inputs are LOW.\n• XOR (exclusive OR): output HIGH only when the inputs DIFFER. Two equal inputs give LOW.' },
+      { type: 'teach', title: 'NAND and NOR Are Universal', body: 'NAND and NOR are called universal gates because you can build any logic function, AND, OR, NOT, anything, using only copies of one of them. For example, tie both inputs of a NAND together and it behaves as a NOT. That is why whole chips, and historically whole computers, were built from nothing but NAND gates.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A NAND gate outputs LOW only when...', options: ['All of its inputs are HIGH', 'Any one of its inputs is HIGH', 'All of its inputs are LOW', 'Its inputs are different from each other'], correct: 0, explanation: 'NAND is AND inverted: LOW only at the all-HIGH corner, HIGH otherwise.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An XOR gate outputs HIGH when its inputs...', options: ['Differ from each other', 'Are both HIGH together', 'Are both LOW together', 'Have at least one input HIGH'], correct: 0, explanation: 'Exclusive OR is HIGH only when exactly one input is HIGH (the inputs differ). The "at least one HIGH" rule is plain OR, which also fires when both are HIGH.' },
+      { type: 'true_false', difficulty: 1, statement: 'NAND and NOR are called universal gates.', correct: true, explanation: 'Either one alone can build any logic function.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A NOR gate is an OR gate followed by a ___ gate.', blank: '___', answer: 'NOT', hint: 'It is the inverter, the one-input gate that flips its input.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'A 2-input XOR gate has A=1, B=1. The output is...', options: ['0 (the inputs are equal)', '1 (at least one is HIGH)', 'Undefined', 'It toggles back and forth'], correct: 0, explanation: 'XOR is HIGH only when inputs differ; equal inputs give LOW.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A 2-input NOR gate has A=0, B=0. The output is...', options: ['1 (HIGH)', '0 (LOW)', 'Undefined', 'The same as input A only'], correct: 0, explanation: 'NOR is HIGH only when all inputs are LOW, which is the case here.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A NAND gate has both inputs tied together and fed one signal X. It behaves as a...', options: ['NOT gate (inverter)', 'Plain AND gate', 'Plain OR gate', 'Buffer that copies X'], correct: 0, explanation: 'NAND of X with X is NOT X, so a NAND with joined inputs is an inverter.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 2-input NAND outputs LOW for exactly ___ of its four input combinations.', blank: '___', answer: 'one', hint: 'Only the all-HIGH corner gives LOW; count how many that is.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'Why can a designer build an entire circuit from only NAND gates?', options: ['NAND is universal: copies of it can make NOT, AND, OR, and any function', 'NAND is the fastest-switching gate, so it can stand in for the others', 'NAND already contains an AND and an OR stage in one package', 'NAND is the only gate that runs from a single 5V logic supply'], correct: 0, explanation: 'Universality means every logic function reduces to a network of NANDs (NOR is the other universal gate). Speed and supply have nothing to do with it.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'An XOR gate is fed two single-bit numbers. What useful arithmetic does its output give?', options: ['The sum bit of adding the two bits together', 'The product of the two input bits multiplied out', 'The larger of the two single input bits given', 'The total count of the inputs that are HIGH'], correct: 0, explanation: 'XOR matches the sum-without-carry rule (1+0 and 0+1 give 1; 1+1 and 0+0 give 0), which is why it is the heart of a binary adder.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each gate to when its output is HIGH.', pairs: [['NAND', 'HIGH unless all inputs are HIGH'], ['NOR', 'HIGH only when all inputs are LOW'], ['XOR', 'HIGH only when the inputs differ'], ['XNOR', 'HIGH only when the inputs match']] },
+    ],
+  },
+
+  'Combinational Logic': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Gates Working Together', body: 'Combinational logic means the output depends only on the inputs right now, with no memory of the past. Wire several gates together and the whole block still obeys one big truth table. The classic example is binary addition: gates can add two bits and produce a result.' },
+      { type: 'teach', title: 'The Half Adder', body: 'Adding two single bits A and B has two outputs: the SUM bit and the CARRY bit.\n\nA=0 B=0 to sum 0, carry 0\nA=0 B=1 to sum 1, carry 0\nA=1 B=0 to sum 1, carry 0\nA=1 B=1 to sum 0, carry 1\n\nThe SUM is exactly an XOR of A and B, and the CARRY is an AND of A and B. Those two gates together are called a half adder.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'In combinational logic, the output depends on...', options: ['Only the present inputs', 'The inputs plus a stored memory of the past', 'A clock edge arriving', 'The supply voltage alone'], correct: 0, explanation: 'Combinational means no memory: outputs follow the current inputs directly.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A half adder produces which two outputs?', options: ['A sum bit and a carry bit', 'A clock and a reset', 'Two identical copies of the input', 'A HIGH and a permanent LOW'], correct: 0, explanation: 'It outputs the sum of two bits plus any carry into the next place.' },
+      { type: 'true_false', difficulty: 1, statement: 'In a half adder, the SUM output is the XOR of the two input bits.', correct: true, explanation: 'XOR gives 1 when the bits differ, exactly the sum-without-carry.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'In a half adder, the CARRY output is the ___ of the two input bits.', blank: '___', answer: 'AND', hint: 'A carry only happens when both bits are 1, which is the all-HIGH gate.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_reading', difficulty: 2, question: 'A half adder is given A=1, B=1. The sum and carry outputs are...', options: ['Sum 0, carry 1', 'Sum 1, carry 0', 'Sum 1, carry 1', 'Sum 0, carry 0'], correct: 0, explanation: '1 + 1 = binary 10: the sum bit is 0 and the carry bit is 1.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A half adder is given A=1, B=0. The sum and carry outputs are...', options: ['Sum 1, carry 0', 'Sum 0, carry 1', 'Sum 1, carry 1', 'Sum 0, carry 0'], correct: 0, explanation: '1 + 0 = 1: the sum bit is 1 and there is no carry.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A "majority" circuit outputs HIGH when most of three inputs are HIGH. With inputs 1, 1, 0 it outputs...', options: ['HIGH (two of three are HIGH)', 'LOW (not all three are HIGH)', 'Undefined (it needs a clock)', 'HIGH only if all three are HIGH'], correct: 0, explanation: 'Majority means more than half; two HIGH out of three is a majority, so the output is HIGH.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A half adder cannot accept a carry coming IN from a previous stage; the block that can is the ___ adder.', blank: '___', answer: 'full', hint: 'It is the complete version, the opposite of half.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'Why is a half adder not enough to add multi-bit numbers on its own?', options: ['It cannot accept a carry coming in from the previous bit position', 'It can only ever add numbers that are exactly zero', 'It needs a clock edge before it will produce any output', 'It outputs the carry but completely forgets the sum'], correct: 0, explanation: 'Beyond the lowest bit you must add a carry-in too; that needs a full adder (a half adder handles only two inputs).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A 3-input majority circuit gets inputs 0, 1, 0. The output is...', options: ['LOW, since only one of the three inputs is HIGH', 'HIGH, since at least one input is HIGH', 'HIGH, because majority always outputs HIGH', 'Undefined, because majority needs an even count'], correct: 0, explanation: 'Only one of three is HIGH, which is a minority, so the majority output is LOW.' },
+      { type: 'drag_order', difficulty: 3, instruction: 'Order the steps to add the lowest bits of two binary numbers with a half adder.', items: ['Feed bits A and B into the half adder', 'XOR them to make the sum bit', 'AND them to make the carry bit', 'Pass the carry on to the next bit position'], correctOrder: [0, 1, 2, 3] },
+    ],
+  },
+
+  'Boolean Rules and De Morgan': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'The Algebra of Logic', body: 'Boolean algebra is arithmetic for HIGH and LOW, written with three operators: AND (a dot), OR (a plus), and NOT (a bar over a term). A few rules let you simplify circuits:\n\n• A AND 1 = A, A AND 0 = 0\n• A OR 0 = A, A OR 1 = 1\n• A AND A = A, A OR A = A\n• NOT(NOT A) = A (two inverters cancel)' },
+      { type: 'teach', title: "De Morgan's Two Laws", body: "De Morgan's laws let you swap AND for OR by moving the inversion:\n\n• NOT(A AND B) = (NOT A) OR (NOT B)\n• NOT(A OR B) = (NOT A) AND (NOT B)\n\nIn words: break the bar, and flip the operator underneath it. This is how a NAND can be redrawn as an OR with inverted inputs, and it is the practical reason NAND and NOR are so flexible." },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'In Boolean algebra, A OR 1 equals...', options: ['1', '0', 'A', 'NOT A'], correct: 0, explanation: 'OR is HIGH if any input is HIGH, and one input is fixed at 1, so the result is always 1.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A AND 0 equals...', options: ['0', '1', 'A', 'NOT A'], correct: 0, explanation: 'AND needs all inputs HIGH; a fixed 0 forces the result to 0.' },
+      { type: 'true_false', difficulty: 1, statement: 'Putting a signal through two inverters in a row gives back the original signal.', correct: true, explanation: 'NOT(NOT A) = A; the two inversions cancel out.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A AND 1 simplifies to just ___.', blank: '___', answer: 'A', hint: 'ANDing with a permanent HIGH leaves the other input unchanged.' },
+
+      // ── Tier 2: apply a law ──
+      { type: 'multiple_choice', difficulty: 2, question: "By De Morgan's law, NOT(A AND B) is the same as...", options: ['(NOT A) OR (NOT B)', '(NOT A) AND (NOT B)', 'A OR B', 'A AND B'], correct: 0, explanation: 'Break the bar over the AND and it becomes an OR of the inverted inputs.' },
+      { type: 'multiple_choice', difficulty: 2, question: "By De Morgan's law, NOT(A OR B) is the same as...", options: ['(NOT A) AND (NOT B)', '(NOT A) OR (NOT B)', 'A AND B', 'NOT A only'], correct: 0, explanation: 'Break the bar over the OR and it becomes an AND of the inverted inputs.' },
+      { type: 'predict_reading', difficulty: 2, question: 'Simplify A OR A.', options: ['A', '1', '0', 'NOT A'], correct: 0, explanation: 'ORing a signal with itself changes nothing: A OR A = A.' },
+      { type: 'fill_blank', difficulty: 2, prompt: "De Morgan in words: break the bar and ___ the operator beneath it.", blank: '___', answer: 'flip', hint: 'AND becomes OR and OR becomes AND, so you change it to the other one.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'A NAND gate (NOT(A AND B)) can be redrawn, by De Morgan, as...', options: ['An OR gate with both inputs inverted', 'An AND gate with both inputs inverted', 'A plain OR gate with normal inputs', 'A single inverter on input A'], correct: 0, explanation: 'NOT(A AND B) = (NOT A) OR (NOT B), so a NAND equals an OR fed by two inverted inputs.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A circuit computes NOT(A OR B), then you also need (NOT A) AND (NOT B) elsewhere. What is the efficient move?', options: ['Reuse the same gate: by De Morgan the two expressions are identical', 'Build a completely separate second circuit from scratch', 'Add a clock so the two expressions stay in step', 'Invert the supply rail to convert one into the other'], correct: 0, explanation: "De Morgan proves they are the same function, so one gate output serves both needs." },
+      { type: 'match', difficulty: 3, instruction: 'Match each Boolean expression to its simplified form.', pairs: [['A AND 1', 'A'], ['A OR 0', 'A'], ['A OR 1', '1'], ['NOT(NOT A)', 'A']] },
+    ],
+  },
+
+  'Flip-Flops and Latches': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'A Circuit That Remembers', body: 'Combinational gates forget the instant the inputs change. A flip-flop is different: it is the smallest unit of memory, holding a single bit. It has two outputs, Q and NOT-Q, always in opposite states. Once set, it stays put until told otherwise. Cross-couple two NAND (or two NOR) gates and you get the simplest one, an SR latch.' },
+      { type: 'teach', title: 'SR Latch and the D Flip-Flop', body: 'An SR latch has Set and Reset inputs: Set drives Q HIGH, Reset drives Q LOW, and with neither active it holds its last state. Asserting both at once is the forbidden combination (the outputs would not stay opposite). A D flip-flop fixes that: it has a single Data input and a clock, and on a clock edge it stores whatever D is, removing the illegal state. That makes it the standard 1-bit memory cell.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A flip-flop is best described as...', options: ['The smallest unit of memory, storing one bit', 'A gate with no memory at all', 'A device that converts AC to DC', 'A resistor that limits current'], correct: 0, explanation: 'A flip-flop holds a single bit until it is changed.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A flip-flop normally has two outputs that are...', options: ['Always in opposite states (Q and NOT-Q)', 'Always exactly equal to each other', 'Both permanently held HIGH', 'Both connected straight to ground'], correct: 0, explanation: 'Q and NOT-Q are complementary: when one is HIGH the other is LOW.' },
+      { type: 'true_false', difficulty: 1, statement: 'An SR latch can be built from two cross-coupled NAND gates.', correct: true, explanation: 'Cross-coupling two NANDs (or two NORs) forms the basic SR latch.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'In an SR latch, the input that drives Q LOW is the ___ input.', blank: '___', answer: 'Reset', hint: 'Set turns it on; this one does the opposite.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'An SR latch currently has Q=1. You assert neither Set nor Reset (both inactive). Q is now...', options: ['Still 1, it holds onto its last state', 'Forced down to a 0 right away', 'Undefined and starts oscillating', 'Equal to whatever NOT-Q is'], correct: 0, explanation: 'With no active input the latch remembers, holding Q at its previous value.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'A D flip-flop has D=1 when a clock edge arrives. After the edge, Q is...', options: ['1 (it stored the value of D)', '0 (it always clears on a clock)', 'Unchanged from before', 'Equal to the clock signal'], correct: 0, explanation: 'A D flip-flop captures D on the clock edge, so Q becomes 1.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why is asserting both Set and Reset together on an SR latch a problem?', options: ['It is the forbidden state: the two outputs cannot stay opposite', 'It simply doubles the latch\'s stored value', 'It permanently and physically destroys the gates', 'It converts the latch into a plain AND gate'], correct: 0, explanation: 'Both active violates the Q / NOT-Q rule, leaving an invalid, unpredictable state.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A D flip-flop captures its Data input only on a clock ___.', blank: '___', answer: 'edge', hint: 'It is the moment the clock transitions, not the whole high time.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'How does a D flip-flop avoid the forbidden state of a plain SR latch?', options: ['It has a single data input, so Set and Reset can never be asserted at once', 'It runs at a much higher voltage that blocks the bad state', 'It uses three outputs instead of two complementary ones', 'It forgets its value, so no illegal state can persist'], correct: 0, explanation: 'One D input internally drives Set and Reset as opposites, so they can never both be active.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A bouncy mechanical switch feeds a logic input. How can an SR latch help?', options: ['It can latch the first clean transition and ignore the bounce that follows', 'It speeds the switch up so it stops bouncing physically', 'It converts the switch into an analog voltage instead', 'It increases the noise margin of the whole supply rail'], correct: 0, explanation: 'A latch holds the first valid state, so the rapid bounce after it does not keep retriggering: classic hardware debounce.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each flip-flop term to its meaning.', pairs: [['Q and NOT-Q', 'The two complementary outputs'], ['Set', 'Drives Q HIGH'], ['Reset', 'Drives Q LOW'], ['D flip-flop', 'Stores Data on a clock edge']] },
+    ],
+  },
+
+  'The Clock and Sequential Logic': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'A Steady Heartbeat', body: 'A clock is a free-running square wave, ticking HIGH, LOW, HIGH, LOW at a fixed rate. It is the heartbeat that paces a digital system. Sequential logic uses memory (flip-flops) AND a clock, so unlike combinational logic, its output depends on both the inputs and what is stored, and changes only on a clock tick.' },
+      { type: 'teach', title: 'Edges, Not Levels', body: 'Most clocked parts act on a clock EDGE, the instant it transitions, not on the whole HIGH time. A rising edge is LOW-to-HIGH; a falling edge is HIGH-to-LOW. Edge triggering keeps the whole system in step: every flip-flop updates at the same tick, so changes ripple through in an orderly way instead of racing each other.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A digital clock signal is...', options: ['A steady square wave ticking HIGH and LOW', 'A slowly drifting analog voltage', 'A single one-off pulse that never repeats', 'A fixed DC level that never changes'], correct: 0, explanation: 'The clock is a regular square wave that paces the system.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'Sequential logic differs from combinational logic because it...', options: ['Has memory and is paced by a clock', 'Uses no gates whatsoever', 'Cannot store any information at all', 'Only ever works with analog signals'], correct: 0, explanation: 'Sequential logic combines stored state with a clock; combinational has neither.' },
+      { type: 'true_false', difficulty: 1, statement: 'A rising clock edge is a transition from LOW to HIGH.', correct: true, explanation: 'Rising = LOW-to-HIGH; falling = HIGH-to-LOW.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A clock transition from HIGH to LOW is called a ___ edge.', blank: '___', answer: 'falling', hint: 'It is the opposite of a rising edge; the level is going down.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'An edge-triggered flip-flop holds its value while the clock sits steady HIGH (no transition). What does Q do?', options: ['Nothing, it waits for the next clock edge', 'It immediately copies its data input', 'It toggles continuously while HIGH', 'It resets itself to 0'], correct: 0, explanation: 'Edge-triggered parts only act at a transition, not during a steady level.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'Why clock many flip-flops from the same clock line?', options: ['So they all update together on the same edge, staying in step', 'So each one can run at a totally different speed', 'So the circuit needs no power supply', 'So the flip-flops become combinational'], correct: 0, explanation: 'A shared clock synchronises updates, keeping the whole system coherent.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A clock runs at 1 kHz. How long is one full clock period (one HIGH plus one LOW)?', options: ['1 ms', '1 s', '1 µs', '1000 ms'], correct: 0, explanation: 'Period = 1/frequency = 1/1000 s = 1 ms.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'Logic that uses both stored memory and a clock is called ___ logic.', blank: '___', answer: 'sequential', hint: 'It steps through states one clock tick after another, in sequence.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'Why is edge triggering generally preferred over level triggering in clocked logic?', options: ['It updates each stage once per tick, avoiding races as data ripples through', 'It lets the circuit run with no clock connected at all', 'It removes the need for any flip-flops in the design', 'It makes combinational and sequential logic identical'], correct: 0, explanation: 'A single defined instant per cycle keeps every stage in step and prevents output from racing back into an input.' },
+      { type: 'predict_reading', difficulty: 3, question: 'A 16 MHz microcontroller clock has a period of about...', options: ['≈ 62.5 ns', '≈ 16 ms', '≈ 6.25 µs', '≈ 160 ns'], correct: 0, explanation: 'Period = 1/16,000,000 s = 62.5 ns. That tiny tick is why it can run millions of operations per second.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['Clock', 'Steady square-wave heartbeat'], ['Rising edge', 'LOW to HIGH transition'], ['Combinational', 'Output from inputs only'], ['Sequential', 'Output from inputs plus stored state']] },
+    ],
+  },
+
+  'Counters and Registers': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Counting Clock Pulses', body: 'Chain flip-flops together and you get a counter: a circuit that increments its stored binary value by one on every clock pulse. An n-bit counter cycles through 2 to the power n values, then rolls over to zero and starts again. A 4-bit counter counts 0 to 15 and wraps. Counters are how a digital system measures time, events, or position.' },
+      { type: 'teach', title: 'Registers Store Bits', body: 'A register is a row of flip-flops that holds several bits at once, one bit per flip-flop, all clocked together. A shift register is a special kind that passes its bits along one position on each clock, which is how a microcontroller can send a byte out of a single pin one bit at a time. Counters count; registers store and move bits.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'A digital counter does what on each clock pulse?', options: ['Increments its stored value by one', 'Doubles the supply voltage', 'Resets every gate to a random state', 'Converts the clock into analog'], correct: 0, explanation: 'A counter adds one to its count each clock tick.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A register is...', options: ['A row of flip-flops storing several bits', 'A single resistor in the clock line', 'A gate with no memory', 'A converter from AC to DC'], correct: 0, explanation: 'A register is multiple flip-flops holding multiple bits together.' },
+      { type: 'true_false', difficulty: 1, statement: 'A shift register moves its stored bits along by one position on each clock.', correct: true, explanation: 'That shifting action sends bits out serially, one per clock.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A counter is built by chaining together several ___.', blank: '___', answer: 'flip-flops', hint: 'They are the one-bit memory cells from the earlier lesson.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_reading', difficulty: 2, question: 'A 3-bit counter counts from 0 up to its maximum, then wraps. What is its maximum value?', options: ['7', '8', '3', '15'], correct: 0, explanation: '3 bits give 2 to the power 3 = 8 values, numbered 0 to 7, so the maximum is 7.' },
+      { type: 'predict_reading', difficulty: 2, question: 'A 4-bit counter sits at 15. The next clock pulse arrives. The new value is...', options: ['0 (it rolls over)', '16', '14', '15 (it stays put)'], correct: 0, explanation: '15 is the maximum for 4 bits, so the next count wraps around to 0.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'How many bits does a register need to store one byte?', options: ['8', '4', '16', '1'], correct: 0, explanation: 'A byte is 8 bits, so it needs 8 flip-flops, one per bit.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'An n-bit counter cycles through 2 to the power n values before it ___ over.', blank: '___', answer: 'rolls', hint: 'When it passes the top it returns to zero; this verb describes that wrap.' },
+
+      // ── Tier 3: reason ──
+      { type: 'predict_reading', difficulty: 3, question: 'A counter is fed a 1 kHz clock. How long until an 8-bit counter completes one full cycle (256 counts)?', options: ['256 ms', '256 s', '8 ms', '1 ms'], correct: 0, explanation: '256 counts at 1 ms each (1 kHz) = 256 ms for a complete 0-to-255 cycle and wrap.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does a shift register let a microcontroller drive eight LEDs from far fewer pins?', options: ['It clocks the eight bits out serially, then holds them in parallel for the LEDs', 'It boosts the output voltage so one pin can power eight LEDs at once', 'It removes the need for any current-limiting resistors on the LEDs', 'It converts the LEDs into a single analog brightness value'], correct: 0, explanation: 'Send bits one at a time into the register, then it presents all eight in parallel: pin count drops to data plus clock.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each block to what it does.', pairs: [['Counter', 'Counts clock pulses'], ['Register', 'Stores several bits'], ['Shift register', 'Moves bits along each clock'], ['Flip-flop', 'Stores one bit']] },
+    ],
+  },
+
+  'The 74HC Logic Family': {
+    xpReward: 30,
+    steps: [
+      { type: 'teach', title: 'Logic in a Chip', body: 'You rarely wire single gates; you buy them packaged. The 74xx series is the classic family, and today the 74HC variant (high-speed CMOS) is the everyday default in a through-hole DIP. A 74HC00 holds four 2-input NAND gates; a 74HC08 holds four ANDs. They run from a Vcc pin and a ground (GND) pin, with the gate inputs and outputs on the remaining pins.' },
+      { type: 'teach', title: 'Decoupling Is Mandatory', body: 'Every logic chip switches its outputs fast, snatching little gulps of current from the supply. A 100 nF (0.1 µF) ceramic decoupling capacitor placed right at each chip\'s Vcc and GND pins supplies those fast spikes locally, before the rail can dip (exactly the Unit 6 and Unit 10 idea). Skip it and chips behave erratically. It is not optional, it is standard practice on every digital board.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'The 74HC family is built using which technology?', options: ['High-speed CMOS', 'Vacuum tubes', 'Electromechanical relays', 'Analog op-amps'], correct: 0, explanation: '74HC is the high-speed CMOS version of the 74xx series.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'A logic chip gets its power from which two pins?', options: ['Vcc and GND', 'Set and Reset', 'Q and NOT-Q', 'SDA and SCL'], correct: 0, explanation: 'Vcc is the positive supply and GND is the ground reference.' },
+      { type: 'true_false', difficulty: 1, statement: 'A 100 nF (0.1 µF) decoupling capacitor belongs right at each logic chip\'s power pins.', correct: true, explanation: 'It supplies fast switching current locally so the rail does not dip.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'A 74HC00 chip contains four 2-input ___ gates.', blank: '___', answer: 'NAND', hint: 'The classic 7400 part: recall which universal gate that very first chip in the series provides.' },
+
+      // ── Tier 2: apply ──
+      { type: 'multiple_choice', difficulty: 2, question: 'Why place the decoupling cap as close to the chip as possible?', options: ['So it can supply the fast current spike before the rail dips', 'So it can store enough charge to run the chip for hours', 'So it can convert the supply from AC to DC', 'So it can raise the chip\'s supply voltage'], correct: 0, explanation: 'Short leads keep inductance low, so the local cap answers the fast demand instantly.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'You leave the decoupling caps off a board full of 74HC chips. The likely result is...', options: ['Erratic, glitchy behaviour as the rail dips on switching', 'Cleaner operation, since fewer parts means less noise', 'The chips run at exactly half their rated speed', 'Nothing changes, decoupling is purely cosmetic'], correct: 0, explanation: 'Without local decoupling the supply sags on each fast switch, causing glitches: the classic missing-cap fault.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A 74HC08 holds four 2-input AND gates. How many gates is that, and how many inputs total?', options: ['4 gates, 8 inputs', '8 gates, 4 inputs', '2 gates, 4 inputs', '1 gate, 8 inputs'], correct: 0, explanation: 'Four gates, each with two inputs, is 8 inputs in total (plus the shared Vcc and GND).' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'A 100 nF capacitor is the same value as 0.1 ___F.', blank: '___', answer: 'µ', hint: 'Move from nano up to the next larger SI prefix used for capacitors.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'A board has one big bulk capacitor on the rail but glitches when a chip switches hard. The fix is...', options: ['Add a small 100 nF cap at each chip; bulk caps are too slow for fast spikes', 'Remove the bulk cap entirely so it stops interfering', 'Lower the supply voltage until the glitches stop', 'Run a much longer ground wire to the far chip'], correct: 0, explanation: 'Bulk caps cover slow demands; only a local ceramic answers the fast switching spike at the chip (Unit 6/10).' },
+      { type: 'multiple_choice', difficulty: 3, question: 'Why is 74HC usually preferred over the original bipolar 74xx TTL for new hobby designs?', options: ['CMOS draws almost no input current and is widely available in DIP', 'TTL accepts a much wider supply range than CMOS ever can', 'TTL inputs can be left floating with no pull resistor needed', 'CMOS is immune to static and never needs careful handling'], correct: 0, explanation: '74HC CMOS combines low power, easy interfacing and through-hole availability. (CMOS is actually MORE static-sensitive, and it is CMOS, not TTL, that tolerates a wide supply.)' },
+      { type: 'match', difficulty: 3, instruction: 'Match each pin or part to its role.', pairs: [['Vcc', 'Positive supply'], ['GND', 'Ground reference'], ['100 nF cap', 'Local decoupling'], ['74HC00', 'Quad 2-input NAND']] },
+    ],
+  },
+
+  'GPIO, Timers and Interrupts': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'The Pins You Control', body: 'A microcontroller\'s general-purpose input/output (GPIO) pins are the ones your code drives. Each can be an input (read a switch or sensor) or an output (drive an LED or transistor). Many pins are multiplexed, meaning they double as special peripherals: ADC inputs, PWM outputs, or serial-bus pins. PWM (from Unit 5) is a built-in timer rapidly switching a pin to fake an analog level.' },
+      { type: 'teach', title: 'Interrupts Beat Polling', body: 'Polling means your loop keeps checking an input over and over: simple, but if the loop is busy with a slow task it can MISS a brief event. An interrupt instead pauses the program the instant an event fires, runs a short handler, then returns. Use an interrupt for fast or rare events you must not miss (a fast encoder pulse); polling is fine for slow inputs like a button.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'GPIO pins on a microcontroller can be configured as...', options: ['Either inputs or outputs', 'Inputs only, never outputs', 'Outputs only, never inputs', 'Power-supply pins only'], correct: 0, explanation: 'General-purpose I/O pins can each be set as an input or an output.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'An interrupt lets the microcontroller...', options: ['Respond to an event immediately, pausing the main code', 'Run noticeably faster by skipping the clock entirely', 'Store its data permanently even when it is powered off', 'Convert an AC input into a steady DC output rail'], correct: 0, explanation: 'An interrupt suspends the program to run a handler the moment an event occurs.' },
+      { type: 'true_false', difficulty: 1, statement: 'Polling means repeatedly checking an input inside the main loop.', correct: true, explanation: 'Polling reads the input each pass; an interrupt fires on its own instead.' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'PWM is produced by an on-chip ___ rapidly switching a pin on and off.', blank: '___', answer: 'timer', hint: 'It is the peripheral that measures and paces intervals.' },
+
+      // ── Tier 2: apply ──
+      { type: 'predict_behavior', difficulty: 2, question: 'Your loop runs a slow 2-second animation with delay(). A button is pressed for 0.1s during it, checked only by polling. What happens?', options: ['The press is likely missed, the loop was busy in delay()', 'The press is always caught, polling never misses', 'The animation stops and restarts automatically', 'The button triggers an interrupt anyway'], correct: 0, explanation: 'While stuck in delay() the code is not polling, so a brief press during it can be missed entirely.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A fast rotary encoder sends brief pulses you must not miss. The right tool is...', options: ['A hardware interrupt on the pin', 'Polling inside a slow loop', 'A bigger decoupling capacitor', 'A longer delay() in the loop'], correct: 0, explanation: 'Short, frequent pulses need an interrupt so none slip past while code is busy.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A pin labelled "A0" being usable as both an analog input and a digital pin is an example of...', options: ['Pin multiplexing (one pin, several functions)', 'A short circuit on the board', 'The pin being permanently analog only', 'A decoupling requirement'], correct: 0, explanation: 'Multiplexed pins double up as different peripherals depending on how you configure them.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'For a slow input like a simple button, ordinary ___ is usually good enough.', blank: '___', answer: 'polling', hint: 'It is the repeated-checking approach, the alternative to interrupts.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'An interrupt handler must be kept very short. Why?', options: ['It blocks the main program (and other interrupts) while it runs', 'A long handler is silently ignored by the processor entirely', 'Handlers are capped at a fixed number of lines by the compiler', 'The handler re-runs the whole main loop each time it fires'], correct: 0, explanation: 'The main program is paused during the handler, so a long handler stalls everything else: keep it brief.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'A bouncy mechanical switch is wired to an edge-triggered interrupt. What can go wrong, and why?', options: ['The bounce fires the interrupt many times for one press, so debounce it', 'The interrupt makes the switch stop bouncing on its own', 'Interrupts cannot read switches, only sensors', 'The switch will draw far too much current'], correct: 0, explanation: 'Each bounce is an edge, so one press triggers many interrupts unless the input is debounced (hardware or code).' },
+      { type: 'match', difficulty: 3, instruction: 'Match each concept to its description.', pairs: [['GPIO', 'A pin your code drives'], ['PWM', 'Timer faking an analog level'], ['Interrupt', 'Respond immediately to an event'], ['Polling', 'Repeatedly check in the loop']] },
+    ],
+  },
+
+  'Serial Buses: UART, I2C, SPI': {
+    xpReward: 35,
+    steps: [
+      { type: 'teach', title: 'Talking Over a Few Wires', body: 'To move data between chips you send it serially, one bit at a time, over a handful of wires. Three buses dominate embedded work:\n\n• UART: asynchronous, point-to-point. Two wires (TX, RX), no shared clock, so both ends must agree a baud rate. This is the serial link behind Serial.begin and the USB programming port.\n• I2C: a two-wire bus (SDA data, SCL clock) where many devices share the lines, each picked out by an address. Needs pull-up resistors.' },
+      { type: 'teach', title: 'SPI and Choosing One', body: 'SPI is a fast, synchronous master/slave bus: a clock (SCK), data out (MOSI), data in (MISO), and one chip-select line per device. It is full-duplex (both directions at once) and the fastest of the three, at the cost of more wires as you add devices. Rule of thumb: UART for a simple two-device link, I2C for many slow sensors on two wires, SPI when you need raw speed.' },
+
+      // ── Tier 1: recall ──
+      { type: 'multiple_choice', difficulty: 1, question: 'UART communication is...', options: ['Asynchronous, with no shared clock line', 'Synchronous, sharing a clock with every device', 'A four-wire bus with chip-select lines', 'Only ever used inside a single chip'], correct: 0, explanation: 'UART has no clock wire, so both ends must agree on a baud rate.' },
+      { type: 'multiple_choice', difficulty: 1, question: 'The I2C bus uses how many signal wires?', options: ['Two (SDA and SCL)', 'One (data only)', 'Four (clock plus three data)', 'Eight (one per bit)'], correct: 0, explanation: 'I2C shares a data line (SDA) and a clock line (SCL) among all devices.' },
+      { type: 'true_false', difficulty: 1, statement: 'SPI is a synchronous bus that uses a shared clock line.', correct: true, explanation: 'SPI clocks data on SCK, so it is synchronous (unlike UART).' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'On an I2C bus, each device is selected by its unique ___.', blank: '___', answer: 'address', hint: 'It is the numeric ID that singles a device out on the shared two wires.' },
+
+      // ── Tier 2: apply ──
+      { type: 'multiple_choice', difficulty: 2, question: 'You need to connect six slow temperature sensors using as few wires as possible. Best bus?', options: ['I2C, since many devices share just two addressed wires', 'SPI, adding a chip-select wire for each sensor', 'UART, which is strictly point-to-point', 'No bus, wire each sensor to its own analog pin'], correct: 0, explanation: 'I2C\'s shared two-wire, addressed bus is ideal for several slow devices.' },
+      { type: 'multiple_choice', difficulty: 2, question: 'A high-speed display needs the fastest possible link. Which bus fits best?', options: ['SPI, the fastest of the three', 'I2C, limited by bus capacitance and pull-ups', 'UART, with no clock to keep it in sync', 'None, displays cannot use a serial bus'], correct: 0, explanation: 'SPI runs the fastest, which suits high-throughput devices like displays.' },
+      { type: 'predict_behavior', difficulty: 2, question: 'Two devices on a UART link are set to different baud rates. The result is...', options: ['Garbled data, the timing no longer matches', 'Faster, error-free communication', 'The devices auto-correct to the same rate', 'Nothing, baud rate does not matter on UART'], correct: 0, explanation: 'With no shared clock, mismatched baud rates mean the receiver samples at the wrong times: garbage.' },
+      { type: 'fill_blank', difficulty: 2, prompt: 'SPI needs one chip-___ line for every slave device on the bus.', blank: '___', answer: 'select', hint: 'It is the line that activates one specific slave; sometimes called CS.' },
+
+      // ── Tier 3: reason ──
+      { type: 'multiple_choice', difficulty: 3, question: 'Why does SPI need more wires than I2C as you add devices, while I2C does not?', options: ['SPI gives each device its own chip-select line', 'SPI uses a separate ground line for every device', 'I2C secretly adds a hidden wire for each device', 'SPI simply cannot connect more than one device'], correct: 0, explanation: 'I2C distinguishes devices by address on two shared wires; SPI adds a dedicated select line per slave.' },
+      { type: 'multiple_choice', difficulty: 3, question: 'SPI is described as "full-duplex." For a sensor read, this means...', options: ['It can send and receive at the same time', 'Only one direction of data flows at once', 'The bus needs no shared clock to work', 'Two masters must take turns in control'], correct: 0, explanation: 'Separate MOSI and MISO lines let data flow both ways simultaneously, which is what full-duplex means.' },
+      { type: 'match', difficulty: 3, instruction: 'Match each bus to its defining trait.', pairs: [['UART', 'Asynchronous, point-to-point, two wires'], ['I2C', 'Two shared wires, addressed devices'], ['SPI', 'Synchronous, fast, chip-select per device'], ['Baud rate', 'Agreed speed for a UART link']] },
+    ],
+  },
+
+  'Unit 11 Checkpoint': {
+    xpReward: 50,
+    steps: [
+      { type: 'multiple_choice', question: 'Digital electronics counts in base-2 because...', options: ['A wire is cleanly either HIGH or LOW', 'Base-2 is simply much faster for humans to read', 'It uses far less copper than the other bases do', 'A microcontroller is unable to count in base-10'], correct: 0, explanation: 'Two clean states map directly onto binary digits.' },
+      { type: 'multiple_choice', question: 'On 5V logic, an input sitting at 1.4V is...', options: ['In the forbidden zone, neither a valid HIGH nor LOW', 'A clean and reliable, settled logic HIGH', 'A clean and reliable, settled logic LOW', 'Certain to instantly damage the input pin'], correct: 0, explanation: '1.4V is above the LOW threshold but below the HIGH threshold, so it is undefined.' },
+      { type: 'predict_reading', question: 'On a 10-bit, 5V Uno ADC, roughly what number does 2.5V give?', options: ['About 512', 'About 1023', 'About 256', 'About 100'], correct: 0, explanation: 'Half of full scale: 2.5/5 × 1023 ≈ 512.' },
+      { type: 'multiple_choice', question: 'A NAND gate outputs LOW only when...', options: ['All of its inputs are HIGH', 'Any one of its inputs is HIGH', 'All of its inputs are LOW', 'Its inputs differ from each other'], correct: 0, explanation: 'NAND is AND inverted: LOW only at the all-HIGH corner.' },
+      { type: 'predict_reading', question: 'A half adder is given inputs A=1 and B=1. The sum and carry outputs are...', options: ['Sum 0, carry 1', 'Sum 1, carry 0', 'Sum 1, carry 1', 'Sum 0, carry 0'], correct: 0, explanation: '1 + 1 = binary 10: sum bit 0, carry bit 1.' },
+      { type: 'multiple_choice', question: 'A flip-flop is best described as...', options: ['The smallest unit of memory, storing one bit', 'A plain logic gate that has no memory at all', 'A converter that turns AC into a steady DC', 'A resistor that limits current to an LED'], correct: 0, explanation: 'A flip-flop holds a single bit until changed.' },
+      { type: 'predict_reading', question: 'A 4-bit counter sits at 15. The next clock pulse makes it...', options: ['0 (it rolls over)', '16', '14', '15 (it stays put)'], correct: 0, explanation: '15 is the 4-bit maximum, so it wraps to 0.' },
+      { type: 'true_false', statement: 'A 100 nF decoupling capacitor belongs right at each logic chip\'s power pins.', correct: true, explanation: 'It supplies fast switching current locally before the rail can dip.' },
+      { type: 'multiple_choice', question: 'For six slow sensors on as few wires as possible, the best bus is...', options: ['I2C (two shared, addressed wires)', 'SPI (a chip-select per device)', 'UART (strictly point-to-point)', 'No bus, one analog pin each'], correct: 0, explanation: 'I2C shares two wires among many addressed devices.' },
+      { type: 'match', instruction: 'Match each item to its description.', pairs: [['AND gate', 'HIGH only if all inputs HIGH'], ['Interrupt', 'Respond immediately to an event'], ['Counter', 'Counts clock pulses'], ['SPI', 'Synchronous, fast, master/slave']] },
+    ],
+  },
 };

@@ -448,6 +448,66 @@ concept-driven; lints clean.
   spikes) + low-impedance ground: EAC Vol.1; ties to Unit 6 decoupling. Verified.
 - **Unit 10 Checkpoint** (new) — mixed retrieval; no new claims.
 
+## Unit 11 — Digital Logic & Embedded
+
+Advanced, concept/logic-driven (no new circuitDiagram ids; truth tables live in
+teach body text). Grounded in EAC Vol.2 (logic gates ch.10, flip-flops ch.11),
+Make: More Electronics (Platt), The Art of Electronics (Horowitz & Hill), and
+Exploring Arduino (Blum) for the embedded bridge. Lints 0/0.
+
+- **Binary and Hex** (new) — digital counts in base-2 because a wire is cleanly
+  HIGH/LOW; binary place values; four bits = one hex digit (0–F); a byte = 256
+  values: EAC Vol.2 ch.10 (logic states); Blum (bits). Verified (1010=10, 1100=12,
+  0xFF=255, 1023=ten 1s).
+- **Logic Levels and Noise Margin** (new) — 5V TTL-style thresholds (LOW ≤ ~0.8V,
+  HIGH ≥ ~2V), the forbidden zone, and noise margin as the slack between guaranteed
+  outputs and input thresholds: AoE §12.1 (logic threshold, noise immunity); EAC
+  Vol.2 ch.10 (74xx input/output levels: low ≤0.8V, high ≥2V). Verified.
+- **Analog to Digital and Back** (new) — ADC samples + quantises a voltage; Uno is
+  10-bit (0–1023, ties to Unit 5); resolution = 2^n steps; DAC reverses it; ~4.9
+  mV/step on 5V/1024: Blum ch.3 (10-bit ADC, 1024 steps, quantisation, 12-bit Due).
+  Verified (2.5V≈512, 5/1024≈4.9 mV).
+- **The Basic Gates** (new) — AND (all HIGH), OR (any HIGH), NOT (invert), and the
+  truth table: EAC Vol.2 ch.10 (gate rules, truth table, positive logic). Verified.
+- **NAND, NOR, XOR** (new) — NAND/NOR as AND/OR inverted, XOR = inputs differ,
+  NAND/NOR universal (joined-input NAND = NOT): EAC Vol.2 ch.10 (gate rules; 7400
+  NAND; XOR for adders). Verified.
+- **Combinational Logic** (new) — no memory; the half adder (SUM = XOR, CARRY = AND),
+  majority circuit, why a full adder is needed for carry-in: EAC Vol.2 ch.10 (half
+  adder / full adder, XOR+AND). Verified (1+1 = sum 0 carry 1).
+- **Boolean Rules and De Morgan** (new) — identity/idempotent/double-negation rules
+  and De Morgan's two laws (break the bar, flip the operator); NAND = OR of inverted
+  inputs: EAC Vol.2 ch.10 (Boolean algebra, bar notation); AoE (Boolean simplification).
+  Verified.
+- **Flip-Flops and Latches** (new) — flip-flop = smallest unit of memory, Q/NOT-Q;
+  cross-coupled NAND/NOR SR latch (Set/Reset/hold, forbidden both-active state); D
+  flip-flop captures D on a clock edge, removing the illegal state; latch debounces:
+  EAC Vol.2 ch.11 (SR latch from two NANDs/NORs, forbidden states, D-type, "smallest
+  possible unit of memory", debounce). Verified.
+- **The Clock and Sequential Logic** (new) — clock = steady square wave; sequential =
+  memory + clock vs combinational; rising/falling edges; edge- vs level-triggering;
+  period = 1/f: EAC Vol.2 ch.11 (synchronous, clock transition); AoE §12 (synchronous,
+  noise immunity). Verified (1 kHz = 1 ms; 16 MHz = 62.5 ns).
+- **Counters and Registers** (new) — counter increments on each clock, n-bit wraps at
+  2^n; register = a row of flip-flops; shift register moves bits serially: EAC Vol.2
+  ch.11 (flip-flops in counters/shift registers); MME ch.26 (counters). Verified
+  (3-bit max 7; 4-bit 15→0; byte = 8 bits; 256 counts @1 kHz = 256 ms).
+- **The 74HC Logic Family** (new) — 74xx series, 74HC = high-speed CMOS default in
+  DIP; Vcc/GND; 74HC00 = quad NAND, 74HC08 = quad AND; mandatory 100 nF (0.1 µF)
+  decoupling at each chip (callback to Unit 6/10): EAC Vol.2 ch.10 (74HCxx CMOS,
+  default HC family, part numbering); MME (74HC chips, decoupling). Verified.
+- **GPIO, Timers and Interrupts** (new) — GPIO in/out, pin multiplexing, PWM from an
+  on-chip timer (Unit 5 recap); interrupt = respond immediately vs polling that can
+  miss a brief event; keep handlers short; debounce bouncy interrupt inputs: Blum
+  ch.13 (interrupts vs polling tradeoffs, missing pulses, ISR debounce) + ch.1 (GPIO).
+  Verified.
+- **Serial Buses: UART, I2C, SPI** (new) — UART async point-to-point (TX/RX, agreed
+  baud); I2C two-wire (SDA/SCL) addressed shared bus with pull-ups; SPI synchronous
+  master/slave (SCK/MOSI/MISO + chip-select per device), full-duplex, fastest: Blum
+  ch.10 (I2C two-wire, addresses, pull-ups), ch.11 (SPI full-duplex, MOSI/MISO/SS,
+  comparison to I2C/UART), ch.7 (UART/USART, baud). Verified.
+- **Unit 11 Checkpoint** (new) — mixed cumulative retrieval; no new claims.
+
 ## Notes for the pipeline
 
 - Every factual claim above traces to a source; this is the manual version of the

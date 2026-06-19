@@ -605,6 +605,69 @@ export const CURRICULUM: CurriculumUnit[] = [
       },
     ],
   },
+  {
+    id: 'digital-logic',
+    title: 'Digital Logic & Embedded',
+    subtitle: 'From bits and gates to the peripherals inside a microcontroller',
+    level: 'advanced',
+    accent: 'blue',
+    skills: [
+      {
+        id: 'numbers-and-levels',
+        title: 'Numbers & Logic Levels',
+        description: 'How digital represents and reads values.',
+        icon: 'Binary',
+        lessons: [
+          { id: 'Binary and Hex', title: 'Binary and Hex', summary: 'Counting in base-2, grouping into hex.', estMinutes: 12 },
+          { id: 'Logic Levels and Noise Margin', title: 'Logic Levels & Noise', summary: 'HIGH/LOW thresholds and why digital resists noise.', estMinutes: 12 },
+          { id: 'Analog to Digital and Back', title: 'Analog to Digital', summary: 'ADC, DAC, quantisation, and resolution.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'logic-gates',
+        title: 'Logic Gates',
+        description: 'The building blocks of every digital circuit.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'The Basic Gates', title: 'The Basic Gates', summary: 'AND, OR, NOT and their truth tables.', estMinutes: 12 },
+          { id: 'NAND, NOR, XOR', title: 'NAND, NOR, XOR', summary: 'Inverted gates and the universal NAND/NOR.', estMinutes: 12 },
+          { id: 'Combinational Logic', title: 'Combinational Logic', summary: 'Gates combined: the half adder.', estMinutes: 14 },
+          { id: 'Boolean Rules and De Morgan', title: 'Boolean & De Morgan', summary: 'The algebra of logic and the two laws.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'memory-and-sequencing',
+        title: 'Memory & Sequencing',
+        description: 'Circuits that remember, clocked by time.',
+        icon: 'Clock',
+        lessons: [
+          { id: 'Flip-Flops and Latches', title: 'Flip-Flops & Latches', summary: 'The SR latch and D flip-flop as 1-bit memory.', estMinutes: 14 },
+          { id: 'The Clock and Sequential Logic', title: 'The Clock', summary: 'Clock edges and sequential vs combinational.', estMinutes: 12 },
+          { id: 'Counters and Registers', title: 'Counters & Registers', summary: 'Counting pulses and storing bits.', estMinutes: 12 },
+        ],
+      },
+      {
+        id: 'embedded-bridge',
+        title: 'The Embedded Bridge',
+        description: 'From logic chips to microcontroller peripherals.',
+        icon: 'Microchip',
+        lessons: [
+          { id: 'The 74HC Logic Family', title: 'The 74HC Family', summary: 'CMOS logic chips and mandatory decoupling.', estMinutes: 12 },
+          { id: 'GPIO, Timers and Interrupts', title: 'GPIO & Interrupts', summary: 'Pins, PWM timers, interrupts vs polling.', estMinutes: 14 },
+          { id: 'Serial Buses: UART, I2C, SPI', title: 'Serial Buses', summary: 'UART, I2C and SPI: what each is and when.', estMinutes: 14 },
+        ],
+      },
+      {
+        id: 'digital-check',
+        title: 'Unit Checkpoint',
+        description: 'Prove you can reason about digital logic and embedded peripherals.',
+        icon: 'Trophy',
+        lessons: [
+          { id: 'Unit 11 Checkpoint', title: 'Unit 11 Checkpoint', summary: 'A mixed test of digital logic and embedded basics.', estMinutes: 10 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Helpers ──
