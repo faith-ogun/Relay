@@ -2,7 +2,6 @@ import React from 'react';
 import { Check, Cpu, Gauge, Lightbulb, Lock, Play, Trophy, Wrench, Zap } from 'lucide-react';
 import {
   CURRICULUM,
-  allLessons,
   nextLesson,
   type CurriculumAccent,
   type CurriculumLesson,
@@ -109,38 +108,18 @@ const LessonNode: React.FC<{
 
 export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new Set(), lessonLevels = {}, onStartLesson }) => {
   const next = nextLesson(completedLessonIds);
-  const all = allLessons();
-  const done = all.filter((l) => completedLessonIds.has(l.id)).length;
-  const total = all.length;
-  // Mastery: total level points earned out of 3 per lesson (how "gold" the path is).
-  const goldPoints = all.reduce((sum, l) => sum + Math.min(3, lessonLevels[l.id] ?? 0), 0);
   let nodeIndex = 0;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-16">
-      {/* Progress header */}
-      <div className="sticky top-2 z-10 mb-4 flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white/90 px-5 py-3 shadow-soft backdrop-blur">
-        <div className="h-3 flex-1 overflow-hidden rounded-full bg-ohmlet-line">
-          <div
-            className="h-full rounded-full bg-ohmlet-gold transition-all"
-            style={{ width: `${total ? (done / total) * 100 : 0}%` }}
-          />
-        </div>
-        <span className="text-sm font-black text-ohmlet-ink">
-          {done}/{total}
-        </span>
-      </div>
-
+    <div className="mx-auto w-full max-w-2xl px-4 pb-16 pt-2">
       {/* Leveling legend */}
       <div className="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold text-ohmlet-ink-soft">
-        <span>Pass once for</span>
         {([1, 2, 3] as const).map((lvl) => (
           <span key={lvl} className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full border border-ohmlet-ink" style={{ background: LEVEL_META[lvl].color }} />
             {LEVEL_META[lvl].name}
           </span>
         ))}
-        <span>· replay to level up · {goldPoints}/{total * 3} mastery</span>
       </div>
 
       {CURRICULUM.map((unit) => {
