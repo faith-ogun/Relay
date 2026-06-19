@@ -69,11 +69,17 @@ function lintStep(lessonId: string, i: number, step: LessonStep, push: (p: Omit<
     case 'predict_reading':
     case 'predict_behavior':
     case 'choose_resistor': {
-      const s = step as { question: string; options: string[]; optionImages?: string[]; correct: number; explanation: string };
+      const s = step as { question: string; options: string[]; optionImages?: string[]; correct: number; explanation: string; meter?: unknown; bands?: unknown };
       if (!isNonEmpty(s.question)) err(`${step.type}: empty question`);
+      // meter (predict_reading) and bands (choose_resistor) are graded by the widget,
+      // not the option list, so the option-list rules below do not apply to them. They
+      // still validate via the meter/bands checks further down.
+      const widgetGraded = !!s.meter || !!s.bands;
       if (s.optionImages && s.optionImages.length !== (s.options?.length ?? 0))
         err(`${step.type}: optionImages must have one entry per option (${s.optionImages.length} vs ${s.options?.length ?? 0})`);
-      if (!Array.isArray(s.options) || s.options.length < 2) err(`${step.type}: needs at least 2 options`);
+      if (widgetGraded) {
+        // ok — no option list required.
+      } else if (!Array.isArray(s.options) || s.options.length < 2) err(`${step.type}: needs at least 2 options`);
       else {
         if (s.options.some((o) => !isNonEmpty(o))) err(`${step.type}: has an empty option`);
         if (new Set(s.options).size !== s.options.length) warn(`${step.type}: duplicate options`);
@@ -317,6 +323,9 @@ function hasVisual(step: LessonStep): boolean {
   if (step.type === 'teach' && (step as { hotspots?: unknown[] }).hotspots?.length) return true;
   if ('optionImages' in step && (step as { optionImages?: unknown[] }).optionImages?.length) return true;
   if (step.type === 'match' && (step as { images?: unknown[] }).images?.length) return true;
+  // The meter gauge and the colour-band resistor render rich SVG — things to look at.
+  if (step.type === 'predict_reading' && (step as { meter?: unknown }).meter) return true;
+  if (step.type === 'choose_resistor' && (step as { bands?: unknown }).bands) return true;
   return false;
 }
 
