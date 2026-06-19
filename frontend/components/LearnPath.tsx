@@ -1,7 +1,8 @@
 import React from 'react';
-import { Check, Cpu, Gauge, Lightbulb, Lock, Play, Trophy, Wrench, Zap } from 'lucide-react';
+import { Calculator, Check, Cpu, Gauge, Lightbulb, Lock, Play, Trophy, Wrench, Zap } from 'lucide-react';
 import {
   CURRICULUM,
+  lessonRigor,
   nextLesson,
   type CurriculumAccent,
   type CurriculumLesson,
@@ -49,6 +50,7 @@ const LessonNode: React.FC<{
 }> = ({ lesson, state, accent, offset, level, onStart }) => {
   const a = ACCENT[accent];
   const medal = level >= 1 ? LEVEL_META[Math.min(3, level) as 1 | 2 | 3] : null;
+  const rigor = lessonRigor(lesson.id);
   const base =
     'relative flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-ohmlet-ink transition-all';
   const look =
@@ -82,6 +84,15 @@ const LessonNode: React.FC<{
             {[1, 2, 3].map((p) => (
               <span key={p} className={`h-1.5 w-1.5 rounded-full border border-ohmlet-ink ${p <= level ? 'bg-white' : 'bg-ohmlet-ink/20'}`} />
             ))}
+          </span>
+        )}
+        {/* rigor badge: this lesson involves real calculation (#42 difficulty signal) */}
+        {rigor === 'calc' && state !== 'locked' && (
+          <span
+            className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-white text-ohmlet-ink shadow-press-sm"
+            title="This lesson includes calculation"
+          >
+            <Calculator className="h-3 w-3" strokeWidth={2.5} />
           </span>
         )}
       </button>
@@ -120,6 +131,10 @@ export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new S
             {LEVEL_META[lvl].name}
           </span>
         ))}
+        <span className="inline-flex items-center gap-1.5">
+          <Calculator className="h-3 w-3" strokeWidth={2.5} />
+          involves calculation
+        </span>
       </div>
 
       {CURRICULUM.map((unit) => {

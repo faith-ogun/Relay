@@ -746,6 +746,31 @@ export const nextLesson = (completedIds: ReadonlySet<string>): CurriculumLesson 
   allLessons().find((lesson) => !completedIds.has(lesson.id));
 
 /**
+ * Rigor of a lesson, DERIVED from its authored content (so it never drifts from
+ * the lessons themselves). 'calc' = the learner will do real maths here: it has a
+ * resistor-sizing step, a numeric prediction, or a fill-blank whose answer is a
+ * number. The path shows a calculator glyph on these so the difficulty ramp is
+ * visible (task #42). null = conceptual.
+ */
+export type LessonRigor = 'calc' | null;
+const numericAnswer = (s: string): boolean => /[0-9]/.test(s);
+export const lessonRigor = (id: string): LessonRigor => {
+  const content = LESSON_CONTENT[id];
+  if (!content) return null;
+  // A resistor-sizing step is always real design maths -> calc. Otherwise require
+  // calculation to be a THEME (>= 2 numeric-prediction / numeric-blank steps), so a
+  // lone incidental number does not flag a conceptual lesson. Keeps the badge a
+  // meaningful "brace for maths" signal rather than noise.
+  let numericSteps = 0;
+  for (const step of content.steps) {
+    if (step.type === 'choose_resistor') return 'calc';
+    if (step.type === 'predict_reading') numericSteps += 1;
+    else if (step.type === 'fill_blank' && numericAnswer(step.answer)) numericSteps += 1;
+  }
+  return numericSteps >= 2 ? 'calc' : null;
+};
+
+/**
  * Integrity check: every curriculum lesson must have authored content, and ids
  * must be unique. Returns problems (empty array = healthy). Call from a test or
  * dev tooling, not at import time.
