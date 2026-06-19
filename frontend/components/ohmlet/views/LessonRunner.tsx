@@ -491,33 +491,17 @@ const StepView: React.FC<StepViewProps> = (p) => {
     case 'multiple_choice':
       return <ChoiceStep {...p} step={step} />;
 
-    // Prediction family: commit a prediction, then the circuit reveals the truth.
+    // Prediction family: commit a prediction, then the circuit reveals the truth —
+    // the diagram animates its current flow once you've answered.
     case 'predict_reading':
-      return <ChoiceStep {...p} step={step} eyebrow="Predict the reading" />;
+      return <ChoiceStep {...p} step={step} eyebrow="Predict the reading" revealFlow />;
     case 'predict_behavior':
-      return <ChoiceStep {...p} step={step} eyebrow="Predict what happens" />;
+      return <ChoiceStep {...p} step={step} eyebrow="Predict what happens" revealFlow />;
     case 'choose_resistor':
       return <ChoiceStep {...p} step={step} eyebrow="Choose the component" />;
 
     case 'true_false':
-      return (
-        <div className="ohmlet-rise">
-          <Prompt>{step.statement}</Prompt>
-          {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            {[true, false].map((val) => {
-              const sel = p.tf === val;
-              const reveal = checked && val === step.correct;
-              const wrong = checked && sel && val !== step.correct;
-              return (
-                <Option key={String(val)} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => p.setTf(val)} center>
-                  {val ? 'True' : 'False'}
-                </Option>
-              );
-            })}
-          </div>
-        </div>
-      );
+      return <TrueFalseStep {...p} step={step} />;
 
     case 'fill_blank':
       if (step.tiles && step.tiles.length) return <FillTileStep {...p} step={step} />;
@@ -587,9 +571,9 @@ const Prompt: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h2 className="text-2xl font-black leading-snug tracking-tight md:text-3xl">{children}</h2>
 );
 
-const Diagram: React.FC<{ circuit: string }> = ({ circuit }) => (
+const Diagram: React.FC<{ circuit: string; showCurrentFlow?: boolean }> = ({ circuit, showCurrentFlow }) => (
   <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
-    <CircuitDiagram circuit={circuit} className="mx-auto w-full max-w-xl" />
+    <CircuitDiagram circuit={circuit} showCurrentFlow={showCurrentFlow} className="mx-auto w-full max-w-xl" />
   </div>
 );
 
@@ -630,14 +614,14 @@ const Option: React.FC<{
 // it as a prediction ("Predict the reading"), which is what makes predict_* feel
 // distinct from a plain quiz: you commit, then the answer + explanation reveal.
 const ChoiceStep: React.FC<
-  { step: { question: string; options: string[]; optionImages?: string[]; correct: number; circuitDiagram?: string }; eyebrow?: string } & StepViewProps
-> = ({ step, eyebrow, choice, setChoice, checked }) => {
+  { step: { question: string; options: string[]; optionImages?: string[]; correct: number; circuitDiagram?: string }; eyebrow?: string; revealFlow?: boolean } & StepViewProps
+> = ({ step, eyebrow, revealFlow, choice, setChoice, checked }) => {
   const useImages = !!step.optionImages && step.optionImages.length === step.options.length;
   return (
     <div className="ohmlet-rise">
       {eyebrow && <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">{eyebrow}</p>}
       <Prompt>{step.question}</Prompt>
-      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
+      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} showCurrentFlow={!!revealFlow && checked} />}
       {useImages ? (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2">
           {step.options.map((opt, i) => {
@@ -763,6 +747,74 @@ const MatchThumb: React.FC<{ src: string }> = ({ src }) => {
   const [broken, setBroken] = useState(false);
   if (broken) return null;
   return <img src={src} alt="" draggable={false} onError={() => setBroken(true)} className="h-16 w-auto object-contain" />;
+};
+
+// ── True/False as a swipe card ──
+// Swipe the statement right for TRUE, left for FALSE (or tap the buttons). The card
+// tilts and tints as you drag; the buttons stay for accessibility and reveal on check.
+const TrueFalseStep: React.FC<{ step: Extract<LessonStep, { type: 'true_false' }> } & StepViewProps> = ({ step, tf, setTf, checked, correct }) => {
+  const [dx, setDx] = useState(0);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const THRESH = 64;
+  const down = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (checked) return;
+    dragging.current = true;
+    startX.current = e.clientX;
+  };
+  const moveCard = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    setDx(e.clientX - startX.current);
+  };
+  const up = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    if (dx > THRESH) setTf(true);
+    else if (dx < -THRESH) setTf(false);
+    setDx(0);
+  };
+  const tint = checked
+    ? correct
+      ? 'border-ohmlet-green bg-[#f1f9e6]'
+      : 'border-ohmlet-red bg-[#fdece8]'
+    : dx > 24 || tf === true
+    ? 'border-ohmlet-green bg-[#f1f9e6]'
+    : dx < -24 || tf === false
+    ? 'border-ohmlet-red bg-[#fdece8]'
+    : 'border-ohmlet-ink bg-white';
+  return (
+    <div className="ohmlet-rise">
+      <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Swipe or tap — true or false?</p>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-wide text-ohmlet-red/70">← False</span>
+        <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-wide text-ohmlet-green-deep/70">True →</span>
+        <div
+          onPointerDown={down}
+          onPointerMove={moveCard}
+          onPointerUp={up}
+          onPointerLeave={up}
+          onPointerCancel={up}
+          style={{ transform: `translateX(${dx}px) rotate(${dx / 26}deg)`, transition: dragging.current ? 'none' : 'transform 0.25s' }}
+          className={`mx-7 select-none rounded-[1.4rem] border-[2.5px] p-6 shadow-press ${tint} ${checked ? '' : 'cursor-grab touch-none active:cursor-grabbing'}`}
+        >
+          {step.circuitDiagram && <CircuitDiagram circuit={step.circuitDiagram} className="mx-auto mb-4 w-full max-w-md" />}
+          <p className="text-center text-xl font-black leading-snug text-ohmlet-ink md:text-2xl">{step.statement}</p>
+        </div>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        {[false, true].map((val) => {
+          const sel = tf === val;
+          const reveal = checked && val === step.correct;
+          const wrong = checked && sel && val !== step.correct;
+          return (
+            <Option key={String(val)} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setTf(val)} center>
+              {val ? 'True' : 'False'}
+            </Option>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 // ── Match step ──
