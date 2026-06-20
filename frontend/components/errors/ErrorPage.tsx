@@ -54,6 +54,9 @@ const CONTENT: Record<
 export const ErrorPage: React.FC<ErrorPageProps> = ({ variant, onHome, onPrimary }) => {
   const c = CONTENT[variant];
   const [imgOk, setImgOk] = useState(true);
+  // On the 404 the primary CTA is itself "Back to home", so the secondary home
+  // link below would duplicate it.
+  const primaryIsHome = variant === 404;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6 font-display">
@@ -81,13 +84,18 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({ variant, onHome, onPrimary
               <ArrowRight className="h-4 w-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={onHome}
-            className="inline-flex items-center gap-1.5 text-sm font-black text-ohmlet-ink-soft transition-colors hover:text-ohmlet-ink"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to home
-          </button>
+          {/* The secondary "Back to home" link is redundant on the 404, where the
+              primary CTA already goes home, so only show it when the primary does
+              something else (403 -> workspace, 402 -> plans). */}
+          {!(onPrimary && primaryIsHome) && (
+            <button
+              type="button"
+              onClick={onHome}
+              className="inline-flex items-center gap-1.5 text-sm font-black text-ohmlet-ink-soft transition-colors hover:text-ohmlet-ink"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to home
+            </button>
+          )}
         </div>
       </div>
     </div>
