@@ -60,13 +60,21 @@ def _require_configured() -> None:
 
 
 # ── Checkout: start a subscription ──
+# The body is read manually (not a typed param) so the auth dependency runs first
+# and an unauthenticated call returns a clean 401, not a body-validation 422.
 @router.post("/checkout")
-def create_checkout(payload: dict, claims: dict = Depends(require_claims)) -> dict:
+async def create_checkout(request: Request, claims: dict = Depends(require_claims)) -> dict:
     _require_configured()
     uid = claims["uid"]
     email = claims.get("email")
-    plan = (payload or {}).get("plan")
-    interval = (payload or {}).get("interval", "annual")
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    plan = payload.get("plan")
+    interval = payload.get("interval", "annual")
     if plan not in PAID_PLANS:
         raise HTTPException(422, f"plan must be one of {PAID_PLANS}")
     if interval not in INTERVALS:
