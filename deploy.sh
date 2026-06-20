@@ -82,7 +82,7 @@ deploy_service() {
     --set-env-vars="$env_vars" \
     --cpu-boost \
     --min-instances="$min_instances" \
-    "${sa_flag[@]}" \
+    ${sa_flag[@]+"${sa_flag[@]}"} \
     --quiet
 
   local url
