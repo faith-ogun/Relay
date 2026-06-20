@@ -53,11 +53,17 @@ const CHOICE_TYPES = new Set(['multiple_choice', 'predict_reading', 'predict_beh
 /** Shuffle a choice step's options and remap its correct index. Other steps pass through. */
 function shuffleStepOptions(step: LessonStep): LessonStep {
   if (!CHOICE_TYPES.has(step.type)) return step;
-  const s = step as LessonStep & { options: string[]; correct: number };
+  const s = step as LessonStep & { options: string[]; correct: number; optionImages?: string[] };
+  // meter/bands steps are graded by their widget, not the option list — never shuffle them.
+  if ((s as { meter?: unknown }).meter || (s as { bands?: unknown }).bands) return step;
   const order = shuffle(s.options.map((_, i) => i));
   const options = order.map((i) => s.options[i]);
   const correct = order.indexOf(s.correct);
-  return { ...step, options, correct } as LessonStep;
+  const next = { ...step, options, correct } as LessonStep & { optionImages?: string[] };
+  // Keep optionImages aligned with their options through the shuffle (else the
+  // picture under each label desyncs).
+  if (Array.isArray(s.optionImages)) next.optionImages = order.map((i) => s.optionImages![i]);
+  return next;
 }
 
 // How many questions a single run shows when a lesson has a deep pool.

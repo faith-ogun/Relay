@@ -246,43 +246,41 @@ export default function CircuitDiagram({
           </g>
         )}
 
-        {circuit === 'led_no_resistor' && (
+        {circuit === 'led_no_resistor' && (() => {
+          const sel = highlightRegion === 'missing_resistor';
+          const ok = correctRegion === 'missing_resistor';
+          const bad = errorRegion === 'missing_resistor';
+          const stroke = ok ? '#22c55e' : bad ? '#ef4444' : sel ? '#f3e515' : clickable ? 'rgba(148,163,184,0.7)' : 'transparent';
+          return (
           <g>
-            <text x={width / 2} y={22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#ef4444">{`What's Wrong?`}</text>
             {/* Battery */}
             <Battery x={80} y={100} label="5V" onClick={handleClick} id="battery" />
             {/* Direct to LED - no resistor! */}
             <Wire x1={95} y1={100} x2={220} y2={100} />
-            <LED x={250} y={100} color="#ef4444" label="LED" highlight={highlightRegion === 'led'} onClick={handleClick} id="led" error={errorRegion === 'missing_resistor'} />
+            <LED x={250} y={100} color="#ef4444" label="LED" highlight={highlightRegion === 'led'} onClick={handleClick} id="led" error={bad} />
             <Wire x1={270} y1={100} x2={330} y2={100} />
             <Wire x1={330} y1={100} x2={330} y2={170} />
             <Wire x1={330} y1={170} x2={60} y2={170} />
             <Wire x1={60} y1={170} x2={60} y2={100} />
             <Wire x1={60} y1={100} x2={65} y2={100} />
-            {/* Error indicator zone */}
-            {errorRegion === 'missing_resistor' && (
-              <g>
-                <rect x={120} y={85} width={80} height={30} rx={6} fill="none" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 3" />
-                <text x={160} y={78} textAnchor="middle" fontSize={9} fill="#ef4444" fontWeight={700}>Missing resistor!</text>
-              </g>
-            )}
-            {/* Clickable "no resistor" zone */}
-            <rect
-              x={120} y={85} width={80} height={30} rx={6}
-              fill="transparent"
-              onClick={() => handleClick?.('missing_resistor')}
-              style={{ cursor: clickable ? 'pointer' : 'default' }}
-            />
-            {/* Warning text */}
-            <text x={width / 2} y={210} textAnchor="middle" fontSize={10} fill={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'}>
-              Click on the problem area in the circuit
-            </text>
+            {/* Clickable "missing resistor" gap — a visible target on the wire so it is
+                discoverable, that highlights on selection and on reveal. */}
+            <g onClick={() => handleClick?.('missing_resistor')} style={{ cursor: clickable ? 'pointer' : 'default' }}>
+              <rect x={120} y={85} width={80} height={30} rx={6} fill={sel ? 'rgba(243,229,21,0.18)' : ok ? 'rgba(34,197,94,0.15)' : 'transparent'} stroke={stroke} strokeWidth={2.5} strokeDasharray="4 3" className={clickable && !sel && !ok && !bad ? 'circuit-pulse' : ''} />
+              {clickable && !sel && !ok && !bad && <text x={160} y={105} textAnchor="middle" fontSize={14} fontWeight={800} fill="rgba(148,163,184,0.9)">?</text>}
+              {(ok || bad) && <text x={160} y={78} textAnchor="middle" fontSize={9} fill={ok ? '#22c55e' : '#ef4444'} fontWeight={700}>Missing resistor!</text>}
+            </g>
           </g>
-        )}
+          );
+        })()}
 
-        {circuit === 'reversed_led' && (
+        {circuit === 'reversed_led' && (() => {
+          const sel = highlightRegion === 'reversed_led';
+          const ok = correctRegion === 'reversed_led';
+          const bad = errorRegion === 'reversed_led';
+          const ring = ok ? '#22c55e' : bad ? '#ef4444' : sel ? '#f3e515' : 'transparent';
+          return (
           <g>
-            <text x={width / 2} y={22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#ef4444">{`What's Wrong?`}</text>
             {/* Battery */}
             <Battery x={60} y={100} label="5V" onClick={handleClick} id="battery" />
             <Wire x1={75} y1={100} x2={130} y2={100} />
@@ -296,11 +294,11 @@ export default function CircuitDiagram({
               style={{ cursor: clickable ? 'pointer' : 'default' }}
             >
               <line x1={-20} y1={0} x2={-6} y2={0} stroke="currentColor" strokeWidth={2} />
-              <polygon points="-6,-8 -6,8 8,0" fill={errorRegion === 'reversed_led' ? '#ef4444' : '#ef4444'} opacity={0.7} stroke="#ef4444" strokeWidth={1.5} />
+              <polygon points="-6,-8 -6,8 8,0" fill="#ef4444" opacity={0.7} stroke="#ef4444" strokeWidth={1.5} />
               <line x1={8} y1={-8} x2={8} y2={8} stroke="currentColor" strokeWidth={2} />
               <line x1={8} y1={0} x2={20} y2={0} stroke="currentColor" strokeWidth={2} />
-              {errorRegion === 'reversed_led' && (
-                <rect x={-22} y={-12} width={44} height={24} rx={6} fill="none" stroke="#ef4444" strokeWidth={2.5} strokeDasharray="4 2" />
+              {(sel || ok || bad) && (
+                <rect x={-22} y={-12} width={44} height={24} rx={6} fill="none" stroke={ring} strokeWidth={2.5} strokeDasharray="4 2" />
               )}
             </g>
             <Wire x1={270} y1={100} x2={340} y2={100} />
@@ -308,18 +306,21 @@ export default function CircuitDiagram({
             <Wire x1={340} y1={170} x2={40} y2={170} />
             <Wire x1={40} y1={170} x2={40} y2={100} />
             <Wire x1={40} y1={100} x2={45} y2={100} />
-            {errorRegion === 'reversed_led' && (
-              <text x={250} y={78} textAnchor="middle" fontSize={9} fill="#ef4444" fontWeight={700}>LED is reversed!</text>
+            {(ok || bad) && (
+              <text x={250} y={78} textAnchor="middle" fontSize={9} fill={ok ? '#22c55e' : '#ef4444'} fontWeight={700}>LED is reversed!</text>
             )}
-            <text x={width / 2} y={210} textAnchor="middle" fontSize={10} fill={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'}>
-              Click on the component that's wrong
-            </text>
           </g>
-        )}
+          );
+        })()}
 
-        {circuit === 'short_circuit' && (
+        {circuit === 'short_circuit' && (() => {
+          const sel = highlightRegion === 'short_wire';
+          const ok = correctRegion === 'short_wire';
+          const bad = errorRegion === 'short_wire';
+          const active = sel || ok || bad;
+          const col = ok ? '#22c55e' : bad ? '#ef4444' : sel ? '#eab308' : 'currentColor';
+          return (
           <g>
-            <text x={width / 2} y={22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#ef4444">{`What's Wrong?`}</text>
             <Battery x={60} y={100} label="5V" onClick={handleClick} id="battery" />
             <Wire x1={75} y1={100} x2={130} y2={100} />
             <Resistor x={155} y={100} label="220Ω" onClick={handleClick} id="resistor" />
@@ -327,28 +328,29 @@ export default function CircuitDiagram({
             <LED x={265} y={100} color="#ef4444" label="LED" onClick={handleClick} id="led" />
             <Wire x1={285} y1={100} x2={330} y2={100} />
             {/* Short circuit wire bypassing components */}
-            <Wire x1={100} y1={100} x2={100} y2={60} color={errorRegion === 'short_wire' ? '#ef4444' : 'currentColor'} error={errorRegion === 'short_wire'} />
-            <Wire x1={100} y1={60} x2={330} y2={60} color={errorRegion === 'short_wire' ? '#ef4444' : 'currentColor'} error={errorRegion === 'short_wire'} />
-            <Wire x1={330} y1={60} x2={330} y2={100} color={errorRegion === 'short_wire' ? '#ef4444' : 'currentColor'} error={errorRegion === 'short_wire'} />
-            {/* Clickable zone for short wire */}
+            <Wire x1={100} y1={100} x2={100} y2={60} color={col} error={bad} />
+            <Wire x1={100} y1={60} x2={330} y2={60} color={col} error={bad} />
+            <Wire x1={330} y1={60} x2={330} y2={100} color={col} error={bad} />
+            {/* Clickable zone for short wire — a visible dashed target when interactive. */}
             <rect
               x={95} y={50} width={240} height={25} rx={4}
-              fill="transparent"
+              fill={sel ? 'rgba(234,179,8,0.12)' : 'transparent'}
+              stroke={active ? col : clickable ? 'rgba(148,163,184,0.7)' : 'transparent'}
+              strokeWidth={2} strokeDasharray="4 3"
               onClick={() => handleClick?.('short_wire')}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
+              className={clickable && !active ? 'circuit-pulse' : ''}
             />
             <Wire x1={330} y1={100} x2={330} y2={170} />
             <Wire x1={330} y1={170} x2={40} y2={170} />
             <Wire x1={40} y1={170} x2={40} y2={100} />
             <Wire x1={40} y1={100} x2={45} y2={100} />
-            {errorRegion === 'short_wire' && (
-              <text x={215} y={48} textAnchor="middle" fontSize={9} fill="#ef4444" fontWeight={700}>Short circuit! Wire bypasses components</text>
+            {(ok || bad) && (
+              <text x={215} y={48} textAnchor="middle" fontSize={9} fill={ok ? '#22c55e' : '#ef4444'} fontWeight={700}>Short circuit! Wire bypasses components</text>
             )}
-            <text x={width / 2} y={210} textAnchor="middle" fontSize={10} fill={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'}>
-              Click on the problem in this circuit
-            </text>
           </g>
-        )}
+          );
+        })()}
 
         {circuit === 'breadboard_layout' && (
           <g>
