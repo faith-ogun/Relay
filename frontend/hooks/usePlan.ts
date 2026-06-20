@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  LIVE_MINUTES_PER_DAY,
+  LIVE_MINUTES_PER_MONTH,
   isBetaFeature,
   planHas,
   type Feature,
@@ -21,7 +21,9 @@ import { fetchMe, setMyPlan } from '../services/account';
 const planKey = (userId: string) => `ohmlet.plan.${userId}`;
 const liveKey = (userId: string) => `ohmlet.live.${userId}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The live budget resets monthly (the caps are per month). This local value is
+// only an instant-paint cache; /v1/me is the source of truth.
+const period = () => new Date().toISOString().slice(0, 7); // YYYY-MM
 
 const readPlan = (userId: string): Plan => {
   const v = (typeof localStorage !== 'undefined' && localStorage.getItem(planKey(userId))) as Plan | null;
@@ -32,8 +34,8 @@ const readLiveSeconds = (userId: string): number => {
   try {
     const raw = localStorage.getItem(liveKey(userId));
     if (!raw) return 0;
-    const parsed = JSON.parse(raw) as { date: string; seconds: number };
-    return parsed.date === today() ? parsed.seconds : 0;
+    const parsed = JSON.parse(raw) as { period?: string; seconds: number };
+    return parsed.period === period() ? parsed.seconds : 0;
   } catch {
     return 0;
   }
@@ -70,7 +72,7 @@ export function usePlan(userId = 'anon'): UsePlan {
       } catch {
         /* ignore */
       }
-      if (typeof me.liveSecondsUsedToday === 'number') setLiveSecondsUsed(me.liveSecondsUsedToday);
+      if (typeof me.liveSecondsUsedThisMonth === 'number') setLiveSecondsUsed(me.liveSecondsUsedThisMonth);
     });
     return () => {
       cancelled = true;
@@ -106,14 +108,14 @@ export function usePlan(userId = 'anon'): UsePlan {
   const consumeLiveSeconds = useCallback((seconds: number) => {
     setLiveSecondsUsed((prev) => {
       const next = prev + seconds;
-      localStorage.setItem(liveKey(userId), JSON.stringify({ date: today(), seconds: next }));
+      localStorage.setItem(liveKey(userId), JSON.stringify({ period: period(), seconds: next }));
       return next;
     });
   }, [userId]);
 
   const can = useCallback((feature: Feature) => planHas(plan, feature), [plan]);
 
-  const liveCapMinutes = LIVE_MINUTES_PER_DAY[plan];
+  const liveCapMinutes = LIVE_MINUTES_PER_MONTH[plan];
   const liveMinutesRemaining = liveCapMinutes === Infinity ? Infinity : Math.max(0, liveCapMinutes - liveSecondsUsed / 60);
   const canGoLive = can('live') && liveMinutesRemaining > 0;
 

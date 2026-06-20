@@ -39,7 +39,7 @@ def get_me(claims: dict = Depends(require_claims)) -> dict:
         "plan": plan,
         "priorityModels": entitlements.has_priority_models(plan),
         "liveCapMinutes": _cap_for_json(plan),
-        "liveSecondsUsedToday": entitlements.live_seconds_used_today(uid),
+        "liveSecondsUsedThisMonth": entitlements.live_seconds_used_this_period(uid),
     }
 
 

@@ -26,13 +26,20 @@ logger = logging.getLogger("ohmlet.entitlements")
 
 VALID_PLANS = ("free", "pro", "max")
 
-# Daily live-tutor budget per plan (minutes). Vision + audio is the cost driver,
-# so Free is metered. Provisional pending real cost data (see usage_meter / #19).
-# inf = effectively unlimited (still protected by the idle watchdog + abuse caps).
-LIVE_MINUTES_PER_DAY: dict[str, float] = {
-    "free": float(os.getenv("OHMLET_LIVE_MIN_FREE", "20")),
-    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "180")),
-    "max": float("inf"),
+# Monthly live-tutor budget per plan (minutes). These MATCH the public pricing
+# page and the business brief (Free 60 min, Pro 10 hr, Max 30 hr) and are the
+# real, server-enforced spend ceiling — no plan is unlimited.
+#
+# Cost basis (instrumented in usage_meter.py, #17): a blended ~$2.50-4.50 per
+# active tutor-hour (~$0.037/min audio + snapshot vision + routed Pro calls). At
+# ~$3/hr a full Free month is ~$3 (funnel cost), a capped Pro month ~$30 (the
+# heavy-user ceiling), a capped Max month ~$90 (priced to clear it). Deliberately
+# conservative until real billing data lands (#19); every value is env-tunable so
+# caps can be tightened without a deploy. Nothing here exceeds the page's promise.
+LIVE_MINUTES_PER_MONTH: dict[str, float] = {
+    "free": float(os.getenv("OHMLET_LIVE_MIN_FREE", "60")),
+    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "600")),   # 10 hours
+    "max": float(os.getenv("OHMLET_LIVE_MIN_MAX", "1800")),  # 30 hours
 }
 
 # Plans that get the premium models for code gen / deep reasoning tools.
@@ -47,7 +54,7 @@ def normalize_plan(value: object) -> str:
 
 
 def live_cap_minutes(plan: str) -> float:
-    return LIVE_MINUTES_PER_DAY.get(normalize_plan(plan), LIVE_MINUTES_PER_DAY["free"])
+    return LIVE_MINUTES_PER_MONTH.get(normalize_plan(plan), LIVE_MINUTES_PER_MONTH["free"])
 
 
 def has_priority_models(plan: str) -> bool:
@@ -58,8 +65,13 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def _period() -> str:
+    """The budget window the caps reset on: the calendar month (UTC), YYYY-MM."""
+    return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
 def _budget_doc_id(user_id: str) -> str:
-    return f"{user_id}_{_today()}"
+    return f"{user_id}_{_period()}"
 
 
 def get_plan(user_id: str) -> str:
@@ -88,8 +100,8 @@ def set_plan(user_id: str, plan: str) -> str:
     return plan
 
 
-def live_seconds_used_today(user_id: str) -> float:
-    """Live seconds the user has already consumed today (0 on any error)."""
+def live_seconds_used_this_period(user_id: str) -> float:
+    """Live seconds the user has consumed this month (0 on any error)."""
     try:
         from state_store import get_client
 
@@ -105,11 +117,11 @@ def live_seconds_remaining(user_id: str, plan: str) -> float:
     cap_min = live_cap_minutes(plan)
     if cap_min == float("inf"):
         return float("inf")
-    return max(0.0, cap_min * 60.0 - live_seconds_used_today(user_id))
+    return max(0.0, cap_min * 60.0 - live_seconds_used_this_period(user_id))
 
 
 def add_live_seconds(user_id: str, seconds: float) -> None:
-    """Atomically add consumed live seconds to today's budget (best-effort)."""
+    """Atomically add consumed live seconds to this month's budget (best-effort)."""
     if seconds <= 0:
         return
     try:
@@ -119,7 +131,7 @@ def add_live_seconds(user_id: str, seconds: float) -> None:
 
         ref = get_client().collection(BUDGET_COLLECTION).document(_budget_doc_id(user_id))
         ref.set(
-            {"user_id": user_id, "date": _today(), "seconds": firestore.Increment(round(seconds, 1))},
+            {"user_id": user_id, "period": _period(), "seconds": firestore.Increment(round(seconds, 1))},
             merge=True,
         )
     except Exception as exc:

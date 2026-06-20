@@ -20,7 +20,7 @@ import {
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
-import { LIVE_MINUTES_PER_DAY, PLAN_META } from '../entitlements';
+import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 
 /**
@@ -94,11 +94,12 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   const live = state === 'connected';
   const connecting = state === 'connecting';
   const unlimited = liveCapMinutes === Infinity;
-  // Warn as the daily budget runs low so running out is never a surprise.
-  const lowTime = !unlimited && liveMinutesRemaining > 0 && liveMinutesRemaining <= 3;
-  const usedMinutes = Math.min(liveCapMinutes, Math.round(liveSecondsUsed / 60));
+  // Warn as the monthly budget runs low so running out is never a surprise.
+  // Threshold scales with the cap: 10% of it, but at least 10 minutes.
+  const lowTimeThreshold = Math.max(10, liveCapMinutes * 0.1);
+  const lowTime = !unlimited && liveMinutesRemaining > 0 && liveMinutesRemaining <= lowTimeThreshold;
 
-  // Meter live time against the plan's daily budget while connected, and cut the
+  // Meter live time against the plan's monthly budget while connected, and cut the
   // session off when the budget runs out (the same cap the server enforces).
   useEffect(() => {
     if (!live) return;
@@ -138,12 +139,13 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // ── Out of live budget (the upgrade moment, a friendly 402) ──
   if (!live && !connecting && !canGoLive) {
     const upgradeTo = plan === 'free' ? PLAN_META.pro : PLAN_META.max;
-    const upgradeLine = upgradeTo.id === 'max' ? 'unlimited live time' : `${LIVE_MINUTES_PER_DAY.pro} minutes of live time a day`;
+    const upgradeHours = Math.round(LIVE_MINUTES_PER_MONTH[upgradeTo.id] / 60);
+    const upgradeLine = `${upgradeHours} hours of live time a month`;
     const [imgOk, setImgOk] = budgetImageState;
     return (
       <div className="ohmlet-rise mx-auto max-w-xl">
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
-        <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">That is today's bench time used.</h1>
+        <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">That is this month's bench time used.</h1>
         <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
           <div className="flex flex-col items-center gap-5 bg-ohmlet-gold-soft px-7 py-8 text-center">
             <img
@@ -162,11 +164,11 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
             )}
             <div>
               <p className="text-lg font-black text-ohmlet-ink">
-                You used all {liveCapMinutes} of your {liveCapMinutes} daily live minutes.
+                You have used all {liveCapMinutes} live minutes on the {PLAN_META[plan].label} plan this month.
               </p>
               <p className="mt-1.5 text-sm font-semibold text-ohmlet-ink-soft">
-                Your lessons, sandbox, and community stay open, and live resets tomorrow. Learners who upgrade go
-                hands-on far more often, which is where it really sticks.
+                Your lessons, sandbox, and community stay open, and live resets at the start of next month. Learners who
+                upgrade go hands-on far more often, which is where it really sticks.
               </p>
             </div>
           </div>
@@ -219,7 +221,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           <div className="flex flex-col gap-3 border-t border-white/10 bg-black/20 px-8 py-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-white/55">
               Ohmlet asks for camera and microphone access when the session starts.
-              {!unlimited && ` ${Math.floor(liveMinutesRemaining)} of ${liveCapMinutes} min left today.`}
+              {!unlimited && ` ${Math.floor(liveMinutesRemaining)} of ${liveCapMinutes} min left this month.`}
             </p>
             <button
               onClick={goLive}
@@ -263,7 +265,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                 lowTime ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft'
               }`}
             >
-              {Math.floor(liveMinutesRemaining)} min left today
+              {Math.floor(liveMinutesRemaining)} min left this month
             </span>
           )}
           {lowTime && onUpgrade && (

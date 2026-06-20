@@ -14,8 +14,8 @@ export interface MeResponse {
   isAdmin: boolean;
   plan: Plan;
   priorityModels: boolean;
-  liveCapMinutes: number | null; // null = unlimited
-  liveSecondsUsedToday: number;
+  liveCapMinutes: number | null; // null = unlimited (no tier is, but kept for safety)
+  liveSecondsUsedThisMonth: number;
 }
 
 const apiBase = () => (import.meta.env.VITE_OHMLET_API_BASE_URL || '').trim().replace(/\/+$/, '');
