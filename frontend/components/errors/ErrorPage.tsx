@@ -9,8 +9,8 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
  *   402  payment required (a premium feature without the plan) — wired fully
  *        once entitlements (#56) land
  *
- * Each uses a mascot mood from /public/mascot. Custom art (lost/stop/locked)
- * drops in over time; until then the existing expressions stand in.
+ * Each uses dedicated art in /public/errors, with a mascot mood as a fallback
+ * so the page is never broken if an image is missing.
  */
 
 export type ErrorVariant = 404 | 403 | 402;
@@ -27,7 +27,7 @@ const CONTENT: Record<
 > = {
   404: {
     code: '404',
-    mascot: '/mascot/lost.png',
+    mascot: '/errors/404.png',
     fallback: '/mascot/think.png',
     title: 'This wire leads nowhere',
     body: "We couldn't find that page. It may have moved, or the address has a typo.",
@@ -35,7 +35,7 @@ const CONTENT: Record<
   },
   403: {
     code: '403',
-    mascot: '/mascot/stop.png',
+    mascot: '/errors/403.png',
     fallback: '/mascot/oops.png',
     title: 'This bench is off-limits',
     body: "You're signed in, but this area isn't part of your account.",
@@ -43,7 +43,7 @@ const CONTENT: Record<
   },
   402: {
     code: '402',
-    mascot: '/mascot/locked.png',
+    mascot: '/errors/402.png',
     fallback: '/mascot/encourage.png',
     title: 'That feature is on a higher plan',
     body: 'Upgrade to unlock this, or keep building with everything on your current plan.',

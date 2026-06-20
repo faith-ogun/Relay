@@ -183,7 +183,7 @@ const App: React.FC = () => {
   // ── Workspace (auth-gated) ──
   if (route === 'ohmlet-app' || route === 'workspace') {
     if (!user) return <AuthSplash />;
-    return <WorkspaceHome onBack={backToLanding} />;
+    return <WorkspaceHome onBack={backToLanding} onUpgrade={() => navigate('pricing')} />;
   }
 
   // ── Author console (admin only) ──

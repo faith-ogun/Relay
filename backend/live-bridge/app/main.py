@@ -14,8 +14,9 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from google.adk.runners import Runner
 from google.adk.agents.run_config import RunConfig, StreamingMode
@@ -30,6 +31,7 @@ from account import router as account_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
+import ratelimit
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
@@ -46,6 +48,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting (#47): blunt a misbehaving client on the REST surface. Keyed by
+# the verified UID when a bearer token is present, else the client IP.
+@app.middleware("http")
+async def rate_limit_rest(request: Request, call_next):
+    if request.url.path.startswith("/v1/"):
+        identity = None
+        authz = request.headers.get("authorization")
+        if authz and authz.lower().startswith("bearer "):
+            try:
+                identity = verify_id_token(authz.split(" ", 1)[1]).get("uid")
+            except Exception:
+                identity = None  # invalid token -> fall back to IP; the route still 401s
+        try:
+            ratelimit.enforce_rest(request, identity)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=exc.headers)
+    return await call_next(request)
+
 
 # User-state persistence (Firestore via service account). Self-contained router.
 app.include_router(state_router)
@@ -155,6 +176,14 @@ async def websocket_endpoint(
         await _reject_ws(websocket, "auth_mismatch", "Identity mismatch; refusing the connection.")
         return
     user_id = verified_uid
+
+    # Abuse guard (#47): cap how often one user can open new live sessions, so
+    # the expensive Gemini path cannot be hammered open/closed in a loop.
+    if not ratelimit.allow_ws_session(user_id):
+        logger.warning("WS session rate limit hit for user=%s", user_id)
+        await _reject_ws(websocket, "rate_limited", "Too many sessions started. Please wait a minute.")
+        return
+
     logger.info("WS connected: user=%s session=%s", user_id, session_id)
 
     # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
