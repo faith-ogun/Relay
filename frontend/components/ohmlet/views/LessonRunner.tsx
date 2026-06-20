@@ -383,6 +383,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
                 ? 'Read, then continue.'
                 : step.type === 'draw_circuit'
                 ? 'Draw your circuit, then submit below.'
+                : step.type === 'draw_fix'
+                ? 'Draw the fix onto the circuit, then submit below.'
                 : 'Pick your answer.'}
             </span>
           )}
@@ -406,8 +408,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
                   Skip <ArrowRight className="h-4 w-4" />
                 </button>
               )}
-              {/* draw_circuit grades via its own Submit button in the step body. */}
-              {step.type !== 'draw_circuit' && (
+              {/* draw_circuit / draw_fix grade via their own Submit button in the step body. */}
+              {step.type !== 'draw_circuit' && step.type !== 'draw_fix' && (
                 <button
                   onClick={handleCheck}
                   disabled={!canCheck()}
@@ -582,6 +584,9 @@ const StepView: React.FC<StepViewProps> = (p) => {
 
     case 'draw_circuit':
       return <DrawCircuitStep {...p} step={step} />;
+
+    case 'draw_fix':
+      return <DrawFixStep {...p} step={step} />;
 
     default:
       return null;
@@ -1400,6 +1405,169 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
           onTouchMove={move}
           onTouchEnd={end}
         />
+      </div>
+      {!checked && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setEraser(false)} className={toolBtn(!eraser)}>
+              <Pencil className="h-4 w-4" /> Pen
+            </button>
+            <button type="button" onClick={() => setEraser(true)} className={toolBtn(eraser)}>
+              <Eraser className="h-4 w-4" /> Eraser
+            </button>
+            <button type="button" onClick={clear} className={toolBtn(false)}>
+              <Trash2 className="h-4 w-4" /> Clear
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || !hasInk}
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-2.5 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
+          >
+            {loading ? 'Checking…' : 'Submit drawing'}
+          </button>
+        </div>
+      )}
+      {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+    </div>
+  );
+};
+
+// ── Draw-fix step (draw the missing component onto the circuit, Vision-graded) ──
+// The circuit renders as a crisp SVG; a transparent canvas sits exactly on top for
+// the learner to draw the fix. At submit, the SVG is rasterised and composited with
+// the drawing into ONE image, so Gemini sees the circuit and the addition together.
+const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } & StepViewProps> = ({ step, checked, onAsyncResult }) => {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastRef = useRef<{ x: number; y: number } | null>(null);
+  const [eraser, setEraser] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasInk, setHasInk] = useState(false);
+
+  // Size the transparent drawing canvas to overlay the circuit box exactly.
+  const sizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const box = boxRef.current;
+    if (!canvas || !box) return;
+    const rect = box.getBoundingClientRect();
+    if (!rect.width) return;
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.setTransform(2, 0, 0, 2, 0, 0);
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(sizeCanvas, 80);
+    window.addEventListener('resize', sizeCanvas);
+    return () => { window.clearTimeout(t); window.removeEventListener('resize', sizeCanvas); };
+  }, [sizeCanvas]);
+
+  const pointFrom = (e: CanvasPointer) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  };
+  const start = (e: CanvasPointer) => { if (checked) return; drawingRef.current = true; lastRef.current = pointFrom(e); };
+  const move = (e: CanvasPointer) => {
+    if (!drawingRef.current || !lastRef.current || checked) return;
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const p = pointFrom(e);
+    ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = '#1d4ed8';
+    ctx.lineWidth = eraser ? 20 : 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastRef.current.x, lastRef.current.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    lastRef.current = p;
+    if (!eraser) setHasInk(true);
+  };
+  const end = () => { drawingRef.current = false; lastRef.current = null; };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setError(null);
+    setHasInk(false);
+  };
+
+  const submit = async () => {
+    const canvas = canvasRef.current;
+    const svg = boxRef.current?.querySelector('svg');
+    if (!canvas || !svg) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Rasterise the circuit SVG, then composite the drawing on top.
+      const out = document.createElement('canvas');
+      out.width = canvas.width;
+      out.height = canvas.height;
+      const octx = out.getContext('2d')!;
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, out.width, out.height);
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      clone.setAttribute('width', String(out.width));
+      clone.setAttribute('height', String(out.height));
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => { octx.drawImage(img, 0, 0, out.width, out.height); resolve(); };
+        img.onerror = () => reject(new Error('Could not render the circuit for grading.'));
+        img.src = svgUrl;
+      });
+      octx.drawImage(canvas, 0, 0);
+      const base64 = out.toDataURL('image/png').split(',')[1];
+      const res = await assessDrawing(QUIZ_API_ROOT, {
+        image_base64: base64,
+        expected_components: step.expected,
+        exercise_type: 'draw_circuit',
+      });
+      const found = res.identified_components?.length ? ` (spotted: ${res.identified_components.join(', ')})` : '';
+      onAsyncResult(res.correct, `${res.feedback}${found}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toolBtn = (on: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+    }`;
+
+  return (
+    <div className="ohmlet-rise">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw the fix</p>
+      <Prompt>{step.instruction}</Prompt>
+      <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+        <div ref={boxRef} className="relative mx-auto w-full max-w-xl">
+          <CircuitDiagram circuit={step.circuitDiagram} className="w-full" />
+          <canvas
+            ref={canvasRef}
+            className={`absolute inset-0 h-full w-full touch-none ${checked ? 'pointer-events-none' : 'cursor-crosshair'}`}
+            onMouseDown={start}
+            onMouseMove={move}
+            onMouseUp={end}
+            onMouseLeave={end}
+            onTouchStart={start}
+            onTouchMove={move}
+            onTouchEnd={end}
+          />
+        </div>
       </div>
       {!checked && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

@@ -45,6 +45,10 @@ in the plan.
 - `draw_circuit` — `{ instruction; expected: string[]; hint; explanation }`. The learner
   DRAWS the circuit on a canvas and Gemini Vision grades it (names the components it
   sees vs `expected`). The embodied hero — use it as the synthesis step of a build lesson.
+- `draw_fix` — `{ instruction; circuitDiagram; expected: string[]; hint; explanation }`.
+  The learner draws the missing/correct component ON TOP of a shown circuit; the circuit
+  and their drawing are composited and Vision-graded. Use INSTEAD of a spot_error when the
+  point is to repair (e.g. "draw the missing resistor") rather than just locate the fault.
 
 **The construction/repair/trace family (prefer these over multiple_choice where they fit):**
 - `trace_current` — `{ question; circuitDiagram; correctPath: string[]; explanation }`.

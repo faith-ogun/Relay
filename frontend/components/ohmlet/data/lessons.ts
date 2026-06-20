@@ -48,7 +48,12 @@ export type LessonStepBuildToSpec = { type: 'build_to_spec'; instruction: string
 // Gemini Vision grades it (the orphaned hackathon capability, now in the lessons).
 // `expected` lists the component keywords the model should find in the drawing.
 export type LessonStepDrawCircuit = { type: 'draw_circuit'; instruction: string; expected: string[]; hint: string; explanation: string };
-export type LessonStep = LessonStepTeach | LessonStepMC | LessonStepTF | LessonStepFill | LessonStepMatch | LessonStepSpotError | LessonStepIdentify | LessonStepDraw | LessonStepDragOrder | LessonStepPredictReading | LessonStepPredictBehavior | LessonStepChooseResistor | LessonStepTraceCurrent | LessonStepFixCircuit | LessonStepBuildToSpec | LessonStepDrawCircuit;
+// draw_fix — draw the missing/correct component directly ON TOP of a shown circuit.
+// The circuit image and the learner's drawing are composited into one picture and
+// graded by Gemini Vision. The diagnose-and-repair task, embodied: instead of being
+// told where to click, the learner adds the fix themselves.
+export type LessonStepDrawFix = { type: 'draw_fix'; instruction: string; circuitDiagram: string; expected: string[]; hint: string; explanation: string };
+export type LessonStep = LessonStepTeach | LessonStepMC | LessonStepTF | LessonStepFill | LessonStepMatch | LessonStepSpotError | LessonStepIdentify | LessonStepDraw | LessonStepDragOrder | LessonStepPredictReading | LessonStepPredictBehavior | LessonStepChooseResistor | LessonStepTraceCurrent | LessonStepFixCircuit | LessonStepBuildToSpec | LessonStepDrawCircuit | LessonStepDrawFix;
 
 // Difficulty tier for a question (used by leveling: Bronze favours tier 1, Silver
 // tier 2, Gold tier 3). Untagged steps default to tier 1. A lesson with a deep,
@@ -322,7 +327,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'teach', title: 'Sizing the Resistor', body: 'Use Ohm\'s law on the resistor, not the LED. The resistor drops whatever voltage the LED does not:\n\nR = (Vsupply − Vf) / I\n\nWith 5V, an LED forward voltage Vf of 2V, and a target of 15 mA:\nR = (5 − 2) / 0.015 = 200Ω → use the nearest common value, 220Ω.\n\nThe trap: forgetting to subtract Vf. Always subtract the LED drop first.' },
 
       // ── Tier 1: recall ──
-      { type: 'spot_error', difficulty: 1, question: 'This LED will burn out. Click the problem.', circuitDiagram: 'led_no_resistor', correctRegion: 'missing_resistor', explanation: 'No current-limiting resistor, so nothing stops the current. The LED draws far too much and fails.' },
+      { type: 'draw_fix', instruction: 'This LED will burn out. Draw the missing component into the circuit to make it safe.', circuitDiagram: 'led_no_resistor', expected: ['resistor'], hint: 'A current-limiting resistor belongs in series on the top wire, between the battery and the LED. Sketch a small resistor (a zig-zag, or a little banded rectangle) bridging that wire.', explanation: 'The circuit is missing its series current-limiting resistor (about 220Ω on 5V). Drawing one into the loop is what keeps the LED current safe.' },
       { type: 'multiple_choice', difficulty: 1, question: 'What current does a typical small indicator LED want?', options: ['Around 15 to 20 mA', 'Around 2 amps', 'Around 200 mA', 'As much as it can take'], correct: 0, explanation: 'Most small LEDs are happy around 15 to 20 mA; the series resistor is what sets it.' },
       { type: 'true_false', difficulty: 1, statement: 'An LED should always have a series resistor to limit its current.', correct: true, explanation: 'Without one, nothing limits the current and the LED is destroyed almost instantly.' },
       { type: 'multiple_choice', difficulty: 1, question: 'In an LED circuit, the resistor\'s job is to...', options: ['Limit the current to a safe level', 'Raise the voltage across the LED', 'Change the colour of the LED', 'Store charge to smooth the supply'], correct: 0, explanation: 'The resistor sets a safe current; it does not change the LED\'s colour or voltage.' },
