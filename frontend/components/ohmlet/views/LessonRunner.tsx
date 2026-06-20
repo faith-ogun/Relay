@@ -651,7 +651,7 @@ const ChoiceStep: React.FC<
             const reveal = checked && i === step.correct;
             const wrong = checked && sel && i !== step.correct;
             return (
-              <ImageChoice key={opt} src={step.optionImages![i]} label={opt} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)} />
+              <ImageChoice key={opt} src={step.optionImages![i]} label={opt} showLabel={checked} selected={sel} reveal={reveal} wrong={wrong} disabled={checked} onClick={() => setChoice(i)} />
             );
           })}
         </div>
@@ -678,22 +678,28 @@ const ChoiceStep: React.FC<
 const ImageChoice: React.FC<{
   src: string;
   label: string;
+  /** Show the name? Only after answering — otherwise it gives away "tap the X". */
+  showLabel: boolean;
   selected: boolean;
   reveal?: boolean;
   wrong?: boolean;
   disabled?: boolean;
   onClick: () => void;
-}> = ({ src, label, selected, reveal, wrong, disabled, onClick }) => {
+}> = ({ src, label, showLabel, selected, reveal, wrong, disabled, onClick }) => {
   const [broken, setBroken] = useState(false);
   let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
   if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
   else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
   else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
+  // The label is the answer, so it stays hidden until checked (kept for screen
+  // readers via aria-label). If the image is missing, fall back to showing the name.
+  const labelVisible = showLabel || broken;
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
+      aria-label={label}
       className={`relative flex flex-col items-center gap-2.5 rounded-2xl border-2 p-4 shadow-soft transition-all ${look} ${disabled ? '' : 'hover:-translate-y-0.5'}`}
     >
       {(reveal || wrong) && (
@@ -701,8 +707,8 @@ const ImageChoice: React.FC<{
           {reveal ? <Check className="h-4 w-4" strokeWidth={3} /> : <X className="h-4 w-4" strokeWidth={3} />}
         </span>
       )}
-      {!broken && <img src={src} alt="" draggable={false} onError={() => setBroken(true)} className="h-24 w-auto object-contain" />}
-      <span className="text-center text-sm font-black text-ohmlet-ink">{label}</span>
+      {!broken && <img src={src} alt="" draggable={false} onError={() => setBroken(true)} className="h-28 w-auto object-contain" />}
+      {labelVisible && <span className="text-center text-sm font-black text-ohmlet-ink">{label}</span>}
     </button>
   );
 };
