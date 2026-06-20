@@ -32,6 +32,7 @@ from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
 import ratelimit
+import validation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
@@ -54,6 +55,10 @@ app.add_middleware(
 @app.middleware("http")
 async def rate_limit_rest(request: Request, call_next):
     if request.url.path.startswith("/v1/"):
+        # Reject oversized bodies up front (#45) before any work is done.
+        clen = request.headers.get("content-length")
+        if clen and clen.isdigit() and int(clen) > validation.MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Request body too large."})
         identity = None
         authz = request.headers.get("authorization")
         if authz and authz.lower().startswith("bearer "):
@@ -257,7 +262,8 @@ async def websocket_endpoint(
                         break
 
                     if msg_type == "stage":
-                        current_stage = msg.get("stage", current_stage)
+                        # Only accept known stages (#45); ignore junk.
+                        current_stage = validation.normalize_stage(msg.get("stage"), current_stage)
                         stage_content = types.Content(
                             role="user",
                             parts=[types.Part(text=f"[stage changed to {current_stage}]")],
@@ -266,7 +272,7 @@ async def websocket_endpoint(
                         continue
 
                     if msg_type == "text":
-                        text = msg.get("text", "")
+                        text = validation.validate_ws_text(msg.get("text", ""))  # capped length (#45)
                         if text:
                             content = types.Content(
                                 role="user",
@@ -279,12 +285,16 @@ async def websocket_endpoint(
                     if msg_type == "image":
                         image_data = msg.get("data", "")
                         mime_type = msg.get("mimeType", "image/jpeg")
-                        if image_data:
-                            decoded = base64.b64decode(image_data)
-                            image_blob = types.Blob(
-                                mime_type=mime_type,
-                                data=decoded,
-                            )
+                        if isinstance(image_data, str) and image_data:
+                            try:
+                                decoded = base64.b64decode(image_data, validate=True)
+                            except (ValueError, TypeError):
+                                logger.warning("Discarding malformed image frame for %s", session_id)
+                                continue
+                            if not validation.ws_image_ok(len(decoded)):
+                                logger.warning("Discarding oversized image frame (%d bytes) for %s", len(decoded), session_id)
+                                continue
+                            image_blob = types.Blob(mime_type=mime_type, data=decoded)
                             live_queue.send_realtime(image_blob)
                             meter.on_image()
                         continue
@@ -389,9 +399,9 @@ async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> d
     Useful for testing without WebSocket or when audio is unavailable. The user
     is the verified token holder; any user_id in the payload is ignored (#44).
     """
-    session_id = payload.get("session_id", "")
-    text = payload.get("text", "")
-    stage = payload.get("stage", "inventory")
+    session_id = str(payload.get("session_id", ""))[:128]
+    text = validation.validate_ws_text(payload.get("text", ""))  # capped (#45)
+    stage = validation.normalize_stage(payload.get("stage"), "inventory")
 
     if not text:
         return {"error": "text is required"}

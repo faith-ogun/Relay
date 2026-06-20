@@ -27,6 +27,8 @@ from google.api_core import exceptions as gcloud_exceptions
 from google.cloud import firestore
 
 from auth import require_uid
+from validation import validate_state_envelope
+from idempotency import save_state_if_newer
 
 logger = logging.getLogger("ohmlet.state-store")
 
@@ -82,13 +84,15 @@ def load_state(user_id: str, caller_uid: str = Depends(require_uid)) -> dict[str
 
 @router.put("/{user_id}")
 def save_state(user_id: str, payload: dict[str, Any], caller_uid: str = Depends(require_uid)) -> dict[str, str]:
-    """Upsert the persisted state envelope for the signed-in user."""
+    """Upsert the persisted state envelope for the signed-in user.
+
+    Validates + size-caps the payload (#45) and writes with optimistic
+    concurrency so a stale tab cannot clobber a newer save (#51)."""
     uid = _authorize(user_id, caller_uid)
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=422, detail="payload must be a JSON object")
+    payload = validate_state_envelope(payload)
     try:
-        _doc_ref(uid).set(payload)
+        written = save_state_if_newer(uid, payload)
     except gcloud_exceptions.GoogleAPICallError as exc:
         logger.error("Firestore save failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502, detail="State backend unavailable") from exc
-    return {"status": "ok"}
+    return {"status": "ok" if written else "stale"}
