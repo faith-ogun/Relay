@@ -37,6 +37,10 @@ QUIZ_ENGINE_SOURCE="backend/quiz-engine"
 QUIZ_ENGINE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION}"
+# Cold starts add seconds to the (latency-critical) drawing assessment. cpu-boost
+# is always on; set this to 1 to keep one instance warm and remove cold starts
+# entirely (small standing cost). Default 0 to avoid standing spend.
+QUIZ_ENGINE_MIN_INSTANCES="${OHMLET_QUIZ_MIN_INSTANCES:-0}"
 
 # ── Helpers ──
 info()  { echo -e "\033[1;34m[deploy]\033[0m $1"; }
@@ -58,7 +62,7 @@ check_gcloud() {
 }
 
 deploy_service() {
-  local name="$1" source="$2" env_vars="$3" service_account="${4:-}"
+  local name="$1" source="$2" env_vars="$3" service_account="${4:-}" min_instances="${5:-0}"
 
   info "Deploying ${name} from ${source} to ${REGION}..."
 
@@ -68,11 +72,16 @@ deploy_service() {
     info "Running as least-privilege SA: ${service_account}"
   fi
 
+  # --cpu-boost speeds the cold start (extra CPU only during container start, so
+  # negligible cost). --min-instances keeps N warm to remove cold starts entirely
+  # (standing cost); default 0, set per service for latency-critical paths.
   gcloud run deploy "$name" \
     --source="$source" \
     --region="$REGION" \
     --allow-unauthenticated \
     --set-env-vars="$env_vars" \
+    --cpu-boost \
+    --min-instances="$min_instances" \
     "${sa_flag[@]}" \
     --quiet
 
@@ -86,7 +95,7 @@ deploy_live_bridge() {
 }
 
 deploy_quiz_engine() {
-  deploy_service "$QUIZ_ENGINE_SERVICE" "$QUIZ_ENGINE_SOURCE" "$QUIZ_ENGINE_ENV"
+  deploy_service "$QUIZ_ENGINE_SERVICE" "$QUIZ_ENGINE_SOURCE" "$QUIZ_ENGINE_ENV" "" "$QUIZ_ENGINE_MIN_INSTANCES"
 }
 
 deploy_frontend() {

@@ -7,6 +7,7 @@ and Google Cloud Vision for assessing user drawings/annotations.
 
 import json
 import os
+from functools import lru_cache
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -14,6 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
+
+# ── Model routing (latency) ──
+# Drawing assessment and question generation are well within Flash's ability and
+# do NOT need the slow reasoning model. Pro's extended "thinking" (which Pro
+# cannot disable) was the main cause of 30-60s waits. Flash + thinking disabled
+# turns a vision check into a few-second round trip. Both are env-overridable.
+VISION_MODEL = os.getenv("OHMLET_VISION_MODEL", "gemini-2.5-flash")
+GEN_MODEL = os.getenv("OHMLET_GEN_MODEL", "gemini-2.5-flash")
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,8 +88,12 @@ class AssessDrawingResponse(BaseModel):
 
 # ── Gemini integration ──
 
+@lru_cache(maxsize=1)
 def _get_genai_client():
-    """Get Gemini client (Vertex AI or API key)."""
+    """Gemini client (Vertex AI or API key), built once and reused.
+
+    Cached so we do not pay client construction (and Vertex auth discovery) on
+    every request, which added avoidable latency to each assessment."""
     try:
         from google import genai
         use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
@@ -178,16 +191,19 @@ async def generate_questions(req: GenerateRequest):
                     + ", ".join(req.allowed_types)
                     + "."
                 )
-            response = client.models.generate_content(
-                model="gemini-2.5-pro",
-                contents=prompt,
+            from google.genai import types
+            config = types.GenerateContentConfig(
+                temperature=0.7,  # a little variety across question sets
+                max_output_tokens=4096,
+                response_mime_type="application/json",
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             )
-            raw = response.text.strip()
-            # Strip markdown code block if present
-            if raw.startswith("```"):
-                raw = raw.split("\n", 1)[1]
-                raw = raw.rsplit("```", 1)[0]
-            questions_data = json.loads(raw)
+            response = client.models.generate_content(
+                model=GEN_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            questions_data = json.loads(response.text)
             questions = [GeneratedQuestion(**q) for q in questions_data]
             if req.allowed_types:
                 allowed = set(req.allowed_types)
@@ -230,16 +246,26 @@ async def assess_drawing(req: AssessDrawingRequest):
 The student was asked to: {req.exercise_type}
 Expected components: {', '.join(req.expected_components)}
 
-Evaluate:
+Evaluate concisely:
 1. Did they correctly identify/draw what was asked?
-2. What components can you identify in their drawing?
-3. Is their answer correct?
+2. Which of the expected components can you actually see in their drawing?
+3. Is their answer correct overall?
 
-Return JSON: {{"correct": bool, "feedback": str, "identified_components": [str], "confidence": float}}"""
+Keep feedback to one or two short, encouraging sentences."""
 
         from google.genai import types
+        # Flash + thinking disabled + structured JSON: the latency fix. The model
+        # returns JSON matching the schema directly, so no markdown stripping and
+        # no rambling output. temperature 0 for a stable, repeatable verdict.
+        config = types.GenerateContentConfig(
+            temperature=0.0,
+            max_output_tokens=512,
+            response_mime_type="application/json",
+            response_schema=AssessDrawingResponse,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+        )
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model=VISION_MODEL,
             contents=[
                 types.Content(
                     role="user",
@@ -249,12 +275,9 @@ Return JSON: {{"correct": bool, "feedback": str, "identified_components": [str],
                     ],
                 ),
             ],
+            config=config,
         )
-        raw = response.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1]
-            raw = raw.rsplit("```", 1)[0]
-        result = json.loads(raw)
+        result = json.loads(response.text)
         return AssessDrawingResponse(**result)
     except Exception as e:
         raise HTTPException(500, f"Assessment failed: {str(e)}")
