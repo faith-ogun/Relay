@@ -1,0 +1,17 @@
+# Gitleaks config (#48). Extends the default ruleset and allowlists values that
+# are public by design, so CI flags REAL leaks without crying wolf.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-public, non-secret values"
+# The Firebase WEB apiKey is public by design (it only identifies the project to
+# Google; protection is Auth authorized-domains + Firestore rules, not secrecy).
+# See services/firebase.ts. It is safe to commit, so do not flag it.
+regexes = [
+  '''AIzaSyBoEnpxbscHVVA0dllrroKJXDkHNLNnenU''',
+]
+paths = [
+  '''frontend/services/firebase.ts''',
+  '''.*\.env\.example$''',
+]

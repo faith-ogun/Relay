@@ -20,6 +20,10 @@ REGION="${GOOGLE_CLOUD_REGION:-europe-west1}"
 # Service definitions
 LIVE_BRIDGE_SERVICE="ohmlet-live-bridge"
 LIVE_BRIDGE_SOURCE="backend/live-bridge"
+# Least-privilege runtime identity (#46): only datastore.user, aiplatform.user,
+# logging.logWriter, secretmanager.secretAccessor — NOT the editor-privileged
+# default compute SA. Override per-env if needed.
+LIVE_BRIDGE_SA="${OHMLET_LIVE_BRIDGE_SA:-ohmlet-live-bridge@${PROJECT_ID}.iam.gserviceaccount.com}"
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
@@ -54,15 +58,22 @@ check_gcloud() {
 }
 
 deploy_service() {
-  local name="$1" source="$2" env_vars="$3"
+  local name="$1" source="$2" env_vars="$3" service_account="${4:-}"
 
   info "Deploying ${name} from ${source} to ${REGION}..."
+
+  local sa_flag=()
+  if [[ -n "$service_account" ]]; then
+    sa_flag=(--service-account="$service_account")
+    info "Running as least-privilege SA: ${service_account}"
+  fi
 
   gcloud run deploy "$name" \
     --source="$source" \
     --region="$REGION" \
     --allow-unauthenticated \
     --set-env-vars="$env_vars" \
+    "${sa_flag[@]}" \
     --quiet
 
   local url
@@ -71,7 +82,7 @@ deploy_service() {
 }
 
 deploy_live_bridge() {
-  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$LIVE_BRIDGE_ENV"
+  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$LIVE_BRIDGE_ENV" "$LIVE_BRIDGE_SA"
 }
 
 deploy_quiz_engine() {

@@ -1,0 +1,82 @@
+# CI (#48 + #49 groundwork) — runs on every push/PR.
+#
+# Three jobs:
+#   frontend  — install, vulnerability audit, lesson lint, production build
+#   backend   — compile + vulnerability audit each Python service
+#   secrets   — scan the diff for accidentally committed credentials
+#
+# High-severity vulnerabilities fail the build, so a vulnerable dependency
+# cannot merge unnoticed. Audits are scoped to runtime deps where it matters.
+
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # Fail only on high/critical vulnerabilities (audit prod deps).
+      - name: npm audit (high+)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Lint lessons
+        run: npm run lint:lessons
+      - name: Production build
+        run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [live-bridge, quiz-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install + tooling
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          if [ -f backend/${{ matrix.service }}/requirements.txt ]; then
+            pip install -r backend/${{ matrix.service }}/requirements.txt
+          fi
+      - name: Compile
+        run: |
+          python -m compileall -q backend/${{ matrix.service }}/app
+      # Reports known CVEs in the dependency tree. Surfaced for triage rather
+      # than hard-blocking: pip-audit has no severity filter, and the google-adk
+      # tree carries transitive advisories we cannot all patch immediately.
+      # Flip to a hard gate once the tree is clean.
+      - name: pip-audit (vulnerability scan)
+        continue-on-error: true
+        run: |
+          if [ -f backend/${{ matrix.service }}/requirements.txt ]; then
+            pip-audit -r backend/${{ matrix.service }}/requirements.txt
+          fi
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

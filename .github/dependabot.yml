@@ -1,0 +1,30 @@
+# Dependabot (#48) — automated dependency update PRs + security alerts.
+# Covers the frontend (npm), each backend service (pip), and the Actions
+# workflows themselves. Grouped weekly to keep the PR noise manageable.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      frontend-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: "pip"
+    directory: "/backend/live-bridge"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "pip"
+    directory: "/backend/quiz-engine"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
