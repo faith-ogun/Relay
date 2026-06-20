@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
@@ -11,7 +12,10 @@ import { LegalPage } from './components/legal/LegalPage';
 import { SupportPage } from './components/SupportPage';
 import { WorkspaceHome } from './components/WorkspaceHome';
 import { AuthorPreview } from './components/ohmlet/views/AuthorPreview';
-import { useIdentity } from './hooks/useIdentity';
+import { AuthPage } from './components/auth/AuthPage';
+import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
+import { ErrorPage } from './components/errors/ErrorPage';
+import { useAuth } from './hooks/useAuth';
 
 type AppRoute =
   | 'landing'
@@ -23,9 +27,13 @@ type AppRoute =
   | 'privacy'
   | 'cookies'
   | 'support'
+  | 'login'
+  | 'signup'
+  | 'welcome'
   | 'author'
   | 'ohmlet-app'
-  | 'workspace';
+  | 'workspace'
+  | 'notfound';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
   landing: '/',
@@ -37,9 +45,13 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   privacy: '/privacy',
   cookies: '/cookies',
   support: '/support',
+  login: '/login',
+  signup: '/signup',
+  welcome: '/welcome',
   author: '/author',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
+  notfound: '/404',
 };
 
 const APP_ROUTE_PATHS = new Set(['/ohmlet-app', '/app', '/ohmlet', '/lab']);
@@ -59,9 +71,8 @@ const normalizePath = (pathname: string) => {
 const resolveRoute = (pathname: string): AppRoute => {
   const normalized = normalizePath(pathname);
 
-  if (APP_ROUTE_PATHS.has(normalized)) {
-    return 'ohmlet-app';
-  }
+  if (APP_ROUTE_PATHS.has(normalized)) return 'ohmlet-app';
+  if (normalized === '/') return 'landing';
   if (normalized === '/learn') return 'learn';
   if (normalized === '/build') return 'build';
   if (normalized === '/blog' || normalized.startsWith('/blog/')) return 'blog';
@@ -70,10 +81,14 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/privacy') return 'privacy';
   if (normalized === '/cookies') return 'cookies';
   if (normalized === '/support') return 'support';
+  if (normalized === '/login') return 'login';
+  if (normalized === '/signup') return 'signup';
+  if (normalized === '/welcome') return 'welcome';
   if (normalized === '/author') return 'author';
   if (normalized === '/workspace') return 'workspace';
 
-  return 'landing';
+  // Anything else is a real 404 (e.g. someone trying /free to be sneaky).
+  return 'notfound';
 };
 
 const resolveBlogSlug = (pathname: string): string | null => {
@@ -81,18 +96,23 @@ const resolveBlogSlug = (pathname: string): string | null => {
   return match ? match[1] : null;
 };
 
+const AuthSplash: React.FC = () => (
+  <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ohmlet-cream font-display">
+    <img src="/mascot/idle.png" alt="" aria-hidden className="h-20 w-auto" draggable={false} />
+    <Loader2 className="h-6 w-6 animate-spin text-ohmlet-ink-soft" />
+  </div>
+);
+
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
-  const { isAdmin } = useIdentity();
+  const { user, loading, isAdmin, signOut } = useAuth();
 
   const navigate = useCallback((nextRoute: AppRoute) => {
     const nextPath = ROUTE_PATHS[nextRoute];
-
     if (normalizePath(window.location.pathname) !== nextPath) {
       window.history.pushState({}, '', nextPath);
     }
-
     setBlogSlug(null);
     setRoute(nextRoute);
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -108,13 +128,11 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
-  const openOhmletApp = useCallback(() => {
-    navigate('ohmlet-app');
-  }, [navigate]);
-
-  const backToLanding = useCallback(() => {
+  const backToLanding = useCallback(() => navigate('landing'), [navigate]);
+  const handleSignOut = useCallback(async () => {
+    await signOut();
     navigate('landing');
-  }, [navigate]);
+  }, [signOut, navigate]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -122,22 +140,65 @@ const App: React.FC = () => {
       setBlogSlug(resolveBlogSlug(window.location.pathname));
       window.scrollTo({ top: 0, behavior: 'auto' });
     };
-
     window.addEventListener('popstate', onPopState);
-
-    return () => {
-      window.removeEventListener('popstate', onPopState);
-    };
+    return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  if (route === 'ohmlet-app' || route === 'workspace') {
-    return <WorkspaceHome onBack={backToLanding} />;
+  // ── Route guards (run once auth state is known) ──
+  const isProtected = route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome';
+  const isAuthRoute = route === 'login' || route === 'signup';
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user && (route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome')) {
+      navigate('login');
+    } else if (user && (route === 'login' || route === 'signup')) {
+      navigate('ohmlet-app');
+    }
+  }, [loading, user, route, navigate]);
+
+  // Wait for auth before deciding anything that depends on it (public marketing
+  // pages render instantly; only the auth-sensitive routes show the splash).
+  if (loading && (isProtected || isAuthRoute)) {
+    return <AuthSplash />;
   }
 
-  // /author is the admin-only lesson review console. Non-admins get the landing
-  // page (the route simply isn't theirs).
+  // ── Auth onboarding ──
+  if (route === 'login' || route === 'signup') {
+    if (user) return <AuthSplash />; // redirecting to workspace
+    return (
+      <AuthPage
+        initialMode={route}
+        onNavigateHome={backToLanding}
+        onAuthed={(isNewSignup) => navigate(isNewSignup ? 'welcome' : 'ohmlet-app')}
+      />
+    );
+  }
+
+  if (route === 'welcome') {
+    if (!user) return <AuthSplash />;
+    return <OnboardingQuestions userId={user.uid} onDone={() => navigate('ohmlet-app')} />;
+  }
+
+  // ── Workspace (auth-gated) ──
+  if (route === 'ohmlet-app' || route === 'workspace') {
+    if (!user) return <AuthSplash />;
+    return <WorkspaceHome onBack={backToLanding} onUpgrade={() => navigate('pricing')} />;
+  }
+
+  // ── Author console (admin only) ──
   if (route === 'author') {
-    return isAdmin ? <AuthorPreview onBack={backToLanding} /> : <Home onNavigate={navigate} />;
+    if (!user) return <AuthSplash />;
+    return isAdmin ? (
+      <AuthorPreview onBack={backToLanding} />
+    ) : (
+      <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
+    );
+  }
+
+  // ── 404 ──
+  if (route === 'notfound') {
+    return <ErrorPage variant={404} onHome={backToLanding} onPrimary={backToLanding} />;
   }
 
   const darkShell = false;
@@ -145,9 +206,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-white font-display text-ohmlet-ink selection:bg-ohmlet-gold selection:text-ohmlet-ink">
       <div
-        className={`fixed inset-0 pointer-events-none mix-blend-multiply ${
-          darkShell ? 'opacity-[0.08]' : 'opacity-[0.03]'
-        }`}
+        className={`fixed inset-0 pointer-events-none mix-blend-multiply ${darkShell ? 'opacity-[0.08]' : 'opacity-[0.03]'}`}
         style={{
           backgroundImage:
             'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.7\' numOctaves=\'2\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
@@ -159,8 +218,13 @@ const App: React.FC = () => {
           activeRoute={route}
           navItems={NAV_ITEMS}
           darkRoute={darkShell}
+          isAuthed={!!user}
+          userLabel={user?.displayName || user?.email || null}
           onNavigate={navigate}
-          onOpenOhmletApp={openOhmletApp}
+          onLogin={() => navigate('login')}
+          onSignup={() => navigate('signup')}
+          onOpenWorkspace={() => navigate('ohmlet-app')}
+          onSignOut={handleSignOut}
         />
         <main>
           {route === 'landing' && <Home onNavigate={navigate} />}

@@ -68,6 +68,7 @@ const dayStr = (offsetDays = 0) => {
 
 interface WorkspaceHomeProps {
   onBack?: () => void;
+  onUpgrade?: () => void;
 }
 
 type ViewId = 'today' | 'path' | 'live' | 'sandbox' | 'community' | 'achievements' | 'draw';
@@ -114,7 +115,7 @@ const ACHIEVEMENT_PREVIEW = [
   { name: 'Consistent Builder', desc: '3-day streak', icon: Flame, tint: 'bg-ohmlet-red' },
 ];
 
-export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
+export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade }) => {
   const [active, setActive] = useState<ViewId>('today');
   const { userId, isAdmin } = useIdentity();
   const { plan, setPlan } = usePlan(userId);
@@ -274,7 +275,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack }) => {
             </div>
           )}
 
-          {active === 'live' && <LiveTutorView />}
+          {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
           {active === 'sandbox' && <SandboxView />}
           {active === 'community' && <CommunityView />}
           {active === 'achievements' && <AchievementsView xp={xp} streak={streak} />}

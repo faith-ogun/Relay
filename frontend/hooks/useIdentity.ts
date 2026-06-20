@@ -1,52 +1,24 @@
 import { useMemo } from 'react';
+import { useAuth } from './useAuth';
 
 /**
  * useIdentity — who the current user is, and whether they're an admin.
  *
- * This is the INTERIM identity layer (pre-auth). It resolves a stable per-browser
- * user id and an admin flag, so progress can be persisted per-user and the dev
- * plan switcher can be gated to admins only.
+ * Now backed by Firebase Auth (#29). It adapts the auth context to the
+ * { userId, isAdmin } shape the workspace already consumes, so nothing
+ * downstream changed when real auth replaced the localStorage placeholder.
  *
- * Security note: a localStorage id is SEPARATION, not authenticated SECURITY — it
- * is not verified, so it cannot stop a determined person from setting another id.
- * Real security arrives with Firebase Auth (task #29): a cryptographic UID plus
- * server-side ID-token verification, at which point this hook swaps its source
- * from localStorage to the signed-in user and `isAdmin` becomes a custom claim.
- * Everything that consumes { userId, isAdmin } keeps working unchanged.
+ *   userId  — the signed-in user's cryptographic Firebase UID (empty if signed
+ *             out; the workspace is auth-gated so consumers only run with a user).
+ *   isAdmin — true only for the owner email allowlist (Author console + dev plan
+ *             switcher). Client-side gate for the UI; server-side enforcement is
+ *             a custom claim verified on the backend (#44 / #56).
  *
- * Admins: ids listed in VITE_OHMLET_ADMIN_IDS (comma-separated), or, if that is
- * unset, VITE_OHMLET_DEFAULT_USER_ID. On a deployed build with neither set, every
- * visitor is a guest and nobody sees the plan switcher. To preview the guest
- * experience locally, add `?as=guest` to the URL (`?as=admin` switches back).
+ * Admin preview: append `?as=guest` to the URL to see the non-admin experience
+ * (the override can only DOWNGRADE an admin, never grant admin to anyone else).
  */
 
-const GUEST_KEY = 'ohmlet-user-id';
 const VIEW_KEY = 'ohmlet-view-as';
-
-const adminIds = (
-  (import.meta.env.VITE_OHMLET_ADMIN_IDS as string | undefined) ||
-  (import.meta.env.VITE_OHMLET_DEFAULT_USER_ID as string | undefined) ||
-  ''
-)
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const primaryAdmin = adminIds[0];
-
-const makeGuestId = () => `guest-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
-
-const resolveGuestId = (): string => {
-  try {
-    const existing = localStorage.getItem(GUEST_KEY);
-    if (existing && existing.trim()) return existing;
-    const generated = makeGuestId();
-    localStorage.setItem(GUEST_KEY, generated);
-    return generated;
-  } catch {
-    return makeGuestId();
-  }
-};
 
 export interface Identity {
   userId: string;
@@ -54,8 +26,9 @@ export interface Identity {
 }
 
 export function useIdentity(): Identity {
+  const { user, isAdmin } = useAuth();
+
   return useMemo(() => {
-    // Read (and persist) an optional ?as=guest|admin view override.
     let view: string | null = null;
     try {
       const as = new URLSearchParams(window.location.search).get('as');
@@ -69,10 +42,7 @@ export function useIdentity(): Identity {
       /* ignore */
     }
 
-    // Admin only when an admin id is configured and we're not previewing as guest.
-    if (primaryAdmin && view !== 'guest') {
-      return { userId: primaryAdmin, isAdmin: true };
-    }
-    return { userId: resolveGuestId(), isAdmin: false };
-  }, []);
+    const effectiveAdmin = isAdmin && view !== 'guest';
+    return { userId: user?.uid ?? '', isAdmin: effectiveAdmin };
+  }, [user?.uid, isAdmin]);
 }

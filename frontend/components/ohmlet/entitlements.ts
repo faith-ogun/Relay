@@ -51,13 +51,15 @@ export const FEATURES_BY_PLAN: Record<Plan, Feature[]> = {
 // available, but clearly flagged as in-progress so we set expectations.
 export const BETA_FEATURES: ReadonlySet<Feature> = new Set<Feature>(['sandbox', 'drawing']);
 
-// Daily live-tutor budget per plan (minutes). Vision + audio is the cost driver,
-// so the free tier is metered. These are provisional pending real cost data (#17,
-// #19); Infinity = effectively unlimited (still server-capped for abuse).
-export const LIVE_MINUTES_PER_DAY: Record<Plan, number> = {
-  free: 20,
-  pro: 180,
-  max: Infinity,
+// Monthly live-tutor budget per plan (minutes). These match the pricing page and
+// business brief (Free 60 min, Pro 10 hr, Max 30 hr) and the server-enforced caps
+// in backend/entitlements.py. No plan is unlimited: the live tutor has real
+// per-minute cost (~$3/active hr), so every tier is bounded. The server is the
+// real gate; this mirror is for UX. Provisional pending real cost data (#19).
+export const LIVE_MINUTES_PER_MONTH: Record<Plan, number> = {
+  free: 60,
+  pro: 600, // 10 hours
+  max: 1800, // 30 hours
 };
 
 export const planHas = (plan: Plan, feature: Feature): boolean => FEATURES_BY_PLAN[plan].includes(feature);

@@ -7,12 +7,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  LIVE_MINUTES_PER_DAY,
+  LIVE_MINUTES_PER_MONTH,
   isBetaFeature,
   planHas,
   type Feature,
   type Plan,
 } from '../components/ohmlet/entitlements';
+import { fetchMe, setMyPlan } from '../services/account';
 
 // Storage is keyed per user so the admin and a guest in the same browser do not
 // share a plan or a daily live budget. When billing lands, the plan moves to the
@@ -20,7 +21,9 @@ import {
 const planKey = (userId: string) => `ohmlet.plan.${userId}`;
 const liveKey = (userId: string) => `ohmlet.live.${userId}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The live budget resets monthly (the caps are per month). This local value is
+// only an instant-paint cache; /v1/me is the source of truth.
+const period = () => new Date().toISOString().slice(0, 7); // YYYY-MM
 
 const readPlan = (userId: string): Plan => {
   const v = (typeof localStorage !== 'undefined' && localStorage.getItem(planKey(userId))) as Plan | null;
@@ -31,8 +34,8 @@ const readLiveSeconds = (userId: string): number => {
   try {
     const raw = localStorage.getItem(liveKey(userId));
     if (!raw) return 0;
-    const parsed = JSON.parse(raw) as { date: string; seconds: number };
-    return parsed.date === today() ? parsed.seconds : 0;
+    const parsed = JSON.parse(raw) as { period?: string; seconds: number };
+    return parsed.period === period() ? parsed.seconds : 0;
   } catch {
     return 0;
   }
@@ -55,9 +58,25 @@ export function usePlan(userId = 'anon'): UsePlan {
   const [liveSecondsUsed, setLiveSecondsUsed] = useState<number>(() => readLiveSeconds(userId));
 
   // Re-read when the user identity changes (e.g. switching admin ↔ guest).
+  // The localStorage value is just an instant-paint cache; the server is the
+  // source of truth for the plan (#56), so reconcile as soon as /v1/me answers.
   useEffect(() => {
+    let cancelled = false;
     setPlanState(readPlan(userId));
     setLiveSecondsUsed(readLiveSeconds(userId));
+    void fetchMe().then((me) => {
+      if (cancelled || !me) return; // signed out / backend unreachable -> keep cache
+      setPlanState(me.plan);
+      try {
+        localStorage.setItem(planKey(userId), me.plan);
+      } catch {
+        /* ignore */
+      }
+      if (typeof me.liveSecondsUsedThisMonth === 'number') setLiveSecondsUsed(me.liveSecondsUsedThisMonth);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // Keep plan in sync across tabs / the dev switcher.
@@ -70,21 +89,33 @@ export function usePlan(userId = 'anon'): UsePlan {
   }, [userId]);
 
   const setPlan = useCallback((next: Plan) => {
-    localStorage.setItem(planKey(userId), next);
+    localStorage.setItem(planKey(userId), next); // optimistic cache
     setPlanState(next);
+    // Persist server-side. The backend only honours this for an admin (the dev
+    // switcher); in production Stripe writes the plan. Reconcile with the result.
+    void setMyPlan(next).then((confirmed) => {
+      if (confirmed && confirmed !== next) {
+        setPlanState(confirmed);
+        try {
+          localStorage.setItem(planKey(userId), confirmed);
+        } catch {
+          /* ignore */
+        }
+      }
+    });
   }, [userId]);
 
   const consumeLiveSeconds = useCallback((seconds: number) => {
     setLiveSecondsUsed((prev) => {
       const next = prev + seconds;
-      localStorage.setItem(liveKey(userId), JSON.stringify({ date: today(), seconds: next }));
+      localStorage.setItem(liveKey(userId), JSON.stringify({ period: period(), seconds: next }));
       return next;
     });
   }, [userId]);
 
   const can = useCallback((feature: Feature) => planHas(plan, feature), [plan]);
 
-  const liveCapMinutes = LIVE_MINUTES_PER_DAY[plan];
+  const liveCapMinutes = LIVE_MINUTES_PER_MONTH[plan];
   const liveMinutesRemaining = liveCapMinutes === Infinity ? Infinity : Math.max(0, liveCapMinutes - liveSecondsUsed / 60);
   const canGoLive = can('live') && liveMinutesRemaining > 0;
 

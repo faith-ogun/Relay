@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 
 interface HomeProps {
-  onNavigate: (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
+  onNavigate: (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'signup' | 'ohmlet-app') => void;
 }
 
 const uiStyles = `
@@ -146,7 +146,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
               <button
                 type="button"
-                onClick={() => onNavigate('ohmlet-app')}
+                onClick={() => onNavigate('signup')}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-4 text-lg font-black text-ohmlet-ink shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
               >
                 Start building
@@ -223,7 +223,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </p>
           <button
             type="button"
-            onClick={() => onNavigate('ohmlet-app')}
+            onClick={() => onNavigate('signup')}
             className="mt-9 inline-flex items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-9 py-4 text-lg font-black text-ohmlet-ink shadow-press transition-all hover:translate-y-[3px] hover:shadow-none"
           >
             Open Ohmlet
