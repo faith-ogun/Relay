@@ -351,7 +351,12 @@ function lintLesson(lessonId: string, lesson: { steps: LessonStep[]; xpReward: n
   const graded = lesson.steps.filter((s) => s.type !== 'teach');
   const nonTeach = graded.length;
   if (nonTeach === 0) pushLesson('warn', 'lesson has no interactive steps (all teach)');
-  else if (nonTeach < 10) pushLesson('warn', `only ${nonTeach} graded questions; aim for 10+ (12+ for a tiered pool that levels well)`);
+  else if (nonTeach < 15) pushLesson('warn', `only ${nonTeach} graded questions; a clean run is 15 (pad with embodied steps, at least one a drawing)`);
+
+  // Every lesson must put the learner on the canvas at least once (draw_circuit /
+  // draw_fix). Drawing is the embodied hero and was the thinnest modality.
+  if (nonTeach >= 1 && !graded.some((s) => s.type === 'draw_circuit' || s.type === 'draw_fix'))
+    pushLesson('warn', 'no drawing step; every lesson needs at least one draw_circuit or draw_fix');
 
   // ── Modality variety (the real "feels interactive" bar) ──
   // Measured by what the learner DOES, not by type name, so relabeling MC as

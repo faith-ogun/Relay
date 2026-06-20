@@ -66,10 +66,14 @@ function shuffleStepOptions(step: LessonStep): LessonStep {
   return next;
 }
 
-// How many questions a single run shows when a lesson has a deep pool.
-export const RUN_SIZE = 8;
-// A lesson needs more than this many questions to count as a "pool" worth sampling.
+// How many questions a single run shows when a lesson has a deep pool. A clean
+// Duolingo run is ~15 questions; wrong answers requeue on top of this in the runner.
+export const RUN_SIZE = 15;
+// A lesson needs more than this many questions to count as a "pool" worth sampling
+// (otherwise the whole authored set is the run).
 const POOL_THRESHOLD = RUN_SIZE + 2;
+
+const DRAW_TYPES = new Set(['draw_circuit', 'draw_fix']);
 
 // Tier preference order by level: which difficulty to draw from first.
 const TIER_ORDER: Record<number, Difficulty[]> = {
@@ -97,10 +101,14 @@ export function buildLeveledSteps(steps: AuthoredStep[], level: number): LessonS
 
   // Deep pool → sample a tiered slice.
   if (graded.length >= POOL_THRESHOLD) {
+    // Drawing steps are the embodied hero: pin them into every run so a learner
+    // always meets the canvas, then fill the rest of the slice by tier.
+    const draws = graded.filter((s) => DRAW_TYPES.has(s.type));
+    const rest = graded.filter((s) => !DRAW_TYPES.has(s.type));
     const byTier: Record<Difficulty, AuthoredStep[]> = { 1: [], 2: [], 3: [] };
-    for (const s of graded) byTier[difficultyOf(s)].push(s);
+    for (const s of rest) byTier[difficultyOf(s)].push(s);
     const order = TIER_ORDER[Math.min(3, Math.max(1, level))];
-    const picked: AuthoredStep[] = [];
+    const picked: AuthoredStep[] = draws.slice(0, RUN_SIZE);
     for (const tier of order) {
       for (const s of shuffle(byTier[tier])) {
         if (picked.length >= RUN_SIZE) break;

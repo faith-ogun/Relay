@@ -62,7 +62,13 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const steps = useMemo(() => buildLeveledSteps(content?.steps ?? [], level), [content, level]);
   const levelMeta = LEVEL_META[Math.min(3, Math.max(1, level)) as 1 | 2 | 3];
 
-  const [stepIndex, setStepIndex] = useState(0);
+  // The run is a QUEUE of step indices, not a straight walk. A wrong graded answer
+  // requeues that step to the end (Duolingo-style) so it returns until cleared;
+  // teach steps and correct answers are "mastered" and never come back. The lesson
+  // ends when the queue is exhausted, which means every graded step was cleared.
+  const [queue, setQueue] = useState<number[]>(() => steps.map((_, i) => i));
+  const [pos, setPos] = useState(0);
+  const [mastered, setMastered] = useState<Set<number>>(new Set());
   const [hearts, setHearts] = useState(() => heartsForLevel(level));
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
@@ -89,9 +95,20 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [meterVal, setMeterVal] = useState<number | null>(null); // predict_reading meter: dialed-in reading
   const [bands, setBands] = useState<number[]>([0, 0, 0]); // choose_resistor: [digit1, digit2, multiplier] colour indices
 
-  const step = steps[stepIndex];
+  const currentIndex = queue[pos];
+  const step = steps[currentIndex];
 
-  // Initialise interactive layouts when the step changes.
+  // Rebuild the run whenever the leveled step list changes (new lesson / level).
+  useEffect(() => {
+    setQueue(steps.map((_, i) => i));
+    setPos(0);
+    setMastered(new Set());
+    setHearts(heartsForLevel(level));
+    setDone(false);
+  }, [steps, level]);
+
+  // Initialise interactive layouts when the presented step changes (pos always
+  // increments, so a requeued step still gets a fresh reset).
   useEffect(() => {
     setChecked(false);
     setCorrect(null);
@@ -118,9 +135,11 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       setLeftOrder(shuffledOrder(step.pairs.length));
       setRightOrder(shuffledOrder(step.pairs.length));
     }
-  }, [stepIndex, step]);
+  }, [pos, step]);
 
-  const progress = steps.length ? Math.round((stepIndex / steps.length) * 100) : 0;
+  // Progress tracks distinct steps MASTERED (teach seen / graded cleared), not
+  // raw position, so a wrong answer holds the bar until the requeued step is cleared.
+  const progress = steps.length ? Math.round((mastered.size / steps.length) * 100) : 0;
 
   if (!lesson || !content) {
     return (
@@ -228,17 +247,33 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
 
   const earnedXp = content ? xpForLevel(content.xpReward, level) : 0;
 
+  // A wrong graded answer will be sent to the back of the queue to retry later.
+  const willRequeue = checked && correct === false && !!step && !isTeach(step);
+  const isLastInRun = pos + 1 >= queue.length && !willRequeue;
+
   const handleContinue = () => {
-    if (stepIndex + 1 >= steps.length) {
+    const idx = currentIndex;
+    let nextQueue = queue;
+    if (willRequeue) {
+      // Came up wrong: it returns at the end of the run until cleared.
+      nextQueue = [...queue, idx];
+    } else {
+      // Teach seen, or graded answer cleared: this step is done for good.
+      setMastered((m) => new Set(m).add(idx));
+    }
+    if (pos + 1 >= nextQueue.length) {
       setDone(true);
       onComplete(lessonId, earnedXp, level);
       return;
     }
-    setStepIndex((i) => i + 1);
+    if (nextQueue !== queue) setQueue(nextQueue);
+    setPos((p) => p + 1);
   };
 
   const retry = () => {
-    setStepIndex(0);
+    setQueue(steps.map((_, i) => i));
+    setPos(0);
+    setMastered(new Set());
     setHearts(heartsForLevel(level));
     setDone(false);
     setChecked(false);
@@ -394,7 +429,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
               disabled={teachGated}
               className="inline-flex shrink-0 items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-7 py-3 text-base font-black shadow-press transition-all enabled:hover:translate-y-[3px] enabled:hover:shadow-none disabled:cursor-not-allowed disabled:border-ohmlet-line disabled:bg-ohmlet-line disabled:text-ohmlet-ink/40 disabled:shadow-none"
             >
-              {stepIndex + 1 >= steps.length ? 'Finish' : 'Continue'}
+              {willRequeue ? 'Got it' : isLastInRun ? 'Finish' : 'Continue'}
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : (

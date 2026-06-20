@@ -84,8 +84,14 @@ region id of the referenced `circuitDiagram` (see the region registry).
 3. **Hints nudge the method, never name the answer.** A `fill_blank` hint must not
    contain the answer as a substring — watch digit runs ("1000" contains "10"). Say
    "apply the multiplier band, then convert to kΩ", not "10 × 100".
-4. **Depth: ≥10 graded steps is the floor; aim 10–14**, 12+ for a unit's deep lessons
-   so Bronze/Silver/Gold replays draw different, harder slices.
+4. **Depth: ≥15 graded steps is the floor** (a clean Duolingo run is 15; the runner
+   then requeues any wrong answers on top). Aim 15–18 for a unit's deep lessons so
+   Bronze/Silver/Gold replays draw different, harder 15-question slices. The run
+   sampler (`buildLeveledSteps`, `RUN_SIZE = 15`) pins drawing steps into every run.
+   **Every lesson must contain ≥1 drawing step (`draw_circuit`/`draw_fix`)** — the
+   linter enforces it. When padding a short lesson up to 15, make at least one of the
+   added steps a drawing; favour embodied modalities for the rest, never just more
+   tap-an-option (the ≤50% option cap still holds).
 5. **Real difficulty via tiers.** Tier 1 = recall; Tier 2 = one calculation/
    application; Tier 3 = multi-step reasoning or a real computation. Every deep lesson
    should span all three. "Advanced" means harder *reasoning*, not just a harder topic.
