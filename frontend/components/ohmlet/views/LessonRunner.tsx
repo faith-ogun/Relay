@@ -251,7 +251,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
         <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ohmlet-ink shadow-press-sm" style={{ background: levelMeta.color }}>
-            <img src="/brand/ohmlet-mascot.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
+            <img src="/mascot/celebrate.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
           </div>
           <p className="mt-5 inline-block rounded-full border-2 border-ohmlet-ink px-3 py-1 text-xs font-black uppercase tracking-wide" style={{ background: levelMeta.soft }}>
             {levelMeta.name} earned
@@ -284,10 +284,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     return (
       <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
         <div className="w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-ohmlet-ink bg-[#fdece8]">
-            <Heart className="h-9 w-9 text-ohmlet-red" fill="currentColor" />
-          </div>
-          <h2 className="mt-6 text-2xl font-black tracking-tight">Out of hearts</h2>
+          <img src="/mascot/encourage.png" alt="" aria-hidden className="mx-auto h-24 w-auto" draggable={false} />
+          <h2 className="mt-4 text-2xl font-black tracking-tight">Out of hearts</h2>
           <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">
             Take a breath and run it again. Repetition is how the concepts stick.
           </p>
@@ -431,10 +429,14 @@ const Feedback: React.FC<{ step: LessonStep; correct: boolean | null; message?: 
   const explanation =
     message || ('explanation' in step ? step.explanation : correct ? 'Nice work.' : 'Not quite. Review it and keep going.');
   return (
-    <div className="flex items-start gap-2.5">
-      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${correct ? 'bg-ohmlet-green' : 'bg-ohmlet-red'} text-white`}>
-        {correct ? <Check className="h-4 w-4" strokeWidth={3} /> : <X className="h-4 w-4" strokeWidth={3} />}
-      </span>
+    <div className="flex items-center gap-3">
+      <img
+        src={correct ? '/mascot/happy.png' : '/mascot/oops.png'}
+        alt=""
+        aria-hidden
+        className="ohmlet-rise h-14 w-14 shrink-0 object-contain"
+        draggable={false}
+      />
       <div>
         <p className={`text-sm font-black ${correct ? 'text-ohmlet-green-deep' : 'text-ohmlet-red'}`}>
           {correct ? 'Correct!' : 'Not quite'}
