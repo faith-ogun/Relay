@@ -48,6 +48,9 @@ def set_my_plan(payload: dict, claims: dict = Depends(require_claims)) -> dict:
     """Admin-only plan override for testing the tiers (Stripe owns this in prod)."""
     if not is_admin(claims):
         raise HTTPException(status_code=403, detail="Only an admin can change a plan directly")
-    plan = entitlements.set_plan(claims["uid"], payload.get("plan"))
+    requested = payload.get("plan") if isinstance(payload, dict) else None
+    if requested not in entitlements.VALID_PLANS:
+        raise HTTPException(status_code=422, detail=f"plan must be one of {entitlements.VALID_PLANS}")
+    plan = entitlements.set_plan(claims["uid"], requested)
     logger.info("Admin %s set their plan to %s", claims.get("email"), plan)
     return {"plan": plan}
