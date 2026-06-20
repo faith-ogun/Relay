@@ -75,6 +75,19 @@ def get_plan(user_id: str) -> str:
     return "free"
 
 
+def set_plan(user_id: str, plan: str) -> str:
+    """Write the user's plan to Firestore (the authoritative store). Returns the
+    normalised plan actually written. In production the Stripe webhook is the
+    real caller (#30); for now an admin-only endpoint uses this to test tiers."""
+    plan = normalize_plan(plan)
+    from state_store import get_client
+
+    get_client().collection(PLANS_COLLECTION).document(user_id).set(
+        {"plan": plan, "updated_at": _today()}, merge=True
+    )
+    return plan
+
+
 def live_seconds_used_today(user_id: str) -> float:
     """Live seconds the user has already consumed today (0 on any error)."""
     try:

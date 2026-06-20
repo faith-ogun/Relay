@@ -66,7 +66,14 @@ def is_admin(decoded: dict) -> bool:
     return bool(decoded.get("admin")) or email in ADMIN_EMAILS
 
 
-# ── FastAPI dependency ──
+# ── FastAPI dependencies ──
 def require_uid(authorization: str | None = Header(default=None)) -> str:
     """Dependency that yields the verified UID for the current request."""
     return uid_from_bearer(authorization)
+
+
+def require_claims(authorization: str | None = Header(default=None)) -> dict:
+    """Dependency that yields the full verified token claims (uid, email, ...)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+    return verify_id_token(authorization.split(" ", 1)[1])

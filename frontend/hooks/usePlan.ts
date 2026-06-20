@@ -13,6 +13,7 @@ import {
   type Feature,
   type Plan,
 } from '../components/ohmlet/entitlements';
+import { fetchMe, setMyPlan } from '../services/account';
 
 // Storage is keyed per user so the admin and a guest in the same browser do not
 // share a plan or a daily live budget. When billing lands, the plan moves to the
@@ -55,9 +56,25 @@ export function usePlan(userId = 'anon'): UsePlan {
   const [liveSecondsUsed, setLiveSecondsUsed] = useState<number>(() => readLiveSeconds(userId));
 
   // Re-read when the user identity changes (e.g. switching admin ↔ guest).
+  // The localStorage value is just an instant-paint cache; the server is the
+  // source of truth for the plan (#56), so reconcile as soon as /v1/me answers.
   useEffect(() => {
+    let cancelled = false;
     setPlanState(readPlan(userId));
     setLiveSecondsUsed(readLiveSeconds(userId));
+    void fetchMe().then((me) => {
+      if (cancelled || !me) return; // signed out / backend unreachable -> keep cache
+      setPlanState(me.plan);
+      try {
+        localStorage.setItem(planKey(userId), me.plan);
+      } catch {
+        /* ignore */
+      }
+      if (typeof me.liveSecondsUsedToday === 'number') setLiveSecondsUsed(me.liveSecondsUsedToday);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // Keep plan in sync across tabs / the dev switcher.
@@ -70,8 +87,20 @@ export function usePlan(userId = 'anon'): UsePlan {
   }, [userId]);
 
   const setPlan = useCallback((next: Plan) => {
-    localStorage.setItem(planKey(userId), next);
+    localStorage.setItem(planKey(userId), next); // optimistic cache
     setPlanState(next);
+    // Persist server-side. The backend only honours this for an admin (the dev
+    // switcher); in production Stripe writes the plan. Reconcile with the result.
+    void setMyPlan(next).then((confirmed) => {
+      if (confirmed && confirmed !== next) {
+        setPlanState(confirmed);
+        try {
+          localStorage.setItem(planKey(userId), confirmed);
+        } catch {
+          /* ignore */
+        }
+      }
+    });
   }, [userId]);
 
   const consumeLiveSeconds = useCallback((seconds: number) => {
