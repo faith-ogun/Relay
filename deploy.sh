@@ -34,9 +34,11 @@ OHMLET_REASONING_MODEL=gemini-2.5-pro"
 
 QUIZ_ENGINE_SERVICE="ohmlet-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"
+# Gemini 3.5 Flash (the GA, non-deprecating model; 2.5 retires 2026-10-16) is
+# served from the `global` Vertex location, so the genai client must target it.
 QUIZ_ENGINE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
-GOOGLE_CLOUD_LOCATION=${REGION}"
+GOOGLE_CLOUD_LOCATION=global"
 # Cold starts add seconds to the (latency-critical) drawing assessment. cpu-boost
 # is always on; set this to 1 to keep one instance warm and remove cold starts
 # entirely (small standing cost). Default 0 to avoid standing spend.

@@ -16,13 +16,15 @@ from pydantic import BaseModel, Field
 
 app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
 
-# ── Model routing (latency) ──
+# ── Model routing (latency + lifecycle) ──
 # Drawing assessment and question generation are well within Flash's ability and
-# do NOT need the slow reasoning model. Pro's extended "thinking" (which Pro
-# cannot disable) was the main cause of 30-60s waits. Flash + thinking disabled
-# turns a vision check into a few-second round trip. Both are env-overridable.
-VISION_MODEL = os.getenv("OHMLET_VISION_MODEL", "gemini-2.5-flash")
-GEN_MODEL = os.getenv("OHMLET_GEN_MODEL", "gemini-2.5-flash")
+# do NOT need the slow reasoning model (Flash + thinking disabled turns a vision
+# check into a ~2-3s round trip). Pinned to the GA Gemini 3.5 Flash: the 2.5
+# family retires on Vertex AI on 2026-10-16, and 3.1 Flash is preview-only, so
+# 3.5 Flash is the stable, non-deprecating choice. It is served on the `global`
+# Vertex location (set GOOGLE_CLOUD_LOCATION=global). Both env-overridable.
+VISION_MODEL = os.getenv("OHMLET_VISION_MODEL", "gemini-3.5-flash")
+GEN_MODEL = os.getenv("OHMLET_GEN_MODEL", "gemini-3.5-flash")
 
 app.add_middleware(
     CORSMiddleware,
