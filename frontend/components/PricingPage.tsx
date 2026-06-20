@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Loader2 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useIdentity } from '../hooks/useIdentity';
+import { usePlan } from '../hooks/usePlan';
+import { startCheckout, openBillingPortal } from '../services/billing';
 
-type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
+type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'signup' | 'ohmlet-app') => void;
 
 interface PricingPageProps {
   onNavigate: Nav;
@@ -91,6 +95,37 @@ const faqs: Array<{ q: string; a: string }> = [
 
 export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
   const [annual, setAnnual] = useState(true);
+  const { user } = useAuth();
+  const { userId } = useIdentity();
+  const { plan: currentPlan } = usePlan(userId);
+  const [busy, setBusy] = useState<Variant | null>(null);
+
+  // What a tier's button does, depending on auth + the user's current plan.
+  const handleCta = async (variant: Variant) => {
+    if (variant === 'free') {
+      onNavigate(user ? 'ohmlet-app' : 'signup');
+      return;
+    }
+    if (!user) {
+      onNavigate('signup'); // must have an account before checkout
+      return;
+    }
+    if (currentPlan === variant) {
+      // Already on this plan -> manage/cancel via the portal.
+      setBusy(variant);
+      const ok = await openBillingPortal();
+      if (!ok) setBusy(null);
+      return;
+    }
+    setBusy(variant);
+    const ok = await startCheckout(variant, annual ? 'annual' : 'monthly');
+    if (!ok) setBusy(null); // on failure, re-enable; success navigates away
+  };
+
+  const ctaLabel = (tier: Tier): string => {
+    if (tier.variant !== 'free' && user && currentPlan === tier.variant) return 'Manage subscription';
+    return tier.cta;
+  };
 
   return (
     <div className="w-full">
@@ -169,8 +204,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
 
                 <button
                   type="button"
-                  onClick={() => onNavigate('ohmlet-app')}
-                  className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] px-6 py-3.5 text-base font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${
+                  onClick={() => handleCta(tier.variant)}
+                  disabled={busy !== null}
+                  className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] px-6 py-3.5 text-base font-black shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-60 ${
                     isMax
                       ? 'border-ohmlet-gold bg-ohmlet-gold text-ohmlet-ink'
                       : isPro
@@ -178,8 +214,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                       : 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink'
                   }`}
                 >
-                  {tier.cta}
-                  <ArrowRight className="h-4 w-4" />
+                  {busy === tier.variant ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      {ctaLabel(tier)}
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </button>
 
                 <ul className="mt-7 space-y-3">

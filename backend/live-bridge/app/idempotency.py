@@ -58,6 +58,18 @@ def claim_event(key: str) -> bool:
         return False
 
 
+def release_event(key: str) -> None:
+    """Undo a claim so a failed-but-claimed event can be retried (best-effort)."""
+    if not key or not key.strip():
+        return
+    from state_store import get_client  # lazy: avoids a circular import at module load
+
+    try:
+        get_client().collection(EVENTS_COLLECTION).document(key.strip()).delete()
+    except Exception as exc:
+        logger.warning("idempotency release failed for %s: %s", key, exc)
+
+
 def save_state_if_newer(user_id: str, payload: dict[str, Any]) -> bool:
     """Write the state envelope unless a strictly-newer one is already stored.
 

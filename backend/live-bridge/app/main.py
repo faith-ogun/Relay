@@ -28,6 +28,7 @@ from ohmlet_live_agent import agent
 from ohmlet_live_agent.tools import set_priority_models
 from state_store import router as state_router
 from account import router as account_router
+from billing import router as billing_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -52,9 +53,14 @@ app.add_middleware(
 
 # Rate limiting (#47): blunt a misbehaving client on the REST surface. Keyed by
 # the verified UID when a bearer token is present, else the client IP.
+# Paths exempt from the REST limiter/body-cap. The Stripe webhook is server-to-
+# server, signature-verified, and must never be dropped or have its body touched.
+_MIDDLEWARE_EXEMPT = {"/v1/billing/webhook"}
+
+
 @app.middleware("http")
 async def rate_limit_rest(request: Request, call_next):
-    if request.url.path.startswith("/v1/"):
+    if request.url.path.startswith("/v1/") and request.url.path not in _MIDDLEWARE_EXEMPT:
         # Reject oversized bodies up front (#45) before any work is done.
         clen = request.headers.get("content-length")
         if clen and clen.isdigit() and int(clen) > validation.MAX_BODY_BYTES:
@@ -77,6 +83,8 @@ async def rate_limit_rest(request: Request, call_next):
 app.include_router(state_router)
 # Account + entitlements (server-authoritative plan).
 app.include_router(account_router)
+# Stripe billing: Checkout, Customer Portal, and the plan-writing webhook.
+app.include_router(billing_router)
 
 session_service = InMemorySessionService()
 runner = Runner(

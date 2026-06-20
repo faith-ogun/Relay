@@ -47,6 +47,9 @@ _PRIORITY_PLANS = {"pro", "max"}
 
 PLANS_COLLECTION = os.getenv("OHMLET_PLANS_COLLECTION", "ohmlet_plans")
 BUDGET_COLLECTION = os.getenv("OHMLET_LIVE_BUDGET_COLLECTION", "ohmlet_live_budget")
+# Maps a Stripe customer id -> our UID, so a webhook (which knows the customer)
+# can resolve the user even when metadata is absent.
+CUSTOMERS_COLLECTION = os.getenv("OHMLET_STRIPE_CUSTOMERS_COLLECTION", "ohmlet_stripe_customers")
 
 
 def normalize_plan(value: object) -> str:
@@ -98,6 +101,39 @@ def set_plan(user_id: str, plan: str) -> str:
         {"plan": plan, "updated_at": _today()}, merge=True
     )
     return plan
+
+
+def set_customer(user_id: str, customer_id: str) -> None:
+    """Record the Stripe customer for a user (both directions, for webhook lookup)."""
+    if not user_id or not customer_id:
+        return
+    client = get_client()
+    client.collection(PLANS_COLLECTION).document(user_id).set({"stripeCustomerId": customer_id}, merge=True)
+    client.collection(CUSTOMERS_COLLECTION).document(customer_id).set({"uid": user_id}, merge=True)
+
+
+def get_customer(user_id: str) -> str | None:
+    """The user's Stripe customer id, if they have one (for the Customer Portal)."""
+    try:
+        snap = get_client().collection(PLANS_COLLECTION).document(user_id).get()
+        if snap.exists:
+            return (snap.to_dict() or {}).get("stripeCustomerId")
+    except Exception as exc:
+        logger.warning("customer lookup failed for %s: %s", user_id, exc)
+    return None
+
+
+def uid_for_customer(customer_id: str | None) -> str | None:
+    """Reverse lookup: the UID behind a Stripe customer id."""
+    if not customer_id:
+        return None
+    try:
+        snap = get_client().collection(CUSTOMERS_COLLECTION).document(customer_id).get()
+        if snap.exists:
+            return (snap.to_dict() or {}).get("uid")
+    except Exception as exc:
+        logger.warning("uid_for_customer lookup failed for %s: %s", customer_id, exc)
+    return None
 
 
 def live_seconds_used_this_period(user_id: str) -> float:
