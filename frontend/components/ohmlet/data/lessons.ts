@@ -2998,6 +2998,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'drag_order', difficulty: 1, instruction: 'Order these from smallest to largest.', items: ['0b0010 (2)', '0b0101 (5)', '0xA (10)', '0xF (15)'], correctOrder: [0, 1, 2, 3] },
       { type: 'fill_blank', difficulty: 2, prompt: 'Build the hex byte for binary 1011 0010 (nibble B, nibble 2).', blank: '___', answer: 'B 2', tiles: ['B', '2', 'A', 'F', '1', 'D'], hint: '1011 is one hex digit, 0010 is the next.' },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its digital-build role.', pairs: [['IC chip', 'Microcontroller / logic'], ['Breadboard', 'Builds the circuit'], ['LED', 'Shows a bit'], ['Jumper wires', 'Wire it up']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/jumper-wires.png'] },
+      { type: 'draw_circuit', instruction: 'Draw an LED used to show one bit: a logic output pin, a resistor, an LED to ground.', expected: ['led', 'resistor'], hint: 'From the output pin, a series resistor, then the LED, then to ground. HIGH lights it (bit = 1), LOW is off (bit = 0).', explanation: 'An LED on an output is the simplest way to see a single bit: lit for 1, dark for 0.' },
     ],
   },
 
@@ -3025,6 +3026,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each 5V-logic voltage to how an input reads it.', pairs: [['0.3V', 'Clean LOW'], ['1.4V', 'Forbidden zone'], ['3.3V', 'Clean HIGH'], ['4.9V', 'Clean HIGH']] },
       { type: 'drag_order', difficulty: 1, instruction: 'Order these 5V-logic inputs from clean LOW up to clean HIGH.', items: ['0.3V (LOW)', '0.8V (edge of LOW)', '2.0V (edge of HIGH)', '4.9V (HIGH)'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its digital-logic role.', pairs: [['IC chip', 'Holds the logic gates'], ['Breadboard', 'Builds the circuit'], ['Jumper wires', 'Wire the gates'], ['LED', 'Shows the output bit']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/jumper-wires.png', '/components/led.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a logic output driving an LED indicator: the output pin, a resistor, an LED to ground.', expected: ['led', 'resistor'], hint: 'Output pin to a series resistor, then the LED, then to ground. A clean HIGH lights it.', explanation: 'A strong HIGH well above the input threshold leaves a wide noise margin, so the link stays reliable.' },
+      { type: 'true_false', statement: 'A digital link survives noise as long as the level still clears the threshold.', correct: true, explanation: 'The noise margin absorbs disturbance: a noisy HIGH that stays above the threshold still reads as HIGH.' },
     ],
   },
 
@@ -3053,6 +3056,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['ADC', 'Voltage to a number'], ['DAC', 'A number to a voltage'], ['Quantisation', 'Rounding to the nearest step'], ['Resolution', 'How fine the steps are']] },
       { type: 'drag_order', difficulty: 2, instruction: 'Order these ADCs from coarsest to finest resolution.', items: ['4-bit (16 steps)', '8-bit (256 steps)', '10-bit (1024 steps)', '12-bit (4096 steps)'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role in reading the world.', pairs: [['LDR', 'Analog signal source'], ['Arduino Uno', 'Holds the ADC'], ['Potentiometer', 'Adjustable test voltage'], ['Multimeter', 'Checks the real voltage']], images: ['/components/ldr.png', '/components/arduino-uno.png', '/components/potentiometer.png', '/components/multimeter.png'] },
+      { type: 'draw_circuit', instruction: 'Draw an analog source for an ADC: a potentiometer with its wiper feeding an analog pin.', expected: ['potentiometer', 'wire'], hint: 'Pot ends across 5V and ground; the wiper runs to the analog input. Turning it sweeps the ADC reading.', explanation: 'The ADC samples this smoothly-varying wiper voltage and rounds it to the nearest of its steps.' },
     ],
   },
 
@@ -3080,6 +3084,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each gate to its rule.', pairs: [['AND', 'HIGH only if all inputs HIGH'], ['OR', 'HIGH if any input HIGH'], ['NOT', 'Output is the opposite of the input'], ['Buffer', 'Output copies the input']] },
       { type: 'drag_order', difficulty: 2, instruction: 'For a 2-input AND, order these input pairs by output (LOW first, then HIGH).', items: ['0,0 (out 0)', '0,1 (out 0)', '1,0 (out 0)', '1,1 (out 1)'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role in a gate circuit.', pairs: [['IC chip', 'Holds the logic gates'], ['Breadboard', 'Builds it'], ['LED', 'Shows the output'], ['Resistor', 'Limits the LED current']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/resistor.png'] },
+      { type: 'draw_circuit', instruction: 'Draw an AND gate symbol: a D-shaped body with two inputs on the left and one output on the right.', expected: ['and gate'], hint: 'Flat back, rounded front (a capital D). Two input lines on the flat side, one output line from the rounded point.', explanation: 'That D-shape is the AND gate: its output is HIGH only when both inputs are HIGH.' },
+      { type: 'drag_order', instruction: 'For a 2-input OR gate, order these input pairs by output (LOW first, then HIGH).', items: ['0,0 (out 0)', '0,1 (out 1)', '1,0 (out 1)', '1,1 (out 1)'], correctOrder: [0, 1, 2, 3] },
     ],
   },
 
@@ -3108,6 +3114,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'drag_order', difficulty: 2, instruction: 'For a 2-input XOR, order these input pairs by output (LOW first).', items: ['0,0 (out 0)', '1,1 (out 0)', '0,1 (out 1)', '1,0 (out 1)'], correctOrder: [0, 1, 2, 3] },
       { type: 'fill_blank', difficulty: 1, prompt: 'A NAND with both inputs tied together behaves as a ___ gate (an inverter).', blank: '___', answer: 'NOT', tiles: ['NOT', 'AND', 'OR', 'XOR'], hint: 'Tying X to X gives the inverse of X; name that one-input gate.' },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role in a gate build.', pairs: [['IC chip', 'Holds the NAND/NOR gates'], ['Breadboard', 'Builds it'], ['LED', 'Shows the output'], ['Resistor', 'Limits the LED current']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/resistor.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a NAND gate symbol: an AND gate (D-shape) with a small bubble on its output.', expected: ['nand gate'], hint: 'Draw the AND D-shape, then add a small circle (the inversion bubble) right at the output point.', explanation: 'The bubble means "inverted", so a NAND is an AND followed by a NOT: LOW only when all inputs are HIGH.' },
     ],
   },
 
@@ -3135,6 +3142,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'drag_order', difficulty: 3, instruction: 'Order the steps to add the lowest bits of two binary numbers with a half adder.', items: ['Feed bits A and B into the half adder', 'XOR them to make the sum bit', 'AND them to make the carry bit', 'Pass the carry on to the next bit position'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each half-adder part to its output.', pairs: [['XOR gate', 'The sum bit'], ['AND gate', 'The carry bit'], ['Combinational', 'No memory, inputs only'], ['Full adder', 'Adds a carry-in too']] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role in a logic build.', pairs: [['IC chip', 'Holds the gates'], ['Breadboard', 'Builds it'], ['Jumper wires', 'Wire it'], ['LED', 'Shows a bit']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/jumper-wires.png', '/components/led.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a half adder: an XOR gate for the sum bit and an AND gate for the carry bit, both fed by A and B.', expected: ['xor gate', 'and gate'], hint: 'Two inputs A and B fan out to two gates: an XOR (curved back with a bar) gives SUM, an AND (D-shape) gives CARRY.', explanation: 'SUM = A XOR B, CARRY = A AND B. Those two gates together add two single bits.' },
+      { type: 'fill_blank', prompt: 'In a half adder, the sum bit is the ___ of the two inputs.', blank: '___', answer: 'XOR', tiles: ['XOR', 'AND', 'OR', 'NOT'], hint: 'It is HIGH only when the two bits differ.' },
     ],
   },
 
@@ -3162,6 +3171,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each Boolean expression to its simplified form.', pairs: [['A AND 1', 'A'], ['A OR 0', 'A'], ['A OR 1', '1'], ['NOT(NOT A)', 'A']] },
       { type: 'drag_order', difficulty: 2, instruction: 'Order the steps to apply De Morgan to NOT(A AND B).', items: ['Start with NOT(A AND B)', 'Break the bar over the whole expression', 'Flip AND to OR', 'Invert each input: NOT A OR NOT B'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role when building Boolean logic.', pairs: [['IC chip', 'Holds the gates'], ['Breadboard', 'Builds it'], ['LED', 'Shows the result'], ['Jumper wires', 'Wire it up']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/jumper-wires.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a NOT gate (inverter): a triangle with a small bubble on its output.', expected: ['not gate'], hint: 'A triangle pointing right with one input line; add a small circle at the tip (the inversion bubble).', explanation: 'The NOT gate flips its input: HIGH in gives LOW out. Two in a row cancel (NOT NOT A = A).' },
+      { type: 'fill_blank', prompt: 'By De Morgan, NOT(A AND B) becomes NOT A ___ NOT B.', blank: '___', answer: 'OR', tiles: ['OR', 'AND', 'NOT', 'XOR'], hint: 'Break the bar; AND flips to its opposite.' },
     ],
   },
 
@@ -3189,6 +3200,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each flip-flop term to its meaning.', pairs: [['Q and NOT-Q', 'The two complementary outputs'], ['Set', 'Drives Q HIGH'], ['Reset', 'Drives Q LOW'], ['D flip-flop', 'Stores Data on a clock edge']] },
       { type: 'drag_order', difficulty: 2, instruction: 'Order how a D flip-flop captures a bit.', items: ['Data sits on the D input', 'A clock edge arrives', 'D is captured into the latch', 'Q holds the stored value'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its memory-circuit role.', pairs: [['IC chip', 'Holds the flip-flop'], ['Breadboard', 'Builds it'], ['LED', 'Shows Q'], ['Push button', 'Set/Reset input']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/push-button.png'] },
+      { type: 'draw_circuit', instruction: 'Draw an SR latch: two NAND gates cross-coupled (each gate\'s output feeds the other\'s input).', expected: ['nand gate'], hint: 'Two NAND gates side by side; wire the output of each into one input of the other. The free inputs are Set and Reset.', explanation: 'Cross-coupling two NANDs makes the simplest memory: it holds Q until Set or Reset changes it.' },
+      { type: 'true_false', statement: 'A D flip-flop captures its Data input on a clock edge, removing the latch\'s forbidden state.', correct: true, explanation: 'One data input drives Set and Reset as opposites, so they can never both be active.' },
     ],
   },
 
@@ -3215,6 +3228,9 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'predict_reading', difficulty: 3, question: 'A 16 MHz microcontroller clock has a period of about...', options: ['≈ 62.5 ns', '≈ 16 ms', '≈ 6.25 µs', '≈ 160 ns'], correct: 0, explanation: 'Period = 1/16,000,000 s = 62.5 ns. That tiny tick is why it can run millions of operations per second.' },
       { type: 'match', difficulty: 3, instruction: 'Match each term to its meaning.', pairs: [['Clock', 'Steady square-wave heartbeat'], ['Rising edge', 'LOW to HIGH transition'], ['Combinational', 'Output from inputs only'], ['Sequential', 'Output from inputs plus stored state']] },
       { type: 'drag_order', difficulty: 1, instruction: 'Order these clock periods from shortest to longest.', items: ['16 MHz (62.5 ns)', '1 MHz (1 µs)', '1 kHz (1 ms)', '1 Hz (1 s)'], correctOrder: [0, 1, 2, 3] },
+      { type: 'draw_circuit', instruction: 'Draw a clock signal: a square wave ticking HIGH and LOW at a steady rate.', expected: ['square wave'], hint: 'A flat HIGH, a vertical drop to flat LOW, then back up, repeating evenly: sharp, regular corners.', explanation: 'The clock is the steady square-wave heartbeat that paces every sequential circuit.' },
+      { type: 'predict_reading', question: 'A clock runs at 2 kHz. Dial its period (T = 1/f).', options: ['0.5 ms'], correct: 0, meter: { unit: 'ms', min: 0, max: 2, step: 0.05, target: 0.5, tolerance: 0.1 }, explanation: 'T = 1/f = 1/2000 = 0.0005 s = 0.5 ms.' },
+      { type: 'true_false', statement: 'A rising clock edge is a LOW-to-HIGH transition.', correct: true, explanation: 'Rising = LOW to HIGH; falling = HIGH to LOW.' },
     ],
   },
 
@@ -3242,6 +3258,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each block to what it does.', pairs: [['Counter', 'Counts clock pulses'], ['Register', 'Stores several bits'], ['Shift register', 'Moves bits along each clock'], ['Flip-flop', 'Stores one bit']] },
       { type: 'drag_order', difficulty: 1, instruction: 'Order a 4-bit counter\'s values as it counts up from 13.', items: ['13', '14', '15', '0 (wraps)'], correctOrder: [0, 1, 2, 3] },
       { type: 'fill_blank', difficulty: 1, prompt: 'A register that needs to hold one byte uses ___ flip-flops.', blank: '___', answer: '8', tiles: ['8', '4', '16', '1'], hint: 'One per bit, and a byte is eight bits.' },
+      { type: 'draw_circuit', instruction: 'Draw an LED showing one bit of a counter\'s output: the output bit, a resistor, an LED to ground.', expected: ['led', 'resistor'], hint: 'From a counter output bit, a series resistor, then the LED to ground. It blinks as that bit toggles.', explanation: 'Each output bit of a counter can drive an LED; watching them shows the binary count climbing.' },
+      { type: 'true_false', statement: 'An n-bit counter rolls over to 0 after 2 to the power n counts.', correct: true, explanation: 'It cycles through all 2^n values, then wraps back to zero.' },
     ],
   },
 
@@ -3269,6 +3287,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each pin or part to its role.', pairs: [['Vcc', 'Positive supply'], ['GND', 'Ground reference'], ['100 nF cap', 'Local decoupling'], ['74HC00', 'Quad 2-input NAND']] },
       { type: 'multiple_choice', difficulty: 1, question: 'Tap the DIP logic chip a 74HC gate comes in.', options: ['IC chip', 'Resistor', 'Electrolytic capacitor', 'LED'], optionImages: ['/components/ic-dip.png', '/components/resistor.png', '/components/capacitor-electrolytic.png', '/components/led.png'], correct: 0, explanation: 'A 74HC part is a DIP IC: a black chip with pins down both sides and a notch at one end.' },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its role at a logic chip.', pairs: [['IC chip', 'The logic gates'], ['Ceramic capacitor', '100 nF decoupling'], ['Breadboard', 'Builds it'], ['Jumper wires', 'Wire the pins']], images: ['/components/ic-dip.png', '/components/capacitor-ceramic.png', '/components/breadboard.png', '/components/jumper-wires.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a 100 nF decoupling capacitor across a logic chip\'s Vcc and GND pins.', expected: ['capacitor', 'wire'], hint: 'Draw the chip\'s Vcc and GND pins, then a small capacitor connected directly between them, as close as possible.', explanation: 'The local 100 nF cap supplies fast switching current so the rail does not dip: mandatory on every logic chip.' },
+      { type: 'true_false', statement: 'A 74HC00 chip holds four 2-input NAND gates.', correct: true, explanation: 'The classic quad 2-input NAND package.' },
     ],
   },
 
@@ -3296,6 +3316,8 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', difficulty: 3, instruction: 'Match each concept to its description.', pairs: [['GPIO', 'A pin your code drives'], ['PWM', 'Timer faking an analog level'], ['Interrupt', 'Respond immediately to an event'], ['Polling', 'Repeatedly check in the loop']] },
       { type: 'drag_order', difficulty: 2, instruction: 'Order what happens when an interrupt fires.', items: ['Event triggers the interrupt', 'Main program pauses', 'Short handler runs', 'Program resumes where it left off'], correctOrder: [0, 1, 2, 3] },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its GPIO role.', pairs: [['Push button', 'Digital input'], ['LED', 'Digital output'], ['Potentiometer', 'Analog input'], ['Arduino Uno', 'Drives the GPIO']], images: ['/components/push-button.png', '/components/led.png', '/components/potentiometer.png', '/components/arduino-uno.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a GPIO output and input: an LED (with resistor) on one pin, and a button (with pull-down) on another.', expected: ['led', 'button'], hint: 'Output pin to a resistor and LED to ground; another pin to a button (to 5V) with a pull-down resistor to ground.', explanation: 'GPIO pins go both ways: drive an LED on an output, read a button on an input.' },
+      { type: 'true_false', statement: 'An interrupt responds to an event immediately, pausing the main code.', correct: true, explanation: 'It suspends the program, runs a short handler, then returns, so brief events are not missed.' },
     ],
   },
 
@@ -3324,6 +3346,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'drag_order', difficulty: 2, instruction: 'Order these buses by wire count for many devices, fewest to most.', items: ['I2C (2 shared wires)', 'UART (point-to-point, 2)', 'SPI (3 + a select per device)', 'SPI with 4 devices (3 + 4)'], correctOrder: [0, 1, 2, 3] },
       { type: 'fill_blank', difficulty: 1, prompt: 'On an I2C bus each device is picked out by its unique ___.', blank: '___', answer: 'address', tiles: ['address', 'clock', 'baud', 'select'], hint: 'A numeric ID on the shared two wires.' },
       { type: 'match', difficulty: 1, instruction: 'Match each real part to its serial-bus role.', pairs: [['IC chip', 'A bus device/sensor'], ['Arduino Uno', 'The bus master'], ['Resistor', 'I2C pull-up'], ['Jumper wires', 'The bus lines']], images: ['/components/ic-dip.png', '/components/arduino-uno.png', '/components/resistor.png', '/components/jumper-wires.png'] },
+      { type: 'draw_circuit', instruction: 'Draw an I2C bus: two lines (SDA and SCL) each with a pull-up resistor to Vcc, shared by two chips.', expected: ['resistor', 'wire'], hint: 'Two shared wires (SDA, SCL); a pull-up resistor from each wire to Vcc; both chips tap the same two lines.', explanation: 'I2C shares two pulled-up wires among many addressed devices, the fewest wires for several slow sensors.' },
     ],
   },
 
@@ -3342,6 +3365,9 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'match', instruction: 'Match each item to its description.', pairs: [['AND gate', 'HIGH only if all inputs HIGH'], ['Interrupt', 'Respond immediately to an event'], ['Counter', 'Counts clock pulses'], ['SPI', 'Synchronous, fast, master/slave']] },
       { type: 'fill_blank', prompt: 'Build the hex byte for binary 1011 0010.', blank: '___', answer: 'B 2', tiles: ['B', '2', 'A', 'F', '1', 'D'], hint: '1011 is one hex digit; 0010 is the next.' },
       { type: 'match', instruction: 'Match each real part to its digital-build role.', pairs: [['IC chip', 'Logic / microcontroller'], ['Breadboard', 'Builds the circuit'], ['LED', 'Shows a bit'], ['Jumper wires', 'Wire it up']], images: ['/components/ic-dip.png', '/components/breadboard.png', '/components/led.png', '/components/jumper-wires.png'] },
+      { type: 'draw_circuit', instruction: 'Draw a logic output indicator: a gate output through a resistor to an LED, then to ground.', expected: ['led', 'resistor'], hint: 'From the gate output pin, a series resistor, then the LED, then to ground.', explanation: 'An LED on a logic output makes a single bit visible: lit for HIGH, dark for LOW.' },
+      { type: 'predict_reading', question: 'A clock runs at 1 kHz. Dial its period (T = 1/f).', options: ['1 ms'], correct: 0, meter: { unit: 'ms', min: 0, max: 5, step: 0.1, target: 1, tolerance: 0.2 }, explanation: 'T = 1/f = 1/1000 = 1 ms.' },
+      { type: 'true_false', statement: 'An interrupt pauses the main program to run a short handler, then resumes.', correct: true, explanation: 'It responds to an event immediately so a brief event is not missed.' },
     ],
   },
 
