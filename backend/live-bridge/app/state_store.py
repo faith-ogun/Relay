@@ -22,9 +22,11 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from google.api_core import exceptions as gcloud_exceptions
 from google.cloud import firestore
+
+from auth import require_uid
 
 logger = logging.getLogger("ohmlet.state-store")
 
@@ -53,16 +55,25 @@ def _doc_ref(user_id: str) -> firestore.DocumentReference:
     return _client().collection(STATE_COLLECTION).document(user_id)
 
 
+def _authorize(path_user_id: str, caller_uid: str) -> str:
+    """A user may only touch their own document. The doc id is the verified UID
+    from the token, never the (spoofable) path param — and a mismatch is a hard
+    403 so a stale or tampered URL cannot reach someone else's data."""
+    path_user_id = (path_user_id or "").strip()
+    if path_user_id and path_user_id != caller_uid:
+        logger.warning("Cross-user state access blocked: path=%s caller=%s", path_user_id, caller_uid)
+        raise HTTPException(status_code=403, detail="You can only access your own data")
+    return caller_uid
+
+
 @router.get("/{user_id}")
-def load_state(user_id: str) -> dict[str, Any]:
-    """Return the persisted state envelope for a user, or {} if none exists."""
-    user_id = user_id.strip()
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+def load_state(user_id: str, caller_uid: str = Depends(require_uid)) -> dict[str, Any]:
+    """Return the persisted state envelope for the signed-in user, or {} if none."""
+    uid = _authorize(user_id, caller_uid)
     try:
-        snapshot = _doc_ref(user_id).get()
+        snapshot = _doc_ref(uid).get()
     except gcloud_exceptions.GoogleAPICallError as exc:
-        logger.error("Firestore load failed for %s: %s", user_id, exc)
+        logger.error("Firestore load failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502, detail="State backend unavailable") from exc
     if not snapshot.exists:
         return {}
@@ -70,16 +81,14 @@ def load_state(user_id: str) -> dict[str, Any]:
 
 
 @router.put("/{user_id}")
-def save_state(user_id: str, payload: dict[str, Any]) -> dict[str, str]:
-    """Upsert the persisted state envelope for a user."""
-    user_id = user_id.strip()
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+def save_state(user_id: str, payload: dict[str, Any], caller_uid: str = Depends(require_uid)) -> dict[str, str]:
+    """Upsert the persisted state envelope for the signed-in user."""
+    uid = _authorize(user_id, caller_uid)
     if not isinstance(payload, dict):
         raise HTTPException(status_code=422, detail="payload must be a JSON object")
     try:
-        _doc_ref(user_id).set(payload)
+        _doc_ref(uid).set(payload)
     except gcloud_exceptions.GoogleAPICallError as exc:
-        logger.error("Firestore save failed for %s: %s", user_id, exc)
+        logger.error("Firestore save failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502, detail="State backend unavailable") from exc
     return {"status": "ok"}

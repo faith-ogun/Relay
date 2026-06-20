@@ -11,6 +11,8 @@
  * only the transport underneath moved.
  */
 
+import { getIdToken } from './firebase';
+
 type OhmletStateConfig = {
   apiBaseUrl?: string;
 };
@@ -36,7 +38,15 @@ export async function loadOhmletState<T extends Record<string, unknown>>(
   const cfg = resolveConfig(override);
   if (!cfg.enabled) return null;
 
-  const response = await fetch(makeUrl(userId, cfg), { method: 'GET' });
+  // The backend derives identity from this token (#44). Signed out -> nothing to
+  // load from the server; fall back to local state.
+  const token = await getIdToken();
+  if (!token) return null;
+
+  const response = await fetch(makeUrl(userId, cfg), {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (response.status === 404) return null;
   if (!response.ok) {
     const body = await response.text();
@@ -56,9 +66,13 @@ export async function saveOhmletState<T extends Record<string, unknown>>(
   const cfg = resolveConfig(override);
   if (!cfg.enabled) return;
 
+  // No token -> not signed in; skip the server write (local state still holds).
+  const token = await getIdToken();
+  if (!token) return;
+
   const response = await fetch(makeUrl(userId, cfg), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(state),
   });
   if (!response.ok) {

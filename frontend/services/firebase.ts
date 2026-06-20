@@ -31,6 +31,16 @@ export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseC
 
 export const auth = getAuth(firebaseApp);
 
+/**
+ * The current user's Firebase ID token (a short-lived JWT), or null if signed
+ * out. Sent as `Authorization: Bearer <token>` on backend calls so the server
+ * can verify identity itself (#44). The SDK caches and refreshes it.
+ */
+export async function getIdToken(): Promise<string | null> {
+  const u = auth.currentUser;
+  return u ? u.getIdToken() : null;
+}
+
 export const googleProvider = new GoogleAuthProvider();
 // Always let the user pick which Google account, even if one is already chosen.
 googleProvider.setCustomParameters({ prompt: 'select_account' });

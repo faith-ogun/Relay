@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getIdToken } from '../services/firebase';
 
 export type LiveTranscript = {
   role: 'user' | 'agent' | 'system';
@@ -210,6 +211,14 @@ export function useLiveBridge({
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Authenticate FIRST: the backend verifies this token and derives the UID
+      // from it (#44), so the connection cannot impersonate another user. Sent
+      // before any audio/text frame; harmlessly ignored by the legacy backend.
+      void getIdToken().then((token) => {
+        if (token && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'auth', token }));
+        }
+      });
       setState('connected');
       reconnectAttemptRef.current = 0;
       pushTranscript('system', reconnectAttemptRef.current === 0

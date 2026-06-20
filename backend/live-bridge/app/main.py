@@ -14,7 +14,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from google.adk.runners import Runner
@@ -27,6 +27,7 @@ from ohmlet_live_agent import agent
 from ohmlet_live_agent.tools import set_priority_models
 from state_store import router as state_router
 from usage_meter import UsageMeter, persist_usage
+from auth import require_uid, verify_id_token
 import entitlements
 
 logging.basicConfig(level=logging.INFO)
@@ -75,6 +76,15 @@ def _is_native_audio_model() -> bool:
     return "native-audio" in model
 
 
+async def _reject_ws(websocket: WebSocket, code: str, message: str) -> None:
+    """Send a structured error then close an unauthorised/forbidden WS."""
+    try:
+        await websocket.send_text(json.dumps({"type": "error", "code": code, "message": message}))
+        await websocket.close(code=4001)
+    except Exception:
+        pass
+
+
 def _build_run_config(stage: str = "inventory") -> RunConfig:
     """Build a RunConfig for bidi streaming based on the model type."""
     if _is_native_audio_model():
@@ -120,6 +130,28 @@ async def websocket_endpoint(
     - ADK Event objects serialised as JSON (contains audio chunks, text, tool calls)
     """
     await websocket.accept()
+
+    # ── Identity (#44): the first frame MUST be an auth message with the Firebase
+    # ID token. We derive the UID from the verified token and ignore whatever UID
+    # the URL claimed, so a socket can never impersonate another user or spend
+    # their live budget. (The legacy backend simply ignores this extra frame.)
+    try:
+        first = await asyncio.wait_for(websocket.receive(), timeout=15)
+        auth_msg = json.loads(first["text"]) if first.get("text") else {}
+    except (asyncio.TimeoutError, WebSocketDisconnect, json.JSONDecodeError, KeyError, TypeError):
+        auth_msg = {}
+    if not isinstance(auth_msg, dict) or auth_msg.get("type") != "auth" or not auth_msg.get("token"):
+        await _reject_ws(websocket, "auth_required", "Sign in to start a live session.")
+        return
+    try:
+        verified_uid = verify_id_token(auth_msg["token"])["uid"]
+    except HTTPException:
+        await _reject_ws(websocket, "auth_invalid", "Your session has expired. Sign in again.")
+        return
+    if user_id and user_id != verified_uid:
+        await _reject_ws(websocket, "auth_mismatch", "Identity mismatch; refusing the connection.")
+        return
+    user_id = verified_uid
     logger.info("WS connected: user=%s session=%s", user_id, session_id)
 
     # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
@@ -319,12 +351,12 @@ async def websocket_endpoint(
 # ── REST fallback for text-only usage ──────────────────────────────────────────
 
 @app.post("/v1/live/text")
-async def text_fallback(payload: dict) -> dict:
+async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> dict:
     """Simple REST endpoint for text-only interaction (non-streaming).
 
-    Useful for testing without WebSocket or when audio is unavailable.
+    Useful for testing without WebSocket or when audio is unavailable. The user
+    is the verified token holder; any user_id in the payload is ignored (#44).
     """
-    user_id = payload.get("user_id", "anonymous")
     session_id = payload.get("session_id", "")
     text = payload.get("text", "")
     stage = payload.get("stage", "inventory")

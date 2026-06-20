@@ -3,4 +3,5 @@ uvicorn[standard]==0.35.0
 pydantic==2.11.7
 google-adk
 google-cloud-firestore==2.21.0
+firebase-admin==6.5.0
 websockets>=13.0
