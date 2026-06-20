@@ -1613,42 +1613,54 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
   const ang = Math.PI * (1 - frac);
   const angT = Math.PI * (1 - (m.target - m.min) / (m.max - m.min));
   const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14201e';
+  const gauge = (
+    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+      <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">
+        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={10} strokeLinecap="round" />
+        {Array.from({ length: 5 }).map((_, i) => {
+          const a = Math.PI * (1 - i / 4);
+          return <line key={i} x1={cx + (r - 9) * Math.cos(a)} y1={cy - (r - 9) * Math.sin(a)} x2={cx + r * Math.cos(a)} y2={cy - r * Math.sin(a)} stroke="#94a3b8" strokeWidth={2} />;
+        })}
+        {checked && <line x1={cx} y1={cy} x2={cx + r * Math.cos(angT)} y2={cy - r * Math.sin(angT)} stroke="#16a34a" strokeWidth={2} strokeDasharray="4 3" />}
+        <line x1={cx} y1={cy} x2={cx + r * Math.cos(ang)} y2={cy - r * Math.sin(ang)} stroke={needle} strokeWidth={4} strokeLinecap="round" style={{ transition: 'all 0.12s' }} />
+        <circle cx={cx} cy={cy} r={7} fill={needle} />
+      </svg>
+      <div className="mt-1 text-center">
+        <span className="text-3xl font-black tabular-nums text-ohmlet-ink">{meterVal === null ? '—' : fmtNum(val)}</span>
+        <span className="ml-1 text-lg font-black text-ohmlet-ink-soft">{m.unit}</span>
+      </div>
+      <input
+        type="range"
+        min={m.min}
+        max={m.max}
+        step={tick}
+        value={val}
+        disabled={checked}
+        onChange={(e) => setMeterVal(parseFloat(e.target.value))}
+        className="mt-4 w-full accent-ohmlet-gold-deep"
+      />
+      <div className="flex justify-between text-xs font-bold text-ohmlet-ink-soft">
+        <span>{m.min} {m.unit}</span>
+        <span>{m.max} {m.unit}</span>
+      </div>
+      {checked && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Target: {fmtNum(m.target)} {m.unit} (±{m.tolerance})</p>}
+    </div>
+  );
   return (
     <div className="ohmlet-rise">
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Dial in the reading</p>
       <Prompt>{step.question}</Prompt>
-      {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} showCurrentFlow={checked} />}
-      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
-        <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">
-          <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={10} strokeLinecap="round" />
-          {Array.from({ length: 5 }).map((_, i) => {
-            const a = Math.PI * (1 - i / 4);
-            return <line key={i} x1={cx + (r - 9) * Math.cos(a)} y1={cy - (r - 9) * Math.sin(a)} x2={cx + r * Math.cos(a)} y2={cy - r * Math.sin(a)} stroke="#94a3b8" strokeWidth={2} />;
-          })}
-          {checked && <line x1={cx} y1={cy} x2={cx + r * Math.cos(angT)} y2={cy - r * Math.sin(angT)} stroke="#16a34a" strokeWidth={2} strokeDasharray="4 3" />}
-          <line x1={cx} y1={cy} x2={cx + r * Math.cos(ang)} y2={cy - r * Math.sin(ang)} stroke={needle} strokeWidth={4} strokeLinecap="round" style={{ transition: 'all 0.12s' }} />
-          <circle cx={cx} cy={cy} r={7} fill={needle} />
-        </svg>
-        <div className="mt-1 text-center">
-          <span className="text-3xl font-black tabular-nums text-ohmlet-ink">{meterVal === null ? '—' : fmtNum(val)}</span>
-          <span className="ml-1 text-lg font-black text-ohmlet-ink-soft">{m.unit}</span>
+      {step.circuitDiagram ? (
+        // Circuit and gauge side by side on wider screens (no scroll); stacked on mobile.
+        <div className="mt-5 grid items-center gap-4 md:grid-cols-2">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={checked} className="mx-auto w-full" />
+          </div>
+          {gauge}
         </div>
-        <input
-          type="range"
-          min={m.min}
-          max={m.max}
-          step={tick}
-          value={val}
-          disabled={checked}
-          onChange={(e) => setMeterVal(parseFloat(e.target.value))}
-          className="mt-4 w-full accent-ohmlet-gold-deep"
-        />
-        <div className="flex justify-between text-xs font-bold text-ohmlet-ink-soft">
-          <span>{m.min} {m.unit}</span>
-          <span>{m.max} {m.unit}</span>
-        </div>
-      </div>
-      {checked && <p className="mt-3 text-center text-sm font-semibold text-ohmlet-ink-soft">Target: {fmtNum(m.target)} {m.unit} (±{m.tolerance})</p>}
+      ) : (
+        <div className="mt-6">{gauge}</div>
+      )}
     </div>
   );
 };
