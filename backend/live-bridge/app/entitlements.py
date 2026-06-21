@@ -107,6 +107,8 @@ def set_customer(user_id: str, customer_id: str) -> None:
     """Record the Stripe customer for a user (both directions, for webhook lookup)."""
     if not user_id or not customer_id:
         return
+    from state_store import get_client
+
     client = get_client()
     client.collection(PLANS_COLLECTION).document(user_id).set({"stripeCustomerId": customer_id}, merge=True)
     client.collection(CUSTOMERS_COLLECTION).document(customer_id).set({"uid": user_id}, merge=True)
@@ -114,6 +116,8 @@ def set_customer(user_id: str, customer_id: str) -> None:
 
 def get_customer(user_id: str) -> str | None:
     """The user's Stripe customer id, if they have one (for the Customer Portal)."""
+    from state_store import get_client
+
     try:
         snap = get_client().collection(PLANS_COLLECTION).document(user_id).get()
         if snap.exists:
@@ -127,6 +131,8 @@ def uid_for_customer(customer_id: str | None) -> str | None:
     """Reverse lookup: the UID behind a Stripe customer id."""
     if not customer_id:
         return None
+    from state_store import get_client
+
     try:
         snap = get_client().collection(CUSTOMERS_COLLECTION).document(customer_id).get()
         if snap.exists:
