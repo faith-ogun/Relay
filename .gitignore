@@ -57,3 +57,6 @@ content/LinkedIn/
 # Session handoff scratch doc (superseded by CLAUDE.md / AGENTS.md / curriculum plan)
 HANDOFF.md
 
+
+# live-bridge billing config (mode-specific Stripe price IDs)
+backend/live-bridge/.deploy.env

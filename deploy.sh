@@ -31,6 +31,13 @@ OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
 OHMLET_FLASH_MODEL=gemini-2.5-flash,\
 OHMLET_PRO_MODEL=gemini-2.5-pro,\
 OHMLET_REASONING_MODEL=gemini-2.5-pro"
+# Stripe secrets, mounted by reference from Secret Manager (same names across
+# test/live; only the secret VERSION changes). Never a value in code.
+LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest"
+# Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
+# a gitignored file because the IDs differ between test and live mode. Each line
+# is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
+LIVE_BRIDGE_ENV_FILE="${LIVE_BRIDGE_ENV_FILE:-backend/live-bridge/.deploy.env}"
 
 QUIZ_ENGINE_SERVICE="ohmlet-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"
@@ -64,7 +71,7 @@ check_gcloud() {
 }
 
 deploy_service() {
-  local name="$1" source="$2" env_vars="$3" service_account="${4:-}" min_instances="${5:-0}"
+  local name="$1" source="$2" env_vars="$3" service_account="${4:-}" min_instances="${5:-0}" secrets="${6:-}"
 
   info "Deploying ${name} from ${source} to ${REGION}..."
 
@@ -72,6 +79,13 @@ deploy_service() {
   if [[ -n "$service_account" ]]; then
     sa_flag=(--service-account="$service_account")
     info "Running as least-privilege SA: ${service_account}"
+  fi
+
+  # Secrets are mounted from Secret Manager by reference (never a value in code).
+  # Kept in sync here so a plain `--set-env-vars` deploy never drops them.
+  local secrets_flag=()
+  if [[ -n "$secrets" ]]; then
+    secrets_flag=(--set-secrets="$secrets")
   fi
 
   # --cpu-boost speeds the cold start (extra CPU only during container start, so
@@ -85,6 +99,7 @@ deploy_service() {
     --cpu-boost \
     --min-instances="$min_instances" \
     ${sa_flag[@]+"${sa_flag[@]}"} \
+    ${secrets_flag[@]+"${secrets_flag[@]}"} \
     --quiet
 
   local url
@@ -93,7 +108,20 @@ deploy_service() {
 }
 
 deploy_live_bridge() {
-  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$LIVE_BRIDGE_ENV" "$LIVE_BRIDGE_SA"
+  local env_vars="$LIVE_BRIDGE_ENV"
+  # Append the gitignored billing config (price IDs + app URL) if present, so a
+  # redeploy never drops it. Lines are KEY=VALUE; blanks/comments ignored.
+  if [[ -f "$LIVE_BRIDGE_ENV_FILE" ]]; then
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%%#*}"; line="${line//[[:space:]]/}"
+      [[ -n "$line" && "$line" == *=* ]] && env_vars="${env_vars},${line}"
+    done < "$LIVE_BRIDGE_ENV_FILE"
+    info "Loaded billing config from ${LIVE_BRIDGE_ENV_FILE}"
+  else
+    info "No ${LIVE_BRIDGE_ENV_FILE} found; deploying without Stripe price IDs (billing inert)."
+  fi
+  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$env_vars" "$LIVE_BRIDGE_SA" 0 "$LIVE_BRIDGE_SECRETS"
 }
 
 deploy_quiz_engine() {
