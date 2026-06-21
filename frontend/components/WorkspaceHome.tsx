@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,7 @@ import {
   Trophy,
   Users,
   Video,
+  X,
   Zap,
 } from 'lucide-react';
 import { CURRICULUM, allLessons, nextLesson, type CurriculumAccent } from './ohmlet/data/curriculum';
@@ -115,6 +116,70 @@ const ACHIEVEMENT_PREVIEW = [
   { name: 'Consistent Builder', desc: '3-day streak', icon: Flame, tint: 'bg-ohmlet-red' },
 ];
 
+/**
+ * Gentle note shown when the learner returns from the Stripe Customer Portal
+ * (return_url carries ?from=portal). If they downgraded to Free we reassure them
+ * their work is saved; if still on a paid plan we just confirm. Dismissible, and
+ * the query param is stripped so a refresh won't show it again.
+ */
+const PortalReturnNote: React.FC<{ plan: Plan; onSeePlans?: () => void }> = ({ plan, onSeePlans }) => {
+  const [show, setShow] = useState(() => new URLSearchParams(window.location.search).get('from') === 'portal');
+
+  useEffect(() => {
+    if (!show) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('from');
+    window.history.replaceState({}, '', url.pathname + url.search);
+  }, [show]);
+
+  if (!show) return null;
+  const onFree = plan === 'free';
+
+  return (
+    <div className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
+      <div className="ohmlet-rise flex items-start gap-3 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white p-4 shadow-press">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ohmlet-gold">
+          <Sparkles className="h-4 w-4 text-ohmlet-ink" />
+        </span>
+        <div className="min-w-0 flex-1">
+          {onFree ? (
+            <>
+              <p className="text-sm font-black text-ohmlet-ink">You're back on Free</p>
+              <p className="mt-0.5 text-xs font-semibold leading-relaxed text-ohmlet-ink-soft">
+                Your builds, XP and streak are all saved. Pick up right where you left off, or upgrade again anytime.
+              </p>
+              {onSeePlans && (
+                <button
+                  type="button"
+                  onClick={onSeePlans}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-black text-ohmlet-gold-deep transition-colors hover:text-ohmlet-ink"
+                >
+                  See plans <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-black text-ohmlet-ink">Billing updated</p>
+              <p className="mt-0.5 text-xs font-semibold leading-relaxed text-ohmlet-ink-soft">
+                You're all set on the {PLAN_META[plan].label} plan.
+              </p>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShow(false)}
+          aria-label="Dismiss"
+          className="shrink-0 rounded-lg p-1 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-cream hover:text-ohmlet-ink"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade }) => {
   const [active, setActive] = useState<ViewId>('today');
   const { userId, isAdmin } = useIdentity();
@@ -203,6 +268,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade 
 
   return (
     <div className="min-h-screen bg-ohmlet-cream font-display text-ohmlet-ink">
+      <PortalReturnNote plan={plan} onSeePlans={onUpgrade} />
       <div className="mx-auto flex max-w-[1320px]">
         {/* ── Left rail ── */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ohmlet-line bg-white px-4 py-6 lg:flex">

@@ -123,15 +123,16 @@ async def create_checkout(request: Request, claims: dict = Depends(require_claim
 
 # ── Customer Portal: manage/cancel an existing subscription ──
 @router.post("/portal")
-def create_portal(claims: dict = Depends(require_claims)) -> dict:
+def create_portal(request: Request, claims: dict = Depends(require_claims)) -> dict:
     _require_configured()
     uid = claims["uid"]
     customer = entitlements.get_customer(uid)
     if not customer:
         raise HTTPException(404, "No subscription to manage.")
+    base = _return_base(request)
     try:
         session = stripe.billing_portal.Session.create(
-            customer=customer, return_url=f"{APP_URL}/ohmlet-app"
+            customer=customer, return_url=f"{base}/ohmlet-app?from=portal"
         )
     except Exception as exc:
         logger.error("portal create failed for %s: %s", uid, exc)
