@@ -60,6 +60,16 @@ def _require_configured() -> None:
         raise HTTPException(status_code=503, detail="Billing is not configured yet.")
 
 
+def _return_base(request: Request) -> str:
+    """Where to send the browser after Checkout. Use the Origin the request came
+    from (so localhost / preview / prod all return to themselves), falling back
+    to the configured app URL. Only http(s) origins are accepted."""
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    if origin.startswith("https://") or origin.startswith("http://"):
+        return origin
+    return APP_URL
+
+
 # ── Checkout: start a subscription ──
 # The body is read manually (not a typed param) so the auth dependency runs first
 # and an unauthenticated call returns a clean 401, not a body-validation 422.
@@ -86,11 +96,12 @@ async def create_checkout(request: Request, claims: dict = Depends(require_claim
 
     # Carry the UID on both the session and the subscription so the webhook can
     # resolve the user without a prior lookup.
+    base = _return_base(request)
     kwargs = dict(
         mode="subscription",
         line_items=[{"price": price, "quantity": 1}],
-        success_url=f"{APP_URL}/ohmlet-app?upgraded=1",
-        cancel_url=f"{APP_URL}/pricing",
+        success_url=f"{base}/upgrade-success?plan={plan}&session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{base}/pricing",
         client_reference_id=uid,
         metadata={"uid": uid, "plan": plan},
         subscription_data={"metadata": {"uid": uid, "plan": plan}},

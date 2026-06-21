@@ -15,6 +15,7 @@ import { AuthorPreview } from './components/ohmlet/views/AuthorPreview';
 import { AuthPage } from './components/auth/AuthPage';
 import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
 import { ErrorPage } from './components/errors/ErrorPage';
+import { UpgradeSuccess } from './components/UpgradeSuccess';
 import { useAuth } from './hooks/useAuth';
 
 type AppRoute =
@@ -30,6 +31,7 @@ type AppRoute =
   | 'login'
   | 'signup'
   | 'welcome'
+  | 'upgrade-success'
   | 'author'
   | 'ohmlet-app'
   | 'workspace'
@@ -48,6 +50,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   login: '/login',
   signup: '/signup',
   welcome: '/welcome',
+  'upgrade-success': '/upgrade-success',
   author: '/author',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
@@ -84,6 +87,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/login') return 'login';
   if (normalized === '/signup') return 'signup';
   if (normalized === '/welcome') return 'welcome';
+  if (normalized === '/upgrade-success') return 'upgrade-success';
   if (normalized === '/author') return 'author';
   if (normalized === '/workspace') return 'workspace';
 
@@ -194,6 +198,11 @@ const App: React.FC = () => {
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
     );
+  }
+
+  // ── Post-checkout success (Stripe redirects here; plan from ?plan=) ──
+  if (route === 'upgrade-success') {
+    return <UpgradeSuccess onEnter={() => navigate('ohmlet-app')} onHome={backToLanding} />;
   }
 
   // ── 404 ──
