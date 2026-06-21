@@ -16,6 +16,7 @@ Design notes (verified against current Stripe guidance):
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 
@@ -135,11 +136,15 @@ async def webhook(request: Request) -> dict:
     payload = await request.body()  # RAW body required for signature verification
     sig = request.headers.get("stripe-signature", "")
     try:
-        event = stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
+        stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
     except ValueError:
         raise HTTPException(400, "Invalid payload")
     except Exception:  # SignatureVerificationError (import path varies by SDK)
         raise HTTPException(400, "Invalid signature")
+
+    # Signature is verified against the raw payload above. Work on a plain dict
+    # (the SDK's StripeObject does not support .get()), so handler access is safe.
+    event = json.loads(payload)
 
     key = f"stripe:{event['id']}"
     if not idempotency.claim_event(key):
