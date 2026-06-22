@@ -29,7 +29,7 @@ VALID_STAGES = {"inventory", "wiring", "code", "test"}
 
 def _too_large(label: str, size: int, limit: int) -> HTTPException:
     return HTTPException(
-        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         detail=f"{label} is too large ({size} > {limit} bytes).",
     )
 

@@ -1,8 +1,8 @@
-# CI (#48 + #49 groundwork) — runs on every push/PR.
+# CI (#48 + #49) — runs on every push/PR.
 #
 # Three jobs:
 #   frontend  — install, vulnerability audit, lesson lint, production build
-#   backend   — compile + vulnerability audit each Python service
+#   backend   — compile + unit tests (hard gate) + vulnerability audit per service
 #   secrets   — scan the diff for accidentally committed credentials
 #
 # High-severity vulnerabilities fail the build, so a vulnerable dependency
@@ -59,6 +59,19 @@ jobs:
       - name: Compile
         run: |
           python -m compileall -q backend/${{ matrix.service }}/app
+      # Hard gate: unit tests must pass. Services without a tests/ dir are skipped.
+      - name: Tests
+        run: |
+          if [ -d backend/${{ matrix.service }}/tests ]; then
+            if [ -f backend/${{ matrix.service }}/requirements-dev.txt ]; then
+              pip install -r backend/${{ matrix.service }}/requirements-dev.txt
+            else
+              pip install pytest
+            fi
+            cd backend/${{ matrix.service }} && python -m pytest
+          else
+            echo "No tests/ for ${{ matrix.service }} — skipping."
+          fi
       # Reports known CVEs in the dependency tree. Surfaced for triage rather
       # than hard-blocking: pip-audit has no severity filter, and the google-adk
       # tree carries transitive advisories we cannot all patch immediately.
