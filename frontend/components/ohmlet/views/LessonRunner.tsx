@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, X, Zap } from 'lucide-react';
+import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
 import { LEVEL_META, buildLeveledSteps, heartsForLevel, xpForLevel } from '../data/levels';
 import { assessDrawing } from '../../../services/quizEngineClient';
+import { playCorrect, playWrong, playComplete, isSfxMuted, setSfxMuted } from '../../../services/sfx';
 
 const QUIZ_API_ROOT = (import.meta.env.VITE_OHMLET_QUIZ_API_BASE_URL as string) || 'http://localhost:8083';
 
@@ -70,6 +71,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [pos, setPos] = useState(0);
   const [mastered, setMastered] = useState<Set<number>>(new Set());
   const [hearts, setHearts] = useState(() => heartsForLevel(level));
+  const [muted, setMuted] = useState(isSfxMuted);
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [done, setDone] = useState(false);
@@ -229,6 +231,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     const ok = evaluate();
     setCorrect(ok);
     setChecked(true);
+    ok ? playCorrect() : playWrong();
     if (!ok) setHearts((h) => Math.max(0, h - 1));
   };
 
@@ -238,6 +241,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setAsyncMsg(message);
     setCorrect(ok);
     setChecked(true);
+    ok ? playCorrect() : playWrong();
     if (!ok) setHearts((h) => Math.max(0, h - 1));
   };
 
@@ -263,6 +267,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     }
     if (pos + 1 >= nextQueue.length) {
       setDone(true);
+      playComplete();
       onComplete(lessonId, earnedXp, level);
       return;
     }
@@ -350,6 +355,14 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
             {levelMeta.name} round
           </span>
         )}
+        <button
+          onClick={() => { const next = !muted; setMuted(next); setSfxMuted(next); }}
+          className="shrink-0 rounded-full p-1.5 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-line hover:text-ohmlet-ink"
+          aria-label={muted ? 'Unmute sound effects' : 'Mute sound effects'}
+          aria-pressed={muted}
+        >
+          {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+        </button>
         <div className="flex shrink-0 items-center gap-1">
           <Heart className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
           <span className="text-base font-black tabular-nums">{hearts}</span>
