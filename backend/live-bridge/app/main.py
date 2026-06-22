@@ -29,6 +29,7 @@ from ohmlet_live_agent.tools import set_priority_models
 from state_store import router as state_router
 from account import router as account_router
 from billing import router as billing_router
+from privacy import router as privacy_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -85,6 +86,8 @@ app.include_router(state_router)
 app.include_router(account_router)
 # Stripe billing: Checkout, Customer Portal, and the plan-writing webhook.
 app.include_router(billing_router)
+# Privacy rights (GDPR/CCPA/...): data export + account deletion.
+app.include_router(privacy_router)
 
 session_service = InMemorySessionService()
 runner = Runner(

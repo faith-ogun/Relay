@@ -16,6 +16,7 @@ import { AuthPage } from './components/auth/AuthPage';
 import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
 import { ErrorPage } from './components/errors/ErrorPage';
 import { UpgradeSuccess } from './components/UpgradeSuccess';
+import { AccountPage } from './components/AccountPage';
 import { useAuth } from './hooks/useAuth';
 
 type AppRoute =
@@ -33,6 +34,7 @@ type AppRoute =
   | 'welcome'
   | 'upgrade-success'
   | 'author'
+  | 'account'
   | 'ohmlet-app'
   | 'workspace'
   | 'notfound';
@@ -52,6 +54,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   welcome: '/welcome',
   'upgrade-success': '/upgrade-success',
   author: '/author',
+  account: '/account',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
   notfound: '/404',
@@ -89,6 +92,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/welcome') return 'welcome';
   if (normalized === '/upgrade-success') return 'upgrade-success';
   if (normalized === '/author') return 'author';
+  if (normalized === '/account') return 'account';
   if (normalized === '/workspace') return 'workspace';
 
   // Anything else is a real 404 (e.g. someone trying /free to be sneaky).
@@ -149,17 +153,18 @@ const App: React.FC = () => {
   }, []);
 
   // ── Route guards (run once auth state is known) ──
-  const isProtected = route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome';
+  const isProtected =
+    route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome' || route === 'account';
   const isAuthRoute = route === 'login' || route === 'signup';
 
   useEffect(() => {
     if (loading) return;
-    if (!user && (route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome')) {
+    if (!user && isProtected) {
       navigate('login');
     } else if (user && (route === 'login' || route === 'signup')) {
       navigate('ohmlet-app');
     }
-  }, [loading, user, route, navigate]);
+  }, [loading, user, route, navigate, isProtected]);
 
   // Wait for auth before deciding anything that depends on it (public marketing
   // pages render instantly; only the auth-sensitive routes show the splash).
@@ -187,7 +192,13 @@ const App: React.FC = () => {
   // ── Workspace (auth-gated) ──
   if (route === 'ohmlet-app' || route === 'workspace') {
     if (!user) return <AuthSplash />;
-    return <WorkspaceHome onBack={backToLanding} onUpgrade={() => navigate('pricing')} />;
+    return (
+      <WorkspaceHome
+        onBack={backToLanding}
+        onUpgrade={() => navigate('pricing')}
+        onAccount={() => navigate('account')}
+      />
+    );
   }
 
   // ── Author console (admin only) ──
@@ -198,6 +209,12 @@ const App: React.FC = () => {
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
     );
+  }
+
+  // ── Account & privacy (auth-gated): billing, data export, delete ──
+  if (route === 'account') {
+    if (!user) return <AuthSplash />;
+    return <AccountPage onBack={() => navigate('ohmlet-app')} onUpgrade={() => navigate('pricing')} />;
   }
 
   // ── Post-checkout success (Stripe redirects here; plan from ?plan=) ──

@@ -10,6 +10,7 @@ import {
   PenTool,
   Play,
   Radio,
+  Settings,
   Sparkles,
   Trophy,
   Users,
@@ -26,6 +27,7 @@ import { CommunityView } from './ohmlet/views/CommunityView';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
+import { useAuth } from '../hooks/useAuth';
 import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
 import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
@@ -70,6 +72,7 @@ const dayStr = (offsetDays = 0) => {
 interface WorkspaceHomeProps {
   onBack?: () => void;
   onUpgrade?: () => void;
+  onAccount?: () => void;
 }
 
 type ViewId = 'today' | 'path' | 'live' | 'sandbox' | 'community' | 'achievements' | 'draw';
@@ -180,9 +183,11 @@ const PortalReturnNote: React.FC<{ plan: Plan; onSeePlans?: () => void }> = ({ p
   );
 };
 
-export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade }) => {
+export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade, onAccount }) => {
   const [active, setActive] = useState<ViewId>('today');
   const { userId, isAdmin } = useIdentity();
+  const { user } = useAuth();
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
   const { plan, setPlan } = usePlan(userId);
 
   // Progress persists per-user: instantly to localStorage (refresh-safe) and,
@@ -300,11 +305,22 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade 
             })}
           </nav>
           <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white p-3 shadow-press-sm">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black">F</span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black text-ohmlet-ink">faith</p>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase">
+              {(displayName || 'O').trim().charAt(0)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
               <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
             </div>
+            {onAccount && (
+              <button
+                onClick={onAccount}
+                className="shrink-0 rounded-lg p-1.5 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-cream hover:text-ohmlet-ink"
+                aria-label="Account and privacy"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
           </div>
           {/* Admin-only plan switcher: stands in for billing while we wire Stripe.
               Gated to admins so normal users never see it (and default to Free).

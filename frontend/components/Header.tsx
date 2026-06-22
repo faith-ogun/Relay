@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, Settings, X } from 'lucide-react';
 import { OhmletLogo } from './Logo';
 
-type SiteRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'login' | 'signup' | 'ohmlet-app';
+type SiteRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'login' | 'signup' | 'account' | 'ohmlet-app';
 
 interface HeaderProps {
   activeRoute: string;
@@ -127,9 +127,20 @@ export const Header: React.FC<HeaderProps> = ({
                         role="menuitem"
                         onClick={() => {
                           setMenuOpen(false);
-                          onSignOut();
+                          onNavigate('account');
                         }}
                         className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-extrabold text-ohmlet-ink transition-colors hover:bg-ohmlet-gold-soft"
+                      >
+                        <Settings className="h-4 w-4" /> Account &amp; privacy
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onSignOut();
+                        }}
+                        className="flex w-full items-center gap-2 border-t border-ohmlet-line px-4 py-3 text-left text-sm font-extrabold text-ohmlet-ink transition-colors hover:bg-ohmlet-gold-soft"
                       >
                         <LogOut className="h-4 w-4" /> Sign out
                       </button>
