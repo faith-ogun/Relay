@@ -212,6 +212,12 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   );
   const xp = progress.xp;
   const streak = progress.streak;
+  // Units fully completed (every lesson in every skill done) — drives the
+  // unit-tier achievements.
+  const unitsCompleted = useMemo(
+    () => CURRICULUM.filter((u) => u.skills.every((s) => s.lessons.every((l) => completed.has(l.id)))).length,
+    [completed],
+  );
   const [running, setRunning] = useState<{ id: string; accent: string; level: number } | null>(null);
 
   const next = nextLesson(completed) ?? allLessons()[0];
@@ -362,7 +368,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
           {active === 'sandbox' && <SandboxView />}
           {active === 'community' && <CommunityView currentUser={displayName} />}
-          {active === 'achievements' && <AchievementsView xp={xp} streak={streak} />}
+          {active === 'achievements' && (
+            <AchievementsView stats={{ xp, streak, builds: completed.size, units: unitsCompleted }} />
+          )}
           {active === 'draw' && <SandboxView />}
 
           {active === 'today' && (

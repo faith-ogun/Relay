@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Flame, Sparkles, Trophy, X, Zap } from 'lucide-react';
-import { ACHIEVEMENTS, CardShape, RARITY_LABELS } from '../data/achievements';
-import type { Achievement } from '../types';
+import { ACHIEVEMENTS, CardShape, RARITY_LABELS, isEarned, metricValue, progressLabel } from '../data/achievements';
+import type { Achievement, AchievementStats } from '../types';
 
 /**
  * AchievementsView — the trophy case. Holographic, tilt-on-hover cards that
- * pop out to inspect (flip to reveal the story on the back). Summary stats up
- * top give the collection weight, the way Duolingo's profile does.
+ * pop out to inspect (flip to reveal the story on the back). "Earned" is computed
+ * from real stats, so locked cards show genuine progress (e.g. "12 / 25 builds").
  */
 
 interface AchievementsViewProps {
-  xp?: number;
-  streak?: number;
+  stats?: AchievementStats;
 }
 
 const tilt = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -29,15 +28,25 @@ const resetTilt = (e: React.MouseEvent<HTMLDivElement>) => {
   e.currentTarget.style.transform = '';
 };
 
-export const AchievementsView: React.FC<AchievementsViewProps> = ({ xp = 1240, streak = 3 }) => {
+export const AchievementsView: React.FC<AchievementsViewProps> = ({ stats = {} }) => {
   const [inspect, setInspect] = useState<Achievement | null>(null);
   const [flipped, setFlipped] = useState(false);
 
-  const earned = useMemo(() => ACHIEVEMENTS.filter((a) => a.earned).length, []);
-  const rareEarned = useMemo(() => ACHIEVEMENTS.filter((a) => a.earned && a.tier !== 'common').length, []);
+  const xp = stats.xp ?? 0;
+  const streak = stats.streak ?? 0;
 
-  const openCard = (a: Achievement) => {
-    if (!a.earned) return;
+  // Earned-first, then locked sorted by how close they are (most motivating up top).
+  const ordered = useMemo(() => {
+    return [...ACHIEVEMENTS]
+      .map((a) => ({ a, earned: isEarned(a, stats), progress: Math.min(1, metricValue(a, stats) / a.threshold) }))
+      .sort((x, y) => (x.earned === y.earned ? y.progress - x.progress : x.earned ? -1 : 1));
+  }, [stats]);
+
+  const earned = ordered.filter((o) => o.earned).length;
+  const rareEarned = ordered.filter((o) => o.earned && o.a.tier !== 'common').length;
+
+  const openCard = (a: Achievement, isE: boolean) => {
+    if (!isE) return;
     setFlipped(false);
     setInspect(a);
   };
@@ -57,15 +66,15 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({ xp = 1240, s
 
       {/* Grid */}
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {ACHIEVEMENTS.map((a) => {
+        {ordered.map(({ a, earned: isE }) => {
           const rarityMeta = RARITY_LABELS[a.tier];
           return (
             <div
               key={a.id}
-              onClick={() => openCard(a)}
-              onMouseMove={a.earned ? tilt : undefined}
-              onMouseLeave={a.earned ? resetTilt : undefined}
-              className={`ohmlet-holo-card ${a.earned ? 'earned cursor-pointer' : 'locked'} aspect-[3/4]`}
+              onClick={() => openCard(a, isE)}
+              onMouseMove={isE ? tilt : undefined}
+              onMouseLeave={isE ? resetTilt : undefined}
+              className={`ohmlet-holo-card ${isE ? 'earned cursor-pointer' : 'locked'} aspect-[3/4]`}
               style={{ ['--card-bg' as string]: a.bg, ['--holo-glow' as string]: a.glowColor }}
             >
               <div className="relative z-[3] flex h-full flex-col items-center justify-between p-4 text-white">
@@ -79,7 +88,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({ xp = 1240, s
                 <div className="w-full text-center">
                   <p className="text-sm font-black leading-tight">{a.title}</p>
                   <p className="mt-0.5 text-[11px] font-semibold text-white/70">
-                    {a.earned ? `Earned ${a.earnedDate}` : `${a.rarity}% have this`}
+                    {isE ? 'Earned' : progressLabel(a, stats)}
                   </p>
                 </div>
               </div>
@@ -128,7 +137,6 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({ xp = 1240, s
                 <div className="relative z-[3] flex h-full flex-col items-center justify-center gap-4 p-7 text-center text-white">
                   <CardShape shape={inspect.shape} className="h-12 w-12 opacity-80" />
                   <p className="text-base font-bold leading-relaxed">{inspect.backText}</p>
-                  {inspect.earnedDate && <p className="text-xs font-black uppercase tracking-wide text-white/60">Earned {inspect.earnedDate}</p>}
                 </div>
               </div>
             </div>

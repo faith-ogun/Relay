@@ -66,7 +66,7 @@ import type {
 import { LESSON_CONTENT, type LessonStep } from './ohmlet/data/lessons';
 import { LearnPath } from './LearnPath';
 import { CURRICULUM, findLesson } from './ohmlet/data/curriculum';
-import { RARITY_LABELS, ACHIEVEMENTS, CardShape } from './ohmlet/data/achievements';
+import { RARITY_LABELS, ACHIEVEMENTS, CardShape, isEarned } from './ohmlet/data/achievements';
 import { QUICK_PROMPTS, BUILD_LIBRARY } from './ohmlet/data/library';
 import { TOUR_STEPS, FOCUS_STEPS } from './ohmlet/data/tour';
 import { useTour } from './ohmlet/hooks/useTour';
@@ -1112,7 +1112,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
             </div>
             <div className="text-left">
               <p className="text-sm font-black">faith</p>
-              <p className={`text-[10px] ${t.sidebarCardMuted}`}>{ACHIEVEMENTS.filter(a => a.earned).length}/{ACHIEVEMENTS.length} achievements</p>
+              <p className={`text-[10px] ${t.sidebarCardMuted}`}>{ACHIEVEMENTS.filter(a => isEarned(a, {})).length}/{ACHIEVEMENTS.length} achievements</p>
             </div>
             <ChevronRight className={`ml-auto h-4 w-4 ${dark ? 'text-white/30' : 'text-slate-300'}`} />
           </button>
@@ -3164,7 +3164,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
             <div className="flex justify-center gap-8 py-4">
               {[
                 { value: streakCount, label: 'Day Streak', icon: <Flame className="h-4 w-4 text-amber-400" /> },
-                { value: ACHIEVEMENTS.filter(a => a.earned).length, label: 'Achievements', icon: <Trophy className="h-4 w-4 text-[#f3e515]" /> },
+                { value: ACHIEVEMENTS.filter(a => isEarned(a, {})).length, label: 'Achievements', icon: <Trophy className="h-4 w-4 text-[#f3e515]" /> },
                 { value: xp, label: 'Total XP', icon: <Zap className="h-4 w-4 text-[#f3e515]" /> },
               ].map((stat) => (
                 <div key={stat.label} className="text-center">
@@ -3245,7 +3245,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
             {profileTab === 'achievements' && (
               <div className="px-6 pt-5 pb-6">
                 <p className={`text-[11px] font-semibold mb-4 ${dark ? 'text-white/30' : 'text-slate-400'}`}>
-                  {ACHIEVEMENTS.filter(a => a.earned).length} of {ACHIEVEMENTS.length} unlocked · Tap to inspect
+                  {ACHIEVEMENTS.filter(a => isEarned(a, {})).length} of {ACHIEVEMENTS.length} unlocked · Tap to inspect
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {ACHIEVEMENTS.map((ach) => (
@@ -3253,9 +3253,9 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                       key={ach.id}
                       className="cursor-pointer"
                       style={{ perspective: '500px' }}
-                      onClick={() => { if (ach.earned) { setInspectCard(ach); setInspectFlipped(false); } }}
+                      onClick={() => { if (isEarned(ach, {})) { setInspectCard(ach); setInspectFlipped(false); } }}
                       onMouseMove={(e) => {
-                        if (!ach.earned) return;
+                        if (!isEarned(ach, {})) return;
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = ((e.clientX - rect.left) / rect.width) * 100;
                         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -3274,12 +3274,12 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                       }}
                     >
                       <div
-                        className={`ohmlet-holo-card ${ach.earned ? 'earned' : 'locked'} flex flex-col`}
-                        style={{ '--holo-glow': ach.glowColor, '--card-bg': ach.earned ? ach.bg : (dark ? '#18181b' : '#e2e8f0'), aspectRatio: '3/4' } as React.CSSProperties}
+                        className={`ohmlet-holo-card ${isEarned(ach, {}) ? 'earned' : 'locked'} flex flex-col`}
+                        style={{ '--holo-glow': ach.glowColor, '--card-bg': isEarned(ach, {}) ? ach.bg : (dark ? '#18181b' : '#e2e8f0'), aspectRatio: '3/4' } as React.CSSProperties}
                       >
                         {/* Shape centerpiece */}
                         <div className="relative z-[3] flex flex-1 items-center justify-center">
-                          <CardShape shape={ach.shape} className={`h-14 w-14 ${!ach.earned ? 'opacity-20' : 'drop-shadow-lg'}`} />
+                          <CardShape shape={ach.shape} className={`h-14 w-14 ${!isEarned(ach, {}) ? 'opacity-20' : 'drop-shadow-lg'}`} />
                         </div>
                         {/* Frosted info bar */}
                         <div className="ohmlet-card-info relative z-[3] px-3 py-2.5">
@@ -3296,7 +3296,7 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                   ))}
                 </div>
                 <p className={`mt-4 text-center text-[10px] ${dark ? 'text-white/20' : 'text-slate-300'}`}>
-                  Cards to unlock: {ACHIEVEMENTS.filter(a => !a.earned).length}
+                  Cards to unlock: {ACHIEVEMENTS.filter(a => !isEarned(a, {})).length}
                 </p>
               </div>
             )}
@@ -3355,7 +3355,6 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                       <p className="text-[11px] text-white/45 mt-1">{inspectCard.desc}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[10px] text-white/30">{inspectCard.rarity}% of builders</span>
-                        {inspectCard.earnedDate && <span className="text-[10px] text-white/30">Earned {inspectCard.earnedDate}</span>}
                       </div>
                     </div>
                   </div>
@@ -3372,9 +3371,6 @@ export const OhmletLab: React.FC<OhmletLabProps> = ({ onBackToLanding }) => {
                     <p className="mt-3 text-sm leading-relaxed italic text-white/50 max-w-[240px]">
                       "{inspectCard.backText}"
                     </p>
-                    {inspectCard.earnedDate && (
-                      <p className="mt-4 text-xs font-bold text-white/25">Unlocked {inspectCard.earnedDate}</p>
-                    )}
                   </div>
                 </div>
               </div>
