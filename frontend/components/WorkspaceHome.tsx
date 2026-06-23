@@ -24,6 +24,7 @@ import { LessonRunner } from './ohmlet/views/LessonRunner';
 import { LiveTutorView } from './ohmlet/views/LiveTutorView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { CommunityView } from './ohmlet/views/CommunityView';
+import { reportXp } from '../services/community';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
@@ -233,6 +234,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
   const handleComplete = useCallback(
     (id: string, gained: number, level: number) => {
+      void reportXp(gained); // feed the weekly league (best-effort)
       setProgress((prev) => {
         const levels = { ...(prev.lessonLevels ?? {}) };
         const prevLevel = levels[id] ?? 0;
@@ -359,7 +361,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
           {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
           {active === 'sandbox' && <SandboxView />}
-          {active === 'community' && <CommunityView />}
+          {active === 'community' && <CommunityView currentUser={displayName} />}
           {active === 'achievements' && <AchievementsView xp={xp} streak={streak} />}
           {active === 'draw' && <SandboxView />}
 
