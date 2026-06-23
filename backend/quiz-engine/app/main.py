@@ -6,6 +6,7 @@ and Google Cloud Vision for assessing user drawings/annotations.
 """
 
 import json
+import logging
 import os
 from functools import lru_cache
 from typing import Optional
@@ -13,6 +14,8 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from resilience import CircuitBreaker, CircuitOpenError, run_resilient
 
 app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
 
@@ -90,27 +93,44 @@ class AssessDrawingResponse(BaseModel):
 
 # ── Gemini integration ──
 
+# A hard request timeout (ms) so a slow/stuck Vertex call cannot hang the request
+# indefinitely. The circuit breakers below then stop us from waiting this long on
+# every call once an upstream is unhealthy. Env-tunable.
+GENAI_TIMEOUT_MS = int(os.getenv("OHMLET_GENAI_TIMEOUT_MS", "15000"))
+
+
 @lru_cache(maxsize=1)
 def _get_genai_client():
     """Gemini client (Vertex AI or API key), built once and reused.
 
     Cached so we do not pay client construction (and Vertex auth discovery) on
-    every request, which added avoidable latency to each assessment."""
+    every request, which added avoidable latency to each assessment. A request
+    timeout is set so a single call cannot hang forever (#50)."""
     try:
         from google import genai
+        from google.genai import types as genai_types
+        http_opts = genai_types.HttpOptions(timeout=GENAI_TIMEOUT_MS)
         use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
         if use_vertex:
             return genai.Client(
                 vertexai=True,
                 project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
                 location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+                http_options=http_opts,
             )
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
-            return genai.Client(api_key=api_key)
+            return genai.Client(api_key=api_key, http_options=http_opts)
     except ImportError:
         pass
     return None
+
+
+# Per-upstream circuit breakers: open after a few consecutive failures so we fail
+# fast (fallback content / clean 503) instead of making every learner wait out
+# the full timeout while Vertex is unhealthy.
+_VISION_CB = CircuitBreaker("vision", fail_max=4, reset_timeout=30.0)
+_GEN_CB = CircuitBreaker("question-gen", fail_max=4, reset_timeout=30.0)
 
 
 QUESTION_GEN_PROMPT = """You are a question generator for an electronics learning platform.
@@ -177,9 +197,10 @@ async def generate_questions(req: GenerateRequest):
     else:
         difficulty = "hard"
 
-    # Try Gemini generation
+    # Try Gemini generation — but only if the breaker is closed. When Vertex is
+    # unhealthy we skip straight to the fallback instead of waiting out a timeout.
     client = _get_genai_client()
-    if client:
+    if client and _GEN_CB.allow():
         try:
             prompt = QUESTION_GEN_PROMPT.format(
                 count=req.count,
@@ -210,13 +231,15 @@ async def generate_questions(req: GenerateRequest):
             if req.allowed_types:
                 allowed = set(req.allowed_types)
                 questions = [q for q in questions if q.type in allowed]
+            _GEN_CB.record_success()
             return GenerateResponse(
                 questions=questions[: req.count],
                 recommended_topic=recommended_topic,
                 skill_gaps=skill_gaps,
             )
         except Exception as e:
-            # Fall back to pre-built questions
+            # Fall back to pre-built questions (the learner still gets a quiz).
+            _GEN_CB.record_failure()
             print(f"Gemini generation failed: {e}")
 
     # Fallback: return pre-built questions for the topic
@@ -239,6 +262,13 @@ async def assess_drawing(req: AssessDrawingRequest):
     client = _get_genai_client()
     if not client:
         raise HTTPException(503, "Vision service unavailable")
+
+    if not _VISION_CB.allow():
+        raise HTTPException(
+            503,
+            "Drawing assessment is busy right now. Please try again in a moment.",
+            headers={"Retry-After": "30"},
+        )
 
     try:
         import base64
@@ -280,9 +310,18 @@ Keep feedback to one or two short, encouraging sentences."""
             config=config,
         )
         result = json.loads(response.text)
+        _VISION_CB.record_success()
         return AssessDrawingResponse(**result)
     except Exception as e:
-        raise HTTPException(500, f"Assessment failed: {str(e)}")
+        # Trip the breaker and degrade to a clean, fast 503 (not a slow opaque 500)
+        # so the learner can simply retry instead of waiting out the full timeout.
+        _VISION_CB.record_failure()
+        logging.getLogger("ohmlet.quiz").warning("assess-drawing failed: %s", e)
+        raise HTTPException(
+            503,
+            "Couldn't assess the drawing right now. Please try again.",
+            headers={"Retry-After": "10"},
+        )
 
 
 @app.get("/health")

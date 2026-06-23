@@ -34,6 +34,12 @@ from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
 import ratelimit
+from resilience import CircuitBreaker
+
+# Breaker for the synchronous text-chat fallback's Gemini call, so a slow/down
+# Vertex fails fast with a friendly message instead of hanging the request (#50).
+_TEXT_CB = CircuitBreaker("text-chat", fail_max=4, reset_timeout=30.0)
+TEXT_TIMEOUT_MS = int(os.getenv("OHMLET_TEXT_TIMEOUT_MS", "20000"))
 import validation
 
 logging.basicConfig(level=logging.INFO)
@@ -431,30 +437,37 @@ async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> d
     from google import genai
     from ohmlet_live_agent.agent import OHMLET_INSTRUCTION
 
+    http_opts = genai.types.HttpOptions(timeout=TEXT_TIMEOUT_MS)
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
     if use_vertex:
         client = genai.Client(
             vertexai=True,
             project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
             location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+            http_options=http_opts,
         )
     else:
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""), http_options=http_opts)
 
     text_model = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
 
-    try:
-        response = client.models.generate_content(
-            model=text_model,
-            contents=f"[stage={stage}] {text}",
-            config=genai.types.GenerateContentConfig(
-                system_instruction=OHMLET_INSTRUCTION,
-            ),
-        )
-        reply = response.text.strip() if response.text else "No response generated."
-    except Exception as e:
-        logger.error("Text fallback failed: %s", e)
-        reply = f"Sorry, I hit an error: {e}"
+    if not _TEXT_CB.allow():
+        reply = "The tutor is very busy right now. Please try again in a moment."
+    else:
+        try:
+            response = client.models.generate_content(
+                model=text_model,
+                contents=f"[stage={stage}] {text}",
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=OHMLET_INSTRUCTION,
+                ),
+            )
+            reply = response.text.strip() if response.text else "No response generated."
+            _TEXT_CB.record_success()
+        except Exception as e:
+            _TEXT_CB.record_failure()
+            logger.error("Text fallback failed: %s", e)
+            reply = "Sorry, the tutor hit a snag. Please try again in a moment."
 
     return {
         "session_id": session_id,
