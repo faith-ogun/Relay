@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Award,
   Boxes,
+  CircuitBoard,
   Flame,
   Home,
   Map as MapIcon,
@@ -23,6 +24,7 @@ import { LearnPath } from './LearnPath';
 import { LessonRunner } from './ohmlet/views/LessonRunner';
 import { LiveTutorView } from './ohmlet/views/LiveTutorView';
 import { SandboxView } from './ohmlet/views/SandboxView';
+import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
 import { reportXp } from '../services/community';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
@@ -76,7 +78,7 @@ interface WorkspaceHomeProps {
   onAccount?: () => void;
 }
 
-type ViewId = 'today' | 'path' | 'live' | 'sandbox' | 'community' | 'achievements' | 'draw';
+type ViewId = 'today' | 'path' | 'live' | 'simulator' | 'sandbox' | 'community' | 'achievements' | 'draw';
 
 const ACCENT_HEX: Record<CurriculumAccent, string> = {
   gold: '#facc2e',
@@ -103,6 +105,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'today', label: 'Today', icon: Home },
   { id: 'path', label: 'Learning path', icon: MapIcon },
   { id: 'live', label: 'Live tutor', icon: Video },
+  { id: 'simulator', label: 'Simulator', icon: CircuitBoard },
   { id: 'sandbox', label: 'Sandbox', icon: Boxes, beta: true },
   { id: 'community', label: 'Community', icon: Users },
   { id: 'achievements', label: 'Achievements', icon: Award },
@@ -111,6 +114,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
 const WAYS: Array<{ id: ViewId; title: string; sub: string; icon: React.ComponentType<{ className?: string }>; accent: string; beta?: boolean }> = [
   { id: 'path', title: 'Continue the path', sub: 'Guided lessons', icon: MapIcon, accent: 'bg-ohmlet-gold-soft' },
   { id: 'live', title: 'Live bench session', sub: 'Voice + camera tutor', icon: Radio, accent: 'bg-ohmlet-blue-soft' },
+  { id: 'simulator', title: 'Open the simulator', sub: 'See current flow live', icon: CircuitBoard, accent: 'bg-ohmlet-gold-soft' },
   { id: 'sandbox', title: 'Open the sandbox', sub: '3D breadboard', icon: Boxes, accent: 'bg-[#eef7e0]', beta: true },
   { id: 'community', title: 'See the community', sub: 'Builds + challenges', icon: Users, accent: 'bg-[#fdece8]' },
 ];
@@ -366,6 +370,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           )}
 
           {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
+          {active === 'simulator' && <SimulatorView />}
           {active === 'sandbox' && <SandboxView />}
           {active === 'community' && <CommunityView currentUser={displayName} />}
           {active === 'achievements' && (
