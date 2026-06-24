@@ -5,4 +5,4 @@ google-adk
 google-cloud-firestore==2.21.0
 firebase-admin==6.5.0
 stripe>=11.0.0
-websockets>=13.0
+websockets>=16.0
