@@ -46,6 +46,13 @@ type UseLiveBridgeReturn = {
   switchCamera: () => void;
   /** Send a single frame to the tutor immediately ("look at my board now"). */
   captureSnapshot: () => void;
+  /**
+   * Grab one still from the live preview as a base64 JPEG (no data: prefix),
+   * without streaming it to the tutor. Used by the inventory kit check, which
+   * posts the frame to the vision-verifier service. Resolves null if the camera
+   * is not ready.
+   */
+  grabFrame: (maxWidth?: number) => Promise<string | null>;
   sendText: (text: string, stage: string) => void;
   sendStageUpdate: (stage: string) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -441,6 +448,46 @@ export function useLiveBridge({
     sendFrame();
   }, [sendFrame]);
 
+  // Grab a still for the inventory kit check (posted to the vision-verifier, not
+  // streamed to the tutor). A slightly larger frame than the live heartbeat so
+  // small parts read clearly. Resolves null if the camera isn't ready.
+  const grabFrame = useCallback((maxWidth = 768): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const video = videoRef.current;
+      if (!video || !video.videoWidth) {
+        resolve(null);
+        return;
+      }
+      if (!canvasRef.current) canvasRef.current = document.createElement('canvas');
+      const scale = Math.min(1, maxWidth / video.videoWidth);
+      const w = Math.floor(video.videoWidth * scale);
+      const h = Math.floor(video.videoHeight * scale);
+      const canvas = canvasRef.current;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.drawImage(video, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? null);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        },
+        'image/jpeg',
+        0.7,
+      );
+    });
+  }, []);
+
   // ── Send text message ──
 
   const sendText = useCallback(
@@ -481,6 +528,7 @@ export function useLiveBridge({
     toggleCam,
     switchCamera,
     captureSnapshot,
+    grabFrame,
     sendText,
     sendStageUpdate,
     videoRef,

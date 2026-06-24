@@ -22,6 +22,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 import entitlements
+import obs
 from auth import _ensure_app, require_claims
 
 logger = logging.getLogger("ohmlet.privacy")
@@ -111,6 +112,7 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
     except Exception as exc:
         logger.warning("usage export failed for %s: %s", uid, exc)
 
+    obs.audit("privacy.data_exported", uid=uid)
     return out
 
 
@@ -176,5 +178,6 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
         logger.error("auth user delete failed for %s: %s", uid, exc)
         raise HTTPException(502, "Could not fully delete the account; please contact support.") from exc
 
+    obs.audit("privacy.account_deleted", uid=uid, collections=deleted, hadStripeCustomer=bool(customer))
     logger.info("account erased: uid=%s collections=%s", uid, deleted)
     return {"status": "deleted", "deletedAt": datetime.now(timezone.utc).isoformat()}

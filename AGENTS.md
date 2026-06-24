@@ -92,10 +92,16 @@ ohmlet/
 └── backend/                       ← modular microservices, each its own Cloud Run service
     ├── live-bridge/               ← real-time bidi streaming (WebSocket ↔ Gemini Live via ADK)
     │   └── app/ohmlet_live_agent/ ← ADK agent with multi-model tool dispatch
-    └── quiz-engine/               ← adaptive quiz + drawing assessment
+    ├── quiz-engine/               ← adaptive quiz + drawing assessment
+    └── vision-verifier/           ← camera component inventory check (Gemini 3.5 Flash vision)
 ```
 
-Future backend services (each independent): `vision-verifier/`, `reporter/` (3D twin generation).
+All services share an observability spine: `app/obs.py` (structured JSON logs +
+Cloud Trace correlation, `/internal/metrics`, security audit trail, clean 500s)
+and `app/cors.py` (scoped CORS), duplicated per service like `resilience.py`.
+See `ops/observability.md` and `ops/alerting.sh`.
+
+Future backend services (each independent): `reporter/` (3D twin generation).
 
 ---
 

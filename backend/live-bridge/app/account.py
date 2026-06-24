@@ -14,6 +14,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 import entitlements
+import obs
 from auth import is_admin, require_claims
 
 logger = logging.getLogger("ohmlet.account")
@@ -52,5 +53,6 @@ def set_my_plan(payload: dict, claims: dict = Depends(require_claims)) -> dict:
     if requested not in entitlements.VALID_PLANS:
         raise HTTPException(status_code=422, detail=f"plan must be one of {entitlements.VALID_PLANS}")
     plan = entitlements.set_plan(claims["uid"], requested)
+    obs.audit("account.plan_set_admin", uid=claims["uid"], plan=plan, by=claims.get("email"))
     logger.info("Admin %s set their plan to %s", claims.get("email"), plan)
     return {"plan": plan}

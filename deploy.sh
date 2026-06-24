@@ -2,10 +2,11 @@
 # deploy.sh — Automated Cloud Run deployment for Ohmlet
 #
 # Usage:
-#   ./deploy.sh              Deploy all services
-#   ./deploy.sh live-bridge  Deploy live-bridge only
-#   ./deploy.sh quiz-engine  Deploy quiz-engine only
-#   ./deploy.sh frontend     Build and deploy frontend
+#   ./deploy.sh                  Deploy all services
+#   ./deploy.sh live-bridge      Deploy live-bridge only
+#   ./deploy.sh quiz-engine      Deploy quiz-engine only
+#   ./deploy.sh vision-verifier  Deploy vision-verifier only
+#   ./deploy.sh frontend         Build and deploy frontend
 #
 # Prerequisites:
 #   - gcloud CLI installed and authenticated
@@ -31,9 +32,10 @@ OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
 OHMLET_FLASH_MODEL=gemini-2.5-flash,\
 OHMLET_PRO_MODEL=gemini-2.5-pro,\
 OHMLET_REASONING_MODEL=gemini-2.5-pro"
-# Stripe secrets, mounted by reference from Secret Manager (same names across
-# test/live; only the secret VERSION changes). Never a value in code.
-LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest"
+# Stripe secrets + the metrics token, mounted by reference from Secret Manager
+# (same names across test/live; only the secret VERSION changes). Never a value
+# in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
+LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
 # Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
 # a gitignored file because the IDs differ between test and live mode. Each line
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
@@ -50,6 +52,23 @@ GOOGLE_CLOUD_LOCATION=global"
 # is always on; set this to 1 to keep one instance warm and remove cold starts
 # entirely (small standing cost). Default 0 to avoid standing spend.
 QUIZ_ENGINE_MIN_INSTANCES="${OHMLET_QUIZ_MIN_INSTANCES:-0}"
+# Metrics token guarding /internal/metrics (#35), by reference from Secret Manager.
+QUIZ_ENGINE_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
+
+VISION_VERIFIER_SERVICE="ohmlet-vision-verifier"
+VISION_VERIFIER_SOURCE="backend/vision-verifier"
+# Same Vertex config as quiz-engine: Gemini 3.5 Flash on the `global` location.
+VISION_VERIFIER_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
+GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
+GOOGLE_CLOUD_LOCATION=global"
+# Optional least-privilege SA (needs aiplatform.user + logging.logWriter); empty
+# falls back to the default compute SA, matching quiz-engine.
+VISION_VERIFIER_SA="${OHMLET_VISION_VERIFIER_SA:-}"
+# The inventory check runs at the start of a live session, so cold starts hurt.
+# cpu-boost is always on; set this to 1 to keep one warm (small standing cost).
+VISION_VERIFIER_MIN_INSTANCES="${OHMLET_VISION_MIN_INSTANCES:-0}"
+# Metrics token guarding /internal/metrics (#35), by reference from Secret Manager.
+VISION_VERIFIER_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
 
 # ── Helpers ──
 info()  { echo -e "\033[1;34m[deploy]\033[0m $1"; }
@@ -125,7 +144,11 @@ deploy_live_bridge() {
 }
 
 deploy_quiz_engine() {
-  deploy_service "$QUIZ_ENGINE_SERVICE" "$QUIZ_ENGINE_SOURCE" "$QUIZ_ENGINE_ENV" "" "$QUIZ_ENGINE_MIN_INSTANCES"
+  deploy_service "$QUIZ_ENGINE_SERVICE" "$QUIZ_ENGINE_SOURCE" "$QUIZ_ENGINE_ENV" "" "$QUIZ_ENGINE_MIN_INSTANCES" "$QUIZ_ENGINE_SECRETS"
+}
+
+deploy_vision_verifier() {
+  deploy_service "$VISION_VERIFIER_SERVICE" "$VISION_VERIFIER_SOURCE" "$VISION_VERIFIER_ENV" "$VISION_VERIFIER_SA" "$VISION_VERIFIER_MIN_INSTANCES" "$VISION_VERIFIER_SECRETS"
 }
 
 deploy_frontend() {
@@ -139,7 +162,7 @@ deploy_frontend() {
 verify_services() {
   info "Verifying deployed services..."
 
-  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE"; do
+  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE" "$VISION_VERIFIER_SERVICE"; do
     local url
     url=$(gcloud run services describe "$service" --region="$REGION" --format="value(status.url)" 2>/dev/null)
     if [[ -n "$url" ]]; then
@@ -167,6 +190,9 @@ main() {
     quiz-engine)
       deploy_quiz_engine
       ;;
+    vision-verifier)
+      deploy_vision_verifier
+      ;;
     frontend)
       deploy_frontend
       ;;
@@ -176,6 +202,7 @@ main() {
     all)
       deploy_live_bridge
       deploy_quiz_engine
+      deploy_vision_verifier
       deploy_frontend
       echo ""
       verify_services
@@ -184,7 +211,7 @@ main() {
       ;;
     *)
       err "Unknown target: $1"
-      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|frontend|verify|all]"
+      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|vision-verifier|frontend|verify|all]"
       exit 1
       ;;
   esac

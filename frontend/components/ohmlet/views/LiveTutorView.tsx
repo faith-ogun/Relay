@@ -4,8 +4,10 @@ import {
   CameraOff,
   CheckCircle2,
   ChevronRight,
+  CircleHelp,
   Cpu,
   Focus,
+  Loader2,
   Lock,
   Mic,
   MicOff,
@@ -15,6 +17,7 @@ import {
   ScanLine,
   Volume2,
   Wrench,
+  XCircle,
   Zap,
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
@@ -22,6 +25,13 @@ import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
+import {
+  verifyInventory,
+  verifierConfigured,
+  VerifierError,
+  type InventoryResult,
+  type PartStatus,
+} from '../../../services/visionVerifier';
 
 /**
  * LiveTutorView — the live bench session. The camera feed is the hero; voice
@@ -86,6 +96,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     toggleCam,
     switchCamera,
     captureSnapshot,
+    grabFrame,
     sendText,
     sendStageUpdate,
     videoRef,
@@ -357,6 +368,11 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           <p className="mt-2 text-center text-sm font-semibold text-ohmlet-ink-soft">
             {STAGES.find((s) => s.id === stage)?.hint}
           </p>
+
+          {/* Kit check (#33): the inventory stage verifies parts via the camera. */}
+          {stage === 'inventory' && verifierConfigured() && (
+            <KitCheck build={build} camOn={camOn} grabFrame={grabFrame} />
+          )}
         </div>
 
         {/* Transcript + input */}
@@ -456,3 +472,147 @@ const ControlButton: React.FC<{
     {on ? <OnIcon className="h-5 w-5" /> : <OffIcon className="h-5 w-5" />}
   </button>
 );
+
+// ── Kit check (#33) ──
+// The inventory stage's camera verification: grab a still of the bench, ask the
+// vision-verifier to confirm the parts, and show a per-part checklist. A real,
+// working interaction — not a static cue.
+
+const STATUS_META: Record<PartStatus['status'], { icon: React.ComponentType<{ className?: string }>; tint: string; ring: string }> = {
+  present: { icon: CheckCircle2, tint: 'text-ohmlet-green', ring: 'border-ohmlet-green/30 bg-[#eafaf0]' },
+  missing: { icon: XCircle, tint: 'text-ohmlet-red', ring: 'border-ohmlet-red/30 bg-[#fdece8]' },
+  unsure: { icon: CircleHelp, tint: 'text-ohmlet-gold-deep', ring: 'border-ohmlet-gold/40 bg-ohmlet-gold-soft' },
+};
+
+const KitCheck: React.FC<{
+  build: (typeof BUILD_LIBRARY)[number];
+  camOn: boolean;
+  grabFrame: (maxWidth?: number) => Promise<string | null>;
+}> = ({ build, camOn, grabFrame }) => {
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
+  const [result, setResult] = useState<InventoryResult | null>(null);
+  const [error, setError] = useState('');
+
+  const run = async () => {
+    setPhase('checking');
+    setError('');
+    const frame = await grabFrame();
+    if (!frame) {
+      setError('Turn the camera on and point it at your parts, then run the check.');
+      setPhase('error');
+      return;
+    }
+    try {
+      const res = await verifyInventory(frame, build.parts, build.title);
+      setResult(res);
+      setPhase('done');
+    } catch (e) {
+      setError(e instanceof VerifierError ? e.message : "Couldn't check your kit just now. Please try again.");
+      setPhase('error');
+    }
+  };
+
+  const presentCount = result?.parts.filter((p) => p.status === 'present').length ?? 0;
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+      <div className="flex items-center justify-between gap-3 border-b border-ohmlet-line px-5 py-3.5">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink">
+            <ScanLine className="h-4 w-4 text-ohmlet-gold" />
+          </span>
+          <div>
+            <h3 className="text-sm font-black tracking-tight leading-none">Kit check</h3>
+            {result && (
+              <p className="mt-1 text-[11px] font-bold text-ohmlet-ink-soft">
+                {presentCount} of {result.parts.length} parts spotted
+              </p>
+            )}
+          </div>
+        </div>
+        {result && (
+          <span
+            className={`rounded-full border-2 px-3 py-1 text-[11px] font-black uppercase tracking-wide ${
+              result.ready ? 'border-ohmlet-green bg-[#eafaf0] text-ohmlet-green' : 'border-ohmlet-gold bg-ohmlet-gold-soft text-ohmlet-gold-deep'
+            }`}
+          >
+            {result.ready ? 'Ready to wire' : 'Almost there'}
+          </span>
+        )}
+      </div>
+
+      <div className="px-5 py-4">
+        {phase === 'idle' && (
+          <div className="flex flex-col items-center gap-3 py-2 text-center">
+            <p className="text-sm font-semibold text-ohmlet-ink-soft">
+              Lay your parts out where the camera can see them, then scan to confirm your kit.
+            </p>
+            <button
+              onClick={run}
+              disabled={!camOn}
+              className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-5 py-2.5 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-40"
+            >
+              <ScanLine className="h-4 w-4" /> Scan my parts
+            </button>
+            {!camOn && <p className="text-[11px] font-bold text-ohmlet-ink-soft">Turn the camera on first.</p>}
+          </div>
+        )}
+
+        {phase === 'checking' && (
+          <div className="flex items-center justify-center gap-2.5 py-6 text-sm font-bold text-ohmlet-ink-soft">
+            <Loader2 className="h-5 w-5 animate-spin text-ohmlet-gold-deep" /> Checking your kit...
+          </div>
+        )}
+
+        {phase === 'error' && (
+          <div className="flex flex-col items-center gap-3 py-2 text-center">
+            <p className="text-sm font-semibold text-ohmlet-red">{error}</p>
+            <button
+              onClick={run}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            >
+              <RefreshCw className="h-4 w-4" /> Try again
+            </button>
+          </div>
+        )}
+
+        {phase === 'done' && result && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-ohmlet-ink">{result.feedback}</p>
+            <ul className="space-y-2">
+              {result.parts.map((p) => {
+                const meta = STATUS_META[p.status];
+                const Icon = meta.icon;
+                return (
+                  <li key={p.name} className={`flex items-start gap-2.5 rounded-xl border px-3 py-2 ${meta.ring}`}>
+                    <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${meta.tint}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-ohmlet-ink">{p.name}</p>
+                      {p.note && <p className="text-[11px] font-semibold text-ohmlet-ink-soft">{p.note}</p>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {result.found_extras.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-ohmlet-ink-soft">Also spotted</span>
+                {result.found_extras.map((e) => (
+                  <span key={e} className="rounded-full border border-ohmlet-line bg-ohmlet-cream px-2 py-0.5 text-[11px] font-bold text-ohmlet-ink-soft">
+                    {e}
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={run}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            >
+              <RefreshCw className="h-4 w-4" /> Scan again
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

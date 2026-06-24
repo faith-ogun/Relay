@@ -556,10 +556,18 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
             </>
           )}
 
-          {onBack && (
-            <button onClick={onBack} className="mt-10 inline-flex items-center gap-2 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
-              <ArrowLeft className="h-4 w-4" /> Back to site
+          {active !== 'today' ? (
+            // From any sub-tab (Community, Path, etc.) the natural "up" is the
+            // workspace home, not a hard exit to the marketing site.
+            <button onClick={() => setActive('today')} className="mt-10 inline-flex items-center gap-2 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
+              <ArrowLeft className="h-4 w-4" /> Back to Today
             </button>
+          ) : (
+            onBack && (
+              <button onClick={onBack} className="mt-10 inline-flex items-center gap-2 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
+                <ArrowLeft className="h-4 w-4" /> Back to site
+              </button>
+            )
           )}
         </main>
       </div>

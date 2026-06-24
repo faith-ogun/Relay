@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 import entitlements
 import idempotency
+import obs
 from auth import require_claims
 
 logger = logging.getLogger("ohmlet.billing")
@@ -199,6 +200,7 @@ def _handle_event(event: dict) -> None:
             plan = _price_plan_map().get(price_id, "free")
         if uid:
             entitlements.set_plan(uid, plan)
+            obs.audit("billing.plan_changed", uid=uid, plan=plan, status=status, source="stripe_webhook", stripeEvent=etype)
             logger.info("subscription %s -> uid=%s plan=%s status=%s", etype, uid, plan, status)
         return
 
@@ -206,6 +208,7 @@ def _handle_event(event: dict) -> None:
         uid = _resolve_uid(obj)
         if uid:
             entitlements.set_plan(uid, "free")
+            obs.audit("billing.plan_changed", uid=uid, plan="free", status="canceled", source="stripe_webhook", stripeEvent=etype)
             logger.info("subscription deleted -> uid=%s downgraded to free", uid)
         return
 

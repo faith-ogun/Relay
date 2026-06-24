@@ -12,9 +12,10 @@ from functools import lru_cache
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import obs
+from cors import install_cors
 from resilience import CircuitBreaker, CircuitOpenError, run_resilient
 
 app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
@@ -29,12 +30,8 @@ app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
 VISION_MODEL = os.getenv("OHMLET_VISION_MODEL", "gemini-3.5-flash")
 GEN_MODEL = os.getenv("OHMLET_GEN_MODEL", "gemini-3.5-flash")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS scoped to Ohmlet's own origins (#35); env-overridable.
+install_cors(app)
 
 # ── Models ──
 
@@ -131,6 +128,8 @@ def _get_genai_client():
 # the full timeout while Vertex is unhealthy.
 _VISION_CB = CircuitBreaker("vision", fail_max=4, reset_timeout=30.0)
 _GEN_CB = CircuitBreaker("question-gen", fail_max=4, reset_timeout=30.0)
+obs.metrics.register_breaker("vision", _VISION_CB)
+obs.metrics.register_breaker("question-gen", _GEN_CB)
 
 
 QUESTION_GEN_PROMPT = """You are a question generator for an electronics learning platform.
@@ -240,7 +239,8 @@ async def generate_questions(req: GenerateRequest):
         except Exception as e:
             # Fall back to pre-built questions (the learner still gets a quiz).
             _GEN_CB.record_failure()
-            print(f"Gemini generation failed: {e}")
+            obs.metrics.inc("question_gen_fallbacks")
+            logging.getLogger("ohmlet.quiz").warning("Gemini generation failed: %s", e)
 
     # Fallback: return pre-built questions for the topic
     fallback = _get_fallback_questions(
@@ -415,3 +415,9 @@ def _get_fallback_questions(
         if filtered:
             bank = filtered
     return bank[:count]
+
+
+# Observability last so its middleware wraps everything: structured JSON logs
+# with trace correlation, per-route metrics, security headers, and a clean JSON
+# 500 on any unhandled error (#35).
+obs.install_observability(app, "quiz-engine")

@@ -15,7 +15,6 @@ import os
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from google.adk.runners import Runner
@@ -42,8 +41,9 @@ from resilience import CircuitBreaker
 _TEXT_CB = CircuitBreaker("text-chat", fail_max=4, reset_timeout=30.0)
 TEXT_TIMEOUT_MS = int(os.getenv("OHMLET_TEXT_TIMEOUT_MS", "20000"))
 import validation
+import obs
+from cors import install_cors
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ohmlet.live-bridge")
 
 # ── App setup ──────────────────────────────────────────────────────────────────
@@ -51,13 +51,9 @@ logger = logging.getLogger("ohmlet.live-bridge")
 APP_NAME = os.getenv("OHMLET_APP_NAME", "ohmlet-live-bridge")
 
 app = FastAPI(title="Ohmlet Live Bridge", version="0.1.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS scoped to Ohmlet's own origins (#35); env-overridable via OHMLET_ALLOWED_ORIGINS.
+install_cors(app)
+obs.metrics.register_breaker("text-chat", _TEXT_CB)
 
 # Rate limiting (#47): blunt a misbehaving client on the REST surface. Keyed by
 # the verified UID when a bearer token is present, else the client IP.
@@ -478,3 +474,22 @@ async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> d
         "reply": reply,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ── Observability + audit trail (#35) ──────────────────────────────────────────
+
+def _firestore_audit_sink(record: dict) -> None:
+    """Durable audit sink: append the record to Firestore so security-relevant
+    actions (plan changes, exports, deletions) have an in-app trail in addition
+    to the immutable Cloud Logging line. Best-effort; never raises."""
+    from state_store import get_client
+
+    coll = os.getenv("OHMLET_AUDIT_COLLECTION", "ohmlet_audit_log")
+    get_client().collection(coll).add(record)
+
+
+obs.register_audit_sink(_firestore_audit_sink)
+# Installed last so the middleware wraps the rate-limiter and routes: it times
+# every request, correlates logs to Cloud Trace, sets security headers, exposes
+# /internal/metrics, and converts any unhandled error into a clean JSON 500.
+obs.install_observability(app, "live-bridge")

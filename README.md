@@ -170,13 +170,32 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload
 ```
 
+### Vision-verifier backend (port 8084)
+
+The camera component inventory check (step 2 of the core loop).
+
+```bash
+cd backend/vision-verifier
+python3.13 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8084 --reload
+```
+
 ## Deployment
 
 ```bash
-./deploy.sh              # all services + frontend build
-./deploy.sh live-bridge  # one service
-./deploy.sh verify       # health-check deployed services
+./deploy.sh                  # all services + frontend build
+./deploy.sh live-bridge      # one service
+./deploy.sh vision-verifier  # one service
+./deploy.sh verify           # health-check deployed services
 ```
+
+## Observability & alerting
+
+All services emit structured JSON logs with Cloud Trace correlation, expose a
+token-guarded `/internal/metrics`, and keep a security audit trail. See
+[`ops/observability.md`](ops/observability.md). Provision Cloud Monitoring
+alerts (uptime, 5xx rate, latency) with `./ops/alerting.sh`.
 
 On Cloud Run with Vertex AI, no API key is needed — authentication uses the service account automatically.
 
@@ -185,7 +204,8 @@ On Cloud Run with Vertex AI, no API key is needed — authentication uses the se
 ```bash
 cd frontend && npm run build                           # must pass before any merge
 python3 -m py_compile backend/live-bridge/app/*.py
-python3 -m py_compile backend/quiz-engine/app/main.py
+python3 -m py_compile backend/quiz-engine/app/*.py
+python3 -m py_compile backend/vision-verifier/app/*.py
 ```
 
 ## Gemini API session limits
