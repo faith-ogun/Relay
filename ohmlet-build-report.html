@@ -229,6 +229,13 @@ const ITEMS = [
     how:'You get emailed the moment a service degrades, can read live performance numbers any time, and the kit check is confirmed working against real Gemini vision in production.',
     ev:['1 email channel, 3 uptime checks, 6 alert policies','Metrics: 200 with token, 404 without','Smoke test passed, test user auto-deleted'] },
 
+  { icon:'bolt', session:true, status:'partial', date:'Jun 24', groups:['gamification'],
+    title:'Circuit simulator — a real library, not one board',
+    what:'Turned the simulator from a few hand-built boards into a browsable library of 14 live circuits across 5 curriculum categories (Basics, Sensors, Inputs, Capacitors, Transistors), each with difficulty, a one-line teach, and an adaptive tutor note. The physics engine grew to handle diodes, capacitors with real transient TIME (watch a cap charge on an oscilloscope trace, governed by τ = R·C), and NPN transistors (off / saturated / active). Highlights: the flagship Light-Activated Alarm (an LDR drives a transistor that sounds a buzzer in the dark), a transistor switch, a motor driver with flyback diode, a temperature sensor, RC charge/discharge with a live scope, and the heat map across every board.',
+    why:'We can’t launch with one build. The simulator is how someone with no parts still learns by seeing electricity move, and it now mirrors the curriculum the way the 140+ lessons do. Owning the engine means the tutor can narrate any circuit and there is zero licensing risk.',
+    how:'Circuits are now DATA in one registry rendered by a generic schematic engine, so adding more is cheap. Every current, voltage, time-constant and transistor region is solved live and was verified against hand calculations (diode 4.4 mA, transistor saturation Vce 0.2 V, RC 63% at one τ, the alarm tripping in the dark).',
+    ev:['14 circuits, 5 categories, data-driven','Engine: diodes, transient capacitors, NPN transistors','Live oscilloscope for RC timing; heat map everywhere','All verified vs hand calcs; build green'] },
+
   { icon:'broom', session:true, status:'shipped', date:'Jun 23', groups:['cleanup'],
     title:'Dead-code cleanup',
     what:'After an exhaustive “is this actually used anywhere?” sweep, removed ~4,550 lines of unused code (9 files deleted, 2 trimmed) — including a 3,400-line legacy screen fully replaced by the current one.',
@@ -301,11 +308,11 @@ const ITEMS = [
     ev:['Web Audio, no assets','Global mute'] },
 
   // UP NEXT
-  { icon:'bolt', session:false, status:'next', date:'', groups:['next'],
+  { icon:'bolt', session:false, status:'partial', date:'', groups:['next'],
     title:'Interactive circuit simulator (the “Falstad” feature)',
-    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor.',
-    why:'It’s the #1 thing electronics people rave about (“what’s your favourite simulator? Falstad”). It’s pure Ohmlet — intuition-first, see-it-move learning.',
-    how:'Replaces the beta Sandbox. Researched (open-source CircuitJS1 is GPL — licensing matters; Wokwi AVR8js is MIT for Arduino). See metadata/falstad-simulator-research.md + the concept mockup. To discuss, not yet scheduled.' },
+    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor. SHIPPED: our own physics engine (resistors, diodes, transient capacitors, NPN transistors) and a library of 14 circuits across 5 curriculum categories, with live readings, an oscilloscope for RC timing, a heat map, and adaptive tutor narration on every circuit.',
+    why:'It’s the #1 thing electronics people rave about (“what’s your favourite simulator? Falstad”). It’s pure Ohmlet — intuition-first, see-it-move learning — and we own the engine, so the tutor can narrate it and it carries no licensing risk.',
+    how:'Decided to build our own (Option C). Remaining phases: a free-form schematic editor (place/wire on a canvas), op-amps/comparators, running real Arduino sketches via AVR8js (MIT), and deeper power-budget analysis. See metadata/falstad-simulator-research.md.' },
 
   { icon:'trophy', session:false, status:'next', date:'', groups:['next'],
     title:'Collectible mascot achievement cards',
