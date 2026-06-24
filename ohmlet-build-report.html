@@ -237,12 +237,12 @@ const ITEMS = [
     ev:['~4,554 lines removed','Build still green','0 orphaned modules left'] },
 
   // RECENTLY SHIPPED
-  { icon:'card', session:false, status:'shipped', date:'Jun ~20', groups:['commercial'],
-    title:'Stripe billing — the commercial spine',
-    what:'The full paid-subscription system: Checkout to subscribe, a signature-verified webhook as the single source of truth for a user’s plan, the Customer Portal to manage/cancel, and plan-aware “thanks for upgrading” pages.',
+  { icon:'card', session:false, status:'partial', date:'Jun ~20', groups:['commercial'],
+    title:'Stripe billing — subscriptions live, more to add',
+    what:'The subscription core is built and tested: Checkout to subscribe, a signature-verified webhook as the single source of truth for a user’s plan, the Customer Portal to manage/cancel, and plan-aware “thanks for upgrading” pages. It is still in TEST mode.',
     why:'Nothing monetizes without a reliable way to take money and grant exactly the right plan.',
-    how:'Ohmlet can charge for Pro/Max and the correct entitlements follow automatically and safely.',
-    ev:['Checkout + Portal + webhook','Idempotent, signature-verified','3 live bugs caught & fixed in testing'] },
+    how:'The spine works — but it is NOT finished. Still to do: flip to LIVE mode; the cancellation “save” flow with a 30% retention coupon; and in-app purchases / consumables (e.g. streak freezes, a gem economy) which need one-time payments, not just subscriptions.',
+    ev:['DONE: Checkout + Portal + webhook (idempotent, signed)','TODO: live-mode go-live','TODO: 30% retention coupon + cancel save-flow','TODO: in-app purchases / consumables'] },
 
   { icon:'lock', session:false, status:'shipped', date:'Jun ~20', groups:['security','commercial'],
     title:'Accounts, true per-user isolation & server-side tiers',
@@ -301,6 +301,30 @@ const ITEMS = [
     ev:['Web Audio, no assets','Global mute'] },
 
   // UP NEXT
+  { icon:'bolt', session:false, status:'next', date:'', groups:['next'],
+    title:'Interactive circuit simulator (the “Falstad” feature)',
+    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor.',
+    why:'It’s the #1 thing electronics people rave about (“what’s your favourite simulator? Falstad”). It’s pure Ohmlet — intuition-first, see-it-move learning.',
+    how:'Replaces the beta Sandbox. Researched (open-source CircuitJS1 is GPL — licensing matters; Wokwi AVR8js is MIT for Arduino). See metadata/falstad-simulator-research.md + the concept mockup. To discuss, not yet scheduled.' },
+
+  { icon:'trophy', session:false, status:'next', date:'', groups:['next'],
+    title:'Collectible mascot achievement cards',
+    what:'Replace the generic crown/shape achievement art with collectible cards featuring the Ohmlet mascot — a premium, “gotta-collect-them” card set (think trading cards, branded as ours).',
+    why:'The current cards look placeholder-pretty. Real, characterful collectibles deepen engagement and lower churn — the whole point in a hard edtech market.',
+    how:'Same earned-from-real-stats system, but the art becomes a reason to keep playing. Needs mascot illustration per card.' },
+
+  { icon:'card', session:false, status:'next', date:'', groups:['next'],
+    title:'In-app purchases / consumables (extend Stripe)',
+    what:'One-time purchases for consumables — streak freezes, a gem economy, cosmetic unlocks — on top of the subscription billing.',
+    why:'A second revenue stream and a retention lever (people pay to protect a streak). Stripe currently only does subscriptions.',
+    how:'Adds Stripe one-time payments + an entitlement/inventory ledger. Ties into streak freezes (#65).' },
+
+  { icon:'bell', session:false, status:'next', date:'', groups:['next'],
+    title:'Streak notifications + home-screen widget',
+    what:'“Your streak is about to break” nudges via push + email, and a Duolingo-style home-screen widget showing your streak.',
+    why:'Re-engagement notifications are among the highest-leverage anti-churn mechanics there is.',
+    how:'Push/email (web first), with the widget arriving alongside the mobile app. Pairs with friend streaks (#66).' },
+
   { icon:'cube', session:false, status:'next', date:'', groups:['next'],
     title:'3D digital twin (reporter service)',
     what:'A new service that generates a 3D model of the finished build — the one post-session artifact Ohmlet promises.',
@@ -343,6 +367,7 @@ const STATS = [
 const STATUS = {
   live:{cls:'b-live', txt:'Live'},
   shipped:{cls:'b-shipped', txt:'Shipped'},
+  partial:{cls:'b-next', txt:'Partial'},
   next:{cls:'b-next', txt:'Next'},
 };
 
@@ -442,7 +467,7 @@ STATS.forEach((s,i)=>countUp(document.getElementById('st'+i),s.n,s.fmt));
 // progress bar
 const doneN=ITEMS.filter(i=>i.status!=='next').length, nextN=ITEMS.filter(i=>i.status==='next').length;
 // Reflect the real roadmap, not just the cards shown here:
-const ROADMAP_DONE=37, ROADMAP_TOTAL=56; // tasks #11–#66, completed vs total tracked
+const ROADMAP_DONE=37, ROADMAP_TOTAL=60; // tasks #11–#70, completed vs total tracked
 const pct=Math.round(ROADMAP_DONE/ROADMAP_TOTAL*100);
 document.getElementById('doneN').textContent=ROADMAP_DONE;
 document.getElementById('nextN').textContent=ROADMAP_TOTAL-ROADMAP_DONE;

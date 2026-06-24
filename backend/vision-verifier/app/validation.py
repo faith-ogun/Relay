@@ -11,7 +11,7 @@ from __future__ import annotations
 import base64
 import os
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 # A camera frame is ~1-3 MB decoded; base64 inflates by ~4/3. Cap generously but
 # finitely so a client cannot post an arbitrarily large body.
@@ -30,7 +30,7 @@ def decode_image(image_base64: str) -> bytes:
     if image_base64.startswith("data:"):
         _, _, image_base64 = image_base64.partition(",")
     if len(image_base64) > MAX_IMAGE_B64_CHARS:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Image is too large.")
+        raise HTTPException(status_code=413, detail="Image is too large.")
     try:
         raw = base64.b64decode(image_base64, validate=True)
     except (ValueError, TypeError) as exc:
@@ -38,7 +38,7 @@ def decode_image(image_base64: str) -> bytes:
     if not raw:
         raise HTTPException(status_code=422, detail="Image is empty.")
     if len(raw) > MAX_IMAGE_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Image is too large.")
+        raise HTTPException(status_code=413, detail="Image is too large.")
     return raw
 
 

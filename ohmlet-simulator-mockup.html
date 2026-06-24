@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ohmlet — Circuit Simulator (concept mockup)</title>
+<style>
+  :root{
+    --yellow:#f3e515; --yellow-deep:#b9a800; --yellow-soft:#fffde8;
+    --ink:#0a0a0a; --ink-soft:#475569;
+    --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0; --line:#e6e9ef;
+    --green:#16a34a; --red:#e2483d; --blue:#2563eb;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);background:var(--slate-50);
+    background-image:radial-gradient(800px 420px at 85% -10%,rgba(243,229,21,.20),transparent 60%);
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:30px 22px 70px}
+  .tag{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--yellow);
+    font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+  h1{font-size:clamp(26px,4.5vw,40px);font-weight:900;letter-spacing:-.03em;margin:14px 0 6px}
+  .sub{color:var(--ink-soft);font-weight:500;max-width:680px;font-size:16px}
+  .concept{margin-top:10px;font-size:12.5px;font-weight:800;color:var(--yellow-deep);text-transform:uppercase;letter-spacing:.08em}
+
+  .app{margin-top:24px;display:grid;grid-template-columns:188px 1fr;gap:16px}
+  @media(max-width:780px){.app{grid-template-columns:1fr}}
+
+  .panel{background:#fff;border:2px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+  .palette{padding:14px}
+  .palette h3{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px}
+  .part{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:8px;cursor:grab;transition:all .15s;background:#fff}
+  .part:hover{border-color:var(--ink);transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,23,42,.08)}
+  .part svg{width:30px;height:20px;flex:none}
+  .part span{font-size:13px;font-weight:800}
+  .palette .hint{font-size:11px;color:var(--ink-soft);font-weight:600;margin-top:6px;line-height:1.4}
+
+  .stage{padding:0;overflow:hidden;position:relative}
+  .canvaswrap{position:relative;background:
+    linear-gradient(0deg,rgba(15,23,42,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(15,23,42,.03) 1px,transparent 1px);
+    background-size:22px 22px;background-color:#fff}
+  svg.board{display:block;width:100%;height:auto}
+
+  /* tutor bubble */
+  .tutor{position:absolute;left:16px;bottom:16px;max-width:330px;display:flex;gap:10px;align-items:flex-start;
+    background:var(--ink);color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .tutor .egg{flex:none;width:34px;height:34px;border-radius:10px;background:var(--yellow);display:flex;align-items:center;justify-content:center}
+  .tutor .egg svg{width:18px;height:18px}
+  .tutor p{font-size:13px;font-weight:600;line-height:1.45}
+  .tutor b{color:var(--yellow)}
+
+  /* controls */
+  .controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 16px;border-top:2px solid var(--line)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--yellow);
+    border-radius:12px;padding:9px 14px;font:inherit;font-size:14px;font-weight:900;cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);transition:all .12s}
+  .btn:active{transform:translate(3px,3px);box-shadow:none}
+  .ctl{display:flex;flex-direction:column;gap:3px;min-width:150px}
+  .ctl label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);display:flex;justify-content:space-between}
+  .ctl input[type=range]{accent-color:var(--yellow-deep);width:100%}
+  .readouts{margin-left:auto;display:flex;gap:18px}
+  .ro{text-align:right}
+  .ro .v{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+  .ro .k{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+
+  .foot{margin-top:22px;font-size:13px;color:var(--ink-soft);font-weight:500;line-height:1.6}
+  .foot b{color:var(--ink)}
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .pill{font-size:12px;font-weight:800;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="tag"><svg width="13" height="13" viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="#f3e515"/></svg> Ohmlet Simulator</span>
+  <h1>See the electricity move.</h1>
+  <p class="sub">A live, animated circuit simulator — the dots are current, their speed is how much. Change the resistor and watch the flow (and the LED) respond, while the tutor explains what's happening.</p>
+  <p class="concept">Concept mockup · not wired into the product yet · for discussion (see metadata/falstad-simulator-research.md)</p>
+
+  <div class="app">
+    <!-- palette -->
+    <div class="panel palette">
+      <h3>Components</h3>
+      <div class="part"><svg viewBox="0 0 40 24"><path d="M2 12h10M28 12h10" stroke="#0a0a0a" stroke-width="2"/><path d="M14 5v14M20 8v8M26 5v14" stroke="#0a0a0a" stroke-width="2"/></svg><span>Battery</span></div>
+      <div class="part"><svg viewBox="0 0 40 24"><path d="M2 12h6l3-6 4 12 4-12 4 12 3-6h6" stroke="#0a0a0a" stroke-width="2" fill="none"/></svg><span>Resistor</span></div>
+      <div class="part"><svg viewBox="0 0 40 24"><path d="M2 12h12M26 12h12" stroke="#0a0a0a" stroke-width="2"/><path d="M14 6v12l11-6-11-6z" fill="#0a0a0a"/><path d="M25 6v12" stroke="#0a0a0a" stroke-width="2"/></svg><span>LED</span></div>
+      <div class="part"><svg viewBox="0 0 40 24"><path d="M2 12h12M26 12h12" stroke="#0a0a0a" stroke-width="2"/><path d="M14 4v16M22 4v16" stroke="#0a0a0a" stroke-width="2"/></svg><span>Capacitor</span></div>
+      <div class="part"><svg viewBox="0 0 40 24"><circle cx="20" cy="12" r="8" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M2 12h10M28 12h10M20 8v8" stroke="#0a0a0a" stroke-width="2"/></svg><span>Switch</span></div>
+      <p class="hint">Drag to add (mockup). The real version would solve the circuit and animate true current.</p>
+    </div>
+
+    <!-- stage -->
+    <div class="panel stage">
+      <div class="canvaswrap">
+        <svg class="board" viewBox="0 0 640 380" id="board">
+          <!-- wire route (also the dot path) -->
+          <path id="loop" d="M120 90 H520 V330 H120 Z" fill="none" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
+          <!-- nodes -->
+          <circle cx="120" cy="90" r="6" fill="#0f172a"/><circle cx="520" cy="90" r="6" fill="#0f172a"/>
+          <circle cx="520" cy="330" r="6" fill="#0f172a"/><circle cx="120" cy="330" r="6" fill="#0f172a"/>
+
+          <!-- battery (left wire) -->
+          <g transform="translate(120,210)">
+            <rect x="-26" y="-26" width="52" height="52" rx="9" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+            <path d="M-9 -12V12M0 -7V7M9 -12V12" stroke="#0f172a" stroke-width="3"/>
+            <text x="0" y="40" text-anchor="middle" font-size="12" font-weight="800" fill="#475569">5V</text>
+          </g>
+          <!-- resistor (top wire) -->
+          <g transform="translate(320,90)">
+            <rect x="-46" y="-16" width="92" height="32" rx="8" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+            <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#0f172a" stroke-width="2.5" fill="none"/>
+            <text x="0" y="-24" text-anchor="middle" font-size="12" font-weight="800" fill="#475569" id="rlabel">220 Ω</text>
+          </g>
+          <!-- LED (right wire) -->
+          <g transform="translate(520,210)">
+            <circle id="glow" cx="0" cy="0" r="30" fill="#f3e515" opacity="0.0"/>
+            <rect x="-24" y="-24" width="48" height="48" rx="9" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+            <path d="M-12 -13v26l20 -13 -20 -13z" id="ledtri" fill="#facc2e" stroke="#0f172a" stroke-width="1.5"/>
+            <path d="M8 -13v26" stroke="#0f172a" stroke-width="3"/>
+            <text x="0" y="40" text-anchor="middle" font-size="12" font-weight="800" fill="#475569">LED</text>
+          </g>
+
+          <!-- node voltage chips -->
+          <g font-size="11" font-weight="800">
+            <g transform="translate(120,72)"><rect x="-20" y="-13" width="40" height="20" rx="6" fill="#eafaf0" stroke="#16a34a"/><text x="0" y="1" text-anchor="middle" fill="#16a34a">5.0V</text></g>
+            <g transform="translate(520,72)"><rect x="-20" y="-13" width="40" height="20" rx="6" fill="#fff7ed" stroke="#d97706"/><text x="0" y="1" text-anchor="middle" fill="#d97706" id="vnode">2.0V</text></g>
+            <g transform="translate(320,352)"><rect x="-18" y="-13" width="36" height="20" rx="6" fill="#f1f5f9" stroke="#94a3b8"/><text x="0" y="1" text-anchor="middle" fill="#475569">0V</text></g>
+          </g>
+
+          <!-- current dots (added by JS) -->
+          <g id="dots"></g>
+        </svg>
+
+        <div class="tutor">
+          <span class="egg"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="#0a0a0a"/></svg></span>
+          <p id="tutortext">Watch the dots: that's <b>current</b> flowing from + to −. Lower the resistance and they speed up — more current, brighter LED. <b>I = V / R.</b></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="playbtn">⏸ Pause</button>
+        <div class="ctl">
+          <label>Resistance <span id="rval">220 Ω</span></label>
+          <input type="range" id="r" min="47" max="1000" value="220" step="1" />
+        </div>
+        <div class="readouts">
+          <div class="ro"><div class="v" id="iout">22.7</div><div class="k">Current (mA)</div></div>
+          <div class="ro"><div class="v" id="pout">52</div><div class="k">LED bright %</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>What this mockup is showing:</b> the "Falstad magic" — a circuit where you can <i>see</i> current as moving dots and feel cause-and-effect (more resistance → slower dots, dimmer LED). The real feature would solve the circuit properly (nodal analysis) for any components you place, and the <b>Ohmlet tutor would narrate it live</b> and tie it to your lessons and your real bench. Three ways to build it (embed the GPL CircuitJS1, fork it, or build our own engine) are written up in <b>metadata/falstad-simulator-research.md</b>.
+    <div class="pillrow">
+      <span class="pill">Animated current flow</span>
+      <span class="pill">Live node voltages</span>
+      <span class="pill">Tutor-narrated</span>
+      <span class="pill">Ties to the circuit DSL + 3D twin</span>
+      <span class="pill">Arduino sketches via AVR8js (MIT)</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const board = document.getElementById('board');
+const path = document.getElementById('loop');
+const dotsG = document.getElementById('dots');
+const L = path.getTotalLength();
+
+const V = 5.0;                 // fixed source
+let R = 220;                   // ohms (from slider)
+let running = true;
+let dots = [];
+
+function current(){ return V / R; }         // amps
+function mA(){ return current()*1000; }
+function brightness(){ return Math.min(1, mA()/44); }  // ~44mA ≈ full
+
+// (re)build the dot set — more current => more, faster dots
+function rebuild(){
+  dotsG.innerHTML = '';
+  dots = [];
+  const n = Math.max(10, Math.round(brightness()*46));
+  for(let i=0;i<n;i++){
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r', 4.2);
+    c.setAttribute('fill', '#f3e515');
+    c.setAttribute('stroke', '#b9a800');
+    c.setAttribute('stroke-width', '1');
+    dotsG.appendChild(c);
+    dots.push({ el:c, d:(i/n)*L });
+  }
+}
+
+function frame(){
+  if(running){
+    const speed = 0.8 + brightness()*4.2;   // px/frame, scales with current
+    for(const dot of dots){
+      dot.d = (dot.d + speed) % L;
+      const p = path.getPointAtLength(dot.d);
+      dot.el.setAttribute('cx', p.x);
+      dot.el.setAttribute('cy', p.y);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// UI wiring
+const rIn = document.getElementById('r');
+const rval = document.getElementById('rval');
+const rlabel = document.getElementById('rlabel');
+const iout = document.getElementById('iout');
+const pout = document.getElementById('pout');
+const glow = document.getElementById('glow');
+const ledtri = document.getElementById('ledtri');
+const vnode = document.getElementById('vnode');
+const tutortext = document.getElementById('tutortext');
+
+function refresh(){
+  rval.textContent = R + ' Ω';
+  rlabel.textContent = R + ' Ω';
+  iout.textContent = mA().toFixed(1);
+  const b = brightness();
+  pout.textContent = Math.round(b*100);
+  glow.setAttribute('opacity', (b*0.85).toFixed(2));
+  // LED colour warms with brightness
+  ledtri.setAttribute('fill', b>0.66 ? '#fde047' : b>0.33 ? '#facc2e' : '#eab308');
+  // forward drop ~2V across LED; rest across R; node after-R voltage ≈ LED drop
+  vnode.textContent = '2.0V';
+  if(b>0.8) tutortext.innerHTML = "Lots of current now — the dots are racing and the LED is bright. Careful: too much current and a real LED would burn out. That's why we add a <b>resistor</b>.";
+  else if(b<0.2) tutortext.innerHTML = "Big resistor, tiny current — the dots crawl and the LED is dim. <b>I = V / R</b>: raise R, current drops.";
+  else tutortext.innerHTML = "Watch the dots: that's <b>current</b> flowing from + to −. Lower the resistance and they speed up. <b>I = V / R.</b>";
+  rebuild();
+}
+
+rIn.addEventListener('input', e=>{ R = +e.target.value; refresh(); });
+document.getElementById('playbtn').addEventListener('click', e=>{
+  running = !running; e.target.textContent = running ? '⏸ Pause' : '▶ Run';
+});
+
+refresh();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

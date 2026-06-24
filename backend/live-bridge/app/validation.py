@@ -16,7 +16,7 @@ import json
 import os
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 # ── Size ceilings ──
 MAX_BODY_BYTES = int(os.getenv("OHMLET_MAX_BODY_BYTES", str(256 * 1024)))        # 256 KB REST body
@@ -28,8 +28,11 @@ VALID_STAGES = {"inventory", "wiring", "code", "test"}
 
 
 def _too_large(label: str, size: int, limit: int) -> HTTPException:
+    # Numeric 413 (not status.HTTP_413_*): the constant's name differs across
+    # Starlette versions (CONTENT_TOO_LARGE vs REQUEST_ENTITY_TOO_LARGE), and
+    # google-adk's dep tree can resolve an older Starlette. 413 is version-proof.
     return HTTPException(
-        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        status_code=413,
         detail=f"{label} is too large ({size} > {limit} bytes).",
     )
 
