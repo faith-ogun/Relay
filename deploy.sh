@@ -74,7 +74,9 @@ COMPILER_SERVICE="ohmlet-compiler"
 COMPILER_SOURCE="backend/compiler"
 COMPILER_ENV="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
 COMPILER_SA="${OHMLET_COMPILER_SA:-}"
-COMPILER_MIN_INSTANCES="${OHMLET_COMPILER_MIN_INSTANCES:-0}"
+# Kept warm (1): the toolchain image is large, so a cold start is slow; one
+# standing instance makes compiles instant. Set OHMLET_COMPILER_MIN_INSTANCES=0 to save cost.
+COMPILER_MIN_INSTANCES="${OHMLET_COMPILER_MIN_INSTANCES:-1}"
 COMPILER_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
 # Compiling avr-gcc is CPU/RAM-heavy and the image (with the AVR core) is large,
 # so give it more headroom and a longer request timeout than the vision services.
