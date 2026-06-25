@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Cpu, Flame, Pause, Play, RotateCcw, Zap } from 'lucide-react';
 import { solve, initTransient, stepTransient, toMA, type Comp, type SolveResult, type TransientState } from '../sim/engine';
 import { FreeFormEditor } from './FreeFormEditor';
+import { CodeLabView } from './CodeLabView';
 
 /**
  * SimulatorView (#67) — Ohmlet's own circuit simulator (Option C).
@@ -941,12 +942,14 @@ const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 
 //  VIEW
 // ────────────────────────────────────────────────────────────────────────────
 
-const ModeBar: React.FC<{ mode: 'library' | 'build'; setMode: (m: 'library' | 'build') => void }> = ({ mode, setMode }) => (
+type SimMode = 'library' | 'build' | 'code';
+const MODE_LABEL: Record<SimMode, string> = { library: 'Circuit library', build: 'Build your own', code: 'Arduino code' };
+const ModeBar: React.FC<{ mode: SimMode; setMode: (m: SimMode) => void }> = ({ mode, setMode }) => (
   <div className="mb-4 inline-flex rounded-2xl border-2 border-ohmlet-ink bg-white p-1 shadow-press-sm">
-    {(['library', 'build'] as const).map((m) => (
+    {(['library', 'build', 'code'] as const).map((m) => (
       <button key={m} onClick={() => setMode(m)}
         className={`rounded-xl px-4 py-1.5 text-sm font-black transition-all ${mode === m ? 'bg-ohmlet-gold text-ohmlet-ink' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'}`}>
-        {m === 'library' ? 'Circuit library' : 'Build your own'}
+        {MODE_LABEL[m]}
       </button>
     ))}
   </div>
@@ -958,7 +961,7 @@ export const SimulatorView: React.FC = () => {
   const circuit = CIRCUITS.find((c) => c.id === circuitId)!;
   const [params, setParams] = useState<Record<string, number>>(() => defaults(circuit));
   const [heatOn, setHeatOn] = useState(false);
-  const [mode, setMode] = useState<'library' | 'build'>('library');
+  const [mode, setMode] = useState<SimMode>('library');
 
   const selectCircuit = (c: Circuit) => { setCircuitId(c.id); setParams(defaults(c)); };
   const resetParams = () => setParams(defaults(circuit));
@@ -969,6 +972,7 @@ export const SimulatorView: React.FC = () => {
   const inCat = CIRCUITS.filter((c) => c.cat === cat);
 
   if (mode === 'build') return (<div className="ohmlet-rise"><ModeBar mode={mode} setMode={setMode} /><FreeFormEditor /></div>);
+  if (mode === 'code') return (<div className="ohmlet-rise"><ModeBar mode={mode} setMode={setMode} /><CodeLabView /></div>);
 
   return (
     <div className="ohmlet-rise">

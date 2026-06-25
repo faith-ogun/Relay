@@ -70,6 +70,16 @@ VISION_VERIFIER_MIN_INSTANCES="${OHMLET_VISION_MIN_INSTANCES:-0}"
 # Metrics token guarding /internal/metrics (#35), by reference from Secret Manager.
 VISION_VERIFIER_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
 
+COMPILER_SERVICE="ohmlet-compiler"
+COMPILER_SOURCE="backend/compiler"
+COMPILER_ENV="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+COMPILER_SA="${OHMLET_COMPILER_SA:-}"
+COMPILER_MIN_INSTANCES="${OHMLET_COMPILER_MIN_INSTANCES:-0}"
+COMPILER_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
+# Compiling avr-gcc is CPU/RAM-heavy and the image (with the AVR core) is large,
+# so give it more headroom and a longer request timeout than the vision services.
+COMPILER_EXTRA="--memory=2Gi --cpu=2 --timeout=120 --concurrency=4"
+
 # ── Helpers ──
 info()  { echo -e "\033[1;34m[deploy]\033[0m $1"; }
 ok()    { echo -e "\033[1;32m[deploy]\033[0m $1"; }
@@ -90,7 +100,7 @@ check_gcloud() {
 }
 
 deploy_service() {
-  local name="$1" source="$2" env_vars="$3" service_account="${4:-}" min_instances="${5:-0}" secrets="${6:-}"
+  local name="$1" source="$2" env_vars="$3" service_account="${4:-}" min_instances="${5:-0}" secrets="${6:-}" extra="${7:-}"
 
   info "Deploying ${name} from ${source} to ${REGION}..."
 
@@ -119,6 +129,7 @@ deploy_service() {
     --min-instances="$min_instances" \
     ${sa_flag[@]+"${sa_flag[@]}"} \
     ${secrets_flag[@]+"${secrets_flag[@]}"} \
+    ${extra:+$extra} \
     --quiet
 
   local url
@@ -151,6 +162,10 @@ deploy_vision_verifier() {
   deploy_service "$VISION_VERIFIER_SERVICE" "$VISION_VERIFIER_SOURCE" "$VISION_VERIFIER_ENV" "$VISION_VERIFIER_SA" "$VISION_VERIFIER_MIN_INSTANCES" "$VISION_VERIFIER_SECRETS"
 }
 
+deploy_compiler() {
+  deploy_service "$COMPILER_SERVICE" "$COMPILER_SOURCE" "$COMPILER_ENV" "$COMPILER_SA" "$COMPILER_MIN_INSTANCES" "$COMPILER_SECRETS" "$COMPILER_EXTRA"
+}
+
 deploy_frontend() {
   info "Building frontend..."
   ( cd frontend && npm run build )
@@ -162,7 +177,7 @@ deploy_frontend() {
 verify_services() {
   info "Verifying deployed services..."
 
-  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE" "$VISION_VERIFIER_SERVICE"; do
+  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE" "$VISION_VERIFIER_SERVICE" "$COMPILER_SERVICE"; do
     local url
     url=$(gcloud run services describe "$service" --region="$REGION" --format="value(status.url)" 2>/dev/null)
     if [[ -n "$url" ]]; then
@@ -193,6 +208,9 @@ main() {
     vision-verifier)
       deploy_vision_verifier
       ;;
+    compiler)
+      deploy_compiler
+      ;;
     frontend)
       deploy_frontend
       ;;
@@ -203,6 +221,7 @@ main() {
       deploy_live_bridge
       deploy_quiz_engine
       deploy_vision_verifier
+      deploy_compiler
       deploy_frontend
       echo ""
       verify_services
@@ -211,7 +230,7 @@ main() {
       ;;
     *)
       err "Unknown target: $1"
-      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|vision-verifier|frontend|verify|all]"
+      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|vision-verifier|compiler|frontend|verify|all]"
       exit 1
       ;;
   esac

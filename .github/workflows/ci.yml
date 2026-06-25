@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [live-bridge, quiz-engine, vision-verifier]
+        service: [live-bridge, quiz-engine, vision-verifier, compiler]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
