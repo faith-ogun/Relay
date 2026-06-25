@@ -10,7 +10,9 @@ ENV ARDUINO_DIRECTORIES_DATA=/opt/arduino \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh -s -- -b /usr/local/bin \
+ && curl -fsSL -o /tmp/acli.tgz https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz \
+ && tar xzf /tmp/acli.tgz -C /usr/local/bin arduino-cli \
+ && rm /tmp/acli.tgz \
  && arduino-cli core update-index \
  && arduino-cli core install arduino:avr \
  && chmod -R a+rX /opt/arduino
