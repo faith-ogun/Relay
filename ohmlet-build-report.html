@@ -236,6 +236,13 @@ const ITEMS = [
     how:'Circuits are DATA in one registry rendered by a generic schematic engine, so adding more is cheap. Every current, voltage, time-constant, transistor region, op-amp output and 555 cycle is solved live and was verified against hand calculations (diode 4.4 mA, Vce_sat 0.2 V, RC 63% at one τ, alarm trips in dark, comparator rails at threshold, amp gains exact, 555 oscillates at 4.8 Hz, logic gates correct). The engine also gained GMIN + bidirectional-diode robustness so circuits never go singular.',
     ev:['22 circuits, 7 categories, data-driven','Engine: diodes, transient caps, transistors, op-amps, 555, logic','Live oscilloscope; heat map; adaptive tutor everywhere','All verified vs hand calcs; build green'] },
 
+  { icon:'cpu', session:true, status:'shipped', date:'Jun 25', groups:['gamification','services'],
+    title:'Simulator: run REAL Arduino code',
+    what:'Write an Arduino sketch in the editor, hit Compile & Run, and watch the actual firmware drive the board: pin-13 and pin-9 LEDs light (their current solved by our engine) and a pin-2 button you can press, with a live serial monitor. This is the real chip, not a fake.',
+    why:'Units 4–5 of the curriculum are all about Arduino. Letting learners run their own code against a simulated board — no hardware needed — closes the loop between "write the sketch" and "see it work", which is the entire point.',
+    how:'A new sandboxed compile service (arduino-cli + avr-gcc on Cloud Run) turns the C++ into firmware; the browser runs that firmware cycle-accurately on AVR8js (MIT). Proven end to end against the live service: Blink compiles to 924 bytes of real firmware in ~4s, and a typo returns a precise line-and-message error. Sandbox: auth + rate limit, non-root, timeout + CPU/RAM/file limits, board allow-list.',
+    ev:['New ohmlet-compiler service (avr-gcc, sandboxed)','AVR8js runs the real hex in-browser','Verified: Blink → 924B firmware in 4s, errors parsed'] },
+
   { icon:'bolt', session:true, status:'shipped', date:'Jun 25', groups:['gamification'],
     title:'Simulator: build-your-own schematic editor',
     what:'A free-form canvas inside the simulator: pick components from a palette, drop them on a grid, wire the dots together, edit values, and watch the real currents and voltages appear instantly. A Circuit library / Build your own toggle sits at the top of the Simulator tab.',
@@ -315,11 +322,11 @@ const ITEMS = [
     ev:['Web Audio, no assets','Global mute'] },
 
   // UP NEXT
-  { icon:'bolt', session:false, status:'partial', date:'', groups:['next'],
+  { icon:'bolt', session:false, status:'shipped', date:'Jun 25', groups:['gamification'],
     title:'Interactive circuit simulator (the “Falstad” feature)',
-    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor. SHIPPED: our own physics engine (resistors, diodes, transient capacitors, NPN transistors, op-amps/comparators, 555 timer, logic), a library of 22 circuits across 7 curriculum categories, AND a free-form build-your-own editor — all with live readings, an oscilloscope, a heat map, and adaptive tutor narration.',
+    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor. SHIPPED, fully: our own physics engine (resistors, diodes, transient capacitors, NPN transistors, op-amps/comparators, 555 timer, logic), a library of 22 circuits across 7 curriculum categories, a free-form build-your-own editor, AND real Arduino-code execution (compile service + AVR8js) — all with live readings, an oscilloscope, a heat map, and adaptive tutor narration.',
     why:'It’s the #1 thing electronics people rave about (“what’s your favourite simulator? Falstad”). It’s pure Ohmlet — intuition-first, see-it-move learning — and we own the engine, so the tutor can narrate it and it carries no licensing risk.',
-    how:'Decided to build our own (Option C); library + editor now SHIPPED. The one remaining phase is running real Arduino sketches (AVR8js, MIT) — which needs a small cloud compile service to turn C++ into firmware; scoped as a follow-up, not faked. See metadata/falstad-simulator-research.md.' },
+    how:'Built our own (Option C). Every planned phase is done: the curated library, the free-form editor, and real firmware execution (the AVR8js + compile-service path was chosen and shipped, proven end to end). See metadata/falstad-simulator-research.md.' },
 
   { icon:'trophy', session:false, status:'next', date:'', groups:['next'],
     title:'Collectible mascot achievement cards',
@@ -372,7 +379,7 @@ const ITEMS = [
 
 // ── Stats (count-up) ──
 const STATS = [
-  { n:3, lab:'Backend services live on Cloud Run' },
+  { n:4, lab:'Backend services live on Cloud Run' },
   { n:49, lab:'Automated backend tests passing' },
   { n:4554, lab:'Lines of dead code removed', fmt:v=>v.toLocaleString() },
   { n:6, lab:'Production alert policies watching' },
