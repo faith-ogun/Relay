@@ -14,6 +14,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getAnalytics, isSupported as analyticsIsSupported, type Analytics } from 'firebase/analytics';
+import { analyticsAllowed } from './cookieConsent';
 
 const env = import.meta.env as Record<string, string | undefined>;
 
@@ -47,8 +48,13 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Analytics is browser-only and throws in unsupported contexts (SSR, some
 // privacy modes), so initialise it lazily and never let it break the app.
+// It is ALSO consent-gated (#37): calling getAnalytics() is what starts
+// collection and sets the analytics cookies, so we never call it until the user
+// has opted in. Before consent this returns null (and is not memoised, so it
+// re-checks on the next call once the choice is made).
 let analyticsPromise: Promise<Analytics | null> | null = null;
 export function getOhmletAnalytics(): Promise<Analytics | null> {
+  if (!analyticsAllowed()) return Promise.resolve(null);
   if (!analyticsPromise) {
     analyticsPromise = (async () => {
       try {

@@ -404,14 +404,14 @@ export const COOKIES: LegalDoc = {
             ['Analytics', 'Understanding, in aggregate, how features are used so we can improve them.', 'Yes'],
           ],
         },
-        { type: 'p', text: 'Today Ohmlet uses primarily essential cookies. If and when we add preference or analytics cookies, we will ask for your consent first through a cookie banner, and non-essential cookies will stay off until you agree.' },
+        { type: 'p', text: 'Essential cookies are always on, because the app cannot work without them. Analytics cookies are off by default: we ask for your consent through a cookie banner the first time you visit, and they stay off unless you choose Accept. You can change your choice at any time from the Cookie settings link in the footer.' },
       ],
     },
     {
       id: 'managing',
       heading: '4. Managing cookies',
       blocks: [
-        { type: 'p', text: 'When we use non-essential cookies, you will be able to accept or reject them through our cookie banner, with reject as easy as accept, and change your choice later. You can also control cookies in your browser settings, including blocking or deleting them. Note that blocking essential cookies will stop you from signing in and using the app.' },
+        { type: 'p', text: 'You can accept or reject non-essential cookies through our cookie banner, with reject as easy as accept, and change your choice at any time using the Cookie settings link in the footer. You can also control cookies in your browser settings, including blocking or deleting them. Note that blocking essential cookies will stop you from signing in and using the app.' },
       ],
     },
     {

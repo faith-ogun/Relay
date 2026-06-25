@@ -1,4 +1,5 @@
 import React from 'react';
+import { openCookieSettings } from '../services/cookieConsent';
 
 type FooterRoute = 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'terms' | 'privacy' | 'cookies' | 'support' | 'ohmlet-app';
 
@@ -80,6 +81,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <button type="button" onClick={() => onNavigate('terms')} className="text-xs font-bold text-ohmlet-ink/70 transition-colors hover:text-ohmlet-ink">Terms</button>
             <button type="button" onClick={() => onNavigate('privacy')} className="text-xs font-bold text-ohmlet-ink/70 transition-colors hover:text-ohmlet-ink">Privacy</button>
             <button type="button" onClick={() => onNavigate('cookies')} className="text-xs font-bold text-ohmlet-ink/70 transition-colors hover:text-ohmlet-ink">Cookies</button>
+            <button type="button" onClick={openCookieSettings} className="text-xs font-bold text-ohmlet-ink/70 transition-colors hover:text-ohmlet-ink">Cookie settings</button>
           </div>
         </div>
       </div>
