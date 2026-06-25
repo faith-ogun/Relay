@@ -42,6 +42,7 @@ type Part =
   | { t: 'sw'; x: number; y: number; closed: boolean }
   | { t: 'buzz'; x: number; y: number; on: boolean; label?: string }
   | { t: 'motor'; x: number; y: number; spin: number; label?: string }
+  | { t: 'op'; x: number; y: number; out?: boolean }
   | { t: 'dot'; x: number; y: number }
   | { t: 'gnd'; x: number; y: number };
 
@@ -552,9 +553,89 @@ const CIRCUITS: Circuit[] = [
       ? <>Drive on: the transistor saturates and the motor pulls <b>{fmt(toMA(res.I.q ?? 0))} mA</b>. The flyback diode sits idle now, but the instant you switch off it catches the coil's back-EMF spike so it doesn't destroy the transistor.</>
       : <>Drive off: no base current, the transistor is open and the motor is stopped. That flyback diode across the motor is the only thing that will absorb the voltage kick when a spinning motor is suddenly cut.</>,
   },
+
+  // ── Op-amps & comparators ──
+  {
+    id: 'comparator', cat: 'Op-Amps', name: 'Comparator', level: 3,
+    blurb: 'An op-amp with no feedback slams its output fully high or low the instant one input crosses the other. A crisp threshold.',
+    params: [
+      { key: 'sig', label: 'Signal (sensor)', min: 0, max: 5, step: 0.05, unit: 'V', def: 1.5 },
+      { key: 'ref', label: 'Threshold', min: 0, max: 5, step: 0.05, unit: 'V', def: 2.5 },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'vsig', pos: 1, neg: 0, value: p.sig },
+      { kind: 'V', id: 'vref', pos: 2, neg: 0, value: p.ref },
+      { kind: 'OP', id: 'u', vp: 2, vn: 1, out: 3, vhi: 5, vlo: 0 },
+      { kind: 'R', id: 'r', a: 3, b: 4, value: 330 },
+      { kind: 'LED', id: 'led', anode: 4, cathode: 0 },
+    ],
+    scene: (p, res) => {
+      const mA = toMA(res.I.led ?? 0), hi = (res.V[3] ?? 0) > 2.5;
+      return {
+        wires: [
+          { d: 'M222 158 H340' },
+          { d: 'M222 202 H340' },
+          { d: 'M426 180 H590', i: 'led' },
+          { d: 'M616 180 V248' },
+        ],
+        parts: [
+          { t: 'op', x: 380, y: 180, out: hi },
+          { t: 'res', x: 500, y: 180, label: '330 Ω', heat: power(res, 'r', (res.V[3] ?? 0) - (res.V[4] ?? 0)) },
+          { t: 'led', x: 590, y: 180, bright: Math.min(1, mA / 20), small: true, heat: power(res, 'led', res.V[4] ?? 0) },
+          { t: 'gnd', x: 616, y: 253 },
+        ],
+        chips: [{ x: 200, y: 158, v: p.ref, kind: 'mid' }, { x: 200, y: 202, v: p.sig, kind: 'mid' }, { x: 470, y: 150, v: res.V[3] ?? 0, kind: hi ? 'hi' : 'gnd' }],
+      };
+    },
+    rows: (p, res) => {
+      const hi = (res.V[3] ?? 0) > 2.5;
+      return [
+        { label: 'Signal (−)', value: `${fmt(p.sig)} V` },
+        { label: 'Threshold (+)', value: `${fmt(p.ref)} V` },
+        { label: 'Output', value: hi ? 'HIGH (LED on)' : 'LOW (off)', hot: hi },
+      ];
+    },
+    tutor: (p, res) => (res.V[3] ?? 0) > 2.5
+      ? <>The signal ({fmt(p.sig)} V) is <b>below</b> the threshold ({fmt(p.ref)} V), so the output snaps to the top rail and the LED is on. No in-between, that's the point of a comparator.</>
+      : <>The signal ({fmt(p.sig)} V) is <b>above</b> the threshold ({fmt(p.ref)} V), so the output sits at 0 V and the LED is off. Nudge the signal past the threshold and it flips instantly.</>,
+  },
+  {
+    id: 'follower', cat: 'Op-Amps', name: 'Voltage follower (buffer)', level: 2,
+    blurb: 'Feed the output back to the inverting input and the op-amp copies its input exactly, but can now drive a real load.',
+    params: [
+      { key: 'Vin', label: 'Input', min: 0, max: 5, step: 0.05, unit: 'V', def: 2.4 },
+      { key: 'Rl', label: 'Load', min: 100, max: 2200, step: 10, unit: 'Ω', def: 470 },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'vin', pos: 1, neg: 0, value: p.Vin },
+      { kind: 'OP', id: 'u', vp: 1, vn: 2, out: 2, vhi: 5, vlo: 0 },
+      { kind: 'R', id: 'rl', a: 2, b: 0, value: p.Rl },
+    ],
+    scene: (p, res) => ({
+      wires: [
+        { d: 'M272 158 H340' },
+        { d: 'M426 180 H470 V250 H310 V202 H340' },
+        { d: 'M470 180 H540 V224', i: 'rl' },
+        { d: 'M540 276 V300' },
+      ],
+      parts: [
+        { t: 'op', x: 380, y: 180, out: true },
+        { t: 'res', x: 540, y: 250, label: fmtOhm(p.Rl), rot: 90, heat: power(res, 'rl', res.V[2] ?? 0) },
+        { t: 'gnd', x: 540, y: 308 },
+        { t: 'dot', x: 470, y: 180 },
+      ],
+      chips: [{ x: 250, y: 158, v: p.Vin, kind: 'mid' }, { x: 490, y: 150, v: res.V[2] ?? 0, kind: 'hi' }],
+    }),
+    rows: (p, res) => [
+      { label: 'Input (+)', value: `${fmt(p.Vin)} V` },
+      { label: 'Output', value: `${fmt(res.V[2] ?? 0)} V` },
+      { label: 'Load current', current: res.I.rl ?? 0, power: power(res, 'rl', res.V[2] ?? 0) },
+    ],
+    tutor: (p, res) => <>Output wired back to the − input forces them equal, so <b>Vout = Vin = {fmt(res.V[2] ?? 0)} V</b>. The point is muscle: a weak signal can now drive <b>{fmt(toMA(res.I.rl ?? 0))} mA</b> into a load without sagging.</>,
+  },
 ];
 
-const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors'];
+const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 'Op-Amps'];
 
 // ────────────────────────────────────────────────────────────────────────────
 //  VIEW
@@ -856,10 +937,23 @@ const PartView: React.FC<{ p: Part; heat?: number }> = ({ p, heat }) => {
     case 'sw': return <Switch x={p.x} y={p.y} closed={p.closed} />;
     case 'buzz': return <Buzzer x={p.x} y={p.y} on={p.on} />;
     case 'motor': return <Motor x={p.x} y={p.y} spin={p.spin} />;
+    case 'op': return <Opamp x={p.x} y={p.y} out={p.out} />;
     case 'dot': return <circle cx={p.x} cy={p.y} r={6} fill="#14201e" />;
     case 'gnd': return <Ground x={p.x} y={p.y} />;
   }
 };
+
+/** Op-amp / comparator triangle. Inputs at (x-40, y±22): + top, − bottom. Output at (x+46, y). */
+const Opamp: React.FC<{ x: number; y: number; out?: boolean }> = ({ x, y, out }) => (
+  <g transform={`translate(${x},${y})`}>
+    <path d="M-26 -34 L-26 34 L36 0 Z" fill={out ? '#f3fae9' : '#fff'} stroke={out ? '#6fb519' : '#14201e'} strokeWidth={2.5} strokeLinejoin="round" />
+    <line x1={-40} y1={-22} x2={-26} y2={-22} stroke="#14201e" strokeWidth={3} />
+    <line x1={-40} y1={22} x2={-26} y2={22} stroke="#14201e" strokeWidth={3} />
+    <line x1={36} y1={0} x2={48} y2={0} stroke="#14201e" strokeWidth={3} />
+    <text x={-20} y={-15} fontSize={14} fontWeight={900} fill="#14201e">+</text>
+    <text x={-20} y={30} fontSize={16} fontWeight={900} fill="#14201e">−</text>
+  </g>
+);
 
 // ── Symbol primitives ──
 const heatAura = (heat: number | undefined) => (0.12 + 0.5 * (heat ?? 0)).toFixed(2);

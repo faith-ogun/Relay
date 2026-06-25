@@ -20,7 +20,8 @@ export type Comp =
   | { kind: 'LED'; id: string; anode: number; cathode: number; vf?: number; ron?: number }
   | { kind: 'D'; id: string; anode: number; cathode: number; vf?: number; ron?: number }   // generic diode
   | { kind: 'C'; id: string; a: number; b: number; value: number }                // capacitor (farads)
-  | { kind: 'Q'; id: string; base: number; collector: number; emitter: number; beta?: number }; // NPN
+  | { kind: 'Q'; id: string; base: number; collector: number; emitter: number; beta?: number } // NPN
+  | { kind: 'OP'; id: string; vp: number; vn: number; out: number; gain?: number; vhi: number; vlo: number }; // op-amp / comparator
 
 export interface SolveResult {
   /** node id -> volts (node 0 = 0V) */
@@ -55,13 +56,18 @@ interface SolveOpts {
 function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
   let maxNode = 0;
   for (const c of netlist) {
-    if (c.kind === 'V' || c.kind === 'R' || c.kind === 'C') maxNode = Math.max(maxNode, (c as any).pos ?? (c as any).a, (c as any).neg ?? (c as any).b);
+    if (c.kind === 'V') maxNode = Math.max(maxNode, c.pos, c.neg);
+    else if (c.kind === 'R' || c.kind === 'C') maxNode = Math.max(maxNode, c.a, c.b);
     else if (c.kind === 'LED' || c.kind === 'D') maxNode = Math.max(maxNode, c.anode, c.cathode);
-    else maxNode = Math.max(maxNode, c.base, c.collector, c.emitter);
+    else if (c.kind === 'Q') maxNode = Math.max(maxNode, c.base, c.collector, c.emitter);
+    else maxNode = Math.max(maxNode, c.vp, c.vn, c.out);
   }
   const n = maxNode;
   const sources = netlist.filter((c): c is Extract<Comp, { kind: 'V' }> => c.kind === 'V');
   const m = sources.length;
+  const ops = netlist.filter((c): c is Extract<Comp, { kind: 'OP' }> => c.kind === 'OP');
+  const opRegion: Record<string, 'lin' | 'hi' | 'lo'> = {};
+  for (const o of ops) opRegion[o.id] = 'lin';
 
   // nonlinear state
   const diodes = netlist.filter((c): c is DiodeLike => c.kind === 'LED' || c.kind === 'D');
@@ -79,7 +85,7 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
   let ok = true;
 
   for (let iter = 0; iter < 60; iter++) {
-    const size = n + m;
+    const size = n + m + ops.length;
     const A: number[][] = Array.from({ length: size }, () => new Array(size).fill(0));
     const z: number[] = new Array(size).fill(0);
 
@@ -133,6 +139,21 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
       z[row] = s.value;
     });
 
+    // op-amps (augmented branch per amp): output supplies current; the row sets V(out)
+    ops.forEach((o, k) => {
+      const row = n + m + k;
+      if (o.out > 0) { A[row][o.out - 1] += 1; A[o.out - 1][row] += 1; }
+      const reg = opRegion[o.id];
+      if (reg === 'lin') {
+        const A0 = o.gain ?? 1e5;
+        if (o.vp > 0) A[row][o.vp - 1] -= A0;
+        if (o.vn > 0) A[row][o.vn - 1] += A0;
+        z[row] = 0;
+      } else {
+        z[row] = reg === 'hi' ? o.vhi : o.vlo; // railed: V(out) = rail
+      }
+    });
+
     const x = gaussSolve(A, z);
     if (!x) { ok = false; break; }
 
@@ -174,6 +195,16 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
       if (next !== qRegion[q.id]) { qRegion[q.id] = next; changed = true; }
     }
 
+    // op-amp output rails
+    for (const o of ops) {
+      const A0 = o.gain ?? 1e5;
+      const demand = A0 * ((V[o.vp] ?? 0) - (V[o.vn] ?? 0));
+      let next: 'lin' | 'hi' | 'lo' = 'lin';
+      if (demand >= o.vhi) next = 'hi';
+      else if (demand <= o.vlo) next = 'lo';
+      if (next !== opRegion[o.id]) { opRegion[o.id] = next; changed = true; }
+    }
+
     if (!changed || iter === 59) {
       // final currents
       I = {};
@@ -193,6 +224,7 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
           I[`${c.id}/b`] = qIb[c.id];
         }
       }
+      ops.forEach((o, k) => { I[o.id] = x[n + m + k]; });
       break;
     }
   }
