@@ -43,6 +43,7 @@ type Part =
   | { t: 'buzz'; x: number; y: number; on: boolean; label?: string }
   | { t: 'motor'; x: number; y: number; spin: number; label?: string }
   | { t: 'op'; x: number; y: number; out?: boolean }
+  | { t: 'ic555'; x: number; y: number; active?: boolean }
   | { t: 'dot'; x: number; y: number }
   | { t: 'gnd'; x: number; y: number };
 
@@ -633,6 +634,144 @@ const CIRCUITS: Circuit[] = [
     ],
     tutor: (p, res) => <>Output wired back to the − input forces them equal, so <b>Vout = Vin = {fmt(res.V[2] ?? 0)} V</b>. The point is muscle: a weak signal can now drive <b>{fmt(toMA(res.I.rl ?? 0))} mA</b> into a load without sagging.</>,
   },
+  {
+    id: 'noninv', cat: 'Op-Amps', name: 'Non-inverting amplifier', level: 3,
+    blurb: 'Negative feedback through a divider multiplies the input by 1 + Rf/Rin, keeping the same sign.',
+    params: [
+      { key: 'Vin', label: 'Input', min: 0, max: 2.5, step: 0.05, unit: 'V', def: 1 },
+      { key: 'Rf', label: 'Rf (feedback)', min: 1000, max: 47000, step: 1000, unit: 'Ω', def: 20000 },
+      { key: 'Rin', label: 'Rin (to ground)', min: 1000, max: 22000, step: 500, unit: 'Ω', def: 10000 },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'vin', pos: 1, neg: 0, value: p.Vin },
+      { kind: 'OP', id: 'u', vp: 1, vn: 3, out: 2, vhi: 9, vlo: 0 },
+      { kind: 'R', id: 'rf', a: 2, b: 3, value: p.Rf },
+      { kind: 'R', id: 'rin', a: 3, b: 0, value: p.Rin },
+    ],
+    scene: (p, res) => ({
+      wires: [
+        { d: 'M272 158 H340' },
+        { d: 'M426 180 H500 V250' },
+        { d: 'M500 250 H380' },
+        { d: 'M380 250 V202 H340' },
+        { d: 'M380 250 V300' },
+      ],
+      parts: [
+        { t: 'op', x: 380, y: 180, out: true },
+        { t: 'res', x: 440, y: 250, label: fmtOhm(p.Rf), heat: power(res, 'rf', (res.V[2] ?? 0) - (res.V[3] ?? 0)) },
+        { t: 'res', x: 380, y: 275, label: fmtOhm(p.Rin), rot: 90, heat: power(res, 'rin', res.V[3] ?? 0) },
+        { t: 'gnd', x: 380, y: 310 },
+        { t: 'dot', x: 380, y: 250 },
+      ],
+      chips: [{ x: 250, y: 158, v: p.Vin, kind: 'mid' }, { x: 475, y: 150, v: res.V[2] ?? 0, kind: 'hi' }],
+    }),
+    rows: (p, res) => {
+      const gain = 1 + p.Rf / p.Rin;
+      return [
+        { label: 'Input (+)', value: `${fmt(p.Vin)} V` },
+        { label: 'Gain (1+Rf/Rin)', value: `×${fmt(gain)}` },
+        { label: 'Output', value: `${fmt(res.V[2] ?? 0)} V`, hot: true },
+      ];
+    },
+    tutor: (p, res) => {
+      const gain = 1 + p.Rf / p.Rin, ideal = gain * p.Vin;
+      return ideal > 9
+        ? <>The math wants {fmt(ideal)} V, but the output <b>clips at the 9 V rail</b>. An amplifier can't swing past its supply. Lower the gain or the input.</>
+        : <>Gain is <b>1 + Rf/Rin = ×{fmt(gain)}</b>, so {fmt(p.Vin)} V becomes <b>{fmt(res.V[2] ?? 0)} V</b>, same sign. The feedback divider sets the gain, not the op-amp.</>;
+    },
+  },
+  {
+    id: 'inv', cat: 'Op-Amps', name: 'Inverting amplifier', level: 3,
+    blurb: 'Feedback to the inverting input gives a gain of −Rf/Rin: a flipped, scaled copy of the input.',
+    params: [
+      { key: 'Vin', label: 'Input', min: -2, max: 2, step: 0.05, unit: 'V', def: 1 },
+      { key: 'Rf', label: 'Rf (feedback)', min: 1000, max: 47000, step: 1000, unit: 'Ω', def: 20000 },
+      { key: 'Rin', label: 'Rin (input)', min: 1000, max: 22000, step: 500, unit: 'Ω', def: 10000 },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'vin', pos: 1, neg: 0, value: p.Vin },
+      { kind: 'R', id: 'rin', a: 1, b: 3, value: p.Rin },
+      { kind: 'R', id: 'rf', a: 2, b: 3, value: p.Rf },
+      { kind: 'OP', id: 'u', vp: 0, vn: 3, out: 2, vhi: 9, vlo: -9 },
+    ],
+    scene: (p, res) => ({
+      wires: [
+        { d: 'M340 158 H310 V198' },
+        { d: 'M172 202 H340' },
+        { d: 'M426 180 H490 V250 H340 V202' },
+      ],
+      parts: [
+        { t: 'op', x: 380, y: 180, out: (res.V[2] ?? 0) > 0.1 },
+        { t: 'res', x: 265, y: 202, label: fmtOhm(p.Rin), heat: power(res, 'rin', (res.V[1] ?? 0) - (res.V[3] ?? 0)) },
+        { t: 'res', x: 415, y: 250, label: fmtOhm(p.Rf), heat: power(res, 'rf', (res.V[2] ?? 0) - (res.V[3] ?? 0)) },
+        { t: 'gnd', x: 310, y: 203 },
+        { t: 'dot', x: 340, y: 202 },
+      ],
+      chips: [{ x: 150, y: 202, v: p.Vin, kind: 'mid' }, { x: 470, y: 150, v: res.V[2] ?? 0, kind: (res.V[2] ?? 0) >= 0 ? 'hi' : 'gnd' }],
+    }),
+    rows: (p, res) => [
+      { label: 'Input', value: `${fmt(p.Vin)} V` },
+      { label: 'Gain (−Rf/Rin)', value: `×${fmt(-p.Rf / p.Rin)}` },
+      { label: 'Output', value: `${fmt(res.V[2] ?? 0)} V`, hot: true },
+    ],
+    tutor: (p, res) => <>The + input is pinned to ground, so the − input sits at a <b>virtual ground</b>. Gain is <b>−Rf/Rin = ×{fmt(-p.Rf / p.Rin)}</b>: {fmt(p.Vin)} V flips to <b>{fmt(res.V[2] ?? 0)} V</b>.</>,
+  },
+  {
+    id: 'astable555', cat: 'Capacitors', name: '555 timer (astable)', level: 3,
+    blurb: 'The classic blinker. A 555 swings a capacitor between 1/3 and 2/3 of the supply, toggling its output forever.',
+    params: [
+      { key: 'Ra', label: 'Ra', min: 1000, max: 47000, step: 1000, unit: 'Ω', def: 10000 },
+      { key: 'Rb', label: 'Rb', min: 1000, max: 47000, step: 1000, unit: 'Ω', def: 10000 },
+      { key: 'C', label: 'Capacitor', min: 1, max: 100, step: 1, unit: 'µF', def: 10 },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'vcc', pos: 1, neg: 0, value: 5 },
+      { kind: 'R', id: 'ra', a: 1, b: 2, value: p.Ra },
+      { kind: 'R', id: 'rb', a: 2, b: 3, value: p.Rb },
+      { kind: 'C', id: 'c', a: 3, b: 0, value: p.C * 1e-6 },
+      { kind: 'NE555', id: 'u', vcc: 1, out: 4, disch: 2, ctl: 3 },
+      { kind: 'R', id: 'rled', a: 4, b: 5, value: 330 },
+      { kind: 'LED', id: 'led', anode: 5, cathode: 0 },
+    ],
+    transient: { dt: 0.0008, sub: 8, duration: 1.2, probe: (r) => r.V[4] ?? 0, vmax: 6, probeLabel: 'Vout' },
+    scene: (p, res) => {
+      const out = res.V[4] ?? 0, hi = out > 2.5, mA = toMA(res.I.led ?? 0);
+      return {
+        wires: [
+          { d: 'M110 70 H340' },
+          { d: 'M160 70 V300' },
+          { d: 'M160 160 H300 V150' },
+          { d: 'M160 245 H290 V210 H300' },
+          { d: 'M340 120 V70' },
+          { d: 'M340 240 V300 H160' },
+          { d: 'M380 180 H450', i: 'led' },
+          { d: 'M548 180 H570 V300 H340' },
+        ],
+        parts: [
+          { t: 'res', x: 160, y: 115, label: fmtOhm(p.Ra), rot: 90, heat: power(res, 'ra', (res.V[1] ?? 0) - (res.V[2] ?? 0)) },
+          { t: 'res', x: 160, y: 200, label: fmtOhm(p.Rb), rot: 90, heat: power(res, 'rb', (res.V[2] ?? 0) - (res.V[3] ?? 0)) },
+          { t: 'cap', x: 160, y: 272, rot: 90, label: `${fmt(p.C)} µF`, charge: clamp01((res.V[3] ?? 0) / 5) },
+          { t: 'ic555', x: 340, y: 180, active: hi },
+          { t: 'res', x: 480, y: 180, label: '330 Ω', heat: power(res, 'rled', (res.V[4] ?? 0) - (res.V[5] ?? 0)) },
+          { t: 'led', x: 522, y: 180, small: true, bright: Math.min(1, mA / 20), heat: power(res, 'led', res.V[5] ?? 0) },
+          { t: 'dot', x: 160, y: 160 }, { t: 'dot', x: 160, y: 245 },
+        ],
+        chips: [{ x: 240, y: 160, v: res.V[2] ?? 0, kind: 'mid' }, { x: 245, y: 245, v: res.V[3] ?? 0, kind: 'mid' }, { x: 450, y: 152, v: out, kind: hi ? 'hi' : 'gnd' }],
+      };
+    },
+    rows: (p, res) => {
+      const C = p.C * 1e-6, tH = 0.693 * (p.Ra + p.Rb) * C, tL = 0.693 * p.Rb * C, f = 1 / (tH + tL);
+      return [
+        { label: 'Output', value: (res.V[4] ?? 0) > 2.5 ? 'HIGH (LED on)' : 'LOW (off)', hot: (res.V[4] ?? 0) > 2.5 },
+        { label: 'Frequency', value: `${fmt(f)} Hz` },
+        { label: 'Duty cycle', value: `${fmt((100 * tH) / (tH + tL))} %` },
+      ];
+    },
+    tutor: (p, res) => {
+      const C = p.C * 1e-6, f = 1 / (0.693 * (p.Ra + 2 * p.Rb) * C);
+      return <>The cap charges through Ra+Rb and drains through Rb, ping-ponging between 1/3 and 2/3 of 5 V. That sets the blink rate: <b>f ≈ {fmt(f)} Hz</b>. Bigger R or C means slower.</>;
+    },
+  },
 ];
 
 const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 'Op-Amps'];
@@ -938,6 +1077,7 @@ const PartView: React.FC<{ p: Part; heat?: number }> = ({ p, heat }) => {
     case 'buzz': return <Buzzer x={p.x} y={p.y} on={p.on} />;
     case 'motor': return <Motor x={p.x} y={p.y} spin={p.spin} />;
     case 'op': return <Opamp x={p.x} y={p.y} out={p.out} />;
+    case 'ic555': return <IC555 x={p.x} y={p.y} active={p.active} />;
     case 'dot': return <circle cx={p.x} cy={p.y} r={6} fill="#14201e" />;
     case 'gnd': return <Ground x={p.x} y={p.y} />;
   }
@@ -952,6 +1092,25 @@ const Opamp: React.FC<{ x: number; y: number; out?: boolean }> = ({ x, y, out })
     <line x1={36} y1={0} x2={48} y2={0} stroke="#14201e" strokeWidth={3} />
     <text x={-20} y={-15} fontSize={14} fontWeight={900} fill="#14201e">+</text>
     <text x={-20} y={30} fontSize={16} fontWeight={900} fill="#14201e">−</text>
+  </g>
+);
+
+/** 555 timer IC. Pins: VCC (top), GND (bottom), OUT (right), DIS (-40,-30), THR/TRG (-40,+30). */
+const IC555: React.FC<{ x: number; y: number; active?: boolean }> = ({ x, y, active }) => (
+  <g transform={`translate(${x},${y})`}>
+    <line x1={0} y1={-60} x2={0} y2={-72} stroke="#14201e" strokeWidth={3} />
+    <line x1={0} y1={60} x2={0} y2={72} stroke="#14201e" strokeWidth={3} />
+    <line x1={40} y1={0} x2={52} y2={0} stroke="#14201e" strokeWidth={3} />
+    <line x1={-40} y1={-30} x2={-52} y2={-30} stroke="#14201e" strokeWidth={3} />
+    <line x1={-40} y1={30} x2={-52} y2={30} stroke="#14201e" strokeWidth={3} />
+    <rect x={-40} y={-60} width={80} height={120} rx={8} fill={active ? '#f3fae9' : '#fff'} stroke={active ? '#6fb519' : '#14201e'} strokeWidth={2.5} />
+    <text x={0} y={-2} textAnchor="middle" fontSize={22} fontWeight={900} fill="#14201e">555</text>
+    <text x={0} y={16} textAnchor="middle" fontSize={9} fontWeight={800} fill="#9aa3a0">TIMER</text>
+    <text x={-36} y={-44} fontSize={8} fontWeight={800} fill="#9aa3a0">VCC</text>
+    <text x={-36} y={-24} fontSize={8} fontWeight={800} fill="#9aa3a0">DIS</text>
+    <text x={-36} y={36} fontSize={8} fontWeight={800} fill="#9aa3a0">THR</text>
+    <text x={36} y={-4} textAnchor="end" fontSize={8} fontWeight={800} fill="#9aa3a0">OUT</text>
+    <text x={-36} y={52} fontSize={8} fontWeight={800} fill="#9aa3a0">GND</text>
   </g>
 );
 

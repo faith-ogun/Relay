@@ -21,7 +21,8 @@ export type Comp =
   | { kind: 'D'; id: string; anode: number; cathode: number; vf?: number; ron?: number }   // generic diode
   | { kind: 'C'; id: string; a: number; b: number; value: number }                // capacitor (farads)
   | { kind: 'Q'; id: string; base: number; collector: number; emitter: number; beta?: number } // NPN
-  | { kind: 'OP'; id: string; vp: number; vn: number; out: number; gain?: number; vhi: number; vlo: number }; // op-amp / comparator
+  | { kind: 'OP'; id: string; vp: number; vn: number; out: number; gain?: number; vhi: number; vlo: number } // op-amp / comparator
+  | { kind: 'NE555'; id: string; vcc: number; out: number; disch: number; ctl: number }; // 555 timer (astable)
 
 export interface SolveResult {
   /** node id -> volts (node 0 = 0V) */
@@ -50,6 +51,7 @@ interface SolveOpts {
   caps: 'open' | 'companion';
   dt?: number;
   capV?: Record<string, number>; // previous-step capacitor voltages (a - b)
+  lat?: Record<string, number>;  // 555 latch states (1 = output high)
 }
 
 /** Core MNA solve with nonlinear (diode/LED/BJT) region iteration. */
@@ -60,7 +62,8 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
     else if (c.kind === 'R' || c.kind === 'C') maxNode = Math.max(maxNode, c.a, c.b);
     else if (c.kind === 'LED' || c.kind === 'D') maxNode = Math.max(maxNode, c.anode, c.cathode);
     else if (c.kind === 'Q') maxNode = Math.max(maxNode, c.base, c.collector, c.emitter);
-    else maxNode = Math.max(maxNode, c.vp, c.vn, c.out);
+    else if (c.kind === 'OP') maxNode = Math.max(maxNode, c.vp, c.vn, c.out);
+    else maxNode = Math.max(maxNode, c.vcc, c.out, c.disch, c.ctl);
   }
   const n = maxNode;
   const sources = netlist.filter((c): c is Extract<Comp, { kind: 'V' }> => c.kind === 'V');
@@ -129,6 +132,13 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
         jStamp(q.collector, -ic);
         jStamp(q.emitter, ic);
       }
+    }
+
+    // 555 timer: output is a push-pull to vcc/gnd; discharge pin shorts to gnd when output low
+    for (const c of netlist) if (c.kind === 'NE555') {
+      const L = (opts.lat?.[c.id] ?? 1) >= 0.5;
+      gStamp(c.out, L ? c.vcc : 0, 1 / 12);     // output stage (~12Ω) to the active rail
+      if (!L) gStamp(c.disch, 0, 1 / 12);        // discharge transistor on
     }
 
     // ideal voltage sources (augmented rows)
@@ -237,19 +247,27 @@ export function solve(netlist: Comp[]): SolveResult {
   return solveAt(netlist, { caps: 'open' });
 }
 
-export interface TransientState { capV: Record<string, number>; t: number }
+export interface TransientState { capV: Record<string, number>; lat: Record<string, number>; t: number }
 
 /** Initialise a transient run. Capacitors start uncharged unless `init` says otherwise. */
 export function initTransient(netlist: Comp[], init?: Record<string, number>): TransientState {
   const capV: Record<string, number> = {};
   for (const c of netlist) if (c.kind === 'C') capV[c.id] = init?.[c.id] ?? 0;
-  return { capV, t: 0 };
+  const lat: Record<string, number> = {};
+  for (const c of netlist) if (c.kind === 'NE555') lat[c.id] = 1; // output starts high (cap below 1/3)
+  return { capV, lat, t: 0 };
 }
 
 /** Advance one timestep of dt seconds; mutates state, returns the solved frame. */
 export function stepTransient(netlist: Comp[], st: TransientState, dt: number): SolveResult {
-  const res = solveAt(netlist, { caps: 'companion', dt, capV: st.capV });
+  const res = solveAt(netlist, { caps: 'companion', dt, capV: st.capV, lat: st.lat });
   for (const c of netlist) if (c.kind === 'C') st.capV[c.id] = (res.V[c.a] ?? 0) - (res.V[c.b] ?? 0);
+  // 555 latch: comparators at 2/3 and 1/3 of Vcc with hysteresis
+  for (const c of netlist) if (c.kind === 'NE555') {
+    const vcc = res.V[c.vcc] ?? 0, vcap = res.V[c.ctl] ?? 0;
+    if (vcap >= (2 / 3) * vcc) st.lat[c.id] = 0;
+    else if (vcap <= (1 / 3) * vcc) st.lat[c.id] = 1;
+  }
   st.t += dt;
   return res;
 }
