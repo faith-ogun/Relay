@@ -15,23 +15,22 @@ const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
  * solved by our engine), and a pushbutton on pin 2 the sketch can read.
  */
 
-const DEFAULT_SKETCH = `// Blink — the "hello world" of hardware.
-// Pin 13 has an LED. Pin 9 has a second LED. Pin 2 has a button.
+const DEFAULT_SKETCH = `// Read the knob on A0, fade the LED on pin 9, and use the button.
+// Pin 13 LED  ·  Pin 9 LED (PWM)  ·  A0 knob  ·  Pin 2 button
 
 void setup() {
   pinMode(13, OUTPUT);
-  pinMode(9, OUTPUT);
+  pinMode(9, OUTPUT);          // pin 9 is PWM-capable
   pinMode(2, INPUT_PULLUP);
   Serial.begin(9600);
-  Serial.println("Ohmlet online");
 }
 
 void loop() {
-  digitalWrite(13, HIGH);
-  digitalWrite(9, digitalRead(2) == LOW); // press the button to light pin 9
-  delay(400);
-  digitalWrite(13, LOW);
-  delay(400);
+  int knob = analogRead(A0);              // 0..1023 from the knob
+  analogWrite(9, knob / 4);               // fade pin 9 (0..255)
+  digitalWrite(13, digitalRead(2) == LOW); // hold the button to light pin 13
+  Serial.println(knob);
+  delay(30);
 }
 `;
 
@@ -47,16 +46,19 @@ export const CodeLabView: React.FC = () => {
   const [message, setMessage] = useState<string>('');
   const [serial, setSerial] = useState('');
   const [led13, setLed13] = useState(false);
-  const [led9, setLed9] = useState(false);
+  const [bright9, setBright9] = useState(0);
   const [pressed, setPressed] = useState(false);
+  const [pot, setPot] = useState(512);
 
   const runnerRef = useRef<AVRRunner | null>(null);
   const rafRef = useRef<number>(0);
   const lastRef = useRef<number>(0);
   const pressedRef = useRef(false);
+  const potRef = useRef(512);
   useEffect(() => { pressedRef.current = pressed; }, [pressed]);
+  useEffect(() => { potRef.current = pot; }, [pot]);
 
-  const stop = () => { cancelAnimationFrame(rafRef.current); runnerRef.current = null; setStatus((s) => (s === 'running' ? 'idle' : s)); setLed13(false); setLed9(false); };
+  const stop = () => { cancelAnimationFrame(rafRef.current); runnerRef.current = null; setStatus((s) => (s === 'running' ? 'idle' : s)); setLed13(false); setBright9(0); };
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
   const run = async () => {
@@ -76,10 +78,11 @@ export const CodeLabView: React.FC = () => {
         const now = performance.now();
         const dtMs = Math.min(16, now - lastRef.current);
         lastRef.current = now;
-        r.setInput('D', 2, !pressedRef.current); // pull-up: high = released
-        r.runCycles(Math.round(CYCLES_PER_MS * dtMs));
-        setLed13(r.isHigh('B', 5));
-        setLed9(r.isHigh('B', 1));
+        r.setInput('D', 2, !pressedRef.current);        // pull-up: high = released
+        r.setAnalog(0, (potRef.current / 1023) * 5);     // A0 knob → voltage
+        const [d13, d9] = r.runFrame(Math.round(CYCLES_PER_MS * dtMs), [['B', 5], ['B', 1]]);
+        setLed13(d13 > 0.5);
+        setBright9(d9);                                   // pin 9 duty = LED brightness
         setSerial(r.serial);
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -131,12 +134,17 @@ export const CodeLabView: React.FC = () => {
         {/* board + serial */}
         <div className="flex flex-col gap-4">
           <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
-            <Board led13={led13} led9={led9} pressed={pressed} onPress={setPressed} running={running} />
+            <Board led13={led13} bright9={bright9} pressed={pressed} onPress={setPressed} pot={pot} />
+            <div className="flex items-center gap-3 border-t-2 border-ohmlet-line bg-ohmlet-cream px-4 py-2.5">
+              <span className="whitespace-nowrap text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">A0 knob</span>
+              <input type="range" min={0} max={1023} value={pot} onChange={(e) => setPot(+e.target.value)} className="w-full accent-ohmlet-gold-deep" />
+              <span className="w-10 text-right text-xs font-black tabular-nums text-ohmlet-ink">{pot}</span>
+            </div>
             <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-white">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-4 w-4 text-ohmlet-ink" /></span>
               <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">
-                {running ? <>Live. Pin 13 {led13 ? <>is <b>HIGH</b> — LED on at <b>{ledMa.toFixed(1)} mA</b></> : 'is LOW'}. Hold the button to pull pin 2 LOW.</>
-                  : <>Hit <b>Compile &amp; Run</b> to build your sketch and watch the real firmware drive the board.</>}
+                {running ? <>Live. Pin 13 {led13 ? <>is <b>HIGH</b> ({ledMa.toFixed(1)} mA)</> : 'is LOW'}; pin 9 sits at <b>{Math.round(bright9 * 100)}%</b> brightness from the knob. Hold the button for pin 2.</>
+                  : <>Hit <b>Compile &amp; Run</b> to build your sketch and watch the real firmware drive the board — knob, PWM and all.</>}
               </p>
             </div>
           </div>
@@ -150,36 +158,45 @@ export const CodeLabView: React.FC = () => {
   );
 };
 
-const Board: React.FC<{ led13: boolean; led9: boolean; pressed: boolean; onPress: (p: boolean) => void; running: boolean }> = ({ led13, led9, pressed, onPress, running }) => (
-  <svg viewBox="0 0 480 260" className="block w-full"
-    style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.03) 1px,transparent 1px)', backgroundSize: '20px 20px' }}>
-    {/* the board */}
-    <rect x={40} y={70} width={400} height={130} rx={14} fill="#0c6b5e" stroke="#14201e" strokeWidth={2.5} />
-    <rect x={56} y={86} width={70} height={44} rx={5} fill="#0a4a41" stroke="#083c35" strokeWidth={2} />
-    <text x={91} y={112} textAnchor="middle" fontSize={11} fontWeight={800} fill="#cfe9e3">UNO</text>
-    {/* pin-13 LED */}
-    <g transform="translate(190,50)">
-      <circle cx={0} cy={0} r={20} fill="#facc2e" opacity={led13 ? 0.85 : 0} />
-      <circle cx={0} cy={0} r={11} fill={led13 ? '#ffe08a' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-      <line x1={0} y1={11} x2={0} y2={70} stroke="#14201e" strokeWidth={3} />
-      <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 13</text>
-    </g>
-    {/* pin-9 LED */}
-    <g transform="translate(300,50)">
-      <circle cx={0} cy={0} r={20} fill="#549cf0" opacity={led9 ? 0.8 : 0} />
-      <circle cx={0} cy={0} r={11} fill={led9 ? '#bcd8fb' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-      <line x1={0} y1={11} x2={0} y2={70} stroke="#14201e" strokeWidth={3} />
-      <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 9</text>
-    </g>
-    {/* pin-2 button */}
-    <g transform="translate(400,210)">
-      <line x1={0} y1={-12} x2={0} y2={-60} stroke="#14201e" strokeWidth={3} />
-      <text x={0} y={36} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 2</text>
-      <circle cx={0} cy={0} r={22} fill={pressed ? '#e8db11' : '#f1f5f9'} stroke="#14201e" strokeWidth={2.5} />
-      <circle cx={0} cy={0} r={13} fill={pressed ? '#cbb800' : '#cdd6d3'} stroke="#14201e" strokeWidth={2} />
-      <rect x={-26} y={-26} width={52} height={52} rx={10} fill="transparent" className="cursor-pointer"
-        onMouseDown={() => onPress(true)} onMouseUp={() => onPress(false)} onMouseLeave={() => onPress(false)}
-        onTouchStart={(e) => { e.preventDefault(); onPress(true); }} onTouchEnd={() => onPress(false)} />
-    </g>
-  </svg>
-);
+const Board: React.FC<{ led13: boolean; bright9: number; pressed: boolean; onPress: (p: boolean) => void; pot: number }> = ({ led13, bright9, pressed, onPress, pot }) => {
+  const a = (pot / 1023 - 0.5) * 1.5 * Math.PI; // knob wiper angle, ±135°
+  return (
+    <svg viewBox="0 0 480 260" className="block w-full"
+      style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.03) 1px,transparent 1px)', backgroundSize: '20px 20px' }}>
+      <rect x={40} y={70} width={400} height={120} rx={14} fill="#0c6b5e" stroke="#14201e" strokeWidth={2.5} />
+      <rect x={56} y={84} width={66} height={42} rx={5} fill="#0a4a41" stroke="#083c35" strokeWidth={2} />
+      <text x={89} y={109} textAnchor="middle" fontSize={11} fontWeight={800} fill="#cfe9e3">UNO</text>
+      {/* pin-13 LED (digital) */}
+      <g transform="translate(190,48)">
+        <circle cx={0} cy={0} r={20} fill="#facc2e" opacity={led13 ? 0.85 : 0} />
+        <circle cx={0} cy={0} r={11} fill={led13 ? '#ffe08a' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
+        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
+        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 13</text>
+      </g>
+      {/* pin-9 LED (PWM brightness) */}
+      <g transform="translate(290,48)">
+        <circle cx={0} cy={0} r={20} fill="#549cf0" opacity={(bright9 * 0.85).toFixed(2)} />
+        <circle cx={0} cy={0} r={11} fill={bright9 > 0.04 ? '#bcd8fb' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
+        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
+        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 9 · {Math.round(bright9 * 100)}%</text>
+      </g>
+      {/* A0 potentiometer */}
+      <g transform="translate(80,228)">
+        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
+        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">A0</text>
+        <circle cx={0} cy={0} r={20} fill="#f1f5f9" stroke="#14201e" strokeWidth={2.5} />
+        <line x1={0} y1={0} x2={Math.sin(a) * 14} y2={-Math.cos(a) * 14} stroke="#14201e" strokeWidth={3} strokeLinecap="round" />
+      </g>
+      {/* pin-2 button */}
+      <g transform="translate(400,228)">
+        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
+        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 2</text>
+        <circle cx={0} cy={0} r={20} fill={pressed ? '#e8db11' : '#f1f5f9'} stroke="#14201e" strokeWidth={2.5} />
+        <circle cx={0} cy={0} r={12} fill={pressed ? '#cbb800' : '#cdd6d3'} stroke="#14201e" strokeWidth={2} />
+        <rect x={-24} y={-24} width={48} height={48} rx={10} fill="transparent" className="cursor-pointer"
+          onMouseDown={() => onPress(true)} onMouseUp={() => onPress(false)} onMouseLeave={() => onPress(false)}
+          onTouchStart={(e) => { e.preventDefault(); onPress(true); }} onTouchEnd={() => onPress(false)} />
+      </g>
+    </svg>
+  );
+};

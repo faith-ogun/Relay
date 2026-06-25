@@ -10,7 +10,7 @@ import {
   CPU, avrInstruction,
   AVRIOPort, portBConfig, portCConfig, portDConfig,
   AVRTimer, timer0Config, timer1Config, timer2Config,
-  AVRUSART, usart0Config, PinState,
+  AVRUSART, usart0Config, AVRADC, adcConfig, PinState,
 } from 'avr8js';
 
 export const FREQ = 16_000_000; // 16 MHz Uno
@@ -42,6 +42,7 @@ export class AVRRunner {
   readonly portC: AVRIOPort;
   readonly portD: AVRIOPort;
   private readonly usart: AVRUSART;
+  private readonly adc: AVRADC;
   serial = '';
 
   constructor(hex: string) {
@@ -54,6 +55,7 @@ export class AVRRunner {
     this.portB = new AVRIOPort(this.cpu, portBConfig);
     this.portC = new AVRIOPort(this.cpu, portCConfig);
     this.portD = new AVRIOPort(this.cpu, portDConfig);
+    this.adc = new AVRADC(this.cpu, adcConfig); // analogRead(A0..A5)
     this.usart = new AVRUSART(this.cpu, usart0Config, FREQ);
     this.usart.onByteTransmit = (b: number) => {
       this.serial += String.fromCharCode(b);
@@ -69,6 +71,11 @@ export class AVRRunner {
   /** Is this output pin currently driven HIGH? */
   isHigh(p: Port, pin: number): boolean { return this.port(p).pinState(pin) === PinState.High; }
 
+  /** Feed an analog voltage (0..AVcc) to an ADC channel, e.g. a pot on A0. */
+  setAnalog(channel: number, volts: number) {
+    if (this.adc.channelValues) this.adc.channelValues[channel] = Math.max(0, Math.min(5, volts));
+  }
+
   /** Execute approximately `cycles` clock cycles (one animation frame's worth). */
   runCycles(cycles: number) {
     const target = this.cpu.cycles + cycles;
@@ -76,6 +83,24 @@ export class AVRRunner {
       avrInstruction(this.cpu);
       this.cpu.tick();
     }
+  }
+
+  /**
+   * Run a frame's worth of cycles, sampling the given pins in sub-frame chunks so
+   * a PWM (analogWrite) pin reports its real duty cycle (0..1), not a single
+   * instant. A plain digital pin reports ~0 or ~1 as expected.
+   */
+  runFrame(cycles: number, sample: Array<[Port, number]>): number[] {
+    const CHUNKS = 100;
+    const per = Math.max(1, Math.floor(cycles / CHUNKS));
+    const acc = sample.map(() => 0);
+    let n = 0;
+    for (let c = 0; c < CHUNKS; c++) {
+      this.runCycles(per);
+      for (let i = 0; i < sample.length; i++) if (this.isHigh(sample[i][0], sample[i][1])) acc[i]++;
+      n++;
+    }
+    return acc.map((a) => a / n);
   }
 }
 
