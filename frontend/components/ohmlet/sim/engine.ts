@@ -104,6 +104,10 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
       jStamp(cathode, -vf / ron);
     };
 
+    // GMIN: a tiny conductance from every node to ground keeps the matrix non-singular
+    // even when a node floats or is left unconnected (standard SPICE technique).
+    for (let i = 0; i < n; i++) A[i][i] += 1e-9;
+
     // resistors
     for (const c of netlist) if (c.kind === 'R' && c.value > 0) gStamp(c.a, c.b, 1 / c.value);
 
@@ -173,11 +177,14 @@ function solveAt(netlist: Comp[], opts: SolveOpts): SolveResult {
     // update nonlinear states
     let changed = false;
 
-    // diode currents → switch off reverse-biased
+    // diodes: switch off when reverse-biased, back on when forward-biased (bidirectional,
+    // so a diode that flicked off during an intermediate iteration can recover)
     for (const d of diodes) {
       if (dOn[d.id]) {
         const i = (V[d.anode] - V[d.cathode] - diodeVf(d)) / diodeRon(d);
         if (i < 0) { dOn[d.id] = false; changed = true; }
+      } else if ((V[d.anode] - V[d.cathode]) > diodeVf(d)) {
+        dOn[d.id] = true; changed = true;
       }
     }
 

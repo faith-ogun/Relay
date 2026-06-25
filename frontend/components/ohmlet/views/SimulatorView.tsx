@@ -44,6 +44,7 @@ type Part =
   | { t: 'motor'; x: number; y: number; spin: number; label?: string }
   | { t: 'op'; x: number; y: number; out?: boolean }
   | { t: 'ic555'; x: number; y: number; active?: boolean }
+  | { t: 'relay'; x: number; y: number; on?: boolean }
   | { t: 'dot'; x: number; y: number }
   | { t: 'gnd'; x: number; y: number };
 
@@ -772,9 +773,168 @@ const CIRCUITS: Circuit[] = [
       return <>The cap charges through Ra+Rb and drains through Rb, ping-ponging between 1/3 and 2/3 of 5 V. That sets the blink rate: <b>f ≈ {fmt(f)} Hz</b>. Bigger R or C means slower.</>;
     },
   },
+  {
+    id: 'relay-driver', cat: 'Transistors', name: 'Relay driver', level: 3,
+    blurb: 'A transistor energises a relay coil so a tiny signal can switch a big, isolated load. The flyback diode tames the coil.',
+    params: [
+      { key: 'V', label: 'Coil supply', min: 5, max: 12, step: 0.5, unit: 'V', def: 9 },
+      { key: 'drive', label: 'Drive signal', min: 0, max: 1, step: 1, unit: '', def: 1, type: 'toggle', onLabel: 'On', offLabel: 'Off' },
+      { key: 'Rb', label: 'Base resistor', min: 1000, max: 22000, step: 500, unit: 'Ω', def: 4700 },
+    ],
+    build: (p) => {
+      const parts: Comp[] = [
+        { kind: 'V', id: 'bat', pos: 1, neg: 0, value: p.V },
+        { kind: 'R', id: 'coil', a: 1, b: 2, value: 60 },
+        { kind: 'D', id: 'fb', anode: 2, cathode: 1 },
+        { kind: 'R', id: 'pd', a: 3, b: 0, value: 10000 },
+        { kind: 'Q', id: 'q', base: 3, collector: 2, emitter: 0, beta: 100 },
+      ];
+      if (p.drive >= 0.5) parts.push({ kind: 'R', id: 'rb', a: 1, b: 3, value: p.Rb });
+      return parts;
+    },
+    scene: (p, res) => {
+      const ic = toMA(res.I.q ?? 0), on = ic > 5;
+      return {
+        wires: [
+          { d: 'M110 70 H560' },
+          { d: 'M470 70 V124', i: 'coil' },
+          { d: 'M470 176 V200 H412', i: 'coil' },
+          { d: 'M560 70 V114', i: 'fb' },
+          { d: 'M560 166 V200 H470', i: 'fb' },
+          { d: 'M412 260 V300 H110 V70', i: 'q' },
+          { d: 'M250 70 V230 H370', i: p.drive >= 0.5 ? 'rb' : undefined },
+        ],
+        parts: [
+          { t: 'bat', x: 110, y: 185, v: p.V, rot: 90 },
+          { t: 'relay', x: 470, y: 150, on },
+          { t: 'diode', x: 560, y: 140, rot: 90, on: (res.I.fb ?? 0) > 1e-4, label: 'flyback' },
+          { t: 'res', x: 310, y: 230, label: fmtOhm(p.Rb), heat: power(res, 'rb', (res.V[1] ?? 0) - (res.V[3] ?? 0)) },
+          { t: 'npn', x: 400, y: 230, on, label: 'NPN' },
+          { t: 'dot', x: 250, y: 70 }, { t: 'dot', x: 470, y: 70 }, { t: 'dot', x: 560, y: 70 },
+        ],
+        chips: [{ x: 110, y: 52, v: res.V[1] ?? 0, kind: 'hi' }, { x: 430, y: 185, v: res.V[2] ?? 0, kind: 'mid' }],
+      };
+    },
+    rows: (p, res) => {
+      const ic = res.I.q ?? 0;
+      return [
+        { label: 'Base current', current: res.I['q/b'] ?? 0 },
+        { label: 'Coil current', current: ic, power: power(res, 'coil', (res.V[1] ?? 0) - (res.V[2] ?? 0)), hot: toMA(ic) > 5 },
+        { label: 'Contact', value: toMA(ic) > 5 ? 'CLOSED (load on)' : 'open', hot: toMA(ic) > 5 },
+      ];
+    },
+    tutor: (p, res) => p.drive >= 0.5
+      ? <>Drive on: the transistor pulls <b>{fmt(toMA(res.I.q ?? 0))} mA</b> through the coil, the relay <b>clicks closed</b>, and your separate high-power load switches on, fully isolated from this 5 V logic. The flyback diode waits to absorb the coil's kick.</>
+      : <>Drive off: no coil current, the relay contact springs open and the load is disconnected. Flip the drive and a few milliamps of logic will switch mains-level loads through the contact.</>,
+  },
+  {
+    id: 'not-gate', cat: 'Logic', name: 'NOT gate (inverter)', level: 2,
+    blurb: 'One transistor flips a signal: input HIGH gives output LOW, input LOW gives output HIGH.',
+    params: [
+      { key: 'in', label: 'Input', min: 0, max: 1, step: 1, unit: '', def: 0, type: 'toggle', onLabel: 'HIGH (1)', offLabel: 'LOW (0)' },
+    ],
+    build: (p) => {
+      const parts: Comp[] = [
+        { kind: 'V', id: 'v', pos: 1, neg: 0, value: 5 },
+        { kind: 'R', id: 'rc', a: 1, b: 2, value: 470 },
+        { kind: 'Q', id: 'q', base: 3, collector: 2, emitter: 0, beta: 100 },
+        { kind: 'R', id: 'pd', a: 3, b: 0, value: 10000 },
+        { kind: 'R', id: 'rled', a: 2, b: 4, value: 330 },
+        { kind: 'LED', id: 'led', anode: 4, cathode: 0 },
+      ];
+      if (p.in >= 0.5) parts.push({ kind: 'R', id: 'rb', a: 1, b: 3, value: 4700 });
+      return parts;
+    },
+    scene: (p, res) => {
+      const outHigh = (res.V[2] ?? 0) > 2.5, ledmA = toMA(res.I.led ?? 0);
+      return {
+        wires: [
+          { d: 'M110 70 H500' },
+          { d: 'M500 70 V200 H412', i: 'rc' },
+          { d: 'M412 260 V300 H110 V70', i: 'q' },
+          { d: 'M250 70 V230 H370', i: p.in >= 0.5 ? 'rb' : undefined },
+          { d: 'M456 200 V300 H412', i: 'led' },
+        ],
+        parts: [
+          { t: 'bat', x: 110, y: 185, v: 5, rot: 90 },
+          { t: 'res', x: 500, y: 130, label: '470 Ω', heat: power(res, 'rc', (res.V[1] ?? 0) - (res.V[2] ?? 0)) },
+          { t: 'res', x: 310, y: 230, label: '10 kΩ', heat: power(res, 'rb', (res.V[1] ?? 0) - (res.V[3] ?? 0)) },
+          { t: 'npn', x: 400, y: 230, on: !outHigh, label: 'NPN' },
+          { t: 'res', x: 456, y: 238, label: '330 Ω', rot: 90, heat: power(res, 'rled', (res.V[2] ?? 0) - (res.V[4] ?? 0)) },
+          { t: 'led', x: 456, y: 283, small: true, bright: Math.min(1, ledmA / 20), heat: power(res, 'led', res.V[4] ?? 0) },
+          { t: 'dot', x: 456, y: 200 }, { t: 'dot', x: 250, y: 70 },
+        ],
+        chips: [{ x: 110, y: 52, v: 5, kind: 'hi' }, { x: 466, y: 178, v: res.V[2] ?? 0, kind: outHigh ? 'hi' : 'gnd' }],
+      };
+    },
+    rows: (p, res) => {
+      const outHigh = (res.V[2] ?? 0) > 2.5;
+      return [
+        { label: 'Input', value: p.in >= 0.5 ? 'HIGH (1)' : 'LOW (0)' },
+        { label: 'Output', value: outHigh ? 'HIGH (1)' : 'LOW (0)', hot: outHigh },
+        { label: 'Output LED', value: outHigh ? 'lit' : 'off' },
+      ];
+    },
+    tutor: (p, res) => p.in >= 0.5
+      ? <>Input HIGH turns the transistor fully on, dragging the output down to <b>{fmt(res.V[2] ?? 0)} V</b> (LOW). The output is the opposite of the input: that's a NOT gate.</>
+      : <>Input LOW leaves the transistor off, so the pull-up resistor lifts the output to <b>{fmt(res.V[2] ?? 0)} V</b> (HIGH) and the LED lights. Flip the input and the output flips too.</>,
+  },
+  {
+    id: 'and-gate', cat: 'Logic', name: 'AND gate (diodes)', level: 2,
+    blurb: 'Two diodes and a pull-up make an AND gate: the output is HIGH only when both inputs are HIGH.',
+    params: [
+      { key: 'A', label: 'Input A', min: 0, max: 1, step: 1, unit: '', def: 1, type: 'toggle', onLabel: 'HIGH (1)', offLabel: 'LOW (0)' },
+      { key: 'B', label: 'Input B', min: 0, max: 1, step: 1, unit: '', def: 0, type: 'toggle', onLabel: 'HIGH (1)', offLabel: 'LOW (0)' },
+    ],
+    build: (p) => [
+      { kind: 'V', id: 'v', pos: 1, neg: 0, value: 5 },
+      { kind: 'R', id: 'pu', a: 1, b: 4, value: 1000 },
+      { kind: 'V', id: 'va', pos: 2, neg: 0, value: p.A >= 0.5 ? 5 : 0 },
+      { kind: 'V', id: 'vb', pos: 3, neg: 0, value: p.B >= 0.5 ? 5 : 0 },
+      { kind: 'D', id: 'da', anode: 4, cathode: 2 },
+      { kind: 'D', id: 'db', anode: 4, cathode: 3 },
+      { kind: 'R', id: 'rled', a: 4, b: 5, value: 330 },
+      { kind: 'LED', id: 'led', anode: 5, cathode: 0 },
+    ],
+    scene: (p, res) => {
+      const out = res.V[4] ?? 0, hi = out > 2.5, ledmA = toMA(res.I.led ?? 0);
+      return {
+        wires: [
+          { d: 'M110 70 H360' },
+          { d: 'M360 70 V150' },
+          { d: 'M360 150 V230' },
+          { d: 'M180 150 H280', i: 'da' },
+          { d: 'M180 230 H280', i: 'db' },
+          { d: 'M360 190 H470', i: 'led' },
+          { d: 'M566 190 H590 V300 H110 V70' },
+        ],
+        parts: [
+          { t: 'bat', x: 110, y: 185, v: 5, rot: 90 },
+          { t: 'res', x: 360, y: 110, label: '1 kΩ', rot: 90, heat: power(res, 'pu', (res.V[1] ?? 0) - (res.V[4] ?? 0)) },
+          { t: 'diode', x: 235, y: 150, rot: 180, on: (res.I.da ?? 0) > 1e-4 },
+          { t: 'diode', x: 235, y: 230, rot: 180, on: (res.I.db ?? 0) > 1e-4 },
+          { t: 'res', x: 510, y: 190, label: '330 Ω', heat: power(res, 'rled', (res.V[4] ?? 0) - (res.V[5] ?? 0)) },
+          { t: 'led', x: 552, y: 190, small: true, bright: Math.min(1, ledmA / 20), heat: power(res, 'led', res.V[5] ?? 0) },
+          { t: 'dot', x: 360, y: 150 }, { t: 'dot', x: 360, y: 230 },
+        ],
+        chips: [{ x: 150, y: 150, v: p.A >= 0.5 ? 5 : 0, kind: p.A >= 0.5 ? 'hi' : 'gnd' }, { x: 150, y: 230, v: p.B >= 0.5 ? 5 : 0, kind: p.B >= 0.5 ? 'hi' : 'gnd' }, { x: 410, y: 168, v: out, kind: hi ? 'hi' : 'gnd' }],
+      };
+    },
+    rows: (p, res) => {
+      const hi = (res.V[4] ?? 0) > 2.5;
+      return [
+        { label: 'Input A', value: p.A >= 0.5 ? '1' : '0' },
+        { label: 'Input B', value: p.B >= 0.5 ? '1' : '0' },
+        { label: 'Output (A AND B)', value: hi ? '1 (HIGH)' : '0 (LOW)', hot: hi },
+      ];
+    },
+    tutor: (p, res) => (res.V[4] ?? 0) > 2.5
+      ? <>Both inputs are HIGH, so neither diode conducts and the pull-up holds the output <b>HIGH</b>. Only the <b>1 AND 1</b> case lights the LED.</>
+      : <>At least one input is LOW, so its diode yanks the output down to ~0.6 V (<b>LOW</b>). An AND gate needs <i>every</i> input high. Set both to 1.</>,
+  },
 ];
 
-const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 'Op-Amps'];
+const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 'Op-Amps', 'Logic'];
 
 // ────────────────────────────────────────────────────────────────────────────
 //  VIEW
@@ -1078,6 +1238,7 @@ const PartView: React.FC<{ p: Part; heat?: number }> = ({ p, heat }) => {
     case 'motor': return <Motor x={p.x} y={p.y} spin={p.spin} />;
     case 'op': return <Opamp x={p.x} y={p.y} out={p.out} />;
     case 'ic555': return <IC555 x={p.x} y={p.y} active={p.active} />;
+    case 'relay': return <Relay x={p.x} y={p.y} on={p.on} />;
     case 'dot': return <circle cx={p.x} cy={p.y} r={6} fill="#14201e" />;
     case 'gnd': return <Ground x={p.x} y={p.y} />;
   }
@@ -1092,6 +1253,20 @@ const Opamp: React.FC<{ x: number; y: number; out?: boolean }> = ({ x, y, out })
     <line x1={36} y1={0} x2={48} y2={0} stroke="#14201e" strokeWidth={3} />
     <text x={-20} y={-15} fontSize={14} fontWeight={900} fill="#14201e">+</text>
     <text x={-20} y={30} fontSize={16} fontWeight={900} fill="#14201e">−</text>
+  </g>
+);
+
+/** Relay: a coil (pins top/bottom at y±26) plus a contact arm that closes when energised. */
+const Relay: React.FC<{ x: number; y: number; on?: boolean }> = ({ x, y, on }) => (
+  <g transform={`translate(${x},${y})`}>
+    <rect x={-30} y={-26} width={42} height={52} rx={6} fill={on ? '#f3fae9' : '#fff'} stroke={on ? '#6fb519' : '#14201e'} strokeWidth={2} />
+    <path d="M-18 -18a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14201e" strokeWidth={2.5} transform="translate(0,2)" />
+    <path d="M-18 -6a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14201e" strokeWidth={2.5} transform="translate(0,8)" />
+    {/* contact: pivot + arm (closed when energised) */}
+    <circle cx={18} cy={16} r={2.5} fill="#14201e" />
+    <circle cx={34} cy={16} r={2.5} fill="#14201e" />
+    <line x1={18} y1={16} x2={34} y2={on ? 16 : 8} stroke={on ? '#6fb519' : '#14201e'} strokeWidth={2.5} strokeLinecap="round" />
+    <text x={-9} y={42} textAnchor="middle" fontSize={10} fontWeight={800} fill={on ? '#6fb519' : '#46514e'}>{on ? 'CLOSED' : 'RELAY'}</text>
   </g>
 );
 
