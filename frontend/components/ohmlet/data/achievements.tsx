@@ -31,7 +31,11 @@ type Shape = Achievement['shape'];
 const mk = (
   id: string, title: string, desc: string, backText: string, rarity: number,
   tier: AchievementRarity, shape: Shape, theme: keyof typeof G, metric: AchievementMetric, threshold: number,
-): Achievement => ({ id, title, desc, backText, rarity, tier, bg: G[theme], glowColor: GLOW[theme], metric, threshold, shape });
+): Achievement => ({
+  id, title, desc, backText, rarity, tier, bg: G[theme], glowColor: GLOW[theme], metric, threshold, shape,
+  // Painted collectible art lives in public/achievements/<id>.webp, keyed by id.
+  art: `/achievements/${id}.webp`,
+});
 
 export const ACHIEVEMENTS: Achievement[] = [
   // ── Builds (the core loop) ──

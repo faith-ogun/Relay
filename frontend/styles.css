@@ -175,6 +175,22 @@ body {
   background: var(--card-bg);
 }
 
+/* Painted-art cards: the PNG is the face, the gloss renders over it. The art
+   sits at z-0 (under the iridescent ::before and specular ::after). */
+.ohmlet-holo-card.has-art {
+  background-image: var(--card-art);
+  background-size: cover;
+  background-position: center;
+}
+/* The art already carries colour + a frame, so soften the rainbow wash so it
+   reads as a sheen on top of the painting rather than washing it out. */
+.ohmlet-holo-card.has-art::before {
+  opacity: 0.18;
+}
+.ohmlet-holo-card.has-art:hover::before {
+  opacity: 0.34;
+}
+
 /* Iridescent rainbow layer — covers entire card */
 .ohmlet-holo-card::before {
   content: '';

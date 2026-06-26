@@ -33,6 +33,10 @@ export type Achievement = {
   // unlock condition: stats[metric] >= threshold
   metric: AchievementMetric;
   threshold: number;
-  // SVG shape type for the centerpiece
+  // SVG shape type for the centerpiece (fallback when there is no art image)
   shape: 'bolt' | 'flame' | 'diamond' | 'star' | 'hexagon' | 'crown';
+  // Full bleed card-art image (the painted collectible). When present it IS the
+  // card face; the holographic gloss layers render on top. Falls back to the
+  // gradient + shape when absent.
+  art?: string;
 };

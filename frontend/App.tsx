@@ -12,6 +12,7 @@ import { LegalPage } from './components/legal/LegalPage';
 import { SupportPage } from './components/SupportPage';
 import { WorkspaceHome } from './components/WorkspaceHome';
 import { AuthorPreview } from './components/ohmlet/views/AuthorPreview';
+import { AchievementsPreview } from './components/ohmlet/views/AchievementsPreview';
 import { AuthPage } from './components/auth/AuthPage';
 import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
 import { ErrorPage } from './components/errors/ErrorPage';
@@ -34,6 +35,7 @@ type AppRoute =
   | 'welcome'
   | 'upgrade-success'
   | 'author'
+  | 'cards'
   | 'account'
   | 'ohmlet-app'
   | 'workspace'
@@ -54,6 +56,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   welcome: '/welcome',
   'upgrade-success': '/upgrade-success',
   author: '/author',
+  cards: '/cards',
   account: '/account',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
@@ -92,6 +95,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/welcome') return 'welcome';
   if (normalized === '/upgrade-success') return 'upgrade-success';
   if (normalized === '/author') return 'author';
+  if (normalized === '/cards') return 'cards';
   if (normalized === '/account') return 'account';
   if (normalized === '/workspace') return 'workspace';
 
@@ -154,7 +158,7 @@ const App: React.FC = () => {
 
   // ── Route guards (run once auth state is known) ──
   const isProtected =
-    route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'welcome' || route === 'account';
+    route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'cards' || route === 'welcome' || route === 'account';
   const isAuthRoute = route === 'login' || route === 'signup';
 
   useEffect(() => {
@@ -206,6 +210,16 @@ const App: React.FC = () => {
     if (!user) return <AuthSplash />;
     return isAdmin ? (
       <AuthorPreview onBack={backToLanding} />
+    ) : (
+      <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
+    );
+  }
+
+  // ── Achievement card gallery (admin only) — review art + gloss before ship ──
+  if (route === 'cards') {
+    if (!user) return <AuthSplash />;
+    return isAdmin ? (
+      <AchievementsPreview onBack={backToLanding} />
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
     );
