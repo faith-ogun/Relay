@@ -334,6 +334,42 @@ body {
   .ohmlet-fade-in, .ohmlet-scale-in, .ohmlet-slide-right,
   .ohmlet-pulse-glow, .ohmlet-streak-flame, .ohmlet-xp-pop,
   .ohmlet-heart-pop, .ohmlet-edge-flow, .ohmlet-count-up,
-  .ohmlet-rise, .ohmlet-float,
+  .ohmlet-rise, .ohmlet-float, .ohmlet-shimmer,
+  .ohmlet-node-breathe, .ohmlet-holo-card,
   .circuit-pulse { animation: none !important; }
+  /* Honour reduced-motion for the dialog entrances driven via animate-[...]. */
+  .ohmlet-card-inspect-overlay,
+  .ohmlet-card-inspect-flip { transition: none !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+/* ── Accessibility (#54) ── */
+/* A consistent, visible keyboard focus ring on dark or busy surfaces where the
+   default UA outline can be hard to see. WCAG 2.4.7 Focus Visible. */
+.ohmlet-focus-ring:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+/* Global: never remove focus visibility without a replacement. A clear ring in
+   the brand ink/gold, only for keyboard users (focus-visible). */
+:focus-visible {
+  outline: 3px solid var(--ohmlet-ink, #14201e);
+  outline-offset: 2px;
+}
+/* Skip link — visually hidden until focused, then pinned top-left. */
+.ohmlet-skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 200;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+  background: var(--ohmlet-ink, #14201e);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  font-weight: 800;
+}
+.ohmlet-skip-link:focus {
+  transform: translateY(0);
 }

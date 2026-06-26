@@ -93,7 +93,7 @@ export const CookieConsent: React.FC<CookieConsentProps> = ({ onOpenPolicy }) =>
             type="button"
             onClick={close}
             aria-label="Close cookie settings"
-            className="absolute right-3 top-3.5 rounded-full p-1.5 text-ohmlet-ink/50 transition-colors hover:bg-ohmlet-ink/10 hover:text-ohmlet-ink"
+            className="absolute right-3 top-3.5 rounded-full p-1.5 text-ohmlet-ink/70 transition-colors hover:bg-ohmlet-ink/10 hover:text-ohmlet-ink"
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
           </button>

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Clock, Gift, Target, Users, X } from 'lucide-react';
 import type { Challenge } from '../../../services/community';
 import { ChallengeArt, themeFor } from './ChallengeArt';
+import { useDialog } from '../../../hooks/useDialog';
 
 // ── Join / leave dialogs for live challenges (#63) ──
 //
@@ -15,20 +16,19 @@ const Backdrop: React.FC<{ onClose: () => void; children: React.ReactNode; label
   children,
   labelledBy,
 }) => {
+  // Focus trap + Escape + focus restoration on the dialog panel.
+  const panelRef = useDialog<HTMLDivElement>(onClose);
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
+      ref={panelRef}
       className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"

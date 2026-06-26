@@ -58,7 +58,7 @@ const LessonNode: React.FC<{
       ? 'text-white shadow-press-sm'
       : state === 'active'
       ? `bg-white text-ohmlet-ink shadow-press ring-4 ring-offset-2 ${a.ring} ohmlet-pulse-glow`
-      : 'bg-ohmlet-line/60 text-ohmlet-ink/30 border-ohmlet-ink/20';
+      : 'bg-ohmlet-line/60 text-ohmlet-ink/55 border-ohmlet-ink/30';
 
   return (
     <div className={`flex flex-col items-center ${offset}`}>
@@ -98,7 +98,7 @@ const LessonNode: React.FC<{
       </button>
       <span
         className={`mt-2 max-w-[8rem] text-center text-xs font-extrabold ${
-          state === 'locked' ? 'text-ohmlet-ink/40' : 'text-ohmlet-ink'
+          state === 'locked' ? 'text-ohmlet-ink/60' : 'text-ohmlet-ink'
         }`}
       >
         {lesson.title}

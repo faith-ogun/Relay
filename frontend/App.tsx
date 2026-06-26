@@ -245,6 +245,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white font-display text-ohmlet-ink selection:bg-ohmlet-gold selection:text-ohmlet-ink">
+      <a href="#main-content" className="ohmlet-skip-link">
+        Skip to content
+      </a>
       <div
         className={`fixed inset-0 pointer-events-none mix-blend-multiply ${darkShell ? 'opacity-[0.08]' : 'opacity-[0.03]'}`}
         style={{
@@ -266,7 +269,7 @@ const App: React.FC = () => {
           onOpenWorkspace={() => navigate('ohmlet-app')}
           onSignOut={handleSignOut}
         />
-        <main>
+        <main id="main-content" tabIndex={-1}>
           {route === 'landing' && <Home onNavigate={navigate} />}
           {route === 'learn' && <LearnPage onNavigate={navigate} />}
           {route === 'build' && <BuildPage onNavigate={navigate} />}

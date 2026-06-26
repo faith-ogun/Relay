@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { CardShape, RARITY_LABELS } from '../data/achievements';
 import type { Achievement } from '../types';
+import { useDialog } from '../../../hooks/useDialog';
 
 // ── Holographic collectible card (shared) ──
 //
@@ -13,7 +14,7 @@ import type { Achievement } from '../types';
 
 // Mouse-tracked tilt + specular position. Instant (no transition) so the gloss
 // feels like a real foil card catching the light.
-const tilt = (e: React.MouseEvent<HTMLDivElement>) => {
+const tilt = (e: React.MouseEvent<HTMLElement>) => {
   const el = e.currentTarget;
   const r = el.getBoundingClientRect();
   const px = (e.clientX - r.left) / r.width;
@@ -24,7 +25,7 @@ const tilt = (e: React.MouseEvent<HTMLDivElement>) => {
   el.style.setProperty('--bg-y', `${py * 100}%`);
   el.style.transform = `perspective(700px) rotateY(${(px - 0.5) * 14}deg) rotateX(${(0.5 - py) * 14}deg)`;
 };
-const resetTilt = (e: React.MouseEvent<HTMLDivElement>) => {
+const resetTilt = (e: React.MouseEvent<HTMLElement>) => {
   e.currentTarget.style.transform = '';
 };
 
@@ -44,19 +45,14 @@ interface CardProps {
   onClick?: () => void;
 }
 
-/** A single grid tile. */
+/** A single grid tile. Earned cards are real buttons (keyboard-operable); locked
+ *  cards are inert, non-focusable tiles that announce their progress. */
 export const AchievementCard: React.FC<CardProps> = ({ a, earned, label, onClick }) => {
   const rarityMeta = RARITY_LABELS[a.tier];
   const hasArt = !!a.art;
-  return (
-    <div
-      onClick={onClick}
-      onMouseMove={earned ? tilt : undefined}
-      onMouseLeave={earned ? resetTilt : undefined}
-      className={`ohmlet-holo-card ${hasArt ? 'has-art' : ''} ${earned ? 'earned cursor-pointer' : 'locked'} aspect-[3/4]`}
-      style={cardVars(a)}
-    >
-      {hasArt ? (
+  const className = `ohmlet-holo-card ${hasArt ? 'has-art' : ''} ${earned ? 'earned cursor-pointer' : 'locked'} aspect-[3/4]`;
+
+  const inner = hasArt ? (
         // Art is self-contained (title, rarity, mascot, frame). Only overlay a
         // progress chip while locked, so a learner sees how close they are.
         !earned && (
@@ -75,10 +71,29 @@ export const AchievementCard: React.FC<CardProps> = ({ a, earned, label, onClick
           <CardShape shape={a.shape} className="h-16 w-16 drop-shadow-lg" />
           <div className="w-full text-center">
             <p className="text-sm font-black leading-tight">{a.title}</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-white/70">{label}</p>
+            <p className="mt-0.5 text-[11px] font-semibold text-white/80">{label}</p>
           </div>
         </div>
-      )}
+      );
+
+  if (earned) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        onMouseMove={tilt}
+        onMouseLeave={resetTilt}
+        aria-label={`${a.title} — ${RARITY_LABELS[a.tier].label}, earned. View card.`}
+        className={`${className} text-left`}
+        style={cardVars(a)}
+      >
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <div className={className} style={cardVars(a)} aria-label={`${a.title} — locked. ${label}.`} role="img">
+      {inner}
     </div>
   );
 };
@@ -87,19 +102,33 @@ export const AchievementCard: React.FC<CardProps> = ({ a, earned, label, onClick
 export const CardInspectModal: React.FC<{ a: Achievement; onClose: () => void }> = ({ a, onClose }) => {
   const [flipped, setFlipped] = useState(false);
   const hasArt = !!a.art;
+  const panelRef = useDialog<HTMLDivElement>(onClose);
+  const titleId = `card-inspect-${a.id}`;
   return (
     <div className="ohmlet-card-inspect-overlay" onClick={onClose}>
-      <div className="ohmlet-card-inspect-wrapper" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panelRef}
+        className="ohmlet-card-inspect-wrapper"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <span id={titleId} className="sr-only">
+          {a.title} achievement card. {a.desc}
+        </span>
         <button
           onClick={onClose}
-          className="mb-4 ml-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/30 text-white transition-colors hover:bg-white/10"
-          aria-label="Close"
+          className="ohmlet-focus-ring mb-4 ml-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/50 text-white transition-colors hover:bg-white/10"
+          aria-label="Close card"
         >
           <X className="h-5 w-5" />
         </button>
-        <div
+        <button
+          type="button"
           className={`ohmlet-card-inspect-flip ${flipped ? 'flipped' : ''}`}
           onClick={() => setFlipped((f) => !f)}
+          aria-label={flipped ? 'Show card front' : 'Flip card to read the story'}
           style={{ width: 280, height: 373, cursor: 'pointer' }}
         >
           {/* Front — the painted art (or gradient fallback) */}
@@ -135,8 +164,8 @@ export const CardInspectModal: React.FC<{ a: Achievement; onClose: () => void }>
               <p className="text-base font-bold leading-relaxed">{a.backText}</p>
             </div>
           </div>
-        </div>
-        <p className="mt-4 text-center text-xs font-bold uppercase tracking-wide text-white/50">Tap the card to flip</p>
+        </button>
+        <p className="mt-4 text-center text-xs font-bold uppercase tracking-wide text-white/75">Tap or press Enter to flip</p>
       </div>
     </div>
   );
