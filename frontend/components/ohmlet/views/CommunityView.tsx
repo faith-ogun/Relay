@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Award, Flame, Heart, Loader2, MessageCircle, Send, Share2, TrendingUp, Trophy, Users } from 'lucide-react';
+import { Award, Bug, Flame, Heart, Loader2, MessageCircle, Radar, Send, Share2, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
 import { AVATAR_COLORS } from '../data/leaderboard';
 import {
   addComment,
@@ -9,6 +9,7 @@ import {
   fetchFeed,
   fetchLeaderboard,
   joinChallenge,
+  leaveChallenge,
   relativeTime,
   toggleLike,
   type Challenge,
@@ -16,6 +17,8 @@ import {
   type CommunityPost,
   type Leaderboard,
 } from '../../../services/community';
+import { ChallengeArt, themeFor } from '../challenges/ChallengeArt';
+import { ChallengeJoinDialog, ChallengeLeaveDialog } from '../challenges/ChallengeDialogs';
 
 /**
  * CommunityView — the social layer (#63), now backed by real persistence.
@@ -31,13 +34,16 @@ interface CommunityViewProps {
 const initial = (s: string) => (s || 'O').trim().charAt(0).toUpperCase();
 const avatarColor = (seed: string) => AVATAR_COLORS[(seed || 'O').charCodeAt(0) % AVATAR_COLORS.length];
 
-// Small decorative lookup so seeded challenges keep their personality.
-const CHALLENGE_STYLE: Record<string, { icon: React.ElementType; accent: string }> = {
-  streak7: { icon: Flame, accent: 'from-ohmlet-red to-[#ff9472]' },
-  nokit: { icon: Award, accent: 'from-ohmlet-blue to-[#7cc0ff]' },
-  teachback: { icon: TrendingUp, accent: 'from-ohmlet-green to-[#a8e063]' },
+// Per-challenge icon (the accent colour now comes from the challenge's theme).
+const CHALLENGE_ICON: Record<string, React.ElementType> = {
+  streak: Flame,
+  nokit: Award,
+  teachback: TrendingUp,
+  sensors: Radar,
+  debug: Bug,
+  firstlight: Sparkles,
 };
-const challengeStyle = (id: string) => CHALLENGE_STYLE[id] ?? { icon: Award, accent: 'from-ohmlet-ink to-ohmlet-slate-700' };
+const challengeIcon = (art?: string) => CHALLENGE_ICON[art ?? ''] ?? Award;
 
 const KIND_LABEL: Record<CommunityPost['kind'], string> = { build: 'Build', win: 'Win', question: 'Question' };
 
@@ -112,10 +118,41 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
     }
   }, [drafts]);
 
-  const onJoin = useCallback(async (id: string) => {
-    setChallenges((prev) => prev.map((c) => (c.id === id ? { ...c, joined: true, participantCount: c.participantCount + 1 } : c)));
-    await joinChallenge(id);
-  }, []);
+  // The challenge currently being confirmed (join or leave), or null.
+  const [joinTarget, setJoinTarget] = useState<Challenge | null>(null);
+  const [leaveTarget, setLeaveTarget] = useState<Challenge | null>(null);
+
+  const confirmJoin = useCallback(async () => {
+    const target = joinTarget;
+    if (!target) return;
+    setJoinTarget(null);
+    setChallenges((prev) =>
+      prev.map((c) => (c.id === target.id ? { ...c, joined: true, participantCount: c.participantCount + 1 } : c)),
+    );
+    const res = await joinChallenge(target.id);
+    if (res) {
+      setChallenges((prev) =>
+        prev.map((c) => (c.id === target.id ? { ...c, joined: res.joined, participantCount: res.participantCount } : c)),
+      );
+    }
+  }, [joinTarget]);
+
+  const confirmLeave = useCallback(async () => {
+    const target = leaveTarget;
+    if (!target) return;
+    setLeaveTarget(null);
+    setChallenges((prev) =>
+      prev.map((c) =>
+        c.id === target.id ? { ...c, joined: false, participantCount: Math.max(0, c.participantCount - 1) } : c,
+      ),
+    );
+    const res = await leaveChallenge(target.id);
+    if (res) {
+      setChallenges((prev) =>
+        prev.map((c) => (c.id === target.id ? { ...c, joined: res.joined, participantCount: res.participantCount } : c)),
+      );
+    }
+  }, [leaveTarget]);
 
   return (
     <div className="ohmlet-rise">
@@ -300,29 +337,62 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
           </section>
 
           <section>
-            <h3 className="px-1 text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live challenges</h3>
+            <div className="flex items-baseline justify-between px-1">
+              <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live challenges</h3>
+              <span className="text-xs font-bold text-ohmlet-ink-soft">{challenges.length}</span>
+            </div>
             <div className="mt-3 space-y-3">
               {challenges.map((c) => {
-                const { icon: Icon, accent } = challengeStyle(c.id);
+                const Icon = challengeIcon(c.art);
+                const palette = themeFor(c.theme);
                 return (
-                  <div key={c.id} className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft">
-                    <div className={`flex items-center gap-3 bg-gradient-to-r ${accent} px-4 py-3 text-white`}>
-                      <Icon className="h-5 w-5" />
-                      <p className="text-sm font-black">{c.title}</p>
-                    </div>
+                  <div
+                    key={c.id}
+                    className="group overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm"
+                  >
+                    {/* Art strip with the icon + title overlaid */}
+                    <button
+                      type="button"
+                      onClick={() => (c.joined ? setLeaveTarget(c) : setJoinTarget(c))}
+                      className="relative block h-24 w-full text-left"
+                      aria-label={c.joined ? `Manage ${c.title}` : `Join ${c.title}`}
+                    >
+                      <ChallengeArt art={c.art} theme={c.theme} className="absolute inset-0 h-full w-full" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-ohmlet-ink/55 to-transparent" />
+                      <div className="absolute bottom-2.5 left-3 right-3 flex items-center gap-2">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-ohmlet-ink bg-white">
+                          <Icon className="h-4 w-4 text-ohmlet-ink" strokeWidth={2.5} />
+                        </span>
+                        <p className="truncate text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">{c.title}</p>
+                        {c.joined && (
+                          <span className="ml-auto shrink-0 rounded-full border border-white/70 bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur">
+                            In
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
                     <div className="px-4 py-3">
-                      <p className="text-sm font-semibold text-ohmlet-ink-soft">{c.desc}</p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs font-bold text-ohmlet-ink-soft">{c.participantCount.toLocaleString()} joined · {c.reward}</span>
-                        <button
-                          onClick={() => !c.joined && onJoin(c.id)}
-                          disabled={c.joined}
-                          className={`rounded-full border-2 px-3.5 py-1.5 text-xs font-black transition-all ${
-                            c.joined ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep' : 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink shadow-press-sm hover:translate-y-[2px] hover:shadow-none'
-                          }`}
-                        >
-                          {c.joined ? 'Joined' : 'Join'}
-                        </button>
+                      <p className="text-sm font-semibold leading-snug text-ohmlet-ink-soft">{c.desc}</p>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-ohmlet-ink-soft">
+                          {c.participantCount.toLocaleString()} joined · {c.reward}
+                        </span>
+                        {c.joined ? (
+                          <button
+                            onClick={() => setLeaveTarget(c)}
+                            className="shrink-0 rounded-full border-2 border-ohmlet-line px-3.5 py-1.5 text-xs font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-red hover:text-ohmlet-red"
+                          >
+                            Leave
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setJoinTarget(c)}
+                            className="shrink-0 rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold px-3.5 py-1.5 text-xs font-black text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-deep active:translate-y-0 active:shadow-none"
+                          >
+                            Join
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -332,6 +402,13 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
           </section>
         </div>
       </div>
+
+      {joinTarget && (
+        <ChallengeJoinDialog challenge={joinTarget} onConfirm={confirmJoin} onClose={() => setJoinTarget(null)} />
+      )}
+      {leaveTarget && (
+        <ChallengeLeaveDialog challenge={leaveTarget} onConfirm={confirmLeave} onClose={() => setLeaveTarget(null)} />
+      )}
     </div>
   );
 };

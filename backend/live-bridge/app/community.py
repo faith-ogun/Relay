@@ -46,10 +46,112 @@ MAX_COMMENT = 2000
 FEED_LIMIT = 30
 
 # Seeded weekly challenges — real, joinable, electronics-flavoured (no "coming soon").
+# Each carries a short `desc` (shown on the card) and a richer `longDesc` (shown in
+# the join dialog), plus a `goal`, a `durationDays`, an `art` key (selects the hero
+# illustration on the client) and a `theme` colour. `order` fixes display order.
 DEFAULT_CHALLENGES = [
-    {"id": "streak7", "title": "7-Day Streak", "desc": "Build or learn something every day this week.", "reward": "+150 XP"},
-    {"id": "nokit", "title": "No-Kit Hero", "desc": "Complete a build using only loose parts, no starter kit.", "reward": "Champion badge"},
-    {"id": "teachback", "title": "Teach It Back", "desc": "Post a build and explain how it works in your own words.", "reward": "+80 XP"},
+    {
+        "id": "streak7",
+        "title": "7-Day Streak",
+        "tagline": "Show up every day",
+        "desc": "Build or learn something every day this week.",
+        "longDesc": (
+            "Real skill comes from showing up. Complete at least one lesson or build "
+            "every day for seven days in a row. Miss a day and the streak resets, so "
+            "protect it. Finish all seven and the habit starts to stick."
+        ),
+        "reward": "+150 XP",
+        "goal": "7 days in a row",
+        "durationDays": 7,
+        "art": "streak",
+        "theme": "red",
+        "order": 1,
+    },
+    {
+        "id": "nokit",
+        "title": "No-Kit Hero",
+        "tagline": "Improvise like a real engineer",
+        "desc": "Complete a build using only loose parts, no starter kit.",
+        "longDesc": (
+            "Anyone can follow a kit. This week, complete a full build from a pile of "
+            "loose components: no labelled trays, no guided slots. You will lean on what "
+            "you actually understand about each part. Pull it off and you have earned the cape."
+        ),
+        "reward": "Champion badge",
+        "goal": "1 freeform build",
+        "durationDays": 7,
+        "art": "nokit",
+        "theme": "blue",
+        "order": 2,
+    },
+    {
+        "id": "teachback",
+        "title": "Teach It Back",
+        "tagline": "If you can teach it, you know it",
+        "desc": "Post a build and explain how it works in your own words.",
+        "longDesc": (
+            "The fastest way to lock in a concept is to explain it. Share one build to "
+            "the community and walk through how it works in plain language, as if teaching "
+            "a friend. Bonus respect for covering what you would do differently next time."
+        ),
+        "reward": "+80 XP",
+        "goal": "1 explained post",
+        "durationDays": 7,
+        "art": "teachback",
+        "theme": "green",
+        "order": 3,
+    },
+    {
+        "id": "sensors",
+        "title": "Sensor Safari",
+        "tagline": "Read the physical world",
+        "desc": "Use three different sensors in your builds this week.",
+        "longDesc": (
+            "Sensors are how a circuit feels its surroundings. Work a light sensor, a "
+            "temperature sensor, and a button or motion trigger into your builds this week. "
+            "Three different ways of turning the physical world into a signal your Arduino can act on."
+        ),
+        "reward": "+120 XP",
+        "goal": "3 sensor types",
+        "durationDays": 7,
+        "art": "sensors",
+        "theme": "gold",
+        "order": 4,
+    },
+    {
+        "id": "debug",
+        "title": "Debug Duel",
+        "tagline": "Find the fault, fix the circuit",
+        "desc": "Repair five broken circuits in the Simulator.",
+        "longDesc": (
+            "Debugging is the real job. Jump into the Simulator and fix five circuits that "
+            "have been deliberately broken: a swapped resistor, a backwards diode, a floating "
+            "input. Each fix sharpens the instinct for spotting what is wrong before the smoke does."
+        ),
+        "reward": "Fixer badge",
+        "goal": "5 circuits fixed",
+        "durationDays": 7,
+        "art": "debug",
+        "theme": "violet",
+        "order": 5,
+    },
+    {
+        "id": "firstlight",
+        "title": "First Light",
+        "tagline": "Your first three wins",
+        "desc": "Finish your first three lessons.",
+        "longDesc": (
+            "Every builder remembers their first glowing LED. New here? Complete your first "
+            "three lessons to get the fundamentals under your hands: current, voltage, and a "
+            "working circuit you built yourself. The community is cheering you on."
+        ),
+        "reward": "+60 XP",
+        "goal": "3 lessons done",
+        "durationDays": 14,
+        "art": "firstlight",
+        "theme": "indigo",
+        "order": 6,
+    },
 ]
 
 
@@ -193,11 +295,19 @@ async def add_comment(post_id: str, request: Request, claims: dict = Depends(req
 
 # ── Challenges ──
 def _ensure_challenges(client) -> None:
-    """Seed the default challenges once (idempotent)."""
+    """Seed the default challenges, and keep their content fresh (idempotent).
+
+    New challenges are created with a zeroed participant counter. Existing ones get
+    their *content* fields (blurbs, reward, art, theme, order) merged in without
+    touching the live `participantCount`/`createdAt`, so editing copy here rolls out
+    on the next read without a migration script.
+    """
     col = client.collection(CHALLENGES)
     for c in DEFAULT_CHALLENGES:
         ref = col.document(c["id"])
-        if not ref.get().exists:
+        if ref.get().exists:
+            ref.set(c, merge=True)  # refresh content only; counters untouched
+        else:
             ref.set({**c, "participantCount": 0, "createdAt": _now()})
 
 
@@ -215,6 +325,7 @@ def list_challenges(claims: dict = Depends(require_claims)) -> dict:
             "joined": member.exists,
             "progress": (member.to_dict() or {}).get("progress", 0) if member.exists else 0,
         })
+    out.sort(key=lambda c: (c.get("order", 99), c.get("title", "")))
     return {"challenges": out}
 
 
@@ -231,6 +342,23 @@ def join_challenge(challenge_id: str, claims: dict = Depends(require_claims)) ->
         ch_ref.update({"participantCount": firestore.Increment(1)})
     count = (ch_ref.get().to_dict() or {}).get("participantCount", 0)
     return {"joined": True, "participantCount": max(0, count)}
+
+
+@router.post("/challenges/{challenge_id}/leave")
+def leave_challenge(challenge_id: str, claims: dict = Depends(require_claims)) -> dict:
+    """Leave a challenge: drop the membership and decrement the counter. Idempotent
+    (leaving twice is a no-op). Progress is discarded; the user can rejoin later."""
+    uid = claims["uid"]
+    client = _client()
+    ch_ref = client.collection(CHALLENGES).document(challenge_id)
+    if not ch_ref.get().exists:
+        raise HTTPException(404, "Challenge not found.")
+    member_ref = client.collection(MEMBERS).document(f"{challenge_id}__{uid}")
+    if member_ref.get().exists:
+        member_ref.delete()
+        ch_ref.update({"participantCount": firestore.Increment(-1)})
+    count = (ch_ref.get().to_dict() or {}).get("participantCount", 0)
+    return {"joined": False, "participantCount": max(0, count)}
 
 
 # ── Weekly league ──

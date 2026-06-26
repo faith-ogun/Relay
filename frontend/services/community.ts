@@ -29,8 +29,21 @@ export interface CommunityComment {
 export interface Challenge {
   id: string;
   title: string;
+  /** One-line hook shown under the title in the join dialog. */
+  tagline?: string;
+  /** Short blurb on the card. */
   desc: string;
+  /** Fuller explanation shown in the join dialog. */
+  longDesc?: string;
   reward: string;
+  /** What "done" looks like, e.g. "7 days in a row". */
+  goal?: string;
+  durationDays?: number;
+  /** Selects the hero illustration in ChallengeArt. */
+  art?: string;
+  /** Colour theme key (red/blue/green/gold/violet/indigo). */
+  theme?: string;
+  order?: number;
   participantCount: number;
   joined: boolean;
   progress: number;
@@ -106,6 +119,10 @@ export async function fetchChallenges(): Promise<Challenge[]> {
 
 export async function joinChallenge(id: string): Promise<{ joined: boolean; participantCount: number } | null> {
   return api(`/v1/community/challenges/${id}/join`, { method: 'POST' });
+}
+
+export async function leaveChallenge(id: string): Promise<{ joined: boolean; participantCount: number } | null> {
+  return api(`/v1/community/challenges/${id}/leave`, { method: 'POST' });
 }
 
 export async function fetchLeaderboard(): Promise<Leaderboard | null> {
