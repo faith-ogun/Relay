@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User as UserIcon } from 'lucide-react';
 import { OhmletLogo } from '../Logo';
 import { authErrorMessage, useAuth } from '../../hooks/useAuth';
+import { track } from '../../services/analytics';
 
 type Mode = 'login' | 'signup' | 'reset';
 
@@ -53,9 +54,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
     try {
       if (mode === 'login') {
         await signInEmail(email, password);
+        track('login', { method: 'email' });
         onAuthed(false);
       } else if (mode === 'signup') {
         await signUpEmail(name, email, password);
+        track('sign_up', { method: 'email' });
         onAuthed(true);
       } else {
         await resetPassword(email);
@@ -74,6 +77,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
     setBusy('google');
     try {
       await signInGoogle();
+      track('login', { method: 'google' });
       onAuthed(false);
     } catch (err) {
       const msg = authErrorMessage(err);

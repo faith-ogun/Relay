@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, Sparkles } from 'lucide-react';
+import { track } from '../services/analytics';
 
 interface UpgradeSuccessProps {
   onEnter: () => void; // into the workspace
@@ -48,6 +49,12 @@ export const UpgradeSuccess: React.FC<UpgradeSuccessProps> = ({ onEnter, onHome 
     const t = setTimeout(() => setShown(true), 40);
     return () => clearTimeout(t);
   }, []);
+
+  // Stripe redirects here after a completed Checkout: the client-observable
+  // conversion. (The plan write is authoritative via the webhook, #30.)
+  useEffect(() => {
+    track('subscribe', { plan });
+  }, [plan]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ohmlet-cream px-6 font-display">

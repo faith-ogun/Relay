@@ -27,6 +27,7 @@ import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
 import { reportXp } from '../services/community';
+import { track } from '../services/analytics';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
@@ -237,6 +238,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   const launchLesson = useCallback(
     (id: string) => {
       const level = nextAttemptLevel(lessonLevels[id] ?? 0);
+      track('lesson_start', { lesson_id: id, level });
       setRunning({ id, accent: lessonAccentHex(id), level });
     },
     [lessonLevels],
@@ -245,6 +247,11 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   const handleComplete = useCallback(
     (id: string, gained: number, level: number) => {
       void reportXp(gained); // feed the weekly league (best-effort)
+      track('lesson_complete', { lesson_id: id, level, xp: gained });
+      // First completion of a new calendar day extends/refreshes the streak.
+      if (progress.lastActiveDate !== dayStr(0)) {
+        track('streak_extended', { day: progress.lastActiveDate === dayStr(1) ? progress.streak + 1 : 1 });
+      }
       setProgress((prev) => {
         const levels = { ...(prev.lessonLevels ?? {}) };
         const prevLevel = levels[id] ?? 0;
@@ -264,7 +271,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
         };
       });
     },
-    [setProgress],
+    [setProgress, progress.lastActiveDate, progress.streak],
   );
 
   // ── Lesson runner takes over the whole screen ──

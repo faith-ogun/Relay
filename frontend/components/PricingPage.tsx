@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useIdentity } from '../hooks/useIdentity';
 import { usePlan } from '../hooks/usePlan';
 import { startCheckout, openBillingPortal } from '../services/billing';
+import { track } from '../services/analytics';
 
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'signup' | 'ohmlet-app') => void;
 
@@ -99,6 +100,11 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
   const { userId } = useIdentity();
   const { plan: currentPlan } = usePlan(userId);
   const [busy, setBusy] = useState<Variant | null>(null);
+
+  // The pricing page is our paywall surface; record a view for conversion funnels.
+  useEffect(() => {
+    track('paywall_view', { current_plan: currentPlan });
+  }, [currentPlan]);
 
   // What a tier's button does, depending on auth + the user's current plan.
   const handleCta = async (variant: Variant) => {

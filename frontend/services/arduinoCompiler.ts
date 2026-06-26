@@ -5,6 +5,7 @@
 // Authed: the server derives the user from the verified Firebase token.
 
 import { getIdToken } from './firebase';
+import { track } from './analytics';
 
 const apiBase = () =>
   (import.meta.env.VITE_OHMLET_COMPILER_API_BASE_URL || '').trim().replace(/\/+$/, '');
@@ -30,6 +31,7 @@ export class CompilerError extends Error {
 }
 
 export async function compileSketch(source: string): Promise<CompileResult> {
+  track('sketch_compile', { bytes: source.length });
   const base = apiBase();
   if (!base) throw new CompilerError('The Arduino compiler is not available right now.');
   const token = await getIdToken();

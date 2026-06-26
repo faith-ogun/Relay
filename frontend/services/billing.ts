@@ -6,6 +6,7 @@
 
 import type { Plan } from '../components/ohmlet/entitlements';
 import { getIdToken } from './firebase';
+import { track } from './analytics';
 
 export type Interval = 'monthly' | 'annual';
 
@@ -31,6 +32,7 @@ async function post(path: string, body?: unknown): Promise<{ url?: string } | nu
 
 /** Start a subscription Checkout. Redirects to Stripe on success; returns false otherwise. */
 export async function startCheckout(plan: Exclude<Plan, 'free'>, interval: Interval): Promise<boolean> {
+  track('checkout_start', { plan, interval });
   const data = await post('/v1/billing/checkout', { plan, interval });
   if (data?.url) {
     window.location.assign(data.url);
@@ -41,6 +43,7 @@ export async function startCheckout(plan: Exclude<Plan, 'free'>, interval: Inter
 
 /** Open the Stripe Customer Portal to manage/cancel a subscription. */
 export async function openBillingPortal(): Promise<boolean> {
+  track('billing_portal_open');
   const data = await post('/v1/billing/portal');
   if (data?.url) {
     window.location.assign(data.url);

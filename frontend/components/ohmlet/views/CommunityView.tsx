@@ -19,6 +19,7 @@ import {
 } from '../../../services/community';
 import { ChallengeArt, themeFor } from '../challenges/ChallengeArt';
 import { ChallengeJoinDialog, ChallengeLeaveDialog } from '../challenges/ChallengeDialogs';
+import { track } from '../../../services/analytics';
 
 /**
  * CommunityView — the social layer (#63), now backed by real persistence.
@@ -126,6 +127,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
     const target = joinTarget;
     if (!target) return;
     setJoinTarget(null);
+    track('challenge_join', { challenge_id: target.id });
     setChallenges((prev) =>
       prev.map((c) => (c.id === target.id ? { ...c, joined: true, participantCount: c.participantCount + 1 } : c)),
     );
@@ -141,6 +143,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
     const target = leaveTarget;
     if (!target) return;
     setLeaveTarget(null);
+    track('challenge_leave', { challenge_id: target.id });
     setChallenges((prev) =>
       prev.map((c) =>
         c.id === target.id ? { ...c, joined: false, participantCount: Math.max(0, c.participantCount - 1) } : c,

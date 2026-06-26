@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check } from 'lucide-react';
+import { track } from '../../services/analytics';
 
 /**
  * OnboardingQuestions — the short "who are you" survey shown right after sign-up.
@@ -58,6 +59,7 @@ export const OnboardingQuestions: React.FC<OnboardingQuestionsProps> = ({ userId
     } catch {
       /* non-fatal: the survey is best-effort */
     }
+    track('onboarding_complete', { skipped: false });
     onDone();
   };
 
@@ -78,6 +80,7 @@ export const OnboardingQuestions: React.FC<OnboardingQuestionsProps> = ({ userId
     } catch {
       /* ignore */
     }
+    track('onboarding_complete', { skipped: true });
     onDone();
   };
 

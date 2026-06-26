@@ -3,6 +3,7 @@ import { AlertTriangle, Cpu, Flame, Pause, Play, RotateCcw, Zap } from 'lucide-r
 import { solve, initTransient, stepTransient, toMA, type Comp, type SolveResult, type TransientState } from '../sim/engine';
 import { FreeFormEditor } from './FreeFormEditor';
 import { CodeLabView } from './CodeLabView';
+import { track } from '../../../services/analytics';
 
 /**
  * SimulatorView (#67) — Ohmlet's own circuit simulator (Option C).
@@ -965,6 +966,8 @@ export const SimulatorView: React.FC = () => {
 
   const selectCircuit = (c: Circuit) => { setCircuitId(c.id); setParams(defaults(c)); };
   const resetParams = () => setParams(defaults(circuit));
+
+  useEffect(() => { track('simulator_open'); }, []);
 
   const sim = useSim(circuit, params);
   const res = sim.frame;

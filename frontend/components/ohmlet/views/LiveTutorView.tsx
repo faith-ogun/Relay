@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
+import { track } from '../../../services/analytics';
 import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
@@ -122,9 +123,22 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     if (live && liveMinutesRemaining <= 0) disconnect();
   }, [live, liveMinutesRemaining, disconnect]);
 
+  // Pair every live_session_start with an end event when the session closes
+  // (user ends it, runs out of minutes, or leaves the view).
+  const wasLive = useRef(false);
+  useEffect(() => {
+    if (live) {
+      wasLive.current = true;
+    } else if (wasLive.current) {
+      wasLive.current = false;
+      track('live_session_end');
+    }
+  }, [live]);
+
   // Start the session and request mic + camera in the same user gesture so the
   // browser shows the permission prompt right away.
   const goLive = () => {
+    track('live_session_start');
     connect();
     if (!micOn) toggleMic();
     if (!camOn) toggleCam();
