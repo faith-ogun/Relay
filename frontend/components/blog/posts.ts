@@ -11,6 +11,7 @@ export type Block =
   | { type: 'table'; head: string[]; rows: string[][] }
   | { type: 'callout'; title?: string; text: string }
   | { type: 'media'; kind: 'image' | 'video'; note: string }
+  | { type: 'code'; caption?: string; code: string }
   | { type: 'quote'; text: string };
 
 export type FAQ = { q: string; a: string };
@@ -384,6 +385,272 @@ export const POSTS: BlogPost[] = [
       { q: 'How do I check if a wire is broken?', a: 'Use the continuity setting and touch a probe to each end of the wire. No beep means the wire (or its connection) is broken.' },
     ],
     related: ['arduino-sensor-reads-garbage', 'resistor-color-codes-cheat-sheet'],
+  },
+
+  // ── Build guides (SEO; step-by-step projects) ──
+  {
+    slug: 'build-a-light-activated-alarm-arduino',
+    title: 'Build a Light-Activated Alarm with Arduino (LDR + Buzzer)',
+    excerpt:
+      'A complete beginner build: wire an LDR and a buzzer to an Arduino so an alarm sounds the moment a light turns on, like when someone opens a drawer or a fridge. Parts list, wiring, full code, and the calibration trick that makes it actually work.',
+    metaDescription:
+      'Step-by-step Arduino light-activated alarm using an LDR (photoresistor) and a buzzer. Full wiring diagram, complete code, and how to calibrate the light threshold.',
+    keywords: [
+      'arduino light activated alarm',
+      'ldr arduino tutorial',
+      'photoresistor arduino',
+      'arduino light sensor buzzer',
+      'arduino alarm project',
+    ],
+    category: 'Build Guides',
+    date: 'Jun 26, 2026',
+    read: '10 min read',
+    author: 'The Ohmlet Team',
+    swatch: 'from-ohmlet-gold to-ohmlet-gold-deep',
+    takeaways: [
+      'An LDR (photoresistor) changes resistance with light; a voltage divider turns that into a signal the Arduino can read.',
+      'analogRead gives 0–1023; you pick a threshold to decide "dark" vs "light".',
+      'The whole build is an LDR, one fixed resistor, a buzzer, and four jumper wires.',
+      'Calibration (reading real values in your own room) is the step beginners skip and then wonder why it never triggers.',
+    ],
+    body: [
+      { type: 'p', text: 'A light-activated alarm sounds the moment light hits a sensor, which makes it perfect for catching when someone opens a drawer, a cupboard, or the fridge at midnight. It is one of the best first Arduino builds because every part of it is visible: light goes up, a number goes up, a buzzer goes off. Nothing is hidden.' },
+      { type: 'p', text: 'This guide builds the whole thing end to end with an LDR (also called a photoresistor), one resistor, and a buzzer. You will wire it, load the code, and then do the one step that beginners skip: calibrating the threshold to your actual room.' },
+      { type: 'h2', text: 'What you need' },
+      {
+        type: 'table',
+        head: ['Part', 'Quantity', 'Notes'],
+        rows: [
+          ['Arduino Uno (or compatible)', '1', 'Any board with analog pins works'],
+          ['LDR / photoresistor', '1', 'The light sensor'],
+          ['Resistor, 10kΩ', '1', 'The fixed half of the voltage divider'],
+          ['Active buzzer', '1', 'Active = makes sound on its own with DC'],
+          ['Breadboard + jumper wires', '1 set', 'Four wires is enough'],
+        ],
+      },
+      { type: 'callout', title: 'Active vs passive buzzer', text: 'An active buzzer beeps when you simply put voltage across it (digitalWrite HIGH). A passive buzzer needs a tone() signal. This guide uses an active buzzer; if yours stays silent on HIGH, you likely have a passive one, see the code note below.' },
+      { type: 'h2', text: 'How it works: the voltage divider' },
+      { type: 'p', text: 'An LDR is just a resistor whose resistance falls as light increases: dark might be 100kΩ, bright daylight might be 1kΩ. An Arduino cannot read resistance directly, only voltage. So we pair the LDR with a fixed 10kΩ resistor to form a voltage divider: the two resistors split the 5V supply in proportion to their resistances, and the Arduino reads the voltage at the midpoint.' },
+      { type: 'p', text: 'When it is dark, the LDR resistance is high, so most of the voltage drops across it and the midpoint reads low. When light hits it, the LDR resistance falls and the midpoint voltage rises. That changing midpoint is what analogRead measures.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring diagram: LDR and 10kΩ resistor forming a divider, midpoint to A0, buzzer on pin 8.' },
+      { type: 'h2', text: 'Wiring it up' },
+      {
+        type: 'list',
+        ordered: true,
+        items: [
+          'Place the LDR across the breadboard gap. Connect one leg to 5V.',
+          'Connect the LDR’s other leg to one end of the 10kΩ resistor, and that same junction to analog pin A0. This junction is the divider midpoint.',
+          'Connect the resistor’s free end to GND.',
+          'Connect the buzzer: positive (longer) leg to digital pin 8, negative leg to GND.',
+          'Double-check 5V and GND are the only things on the power rails before plugging in.',
+        ],
+      },
+      { type: 'callout', title: 'Why A0, not a digital pin', text: 'A digital pin can only tell you HIGH or LOW. Light is a smooth range, so we use an analog pin (A0) to read the full 0–1023 scale and choose our own cut-off.' },
+      { type: 'h2', text: 'The code' },
+      { type: 'p', text: 'Upload this sketch. It reads the sensor, prints the value so you can calibrate, and sounds the buzzer when the reading crosses your threshold.' },
+      {
+        type: 'code',
+        caption: 'light_alarm.ino',
+        code: `const int LDR_PIN = A0;     // divider midpoint
+const int BUZZER_PIN = 8;   // active buzzer
+int threshold = 600;        // tune this after calibrating
+
+void setup() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(LDR_PIN);   // 0 (dark) .. 1023 (bright)
+  Serial.println(light);             // watch this in the Serial Monitor
+
+  if (light > threshold) {
+    digitalWrite(BUZZER_PIN, HIGH);  // light detected -> alarm
+  } else {
+    digitalWrite(BUZZER_PIN, LOW);   // dark -> quiet
+  }
+  delay(50);
+}`,
+      },
+      { type: 'callout', title: 'Passive buzzer?', text: 'If your buzzer is passive, swap digitalWrite(BUZZER_PIN, HIGH) for tone(BUZZER_PIN, 1000) and digitalWrite(..., LOW) for noTone(BUZZER_PIN).' },
+      { type: 'h2', text: 'Calibrate the threshold (the step everyone skips)' },
+      { type: 'p', text: 'The 600 in the code is a placeholder. Your room is not our room. Open the Serial Monitor (Tools → Serial Monitor, 9600 baud) and watch the numbers: cover the LDR and note the "dark" value, then shine a phone torch on it and note the "bright" value. Pick a threshold roughly halfway between the two.' },
+      {
+        type: 'table',
+        head: ['Reading', 'Typical value', 'Meaning'],
+        rows: [
+          ['LDR covered', '~150–350', 'Dark; alarm should be silent'],
+          ['Room light', '~500–700', 'Ambient; decide which side this is on'],
+          ['Torch on sensor', '~850–1000', 'Bright; alarm should fire'],
+        ],
+      },
+      { type: 'p', text: 'Set threshold a little above your normal room reading so everyday light does not trip it, but below the torch value so a real light source does. Re-upload and test by covering and uncovering the sensor.' },
+      { type: 'h2', text: 'Troubleshooting' },
+      {
+        type: 'list',
+        items: [
+          'Buzzer never sounds: your threshold is higher than any reading. Lower it toward your bright value.',
+          'Buzzer always sounds: threshold is below your dark reading. Raise it.',
+          'Readings stuck at 0 or 1023: the divider is miswired, A0 is reading a bare 5V or GND rail instead of the midpoint.',
+          'Faint buzzing only: you likely have a passive buzzer, use tone() as noted above.',
+        ],
+      },
+      { type: 'callout', title: 'Build it with a tutor watching', text: 'In Ohmlet, this exact build is guided live: the tutor sees your breadboard through your camera, checks each wire as you place it, and helps you calibrate the threshold against your real readings, so a miswired divider gets caught in seconds, not after ten minutes of confusion.' },
+      { type: 'h2', text: 'Where to take it next' },
+      { type: 'p', text: 'Once it works, try these upgrades: add an LED that lights with the buzzer, invert the logic to make a darkness alarm (a night light), or add a potentiometer so you can turn the threshold by hand instead of editing code. Each is a small change to the same circuit and a real lesson in how the pieces compose.' },
+    ],
+    faqs: [
+      { q: 'Do I need a specific LDR?', a: 'No. Any common photoresistor (often sold as GL5528) works. The exact resistance does not matter because you calibrate the threshold to whatever your LDR reads in your room.' },
+      { q: 'Can I use an LED instead of a buzzer?', a: 'Yes. Wire an LED (with a 220–330Ω resistor) to pin 8 instead of, or alongside, the buzzer. The code is identical because both are just outputs you drive HIGH.' },
+      { q: 'Why is my reading the opposite of what I expect?', a: 'It depends on which side of the divider the LDR is on. If bright light gives a low number, swap the LDR and the fixed resistor positions, or simply flip the comparison to light < threshold.' },
+      { q: 'What resistor value should I use with the LDR?', a: '10kΩ is a good default that centres the divider for indoor light. If your readings bunch up at one end, try 4.7kΩ (for brighter environments) or 22kΩ (for dimmer ones).' },
+    ],
+    related: ['ohms-law-explained-with-an-led', 'arduino-sensor-reads-garbage', 'build-an-arduino-traffic-light'],
+  },
+
+  {
+    slug: 'build-an-arduino-traffic-light',
+    title: 'Build an Arduino Traffic Light (3 LEDs, Step by Step)',
+    excerpt:
+      'The classic first project that teaches timing and sequencing: three LEDs that cycle red, green, amber like a real traffic light. Parts, wiring, full code, and how to extend it to a pedestrian crossing.',
+    metaDescription:
+      'Beginner Arduino traffic light project with 3 LEDs. Full wiring, complete code with millis vs delay, resistor values, and a pedestrian-crossing extension.',
+    keywords: [
+      'arduino traffic light',
+      'arduino traffic light code',
+      'arduino led sequence',
+      'arduino beginner project',
+      'arduino 3 led project',
+    ],
+    category: 'Build Guides',
+    date: 'Jun 26, 2026',
+    read: '9 min read',
+    author: 'The Ohmlet Team',
+    swatch: 'from-ohmlet-red to-ohmlet-gold',
+    takeaways: [
+      'Three LEDs plus three resistors is all the hardware a traffic light needs.',
+      'Every LED needs its own current-limiting resistor (220–330Ω), never wire one bare to a pin.',
+      'The logic is just a timed sequence: which light is on, and for how long.',
+      'Swapping delay() for millis() is the upgrade that lets the light do more than one thing at once.',
+    ],
+    body: [
+      { type: 'p', text: 'A traffic light is the project almost every maker builds early, and for good reason: it is pure sequencing. Red, then green, then amber, then back, each for a set time. You will learn how to drive multiple outputs, why every LED needs a resistor, and the difference between delay() and millis() that separates toy code from code that scales.' },
+      { type: 'h2', text: 'What you need' },
+      {
+        type: 'table',
+        head: ['Part', 'Quantity', 'Notes'],
+        rows: [
+          ['Arduino Uno (or compatible)', '1', 'Three digital pins used'],
+          ['LEDs (red, green, yellow)', '3', 'Yellow stands in for amber'],
+          ['Resistor, 220–330Ω', '3', 'One per LED, current limiting'],
+          ['Breadboard + jumper wires', '1 set', ''],
+        ],
+      },
+      { type: 'callout', title: 'Never skip the resistors', text: 'An LED wired straight to a 5V pin draws too much current and burns out (and stresses the pin). Each LED needs a series resistor of about 220–330Ω. This is the single most common beginner mistake.' },
+      { type: 'h2', text: 'Wiring it up' },
+      {
+        type: 'list',
+        ordered: true,
+        items: [
+          'For each LED: the long leg (anode, +) connects through a 220Ω resistor to a digital pin. Use pin 4 for red, pin 3 for yellow, pin 2 for green.',
+          'The short leg (cathode, −) of every LED goes to the GND rail.',
+          'Connect one Arduino GND pin to the breadboard’s GND rail so all three LEDs share ground.',
+          'Sanity check: each LED has exactly one resistor in series, and all cathodes meet at GND.',
+        ],
+      },
+      { type: 'media', kind: 'image', note: 'Breadboard layout: three LEDs in a column, each with a 220Ω resistor to pins 2/3/4, all cathodes to the GND rail.' },
+      { type: 'h2', text: 'The code (simple version)' },
+      { type: 'p', text: 'Start with the readable, delay-based version. It cycles like a UK-style light: red, red+amber, green, amber, repeat. Trim it to red/green/amber if you prefer.' },
+      {
+        type: 'code',
+        caption: 'traffic_light.ino',
+        code: `const int RED = 4;
+const int YELLOW = 3;
+const int GREEN = 2;
+
+void setup() {
+  pinMode(RED, OUTPUT);
+  pinMode(YELLOW, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+}
+
+void loop() {
+  // RED
+  set(HIGH, LOW, LOW);
+  delay(4000);
+
+  // RED + AMBER (get ready)
+  set(HIGH, HIGH, LOW);
+  delay(1500);
+
+  // GREEN (go)
+  set(LOW, LOW, HIGH);
+  delay(4000);
+
+  // AMBER (stop soon)
+  set(LOW, HIGH, LOW);
+  delay(1500);
+}
+
+void set(int r, int y, int g) {
+  digitalWrite(RED, r);
+  digitalWrite(YELLOW, y);
+  digitalWrite(GREEN, g);
+}`,
+      },
+      { type: 'callout', title: 'Why a helper function', text: 'The set(r, y, g) helper means each phase is one readable line instead of three. Small habit, big payoff when the sequence grows.' },
+      { type: 'h2', text: 'The upgrade: millis() instead of delay()' },
+      { type: 'p', text: 'delay() freezes the whole board: while it waits, the Arduino can do nothing else, no button check, no second light. Real projects use millis(), which lets you track time without blocking. Here is the same sequence written so the board stays responsive.' },
+      {
+        type: 'code',
+        caption: 'traffic_light_millis.ino',
+        code: `const int RED = 4, YELLOW = 3, GREEN = 2;
+
+// phase durations in ms: red, red+amber, green, amber
+const unsigned long DUR[4] = {4000, 1500, 4000, 1500};
+int phase = 0;
+unsigned long phaseStart = 0;
+
+void setup() {
+  pinMode(RED, OUTPUT); pinMode(YELLOW, OUTPUT); pinMode(GREEN, OUTPUT);
+  phaseStart = millis();
+}
+
+void loop() {
+  // advance the phase when its time is up, without blocking
+  if (millis() - phaseStart >= DUR[phase]) {
+    phase = (phase + 1) % 4;
+    phaseStart = millis();
+  }
+
+  digitalWrite(RED,    phase == 0 || phase == 1);
+  digitalWrite(YELLOW, phase == 1 || phase == 3);
+  digitalWrite(GREEN,  phase == 2);
+
+  // ... room here to read a button, blink a pedestrian light, etc.
+}`,
+      },
+      { type: 'h2', text: 'Troubleshooting' },
+      {
+        type: 'list',
+        items: [
+          'An LED never lights: check it is not in backwards (long leg to the resistor/pin side) and the resistor is actually in series.',
+          'All LEDs dim: you may have wired them through one shared resistor; each needs its own.',
+          'Nothing happens: confirm the board’s GND is tied to the breadboard GND rail.',
+          'Sequence runs but order is wrong: your pin numbers in code do not match the wiring, line them up.',
+        ],
+      },
+      { type: 'callout', title: 'See it before you wire it', text: 'You can prototype this exact circuit in Ohmlet’s simulator first, drag the LEDs and resistors, watch current flow and the heat map, then build the real thing with the live tutor checking each leg as you go.' },
+      { type: 'h2', text: 'Extend it: a pedestrian crossing' },
+      { type: 'p', text: 'Add a pushbutton and a fourth LED (a walk light). When the button is pressed, finish the current green, then run a pedestrian phase. Because the millis() version never blocks, the button is easy to fold in, which is exactly why that upgrade was worth making.' },
+    ],
+    faqs: [
+      { q: 'What resistor value for the LEDs?', a: '220Ω to 330Ω is the safe range for standard LEDs on a 5V Arduino. 220Ω is brighter, 330Ω is dimmer and gentler. Either is fine.' },
+      { q: 'Can I use delay() forever?', a: 'For a single blinking light, sure. The moment you want a second thing to happen (a button, a buzzer, another light) delay() gets in the way, which is why the millis() version exists.' },
+      { q: 'My yellow LED looks orange/amber, is that wrong?', a: 'No. Real traffic "amber" is a yellow-orange. A standard yellow LED is the right stand-in; a true amber LED just shifts the hue slightly.' },
+      { q: 'Do all the LEDs share one ground?', a: 'Yes. All cathodes connect to the GND rail, and that rail connects to an Arduino GND pin. Each LED still has its own resistor on the positive side.' },
+    ],
+    related: ['ohms-law-explained-with-an-led', 'resistor-color-codes-cheat-sheet', 'build-a-light-activated-alarm-arduino'],
   },
 ];
 

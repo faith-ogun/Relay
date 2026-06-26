@@ -62,6 +62,19 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
           </div>
         </div>
       );
+    case 'code':
+      return (
+        <figure className="mt-6 overflow-hidden rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-ink">
+          {block.caption && (
+            <figcaption className="border-b border-white/10 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wide text-ohmlet-gold">
+              {block.caption}
+            </figcaption>
+          )}
+          <pre className="overflow-x-auto px-4 py-4 text-[13px] leading-relaxed text-ohmlet-gold-soft">
+            <code className="font-mono">{block.code}</code>
+          </pre>
+        </figure>
+      );
     case 'quote':
       return (
         <p className="mt-6 rounded-2xl bg-ohmlet-ink px-6 py-5 text-center font-mono text-lg font-bold text-ohmlet-gold">
