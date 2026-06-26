@@ -7,6 +7,11 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "headers": [
       {
+        "//": "Default for the SPA shell (served at every non-asset path via the rewrite): always revalidate so a deploy reaches returning users immediately. Firebase applies the LAST matching rule, so the specific asset/media rules below override this for their paths.",
+        "source": "**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
         "//": "Content-hashed JS/CSS bundles never change for a given URL — cache forever.",
         "source": "/assets/**",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
@@ -15,11 +20,6 @@
         "//": "Static media (card art, mascots, fonts) is stable per filename — cache long, revalidate on deploy.",
         "source": "**/*.@(webp|png|jpg|jpeg|gif|svg|ico|woff2|mp3|wav)",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
-      },
-      {
-        "//": "The SPA shell must always revalidate, or a deploy never reaches returning users.",
-        "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       }
     ],
     "rewrites": [

@@ -14,10 +14,12 @@ Configured in `frontend/firebase.json` → `hosting.headers`:
 |-------|-----------------|-----|
 | `/assets/**` (JS/CSS bundles) | `public, max-age=31536000, immutable` | Vite content-hashes the filename, so a URL's bytes never change. Cache forever; a deploy ships new hashed URLs. |
 | Images/fonts/audio (`webp,png,svg,woff2,mp3,…`) | `public, max-age=2592000` | Stable per filename (e.g. achievement card art). 30-day cache, revalidates after. |
-| `/index.html` | `no-cache` | The SPA shell must revalidate every load, or a deploy never reaches returning users. |
+| everything else (the SPA shell) | `no-cache` | Served at every non-asset path via the rewrite, so it must revalidate every load or a deploy never reaches returning users. |
 
-The browser therefore fetches the small HTML shell each visit and reuses
-everything heavy (bundles, the ~7.5 MB of card art) from cache.
+Order matters: Firebase Hosting applies the **last** matching header rule, so the
+catch-all `no-cache` is listed first and the specific asset/media rules override
+it for their paths. The browser therefore fetches the small HTML shell each visit
+and reuses everything heavy (bundles, the ~7.5 MB of card art) from cache.
 
 ## API responses (backend)
 
