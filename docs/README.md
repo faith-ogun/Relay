@@ -8,6 +8,8 @@ The map of the system and the reasoning behind it. Start here.
 - **[api-contracts.md](api-contracts.md)** — every HTTP/WS endpoint per service:
   method, path, auth, body, returns, and the shared conventions (auth, isolation,
   errors, rate limits).
+- **[caching.md](caching.md)** — what we cache, for how long, and how staleness
+  is bounded (static assets + the leaderboard TTL cache).
 - **[adr/](adr/)** — Architecture Decision Records: the *why* behind the big
   choices, append-only.
 
@@ -27,6 +29,8 @@ The map of the system and the reasoning behind it. Start here.
   design system, engineering standards, and working rules.
 - [`../ops/observability.md`](../ops/observability.md) — logging, metrics,
   tracing, alerting, audit trail.
+- [`../ops/disaster-recovery.md`](../ops/disaster-recovery.md) — backups, RTO/RPO,
+  restore runbook (paired with `../ops/backup.sh`).
 - [`../SECURITY.md`](../SECURITY.md) — security posture and disclosure.
 - [`../README.md`](../README.md) — top-level project readme.
 

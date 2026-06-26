@@ -27,8 +27,15 @@ from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from auth import require_claims
+from cache import TTLCache
 
 logger = logging.getLogger("ohmlet.community")
+
+# The weekly league's top-100 is identical for every user and is read on every
+# Community open, so cache it briefly per ISO-week (#52). `me` is always computed
+# fresh, and report_xp invalidates the week so a user sees their own gain at once.
+_LEADERBOARD_TTL = float(os.getenv("OHMLET_LEADERBOARD_CACHE_TTL", "20"))
+_leaderboard_cache = TTLCache(ttl=_LEADERBOARD_TTL)
 
 router = APIRouter(prefix="/v1/community", tags=["community"])
 
@@ -381,7 +388,23 @@ async def report_xp(request: Request, claims: dict = Depends(require_claims)) ->
         {"week": week, "uid": uid, "name": _display_name(claims), "xp": firestore.Increment(int(amount))},
         merge=True,
     )
+    # The standings just changed; drop the cached top-100 for this week so the
+    # next read reflects it (read-your-writes for the contributor).
+    _leaderboard_cache.invalidate(week)
     return {"ok": True, "week": week}
+
+
+def _week_rows(client, week: str) -> list[dict]:
+    """The sorted top-100 standings for a week. Shared across users → cacheable.
+
+    Equality-only filter (no composite index needed); rank in Python. Bounded at
+    500/week for launch scale — revisit with an aggregation/index if it grows."""
+    rows = [
+        snap.to_dict() or {}
+        for snap in client.collection(LEADERBOARD).where(filter=FieldFilter("week", "==", week)).limit(500).stream()
+    ]
+    rows.sort(key=lambda r: r.get("xp", 0), reverse=True)
+    return rows[:100]
 
 
 @router.get("/leaderboard")
@@ -389,14 +412,7 @@ def leaderboard(claims: dict = Depends(require_claims)) -> dict:
     uid = claims["uid"]
     week = _week_key()
     client = _client()
-    # Equality-only filter (no composite index needed); rank in Python. Bounded at
-    # 500/week for launch scale — revisit with an aggregation/index if it grows.
-    rows = [
-        snap.to_dict() or {}
-        for snap in client.collection(LEADERBOARD).where(filter=FieldFilter("week", "==", week)).limit(500).stream()
-    ]
-    rows.sort(key=lambda r: r.get("xp", 0), reverse=True)
-    rows = rows[:100]
+    rows = _leaderboard_cache.get_or_compute(week, lambda: _week_rows(client, week))
 
     me_xp = next((r.get("xp", 0) for r in rows if r.get("uid") == uid), None)
     if me_xp is None:
