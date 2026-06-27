@@ -35,6 +35,8 @@ import { track } from '../services/analytics';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
+import { useAvatar } from '../hooks/useAvatar';
+import { OhmletAvatar } from './ohmlet/avatar/OhmletAvatar';
 import { useAuth } from '../hooks/useAuth';
 import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
@@ -220,6 +222,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   const { user } = useAuth();
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
   const { plan, setPlan } = usePlan(userId);
+  const { config: avatar } = useAvatar(userId);
 
   // Progress persists per-user: instantly to localStorage (refresh-safe) and,
   // when the backend is reachable, to the Firestore state store (cross-device).
@@ -377,16 +380,14 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               onClick={onAccount}
               title={`${displayName} · ${PLAN_META[plan].label} plan`}
               aria-label="Account and privacy"
-              className="mt-auto flex h-10 w-10 items-center justify-center self-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase shadow-press-sm transition-transform hover:-translate-y-0.5"
+              className="mt-auto self-center rounded-full transition-transform hover:-translate-y-0.5"
             >
-              {(displayName || 'O').trim().charAt(0)}
+              <OhmletAvatar config={avatar} size={40} ring />
             </button>
           ) : (
             <>
               <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white p-3 shadow-press-sm">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase">
-                  {(displayName || 'O').trim().charAt(0)}
-                </span>
+                <OhmletAvatar config={avatar} size={40} ring />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
                   <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>

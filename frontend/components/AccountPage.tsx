@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, CreditCard, ShieldCheck, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, CreditCard, Pencil, ShieldCheck, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useIdentity } from '../hooks/useIdentity';
 import { usePlan } from '../hooks/usePlan';
+import { useAvatar } from '../hooks/useAvatar';
 import { PLAN_META } from './ohmlet/entitlements';
 import { openBillingPortal } from '../services/billing';
 import { exportMyData, deleteMyAccount } from '../services/privacy';
+import { OhmletAvatar } from './ohmlet/avatar/OhmletAvatar';
+import { AvatarEditor } from './ohmlet/avatar/AvatarEditor';
 
 interface AccountPageProps {
   onBack: () => void;
@@ -18,6 +21,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
   const { plan } = usePlan(userId);
   const planMeta = PLAN_META[plan];
   const isFree = plan === 'free';
+  const { config: avatar, save: saveAvatar } = useAvatar(userId);
+  const [avatarEditing, setAvatarEditing] = useState(false);
 
   const [exporting, setExporting] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
@@ -72,8 +77,31 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
 
         {/* Profile + plan */}
         <section className="mt-6 rounded-[1.4rem] border-[2.5px] border-ohmlet-ink bg-white p-6 shadow-press-sm">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Signed in as</p>
-          <p className="mt-1 text-lg font-black">{user?.email || user?.displayName || 'Your account'}</p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setAvatarEditing(true)}
+              className="group relative shrink-0 rounded-full"
+              aria-label="Customize your avatar"
+            >
+              <OhmletAvatar config={avatar} size={72} ring />
+              <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink shadow-press-sm transition-transform group-hover:-translate-y-0.5">
+                <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
+              </span>
+            </button>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Signed in as</p>
+              <p className="mt-1 truncate text-lg font-black">{user?.email || user?.displayName || 'Your account'}</p>
+              <button
+                type="button"
+                onClick={() => setAvatarEditing(true)}
+                className="mt-1 text-sm font-extrabold text-ohmlet-ink underline decoration-ohmlet-gold-deep decoration-2 underline-offset-2 hover:text-ohmlet-gold-deep"
+              >
+                Customize your avatar
+              </button>
+            </div>
+          </div>
+          <div className="mt-5 h-px bg-ohmlet-line" />
           <div className="mt-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Plan</p>
@@ -176,6 +204,17 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
             </div>
           </div>
         </div>
+      )}
+
+      {avatarEditing && (
+        <AvatarEditor
+          initial={avatar}
+          onClose={() => setAvatarEditing(false)}
+          onSave={(cfg) => {
+            saveAvatar(cfg);
+            setAvatarEditing(false);
+          }}
+        />
       )}
     </div>
   );
