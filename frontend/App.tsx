@@ -1,24 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
-import { LearnPage } from './components/LearnPage';
-import { BuildPage } from './components/BuildPage';
-import { BlogPage } from './components/BlogPage';
-import { BlogPostPage } from './components/BlogPostPage';
-import { PricingPage } from './components/PricingPage';
-import { LegalPage } from './components/legal/LegalPage';
-import { SupportPage } from './components/SupportPage';
-import { WorkspaceHome } from './components/WorkspaceHome';
-import { AuthorPreview } from './components/ohmlet/views/AuthorPreview';
-import { AchievementsPreview } from './components/ohmlet/views/AchievementsPreview';
 import { AuthPage } from './components/auth/AuthPage';
 import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
 import { ErrorPage } from './components/errors/ErrorPage';
-import { UpgradeSuccess } from './components/UpgradeSuccess';
-import { AccountPage } from './components/AccountPage';
 import { useAuth } from './hooks/useAuth';
+
+// Code-split the heavy, auth-gated app and the secondary marketing pages out of
+// the initial bundle, so a first-time landing visitor downloads only the shell.
+// WorkspaceHome alone pulls in Monaco, AVR8js, Three.js, and every workspace view.
+const lazyNamed = <M, K extends keyof M>(loader: () => Promise<M>, name: K) =>
+  React.lazy(() => loader().then((m) => ({ default: m[name] as React.ComponentType<any> })));
+
+const LearnPage = lazyNamed(() => import('./components/LearnPage'), 'LearnPage');
+const BuildPage = lazyNamed(() => import('./components/BuildPage'), 'BuildPage');
+const BlogPage = lazyNamed(() => import('./components/BlogPage'), 'BlogPage');
+const BlogPostPage = lazyNamed(() => import('./components/BlogPostPage'), 'BlogPostPage');
+const PricingPage = lazyNamed(() => import('./components/PricingPage'), 'PricingPage');
+const LegalPage = lazyNamed(() => import('./components/legal/LegalPage'), 'LegalPage');
+const SupportPage = lazyNamed(() => import('./components/SupportPage'), 'SupportPage');
+const WorkspaceHome = lazyNamed(() => import('./components/WorkspaceHome'), 'WorkspaceHome');
+const AuthorPreview = lazyNamed(() => import('./components/ohmlet/views/AuthorPreview'), 'AuthorPreview');
+const AchievementsPreview = lazyNamed(() => import('./components/ohmlet/views/AchievementsPreview'), 'AchievementsPreview');
+const UpgradeSuccess = lazyNamed(() => import('./components/UpgradeSuccess'), 'UpgradeSuccess');
+const AccountPage = lazyNamed(() => import('./components/AccountPage'), 'AccountPage');
 
 type AppRoute =
   | 'landing'
@@ -115,6 +122,14 @@ const AuthSplash: React.FC = () => (
   </div>
 );
 
+// Lightweight fallback while a lazy marketing page chunk loads. Reserves height
+// so the header/footer don't jump.
+const PageSpinner: React.FC = () => (
+  <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-label="Loading">
+    <Loader2 className="h-6 w-6 animate-spin text-ohmlet-ink-soft" />
+  </div>
+);
+
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
@@ -197,11 +212,13 @@ const App: React.FC = () => {
   if (route === 'ohmlet-app' || route === 'workspace') {
     if (!user) return <AuthSplash />;
     return (
-      <WorkspaceHome
-        onBack={backToLanding}
-        onUpgrade={() => navigate('pricing')}
-        onAccount={() => navigate('account')}
-      />
+      <Suspense fallback={<AuthSplash />}>
+        <WorkspaceHome
+          onBack={backToLanding}
+          onUpgrade={() => navigate('pricing')}
+          onAccount={() => navigate('account')}
+        />
+      </Suspense>
     );
   }
 
@@ -209,7 +226,9 @@ const App: React.FC = () => {
   if (route === 'author') {
     if (!user) return <AuthSplash />;
     return isAdmin ? (
-      <AuthorPreview onBack={backToLanding} />
+      <Suspense fallback={<AuthSplash />}>
+        <AuthorPreview onBack={backToLanding} />
+      </Suspense>
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
     );
@@ -219,7 +238,9 @@ const App: React.FC = () => {
   if (route === 'cards') {
     if (!user) return <AuthSplash />;
     return isAdmin ? (
-      <AchievementsPreview onBack={backToLanding} />
+      <Suspense fallback={<AuthSplash />}>
+        <AchievementsPreview onBack={backToLanding} />
+      </Suspense>
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
     );
@@ -228,12 +249,20 @@ const App: React.FC = () => {
   // ── Account & privacy (auth-gated): billing, data export, delete ──
   if (route === 'account') {
     if (!user) return <AuthSplash />;
-    return <AccountPage onBack={() => navigate('ohmlet-app')} onUpgrade={() => navigate('pricing')} />;
+    return (
+      <Suspense fallback={<AuthSplash />}>
+        <AccountPage onBack={() => navigate('ohmlet-app')} onUpgrade={() => navigate('pricing')} />
+      </Suspense>
+    );
   }
 
   // ── Post-checkout success (Stripe redirects here; plan from ?plan=) ──
   if (route === 'upgrade-success') {
-    return <UpgradeSuccess onEnter={() => navigate('ohmlet-app')} onHome={backToLanding} />;
+    return (
+      <Suspense fallback={<AuthSplash />}>
+        <UpgradeSuccess onEnter={() => navigate('ohmlet-app')} onHome={backToLanding} />
+      </Suspense>
+    );
   }
 
   // ── 404 ──
@@ -270,20 +299,22 @@ const App: React.FC = () => {
           onSignOut={handleSignOut}
         />
         <main id="main-content" tabIndex={-1}>
-          {route === 'landing' && <Home onNavigate={navigate} />}
-          {route === 'learn' && <LearnPage onNavigate={navigate} />}
-          {route === 'build' && <BuildPage onNavigate={navigate} />}
-          {route === 'blog' &&
-            (blogSlug ? (
-              <BlogPostPage slug={blogSlug} onNavigate={navigate} onOpenPost={openPost} />
-            ) : (
-              <BlogPage onNavigate={navigate} onOpenPost={openPost} />
-            ))}
-          {route === 'pricing' && <PricingPage onNavigate={navigate} />}
-          {(route === 'terms' || route === 'privacy' || route === 'cookies') && (
-            <LegalPage slug={route} onNavigate={navigate} />
-          )}
-          {route === 'support' && <SupportPage onNavigate={navigate} />}
+          <Suspense fallback={<PageSpinner />}>
+            {route === 'landing' && <Home onNavigate={navigate} />}
+            {route === 'learn' && <LearnPage onNavigate={navigate} />}
+            {route === 'build' && <BuildPage onNavigate={navigate} />}
+            {route === 'blog' &&
+              (blogSlug ? (
+                <BlogPostPage slug={blogSlug} onNavigate={navigate} onOpenPost={openPost} />
+              ) : (
+                <BlogPage onNavigate={navigate} onOpenPost={openPost} />
+              ))}
+            {route === 'pricing' && <PricingPage onNavigate={navigate} />}
+            {(route === 'terms' || route === 'privacy' || route === 'cookies') && (
+              <LegalPage slug={route} onNavigate={navigate} />
+            )}
+            {route === 'support' && <SupportPage onNavigate={navigate} />}
+          </Suspense>
         </main>
         <Footer onNavigate={navigate} />
       </div>
