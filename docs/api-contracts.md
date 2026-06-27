@@ -100,6 +100,22 @@ against a known set (see `tests/test_community.py`).
 | POST | `/v1/compile` | token | Compile an Arduino sketch → `{ hex, ... }` or structured errors. Sandboxed: source ≤64 KB, board allow-list, non-root, rlimits, timeout. Source is **compiled, never executed**. |
 | GET | `/internal/metrics` | metrics token | Metrics. |
 
+## reporter — `VITE_OHMLET_REPORTER_API_BASE_URL`
+
+The 3D digital-twin service: a real image→mesh of the finished build (the one
+post-session artifact). Generation is gated + metered per plan; the GLB is private
+and streamed through an authenticated, ownership-checked endpoint.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/health` | public | Liveness + which provider is configured. |
+| POST | `/v1/twin` | token | Generate a twin from `{ image_base64, title?, sessionId?, buildId? }`. `402` when over the monthly quota; `503` when generation is unconfigured. |
+| GET | `/v1/twins` | token | The caller's twins, newest first. |
+| GET | `/v1/twins/{id}` | token | One twin's metadata. |
+| GET | `/v1/twins/{id}/model` | token | Stream the GLB mesh (ownership-checked). |
+| DELETE | `/v1/twins/{id}` | token | Delete a twin + its mesh. |
+| GET | `/internal/metrics` | metrics token | Metrics. |
+
 ---
 
 ## Versioning

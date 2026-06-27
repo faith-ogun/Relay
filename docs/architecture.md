@@ -80,7 +80,10 @@ library, so a service can be deployed and reasoned about in isolation.
 | **vision-verifier** | 8084 | Camera component inventory check at session start. | Gemini 3.5 Flash vision |
 | **compiler** | — | Compiles a learner's Arduino sketch (arduino-cli + avr-gcc) to Intel HEX, sandboxed. Source is compiled, never executed. | n/a |
 
-Future: `reporter/` (3D digital-twin generation) — the one post-session artifact.
+The fifth service is **`reporter/`** (3D digital-twin generation, #31) — the one
+post-session artifact. It takes the final build photo, calls a true image→mesh
+provider, stores the GLB in Cloud Storage, and streams it back privately.
+Generation is plan-gated and metered.
 
 ### The live session (the heart of the product)
 

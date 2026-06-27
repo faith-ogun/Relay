@@ -82,6 +82,18 @@ COMPILER_SECRETS="OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
 # so give it more headroom and a longer request timeout than the vision services.
 COMPILER_EXTRA="--memory=2Gi --cpu=2 --timeout=120 --concurrency=4"
 
+REPORTER_SERVICE="ohmlet-reporter"
+REPORTER_SOURCE="backend/reporter"
+REPORTER_ENV="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},OHMLET_TWIN_PROVIDER=stability"
+REPORTER_SA="${OHMLET_REPORTER_SA:-}"
+REPORTER_MIN_INSTANCES="${OHMLET_REPORTER_MIN_INSTANCES:-0}"
+# The 3D-provider API key + the metrics token, by reference from Secret Manager
+# (never a value in code). Create the secret once: see backend/reporter/README.md.
+REPORTER_SECRETS="STABILITY_API_KEY=ohmlet-stability-key:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
+# Image→mesh generation can take tens of seconds; give it a long request timeout
+# and low concurrency (each call holds an upstream request open).
+REPORTER_EXTRA="--memory=1Gi --cpu=1 --timeout=300 --concurrency=8"
+
 # ── Helpers ──
 info()  { echo -e "\033[1;34m[deploy]\033[0m $1"; }
 ok()    { echo -e "\033[1;32m[deploy]\033[0m $1"; }
@@ -168,6 +180,10 @@ deploy_compiler() {
   deploy_service "$COMPILER_SERVICE" "$COMPILER_SOURCE" "$COMPILER_ENV" "$COMPILER_SA" "$COMPILER_MIN_INSTANCES" "$COMPILER_SECRETS" "$COMPILER_EXTRA"
 }
 
+deploy_reporter() {
+  deploy_service "$REPORTER_SERVICE" "$REPORTER_SOURCE" "$REPORTER_ENV" "$REPORTER_SA" "$REPORTER_MIN_INSTANCES" "$REPORTER_SECRETS" "$REPORTER_EXTRA"
+}
+
 deploy_frontend() {
   info "Building frontend..."
   ( cd frontend && npm run build )
@@ -179,7 +195,7 @@ deploy_frontend() {
 verify_services() {
   info "Verifying deployed services..."
 
-  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE" "$VISION_VERIFIER_SERVICE" "$COMPILER_SERVICE"; do
+  for service in "$LIVE_BRIDGE_SERVICE" "$QUIZ_ENGINE_SERVICE" "$VISION_VERIFIER_SERVICE" "$COMPILER_SERVICE" "$REPORTER_SERVICE"; do
     local url
     url=$(gcloud run services describe "$service" --region="$REGION" --format="value(status.url)" 2>/dev/null)
     if [[ -n "$url" ]]; then
@@ -213,6 +229,9 @@ main() {
     compiler)
       deploy_compiler
       ;;
+    reporter)
+      deploy_reporter
+      ;;
     frontend)
       deploy_frontend
       ;;
@@ -224,6 +243,7 @@ main() {
       deploy_quiz_engine
       deploy_vision_verifier
       deploy_compiler
+      deploy_reporter
       deploy_frontend
       echo ""
       verify_services
@@ -232,7 +252,7 @@ main() {
       ;;
     *)
       err "Unknown target: $1"
-      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|vision-verifier|compiler|frontend|verify|all]"
+      echo "Usage: ./deploy.sh [live-bridge|quiz-engine|vision-verifier|compiler|reporter|frontend|verify|all]"
       exit 1
       ;;
   esac

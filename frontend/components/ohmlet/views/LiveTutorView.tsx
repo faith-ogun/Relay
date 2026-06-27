@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Box,
   Camera,
   CameraOff,
   CheckCircle2,
@@ -33,6 +34,8 @@ import {
   type InventoryResult,
   type PartStatus,
 } from '../../../services/visionVerifier';
+import { reporterConfigured } from '../../../services/reporter';
+import { TwinStudio } from '../twin/TwinStudio';
 
 /**
  * LiveTutorView — the live bench session. The camera feed is the hero; voice
@@ -81,6 +84,9 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
   const [snapped, setSnapped] = useState(false);
+  // The captured build photo currently being turned into a 3D twin (#31).
+  const [twinFrame, setTwinFrame] = useState<string | null>(null);
+  const [twinBusy, setTwinBusy] = useState(false);
   const budgetImageState = useState(true); // [ok, setOk] for the 402 art fallback
 
   const { canGoLive, liveCapMinutes, liveMinutesRemaining, liveSecondsUsed, consumeLiveSeconds, plan } = usePlan(userId);
@@ -154,6 +160,14 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     setStage(s);
     if (live) sendStageUpdate(s);
   };
+
+  // Capture a clean still of the finished build and hand it to the twin studio.
+  const captureTwin = useCallback(async () => {
+    setTwinBusy(true);
+    const frame = await grabFrame(1024);
+    setTwinBusy(false);
+    if (frame) setTwinFrame(frame);
+  }, [grabFrame]);
 
   const send = (text: string) => {
     if (!text.trim() || !live) return;
@@ -387,6 +401,27 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           {stage === 'inventory' && verifierConfigured() && (
             <KitCheck build={build} camOn={camOn} grabFrame={grabFrame} />
           )}
+
+          {/* 3D twin (#31): the post-session artifact, captured from the finished build. */}
+          {stage === 'test' && reporterConfigured() && (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+              <div className="min-w-0">
+                <p className="text-sm font-black tracking-tight text-ohmlet-ink">Capture a 3D twin</p>
+                <p className="mt-0.5 text-xs font-semibold text-ohmlet-ink-soft">
+                  Turn your finished build into a 3D model you can keep and spin.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={captureTwin}
+                disabled={!camOn || twinBusy}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold px-3.5 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-deep active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {twinBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Box className="h-4 w-4" strokeWidth={2.5} />}
+                {twinBusy ? 'Capturing' : 'Create twin'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Transcript + input */}
@@ -465,6 +500,17 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           </form>
         </div>
       </div>
+
+      {twinFrame && (
+        <TwinStudio
+          imageBase64={twinFrame}
+          title={build.title}
+          buildId={build.title}
+          sessionId={sessionId}
+          onClose={() => setTwinFrame(null)}
+          onUpgrade={onUpgrade}
+        />
+      )}
     </div>
   );
 };
