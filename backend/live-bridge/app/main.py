@@ -24,12 +24,15 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from ohmlet_live_agent import agent
+from ohmlet_live_agent.interview_agent import interview_agent
 from ohmlet_live_agent.tools import set_priority_models
+import interview as interview_mod
 from state_store import router as state_router
 from account import router as account_router
 from billing import router as billing_router
 from privacy import router as privacy_router
 from community import router as community_router
+from interview_router import router as interview_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -93,11 +96,19 @@ app.include_router(billing_router)
 app.include_router(privacy_router)
 # Community: feed, comments, reactions, challenges, weekly league (#63).
 app.include_router(community_router)
+# Interview Mode: the post-session feedback report (#21, Max-tier).
+app.include_router(interview_router)
 
 session_service = InMemorySessionService()
 runner = Runner(
     app_name=APP_NAME,
     agent=agent,
+    session_service=session_service,
+)
+# Interview Mode (#21) reuses the entire live spine with a different persona.
+interview_runner = Runner(
+    app_name=APP_NAME,
+    agent=interview_agent,
     session_service=session_service,
 )
 
@@ -207,8 +218,19 @@ async def websocket_endpoint(
 
     logger.info("WS connected: user=%s session=%s", user_id, session_id)
 
+    # ── Session mode: tutor (default) or interview (#21, Max-only) ──
+    mode = "interview" if (websocket.query_params.get("mode") == "interview") else "tutor"
+
     # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
     plan = entitlements.get_plan(user_id)
+
+    # Interview Mode is a Max-tier feature; enforce it server-side (#56), never
+    # trusting the client's UI gate.
+    if mode == "interview" and plan != "max":
+        logger.info("Interview mode refused for user=%s plan=%s", user_id, plan)
+        await _reject_ws(websocket, "upgrade_required", "Interview Mode is a Max-plan feature.")
+        return
+
     remaining_seconds = entitlements.live_seconds_remaining(user_id, plan)
     if remaining_seconds <= 0:
         logger.info("Live budget exhausted for user=%s plan=%s; rejecting", user_id, plan)
@@ -287,12 +309,29 @@ async def websocket_endpoint(
                         live_queue.send_content(stage_content)
                         continue
 
+                    if msg_type == "interview_context" and mode == "interview":
+                        # Prime the interviewer with the role + JD + (fenced) resume.
+                        # Sanitised + injection-fenced in interview.build_context_message.
+                        ctx = interview_mod.build_context_message(
+                            role=msg.get("role"),
+                            seniority=msg.get("seniority"),
+                            job_description=msg.get("jobDescription"),
+                            resume=msg.get("resume"),
+                            warmup=msg.get("warmup", False),
+                        )
+                        live_queue.send_content(
+                            types.Content(role="user", parts=[types.Part(text=ctx)])
+                        )
+                        continue
+
                     if msg_type == "text":
                         text = validation.validate_ws_text(msg.get("text", ""))  # capped length (#45)
                         if text:
+                            # Interview mode has no tutor stages; send the turn as-is.
+                            prefixed = text if mode == "interview" else f"[stage={current_stage}] {text}"
                             content = types.Content(
                                 role="user",
-                                parts=[types.Part(text=f"[stage={current_stage}] {text}")],
+                                parts=[types.Part(text=prefixed)],
                             )
                             live_queue.send_content(content)
                             meter.on_text()
@@ -323,12 +362,14 @@ async def websocket_endpoint(
     # ── Downstream: Gemini → client ────────────────────────────────────────────
 
     async def downstream() -> None:
-        logger.info("Downstream starting for session %s", session_id)
+        logger.info("Downstream starting for session %s (mode=%s)", session_id, mode)
         # Select the model tier for this session's plan (Free → Flash, Pro/max → Pro).
         set_priority_models(entitlements.has_priority_models(plan))
+        # Interview Mode swaps the persona (interviewer) but reuses the whole spine.
+        active_runner = interview_runner if mode == "interview" else runner
         try:
             event_count = 0
-            async for event in runner.run_live(
+            async for event in active_runner.run_live(
                 user_id=user_id,
                 session_id=session_id,
                 live_request_queue=live_queue,
