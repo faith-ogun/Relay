@@ -9,6 +9,8 @@ import {
   Flame,
   Home,
   Map as MapIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenTool,
   Play,
   Radio,
@@ -194,6 +196,26 @@ const PortalReturnNote: React.FC<{ plan: Plan; onSeePlans?: () => void }> = ({ p
 
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade, onAccount }) => {
   const [active, setActive] = useState<ViewId>('today');
+  // Collapsible left rail — gives space-hungry views (Sandbox/Simulator) room.
+  // Persisted so it stays the way the learner left it.
+  const [navCollapsed, setNavCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ohmlet.navCollapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleNav = useCallback(() => {
+    setNavCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem('ohmlet.navCollapsed', next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
   const { userId, isAdmin } = useIdentity();
   const { user } = useAuth();
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
@@ -298,10 +320,30 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
       <PortalReturnNote plan={plan} onSeePlans={onUpgrade} />
       <div className="mx-auto flex max-w-[1320px]">
         {/* ── Left rail ── */}
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ohmlet-line bg-white px-4 py-6 lg:flex">
-          <button type="button" onClick={onBack} className="mb-8 flex w-full items-center justify-center px-2">
-            <img src="/brand/ohmlet-logo.png" alt="Ohmlet" className="h-11 w-auto" draggable={false} />
-          </button>
+        <aside
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ohmlet-line bg-white py-6 transition-[width] duration-200 lg:flex ${
+            navCollapsed ? 'w-[76px] px-2' : 'w-64 px-4'
+          }`}
+        >
+          {/* Logo + collapse toggle */}
+          <div className={`mb-6 flex items-center ${navCollapsed ? 'flex-col gap-3' : 'justify-between'}`}>
+            {!navCollapsed && (
+              <button type="button" onClick={onBack} className="flex items-center px-1" aria-label="Ohmlet home">
+                <img src="/brand/ohmlet-logo.png" alt="Ohmlet" className="h-9 w-auto" draggable={false} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleNav}
+              aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!navCollapsed}
+              className="rounded-lg p-2 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-gold-soft hover:text-ohmlet-ink"
+            >
+              {navCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+            </button>
+          </div>
+
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
               const Icon = item.icon;
@@ -311,13 +353,15 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   key={item.id}
                   type="button"
                   onClick={() => setActive(item.id)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-extrabold transition-colors ${
-                    on ? 'bg-ohmlet-gold text-ohmlet-ink' : 'text-ohmlet-ink-soft hover:bg-ohmlet-gold-soft hover:text-ohmlet-ink'
-                  }`}
+                  title={navCollapsed ? item.label : undefined}
+                  aria-label={item.label}
+                  className={`flex items-center rounded-xl py-2.5 text-[15px] font-extrabold transition-colors ${
+                    navCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                  } ${on ? 'bg-ohmlet-gold text-ohmlet-ink' : 'text-ohmlet-ink-soft hover:bg-ohmlet-gold-soft hover:text-ohmlet-ink'}`}
                 >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                  {item.beta && (
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {!navCollapsed && item.label}
+                  {!navCollapsed && item.beta && (
                     <span className="ml-auto rounded-full bg-ohmlet-blue-soft px-1.5 py-0.5 text-[9px] font-black uppercase text-ohmlet-blue-deep">
                       Beta
                     </span>
@@ -326,43 +370,58 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               );
             })}
           </nav>
-          <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white p-3 shadow-press-sm">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase">
+
+          {navCollapsed ? (
+            <button
+              type="button"
+              onClick={onAccount}
+              title={`${displayName} · ${PLAN_META[plan].label} plan`}
+              aria-label="Account and privacy"
+              className="mt-auto flex h-10 w-10 items-center justify-center self-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase shadow-press-sm transition-transform hover:-translate-y-0.5"
+            >
               {(displayName || 'O').trim().charAt(0)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
-              <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
-            </div>
-            {onAccount && (
-              <button
-                onClick={onAccount}
-                className="shrink-0 rounded-lg p-1.5 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-cream hover:text-ohmlet-ink"
-                aria-label="Account and privacy"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          {/* Admin-only plan switcher: stands in for billing while we wire Stripe.
-              Gated to admins so normal users never see it (and default to Free).
-              With real auth (#29) this becomes an admin custom claim. */}
-          {isAdmin && (
+            </button>
+          ) : (
             <>
-              <p className="mt-3 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Admin · view as plan</p>
-              <div className="mt-1 flex items-center gap-1 rounded-xl border border-ohmlet-line bg-ohmlet-cream p-1">
-                {(['free', 'pro', 'max'] as Plan[]).map((p) => (
+              <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white p-3 shadow-press-sm">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-sm font-black uppercase">
+                  {(displayName || 'O').trim().charAt(0)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
+                  <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
+                </div>
+                {onAccount && (
                   <button
-                    key={p}
-                    onClick={() => setPlan(p)}
-                    className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
-                      plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
-                    }`}
+                    onClick={onAccount}
+                    className="shrink-0 rounded-lg p-1.5 text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-cream hover:text-ohmlet-ink"
+                    aria-label="Account and privacy"
                   >
-                    {PLAN_META[p].label}
+                    <Settings className="h-4 w-4" />
                   </button>
-                ))}
+                )}
               </div>
+              {/* Admin-only plan switcher: stands in for billing while we wire Stripe.
+                  Gated to admins so normal users never see it (and default to Free).
+                  With real auth (#29) this becomes an admin custom claim. */}
+              {isAdmin && (
+                <>
+                  <p className="mt-3 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Admin · view as plan</p>
+                  <div className="mt-1 flex items-center gap-1 rounded-xl border border-ohmlet-line bg-ohmlet-cream p-1">
+                    {(['free', 'pro', 'max'] as Plan[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPlan(p)}
+                        className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
+                          plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
+                        }`}
+                      >
+                        {PLAN_META[p].label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </aside>

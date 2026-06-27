@@ -29,17 +29,19 @@ const Backdrop: React.FC<{ onClose: () => void; children: React.ReactNode; label
   return (
     <div
       ref={panelRef}
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[80] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
     >
       <div
-        className="absolute inset-0 bg-ohmlet-ink/45 backdrop-blur-sm motion-safe:animate-[ohmlet-fade-in_180ms_ease-out]"
+        className="fixed inset-0 bg-ohmlet-ink/45 backdrop-blur-sm motion-safe:animate-[ohmlet-fade-in_180ms_ease-out]"
         onClick={onClose}
         aria-hidden
       />
-      {children}
+      {/* min-h-full + items-center: centers when it fits, scrolls when the dialog
+          is taller than the viewport so the buttons are always reachable. */}
+      <div className="relative flex min-h-full items-center justify-center p-4 sm:p-6">{children}</div>
     </div>
   );
 };
