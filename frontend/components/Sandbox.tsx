@@ -45,8 +45,13 @@ const PALETTE: PaletteItem[] = [
   { type: 'resistor_220', label: '220 ohm resistor', color: '#d2b48c', description: 'Current limiter for LEDs', family: 'Passive' },
   { type: 'resistor_10k', label: '10k ohm resistor', color: '#c4a882', description: 'Pull-up, pull-down, divider', family: 'Passive' },
   { type: 'ldr', label: 'LDR', color: '#eab308', description: 'Light-dependent resistor', family: 'Sensor' },
+  { type: 'thermistor', label: 'Thermistor', color: '#38bdf8', description: 'Temperature sensor (NTC)', family: 'Sensor' },
   { type: 'buzzer', label: 'Buzzer', color: '#6366f1', description: 'Piezo buzzer, 5V', family: 'Output' },
   { type: 'button', label: 'Push button', color: '#ef4444', description: 'Momentary tactile switch', family: 'Input' },
+  { type: 'pot', label: 'Potentiometer', color: '#1e3a5f', description: '10k rotary, analog input', family: 'Input' },
+  { type: 'transistor', label: 'NPN transistor', color: '#1f2430', description: '2N2222 switch / amplifier', family: 'Active' },
+  { type: 'motor', label: 'DC motor', color: '#b9c2cc', description: '3-6V hobby motor', family: 'Output' },
+  { type: 'servo', label: 'Servo', color: '#2563eb', description: '9g micro servo, PWM', family: 'Output' },
 ];
 
 const CAMERA_OPTIONS: Array<{ id: CameraPreset; label: string }> = [
@@ -198,6 +203,59 @@ function PaletteGlyph({ type, color }: { type: ComponentType; color: string }) {
         <circle cx="16" cy="13" r="3" fill={color} />
         <path d="M13 21v7M19 21v7" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" />
         <path d="M24 10c1.4 1 2.2 2.2 2.2 3.8S25.4 16.6 24 17.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
+
+  if (type === 'thermistor') {
+    return (
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+        <circle cx="16" cy="12" r="5.5" fill={color} fillOpacity="0.85" />
+        <path d="M16 12c0-3 4-3 4-6.5S16.5 2 16 2" stroke={color} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+        <path d="M13.5 17v9M18.5 17v9" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === 'pot') {
+    return (
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+        <circle cx="16" cy="13" r="8" fill={color} />
+        <circle cx="16" cy="13" r="5" fill="#cbd5e1" />
+        <path d="M16 13l3-3" stroke="#0f172a" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M11 21v7M16 21v7M21 21v7" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === 'transistor') {
+    return (
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+        <path d="M9 6h14v9a7 7 0 0 1-14 0V6Z" fill={color} />
+        <path d="M9 6h14" stroke="#475569" strokeWidth="1" />
+        <path d="M12 22v6M16 22v6M20 22v6" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === 'motor') {
+    return (
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+        <rect x="7" y="9" width="18" height="14" rx="3" fill={color} stroke="#64748b" strokeWidth="1" />
+        <circle cx="16" cy="16" r="4.5" fill="none" stroke="#475569" strokeWidth="1.3" />
+        <path d="M16 11.5v9M11.5 16h9" stroke="#475569" strokeWidth="1.3" />
+        <path d="M25 14v4l3-1.5z" fill="#9ca3af" />
+      </svg>
+    );
+  }
+
+  if (type === 'servo') {
+    return (
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+        <rect x="9" y="8" width="14" height="16" rx="1.5" fill={color} />
+        <rect x="5" y="11" width="22" height="3" rx="1" fill="#1d4ed8" />
+        <circle cx="16" cy="9" r="2.4" fill="#1e293b" />
+        <rect x="11" y="3" width="10" height="2.6" rx="1.3" fill="#f8fafc" stroke="#1e293b" strokeWidth="0.6" />
       </svg>
     );
   }
