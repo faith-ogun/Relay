@@ -24,6 +24,7 @@ const SupportPage = lazyNamed(() => import('./components/SupportPage'), 'Support
 const WorkspaceHome = lazyNamed(() => import('./components/WorkspaceHome'), 'WorkspaceHome');
 const AuthorPreview = lazyNamed(() => import('./components/ohmlet/views/AuthorPreview'), 'AuthorPreview');
 const AchievementsPreview = lazyNamed(() => import('./components/ohmlet/views/AchievementsPreview'), 'AchievementsPreview');
+const PartsGallery = React.lazy(() => import('./components/ohmlet/sandbox/PartsGallery'));
 const UpgradeSuccess = lazyNamed(() => import('./components/UpgradeSuccess'), 'UpgradeSuccess');
 const AccountPage = lazyNamed(() => import('./components/AccountPage'), 'AccountPage');
 
@@ -43,6 +44,7 @@ type AppRoute =
   | 'upgrade-success'
   | 'author'
   | 'cards'
+  | 'parts'
   | 'account'
   | 'ohmlet-app'
   | 'workspace'
@@ -64,6 +66,7 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   'upgrade-success': '/upgrade-success',
   author: '/author',
   cards: '/cards',
+  parts: '/parts',
   account: '/account',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
@@ -103,6 +106,7 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/upgrade-success') return 'upgrade-success';
   if (normalized === '/author') return 'author';
   if (normalized === '/cards') return 'cards';
+  if (normalized === '/parts') return 'parts';
   if (normalized === '/account') return 'account';
   if (normalized === '/workspace') return 'workspace';
 
@@ -173,7 +177,7 @@ const App: React.FC = () => {
 
   // ── Route guards (run once auth state is known) ──
   const isProtected =
-    route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'cards' || route === 'welcome' || route === 'account';
+    route === 'ohmlet-app' || route === 'workspace' || route === 'author' || route === 'cards' || route === 'parts' || route === 'welcome' || route === 'account';
   const isAuthRoute = route === 'login' || route === 'signup';
 
   useEffect(() => {
@@ -240,6 +244,18 @@ const App: React.FC = () => {
     return isAdmin ? (
       <Suspense fallback={<AuthSplash />}>
         <AchievementsPreview onBack={backToLanding} />
+      </Suspense>
+    ) : (
+      <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />
+    );
+  }
+
+  // ── Sandbox parts gallery (admin only) — review the 3D component meshes ──
+  if (route === 'parts') {
+    if (!user) return <AuthSplash />;
+    return isAdmin ? (
+      <Suspense fallback={<AuthSplash />}>
+        <PartsGallery onBack={backToLanding} />
       </Suspense>
     ) : (
       <ErrorPage variant={403} onHome={backToLanding} onPrimary={() => navigate('ohmlet-app')} />

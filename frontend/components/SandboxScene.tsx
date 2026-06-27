@@ -358,7 +358,7 @@ function BreadboardMesh({
   );
 }
 
-function PlacedLED({
+export function PlacedLED({
   position,
   color,
   simState,
@@ -367,53 +367,83 @@ function PlacedLED({
   color: string;
   simState?: { on: boolean; brightness: number };
 }) {
-  const ref = useRef<THREE.Mesh>(null!);
+  const die = useRef<THREE.MeshStandardMaterial>(null!);
 
   useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const material = ref.current.material as THREE.MeshStandardMaterial;
-    material.emissiveIntensity = simState?.on ? simState.brightness * (0.8 + Math.sin(clock.elapsedTime * 5) * 0.3) : 0.04;
+    if (!die.current) return;
+    die.current.emissiveIntensity = simState?.on
+      ? simState.brightness * (2.4 + Math.sin(clock.elapsedTime * 5) * 0.5)
+      : 0.06;
   });
 
   return (
     <group position={position}>
-      {/* LED dome */}
-      <mesh ref={ref} castShadow>
-        <sphereGeometry args={[0.055, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.05} transparent opacity={0.88} />
+      {/* glassy transmissive dome (epoxy, ior ~1.55) */}
+      <mesh castShadow>
+        <sphereGeometry args={[0.055, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshPhysicalMaterial
+          color={color}
+          transmission={0.6}
+          thickness={0.06}
+          ior={1.55}
+          roughness={0.16}
+          clearcoat={1}
+          clearcoatRoughness={0.06}
+          attenuationColor={color}
+          attenuationDistance={0.4}
+          transparent
+        />
+      </mesh>
+      {/* the lit die inside the dome */}
+      <mesh position={[0, 0.012, 0]}>
+        <sphereGeometry args={[0.016, 16, 12]} />
+        <meshStandardMaterial ref={die} color={color} emissive={color} emissiveIntensity={0.06} toneMapped={false} />
       </mesh>
       {/* glow halo when on */}
       {simState?.on && (
-        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.055, 0.12, 24]} />
-          <meshBasicMaterial color={color} transparent opacity={0.25} />
+        <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.06, 0.13, 28]} />
+          <meshBasicMaterial color={color} transparent opacity={0.22} toneMapped={false} />
         </mesh>
       )}
-      {/* base */}
-      <mesh position={[0, -0.03, 0]} castShadow>
-        <cylinderGeometry args={[0.04, 0.055, 0.04, 16]} />
-        <meshStandardMaterial color={color} transparent opacity={0.45} />
+      {/* flange base with the cathode flat */}
+      <mesh position={[0, -0.028, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.058, 0.045, 32]} />
+        <meshPhysicalMaterial color={color} transmission={0.4} roughness={0.25} clearcoat={0.6} transparent />
+      </mesh>
+      {/* cathode flat (the side electronics people look for) */}
+      <mesh position={[0.052, -0.028, 0]}>
+        <boxGeometry args={[0.006, 0.045, 0.09]} />
+        <meshStandardMaterial color={color} roughness={0.4} transparent opacity={0.6} />
       </mesh>
       {/* legs */}
       <mesh position={[-0.02, -0.075, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.07, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.02, -0.07, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
 }
 
-function PlacedResistor({ position }: { position: [number, number, number] }) {
+export function PlacedResistor({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      {/* body */}
+      {/* body (rounded carbon-film capsule) */}
       <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.028, 0.028, 0.14, 12]} />
-        <meshStandardMaterial color="#d9b78c" roughness={0.86} />
+        <cylinderGeometry args={[0.028, 0.028, 0.13, 28]} />
+        <meshStandardMaterial color="#d9c4a3" roughness={0.55} />
+      </mesh>
+      <mesh position={[-0.065, 0, 0]} castShadow>
+        <sphereGeometry args={[0.028, 20, 14]} />
+        <meshStandardMaterial color="#d9c4a3" roughness={0.55} />
+      </mesh>
+      <mesh position={[0.065, 0, 0]} castShadow>
+        <sphereGeometry args={[0.028, 20, 14]} />
+        <meshStandardMaterial color="#d9c4a3" roughness={0.55} />
       </mesh>
       {/* color bands */}
       {[-0.035, -0.012, 0.012, 0.035].map((offset, index) => (
@@ -425,17 +455,17 @@ function PlacedResistor({ position }: { position: [number, number, number] }) {
       {/* legs */}
       <mesh position={[-0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
 }
 
-function PlacedLDR({ position }: { position: [number, number, number] }) {
+export function PlacedLDR({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       {/* disc body */}
@@ -456,17 +486,17 @@ function PlacedLDR({ position }: { position: [number, number, number] }) {
       {/* legs */}
       <mesh position={[-0.018, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.018, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
 }
 
-function PlacedBuzzer({ position, active }: { position: [number, number, number]; active?: boolean }) {
+export function PlacedBuzzer({ position, active }: { position: [number, number, number]; active?: boolean }) {
   const ref = useRef<THREE.Mesh>(null!);
 
   useFrame(({ clock }) => {
@@ -479,8 +509,8 @@ function PlacedBuzzer({ position, active }: { position: [number, number, number]
     <group position={position}>
       {/* main cylinder */}
       <mesh ref={ref} castShadow>
-        <cylinderGeometry args={[0.065, 0.065, 0.04, 22]} />
-        <meshStandardMaterial color="#20242d" roughness={0.5} />
+        <cylinderGeometry args={[0.065, 0.065, 0.04, 36]} />
+        <meshPhysicalMaterial color="#0b0b0d" roughness={0.5} clearcoat={0.5} clearcoatRoughness={0.4} />
       </mesh>
       {/* sound hole */}
       <mesh position={[0, 0.022, 0]}>
@@ -506,21 +536,21 @@ function PlacedBuzzer({ position, active }: { position: [number, number, number]
       {/* legs */}
       <mesh position={[-0.02, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.05, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.02, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.05, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
 }
 
-function PlacedButton({ position }: { position: [number, number, number] }) {
+export function PlacedButton({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <RoundedBox args={[0.1, 0.03, 0.1]} radius={0.008} smoothness={4} castShadow>
-        <meshStandardMaterial color="#2d333d" />
+        <meshPhysicalMaterial color="#15181f" roughness={0.45} clearcoat={0.5} clearcoatRoughness={0.35} />
       </RoundedBox>
       <mesh position={[0, 0.025, 0]} castShadow>
         <cylinderGeometry args={[0.022, 0.022, 0.018, 16]} />
@@ -530,7 +560,7 @@ function PlacedButton({ position }: { position: [number, number, number] }) {
       {[[-0.035, -0.035], [0.035, -0.035], [-0.035, 0.035], [0.035, 0.035]].map(([x, z], i) => (
         <mesh key={i} position={[x, -0.03, z]} castShadow>
           <cylinderGeometry args={[0.004, 0.004, 0.04, 6]} />
-          <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+          <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
         </mesh>
       ))}
     </group>
@@ -544,7 +574,7 @@ function ThreeLegs({ y = -0.04, spread = 0.025 }: { y?: number; spread?: number 
       {[-spread, 0, spread].map((x, i) => (
         <mesh key={i} position={[x, y, 0]} castShadow>
           <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-          <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+          <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
         </mesh>
       ))}
     </>
@@ -553,7 +583,7 @@ function ThreeLegs({ y = -0.04, spread = 0.025 }: { y?: number; spread?: number 
 
 // Potentiometer: a body with a turnable knob (#38). The knob angle reflects the
 // analog value when the sim runs, so a learner sees the "dial" they're reading.
-function PlacedPot({ position, value }: { position: [number, number, number]; value?: number }) {
+export function PlacedPot({ position, value }: { position: [number, number, number]; value?: number }) {
   const knob = useRef<THREE.Group>(null!);
   useFrame(() => {
     if (knob.current) knob.current.rotation.y = ((value ?? 0.5) - 0.5) * 5; // ~+/-140deg sweep
@@ -561,14 +591,14 @@ function PlacedPot({ position, value }: { position: [number, number, number]; va
   return (
     <group position={position}>
       {/* base */}
-      <RoundedBox args={[0.13, 0.05, 0.11]} radius={0.008} smoothness={4} castShadow>
-        <meshStandardMaterial color="#1e3a5f" roughness={0.55} />
+      <RoundedBox args={[0.13, 0.05, 0.11]} radius={0.01} smoothness={4} bevelSegments={2} castShadow>
+        <meshPhysicalMaterial color="#1e3a5f" roughness={0.45} clearcoat={0.5} clearcoatRoughness={0.35} />
       </RoundedBox>
       {/* knob */}
       <group ref={knob} position={[0, 0.055, 0]}>
         <mesh castShadow>
-          <cylinderGeometry args={[0.04, 0.045, 0.05, 24]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.4} roughness={0.4} />
+          <cylinderGeometry args={[0.04, 0.045, 0.05, 32]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.5} roughness={0.38} />
         </mesh>
         {/* pointer notch */}
         <mesh position={[0, 0.026, 0.028]}>
@@ -582,17 +612,17 @@ function PlacedPot({ position, value }: { position: [number, number, number]; va
 }
 
 // NPN transistor in a TO-92 package: a black half-cylinder with a flat front.
-function PlacedTransistor({ position }: { position: [number, number, number] }) {
+export function PlacedTransistor({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <mesh castShadow position={[0, 0.005, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.07, 24, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#1f2430" roughness={0.6} />
+        <cylinderGeometry args={[0.05, 0.05, 0.07, 32, 1, false, 0, Math.PI]} />
+        <meshPhysicalMaterial color="#0b0b0d" roughness={0.55} clearcoat={0.4} clearcoatRoughness={0.45} />
       </mesh>
       {/* flat face */}
       <mesh position={[0, 0.005, 0]}>
         <boxGeometry args={[0.1, 0.07, 0.004]} />
-        <meshStandardMaterial color="#171b24" roughness={0.6} />
+        <meshPhysicalMaterial color="#0b0b0d" roughness={0.55} clearcoat={0.4} clearcoatRoughness={0.45} />
       </mesh>
       <ThreeLegs y={-0.04} spread={0.022} />
     </group>
@@ -600,7 +630,7 @@ function PlacedTransistor({ position }: { position: [number, number, number] }) 
 }
 
 // DC motor: a metal can with a shaft + rotor that spins while the sim runs (#38).
-function PlacedMotor({ position, active }: { position: [number, number, number]; active?: boolean }) {
+export function PlacedMotor({ position, active }: { position: [number, number, number]; active?: boolean }) {
   const rotor = useRef<THREE.Group>(null!);
   useFrame((_, dt) => {
     if (rotor.current && active) rotor.current.rotation.y += dt * 14;
@@ -609,13 +639,13 @@ function PlacedMotor({ position, active }: { position: [number, number, number];
     <group position={position}>
       {/* can body */}
       <mesh castShadow position={[0, 0.04, 0]}>
-        <cylinderGeometry args={[0.075, 0.075, 0.12, 28]} />
-        <meshStandardMaterial color="#b9c2cc" metalness={0.85} roughness={0.3} />
+        <cylinderGeometry args={[0.075, 0.075, 0.12, 40]} />
+        <meshStandardMaterial color="#c9ccce" metalness={1} roughness={0.34} />
       </mesh>
       {/* end cap */}
       <mesh position={[0, 0.105, 0]}>
-        <cylinderGeometry args={[0.077, 0.077, 0.012, 28]} />
-        <meshStandardMaterial color="#8a94a0" metalness={0.8} roughness={0.35} />
+        <cylinderGeometry args={[0.077, 0.077, 0.012, 40]} />
+        <meshStandardMaterial color="#aeb4ba" metalness={1} roughness={0.42} />
       </mesh>
       {/* shaft + rotor */}
       <group ref={rotor} position={[0, 0.12, 0]}>
@@ -637,18 +667,18 @@ function PlacedMotor({ position, active }: { position: [number, number, number];
       {/* two terminal legs */}
       <mesh position={[-0.025, -0.02, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.025, -0.02, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.06, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
 }
 
 // Hobby servo: a blue body with a horn that sweeps back and forth while running.
-function PlacedServo({ position, active }: { position: [number, number, number]; active?: boolean }) {
+export function PlacedServo({ position, active }: { position: [number, number, number]; active?: boolean }) {
   const horn = useRef<THREE.Group>(null!);
   useFrame(({ clock }) => {
     if (horn.current) horn.current.rotation.y = active ? Math.sin(clock.elapsedTime * 2.2) * 1.4 : 0;
@@ -656,23 +686,23 @@ function PlacedServo({ position, active }: { position: [number, number, number];
   return (
     <group position={position}>
       {/* body */}
-      <RoundedBox args={[0.18, 0.1, 0.09]} radius={0.006} smoothness={4} castShadow position={[0, 0.03, 0]}>
-        <meshStandardMaterial color="#2563eb" roughness={0.5} />
+      <RoundedBox args={[0.18, 0.1, 0.09]} radius={0.008} smoothness={4} bevelSegments={2} castShadow position={[0, 0.03, 0]}>
+        <meshPhysicalMaterial color="#1f6fd0" roughness={0.4} clearcoat={0.6} clearcoatRoughness={0.3} />
       </RoundedBox>
       {/* mounting tabs */}
       <mesh position={[0, 0.05, 0]}>
         <boxGeometry args={[0.27, 0.012, 0.085]} />
-        <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+        <meshPhysicalMaterial color="#1a5bb0" roughness={0.4} clearcoat={0.6} clearcoatRoughness={0.3} />
       </mesh>
       {/* output boss + horn */}
       <group ref={horn} position={[0.05, 0.092, 0]}>
         <mesh castShadow>
-          <cylinderGeometry args={[0.022, 0.022, 0.02, 18]} />
-          <meshStandardMaterial color="#1e293b" />
+          <cylinderGeometry args={[0.022, 0.022, 0.02, 24]} />
+          <meshPhysicalMaterial color="#0b0b0d" roughness={0.5} clearcoat={0.4} />
         </mesh>
         <mesh position={[0, 0.012, 0]}>
           <boxGeometry args={[0.11, 0.006, 0.014]} />
-          <meshStandardMaterial color="#f8fafc" />
+          <meshPhysicalMaterial color="#e8eaed" roughness={0.45} clearcoat={0.5} />
         </mesh>
       </group>
       {/* 3-wire pigtail */}
@@ -685,7 +715,7 @@ function PlacedServo({ position, active }: { position: [number, number, number];
 }
 
 // Thermistor: a small epoxy bead on two legs (temperature sensor).
-function PlacedThermistor({ position }: { position: [number, number, number] }) {
+export function PlacedThermistor({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <mesh castShadow position={[0, 0.01, 0]}>
@@ -694,11 +724,11 @@ function PlacedThermistor({ position }: { position: [number, number, number] }) 
       </mesh>
       <mesh position={[-0.014, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.07, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
       <mesh position={[0.014, -0.04, 0]} castShadow>
         <cylinderGeometry args={[0.005, 0.005, 0.07, 6]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.88} roughness={0.22} />
+        <meshStandardMaterial color="#b8bcc0" metalness={1} roughness={0.32} />
       </mesh>
     </group>
   );
