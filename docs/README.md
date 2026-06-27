@@ -10,6 +10,8 @@ The map of the system and the reasoning behind it. Start here.
   errors, rate limits).
 - **[caching.md](caching.md)** — what we cache, for how long, and how staleness
   is bounded (static assets + the leaderboard TTL cache).
+- **[blockers.md](blockers.md)** — what's built but not fully live, and exactly
+  what (credential, cloud action, or decision) unblocks each.
 - **[adr/](adr/)** — Architecture Decision Records: the *why* behind the big
   choices, append-only.
 
