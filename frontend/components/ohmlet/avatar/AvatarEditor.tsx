@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Check, Lock, Shuffle, X } from 'lucide-react';
+import { Check, Shuffle, X } from 'lucide-react';
 import { OhmletAvatar } from './OhmletAvatar';
-import { defaultAvatar, LABELS, LOCKED_GEAR, OPTIONS, type OhmletAvatarConfig } from './avatarConfig';
+import { defaultAvatar, LABELS, OPTIONS, type OhmletAvatarConfig } from './avatarConfig';
 import { useDialog } from '../../../hooks/useDialog';
 
 // ── AvatarEditor ──
@@ -12,13 +12,11 @@ import { useDialog } from '../../../hooks/useDialog';
 
 interface AvatarEditorProps {
   initial: OhmletAvatarConfig;
-  /** Earned lab-gear ids; others render locked. Omit to allow all. */
-  unlocked?: Set<string>;
   onSave: (config: OhmletAvatarConfig) => void;
   onClose: () => void;
 }
 
-type Tab = 'skin' | 'face' | 'hair' | 'eyes' | 'features' | 'glasses' | 'outfit' | 'gear';
+type Tab = 'skin' | 'face' | 'hair' | 'eyes' | 'features' | 'glasses' | 'outfit';
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'skin', label: 'Skin' },
   { id: 'face', label: 'Face' },
@@ -27,23 +25,13 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'features', label: 'Features' },
   { id: 'glasses', label: 'Glasses' },
   { id: 'outfit', label: 'Outfit' },
-  { id: 'gear', label: 'Lab gear' },
 ];
 
-const GEAR_LABELS: Record<string, string> = {
-  hardHat: 'Hard hat',
-  earDefenders: 'Ear defenders',
-  goggles: 'Goggles',
-  mask: 'Face mask',
-  labCoat: 'Lab coat',
-};
-
-export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, unlocked, onSave, onClose }) => {
+export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, onSave, onClose }) => {
   const [cfg, setCfg] = useState<OhmletAvatarConfig>(initial);
   const [tab, setTab] = useState<Tab>('skin');
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const set = (patch: Partial<OhmletAvatarConfig>) => setCfg((c) => ({ ...c, ...patch }));
-  const isUnlocked = (id: string) => !unlocked || unlocked.has(id);
 
   return (
     <div className="fixed inset-0 z-[80] overflow-y-auto">
@@ -72,7 +60,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, unlocked, o
               <OhmletAvatar config={cfg} size={168} ring />
               <button
                 type="button"
-                onClick={() => set({ ...defaultAvatar(`${Math.random()}`), headGear: null, eyeGear: null, faceGear: null, neckGear: null })}
+                onClick={() => set(defaultAvatar(`${Math.random()}`))}
                 className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-line bg-white px-3 py-1.5 text-xs font-black text-ohmlet-ink transition-colors hover:border-ohmlet-ink"
               >
                 <Shuffle className="h-3.5 w-3.5" /> Surprise me
@@ -141,15 +129,6 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, unlocked, o
                     <Swatches label="Top colour" values={OPTIONS.shirtColor} active={cfg.shirtColor} onPick={(shirtColor) => set({ shirtColor })} />
                   </>
                 )}
-                {tab === 'gear' && (
-                  <>
-                    <GearRow label="Headgear" options={[null, 'hardHat', 'earDefenders']} active={cfg.headGear ?? null} isUnlocked={isUnlocked} onPick={(g) => set({ headGear: g as OhmletAvatarConfig['headGear'] })} />
-                    <GearRow label="Eye protection" options={[null, 'goggles']} active={cfg.eyeGear ?? null} isUnlocked={isUnlocked} onPick={(g) => set({ eyeGear: g as OhmletAvatarConfig['eyeGear'] })} />
-                    <GearRow label="Face" options={[null, 'mask']} active={cfg.faceGear ?? null} isUnlocked={isUnlocked} onPick={(g) => set({ faceGear: g as OhmletAvatarConfig['faceGear'] })} />
-                    <GearRow label="Coat" options={[null, 'labCoat']} active={cfg.neckGear ?? null} isUnlocked={isUnlocked} onPick={(g) => set({ neckGear: g as OhmletAvatarConfig['neckGear'] })} />
-                    <p className="mt-1 text-xs font-semibold text-ohmlet-ink-soft">Lab gear stacks: wear a hard hat, goggles, and a coat together.</p>
-                  </>
-                )}
               </div>
 
               <div className="flex gap-2.5 border-t-2 border-ohmlet-line p-4">
@@ -205,32 +184,3 @@ const Choices: React.FC<{ label: string; options: (readonly [string, string])[] 
   </Row>
 );
 
-const GearRow: React.FC<{ label: string; options: (string | null)[]; active: string | null; isUnlocked: (id: string) => boolean; onPick: (v: string | null) => void }> = ({ label, options, active, isUnlocked, onPick }) => (
-  <Row label={label}>
-    {options.map((g) => {
-      if (g === null) {
-        return (
-          <button key="none" type="button" onClick={() => onPick(null)} className={`rounded-xl border-2 px-3 py-1.5 text-xs font-black transition-all ${active === null ? 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink' : 'border-ohmlet-line text-ohmlet-ink hover:border-ohmlet-ink'}`}>
-            None
-          </button>
-        );
-      }
-      const locked = !isUnlocked(g);
-      return (
-        <button
-          key={g}
-          type="button"
-          disabled={locked}
-          onClick={() => onPick(g)}
-          title={locked ? LOCKED_GEAR[g]?.requirement : undefined}
-          className={`inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-1.5 text-xs font-black transition-all ${
-            active === g ? 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink' : locked ? 'border-ohmlet-line bg-ohmlet-cream text-ohmlet-ink-soft/70' : 'border-ohmlet-line text-ohmlet-ink hover:border-ohmlet-ink'
-          }`}
-        >
-          {locked && <Lock className="h-3 w-3" />}
-          {GEAR_LABELS[g] || g}
-        </button>
-      );
-    })}
-  </Row>
-);

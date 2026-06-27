@@ -4,22 +4,11 @@ import { genConfig, type AvatarFullConfig } from 'react-nice-avatar';
 //
 // Built on react-nice-avatar (MIT): a customizable, layered-SVG flat avatar. We
 // store a small, versioned, values-only config per user. Colours are constrained
-// to a wide, inclusive palette; gendered library values are surfaced with neutral,
-// descriptive labels (see LABELS); and we add four independent "lab gear" overlay
-// slots (head/eyes/face/neck) so accessories stack into a real lab look. The gear
-// SVGs are calibrated to the avatar's geometry (see OhmletAvatar).
-
-export type HeadGear = 'hardHat' | 'earDefenders';
-export type EyeGear = 'goggles';
-export type FaceGear = 'mask';
-export type NeckGear = 'labCoat';
+// to a wide, inclusive palette, and gendered library values are surfaced with
+// neutral, descriptive labels (see LABELS).
 
 export interface OhmletAvatarConfig extends AvatarFullConfig {
   v: 2;
-  headGear?: HeadGear | null;
-  eyeGear?: EyeGear | null;
-  faceGear?: FaceGear | null;
-  neckGear?: NeckGear | null;
 }
 
 // Inclusive, descriptive labels for the library's (gendered) option values.
@@ -34,7 +23,6 @@ export const LABELS = {
   mouthStyle: { laugh: 'Grin', smile: 'Smile', peace: 'Soft' } as Record<string, string>,
   shirtStyle: { hoody: 'Hoodie', short: 'Tee', polo: 'Collar' } as Record<string, string>,
   hatStyle: { none: 'None', beanie: 'Beanie', turban: 'Wrap' } as Record<string, string>,
-  headGear: { hardHat: 'Hard hat', earDefenders: 'Ear defenders' } as Record<string, string>,
 };
 
 // Wide, inclusive palettes (kept on a curated set so avatars stay tasteful).
@@ -72,16 +60,6 @@ export const OPTIONS = {
   shirtStyle: ['hoody', 'short', 'polo'] as const,
   shirtColor: SHIRT_COLORS,
   bgColor: BG_COLORS,
-  headGear: [null, 'hardHat', 'earDefenders'] as const,
-  eyeGear: [null, 'goggles'] as const,
-  faceGear: [null, 'mask'] as const,
-  neckGear: [null, 'labCoat'] as const,
-};
-
-// Lab gear that must be earned. Others are free. (Editor + server gate on this.)
-export const LOCKED_GEAR: Partial<Record<string, { requirement: string }>> = {
-  hardHat: { requirement: 'Finish your first build' },
-  labCoat: { requirement: 'Reach a 7-day streak' },
 };
 
 export function defaultAvatar(seed?: string): OhmletAvatarConfig {
@@ -96,20 +74,15 @@ export function defaultAvatar(seed?: string): OhmletAvatarConfig {
     hatStyle: 'none',
     glassesStyle: 'none',
     v: 2,
-    headGear: null,
-    eyeGear: null,
-    faceGear: null,
-    neckGear: null,
   };
 }
 
-/** Coerce stored data (incl. the old v1 `prop` field) into a valid v2 config. */
+/** Coerce stored data into a valid v2 config (defensive for old/partial data). */
 export function normalizeAvatar(value: unknown): OhmletAvatarConfig {
   if (!value || typeof value !== 'object') return defaultAvatar();
   const v = value as Record<string, unknown>;
   const out = { ...defaultAvatar(), ...(v as Partial<OhmletAvatarConfig>), v: 2 as const };
-  // Migrate v1 `prop` (goggles | boltBand | visor) into the new slots.
-  if (v.prop === 'goggles' || v.prop === 'visor') out.eyeGear = 'goggles';
-  delete (out as Record<string, unknown>).prop;
+  // Drop retired lab-gear fields if present in older stored data.
+  for (const k of ['prop', 'headGear', 'eyeGear', 'faceGear', 'neckGear']) delete (out as Record<string, unknown>)[k];
   return out;
 }
