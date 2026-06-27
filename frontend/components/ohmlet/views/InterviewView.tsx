@@ -1,14 +1,14 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Briefcase, FileText, Loader2, Lock, Mic, MicOff, PhoneOff, Radio, Sparkles, Upload, Video, VideoOff,
+  Briefcase, ChevronRight, FileText, History, Loader2, Lock, Mic, MicOff, PhoneOff, Radio, Sparkles, Upload, Video, VideoOff,
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { usePlan } from '../../../hooks/usePlan';
 import { track } from '../../../services/analytics';
 import {
-  extractResume, fileToBase64, generateReport, InterviewError,
-  type InterviewContext, type InterviewReport, type TranscriptTurn,
+  extractResume, fileToBase64, generateReport, getReport, listReports, InterviewError,
+  type InterviewContext, type InterviewReport, type ReportListItem, type TranscriptTurn,
 } from '../../../services/interview';
 import { InterviewReportView } from '../interview/InterviewReportView';
 
@@ -49,7 +49,29 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState('');
   const [report, setReport] = useState<InterviewReport | null>(null);
+  const [history, setHistory] = useState<ReportListItem[]>([]);
+  const [openingPast, setOpeningPast] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load past reports whenever we land on setup (refreshes after a new interview).
+  useEffect(() => {
+    if (phase !== 'setup' || !allowed) return;
+    let alive = true;
+    listReports().then((h) => alive && setHistory(h));
+    return () => {
+      alive = false;
+    };
+  }, [phase, allowed]);
+
+  const openPast = useCallback(async (id: string) => {
+    setOpeningPast(true);
+    const res = await getReport(id);
+    setOpeningPast(false);
+    if (res?.report) {
+      setReport(res.report);
+      setPhase('report');
+    }
+  }, []);
 
   const ctx: InterviewContext = useMemo(
     () => ({ role: role.trim(), seniority, jobDescription: jd.trim(), resume: cv.trim(), warmup }),
@@ -343,6 +365,78 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
           Start the interview
         </button>
       </div>
+
+      {/* Past interviews (the longitudinal trend — deliberate practice is repeated). */}
+      {history.length > 0 && (
+        <section className="mt-7">
+          <div className="flex items-center gap-2 px-1">
+            <History className="h-4 w-4 text-ohmlet-ink-soft" />
+            <h2 className="text-sm font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Your past interviews</h2>
+            <TrendChip history={history} />
+          </div>
+          <div className="mt-3 space-y-2.5">
+            {history.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => openPast(h.id)}
+                disabled={openingPast}
+                className="group flex w-full items-center gap-3 rounded-2xl border-2 border-ohmlet-line bg-white px-4 py-3 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm disabled:opacity-60"
+              >
+                <ScoreRing score={h.overall ?? 0} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold text-ohmlet-ink">{h.role || 'Mock interview'}</p>
+                  <p className="text-xs font-bold text-ohmlet-ink-soft">{relTime(h.createdAt)}{h.seniority && h.seniority !== 'unknown' ? ` · ${h.seniority}` : ''}</p>
+                </div>
+                {openingPast ? <Loader2 className="h-4 w-4 animate-spin text-ohmlet-ink-soft" /> : <ChevronRight className="h-4 w-4 text-ohmlet-ink-soft transition-transform group-hover:translate-x-0.5" />}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
+
+// Compact "best / latest" trend chip for the history header.
+const TrendChip: React.FC<{ history: ReportListItem[] }> = ({ history }) => {
+  const scored = history.filter((h) => typeof h.overall === 'number');
+  if (scored.length < 2) return null;
+  const latest = scored[0].overall ?? 0;
+  const prev = scored[1].overall ?? 0;
+  const delta = latest - prev;
+  if (delta === 0) return null;
+  const up = delta > 0;
+  return (
+    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${up ? 'bg-[#f2fae4] text-ohmlet-green-deep' : 'bg-[#fff1ef] text-ohmlet-red'}`}>
+      {up ? '▲' : '▼'} {Math.abs(delta)} vs last
+    </span>
+  );
+};
+
+const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
+  const pct = Math.max(0, Math.min(1, score / 5));
+  const color = score >= 4 ? '#6fb519' : score >= 3 ? '#f5b800' : '#ff6f5e';
+  return (
+    <div
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+      style={{ background: `conic-gradient(${color} ${pct * 360}deg, var(--ohmlet-line, #ece7db) 0deg)` }}
+    >
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
+        <span className="text-xs font-black tabular-nums text-ohmlet-ink">{score || '–'}</span>
+      </div>
+    </div>
+  );
+};
+
+function relTime(iso?: string): string {
+  if (!iso) return 'recently';
+  const then = new Date(iso).getTime();
+  if (!then) return 'recently';
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} wk ago`;
+  return new Date(iso).toLocaleDateString();
+}
