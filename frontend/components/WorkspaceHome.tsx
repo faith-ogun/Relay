@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Award,
   Boxes,
+  Briefcase,
   CircuitBoard,
   Flame,
   Home,
@@ -23,6 +24,7 @@ import { CURRICULUM, allLessons, nextLesson, type CurriculumAccent } from './ohm
 import { LearnPath } from './LearnPath';
 import { LessonRunner } from './ohmlet/views/LessonRunner';
 import { LiveTutorView } from './ohmlet/views/LiveTutorView';
+import { InterviewView } from './ohmlet/views/InterviewView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
@@ -79,7 +81,7 @@ interface WorkspaceHomeProps {
   onAccount?: () => void;
 }
 
-type ViewId = 'today' | 'path' | 'live' | 'simulator' | 'sandbox' | 'community' | 'achievements' | 'draw';
+type ViewId = 'today' | 'path' | 'live' | 'simulator' | 'sandbox' | 'community' | 'achievements' | 'draw' | 'interview';
 
 const ACCENT_HEX: Record<CurriculumAccent, string> = {
   gold: '#facc2e',
@@ -106,6 +108,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'today', label: 'Today', icon: Home },
   { id: 'path', label: 'Learning path', icon: MapIcon },
   { id: 'live', label: 'Live tutor', icon: Video },
+  { id: 'interview', label: 'Interview mode', icon: Briefcase },
   { id: 'simulator', label: 'Simulator', icon: CircuitBoard },
   { id: 'sandbox', label: 'Sandbox', icon: Boxes, beta: true },
   { id: 'community', label: 'Community', icon: Users },
@@ -377,6 +380,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           )}
 
           {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
+          {active === 'interview' && <InterviewView onUpgrade={onUpgrade} onOpenLessons={() => setActive('path')} />}
           {active === 'simulator' && <SimulatorView />}
           {active === 'sandbox' && <SandboxView />}
           {active === 'community' && <CommunityView currentUser={displayName} />}

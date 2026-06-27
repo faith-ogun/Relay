@@ -32,6 +32,8 @@ export type AnalyticsEvent =
   | 'simulator_open'
   | 'sketch_compile'
   | 'twin_generated'
+  | 'interview_start'
+  | 'interview_complete'
   // Monetisation. The actual subscription cancel completes inside Stripe's
   // hosted Portal (we redirect away), so it is observed server-side via the
   // webhook; `billing_portal_open` is the client-side cancellation-funnel entry.

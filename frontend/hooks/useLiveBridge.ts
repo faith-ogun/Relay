@@ -28,6 +28,11 @@ type UseLiveBridgeOptions = {
    * heartbeat entirely (pure on-demand snapshots).
    */
   visionIntervalMs?: number;
+  /** Session mode. 'interview' connects the Max-tier mock interviewer (#21). */
+  mode?: 'tutor' | 'interview';
+  /** Fires once, right after the auth frame is sent, with a JSON sender. Use it
+   *  to prime the session (e.g. send the interview context) in the correct order. */
+  onReady?: (sendJson: (obj: unknown) => void) => void;
 };
 
 export type CameraFacing = 'user' | 'environment';
@@ -76,7 +81,11 @@ export function useLiveBridge({
   sessionId,
   autoConnect = false,
   visionIntervalMs = 2500,
+  mode = 'tutor',
+  onReady,
 }: UseLiveBridgeOptions): UseLiveBridgeReturn {
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
   const [state, setState] = useState<LiveBridgeState>('disconnected');
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
@@ -213,7 +222,7 @@ export function useLiveBridge({
     intentionalCloseRef.current = false;
     setState('connecting');
 
-    const url = `${wsUrl}/ws/${userId}/${sessionId}`;
+    const url = `${wsUrl}/ws/${userId}/${sessionId}${mode === 'interview' ? '?mode=interview' : ''}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -224,6 +233,11 @@ export function useLiveBridge({
       void getIdToken().then((token) => {
         if (token && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'auth', token }));
+          // After auth, let the caller prime the session (e.g. interview context),
+          // guaranteeing it arrives after the auth frame.
+          onReadyRef.current?.((obj: unknown) => {
+            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+          });
         }
       });
       setState('connected');

@@ -53,6 +53,18 @@
 | GET | `/v1/state/{user_id}` | Read progress (completed lessons, XP, streak). Must equal the token uid. |
 | PUT | `/v1/state/{user_id}` | Upsert progress. Server-authoritative; idempotent on XP/streak. |
 
+### Interview Mode — prefix `/v1/interview` (Max-tier; #21)
+| Method | Path | Body | Purpose |
+|--------|------|------|---------|
+| POST | `/extract` | `{ fileBase64, filename }` | Validate an uploaded CV (PDF/DOCX/TXT) by content and extract its text. Rejects EXE/scripts/JS-PDFs/macros (#45). |
+| POST | `/report` | `{ transcript[], role?, seniority?, jobDescription?, warmup? }` | Score the mock-interview transcript into a structured feedback report. `402` if not Max. |
+| GET | `/reports` | — | The caller's past reports (metadata + overall) for the trend line. |
+| GET | `/reports/{id}` | — | A full saved report. |
+
+The interview itself runs over the live WebSocket: connect to `/ws/{uid}/{sid}?mode=interview`
+(Max-only), then send `{ "type": "interview_context", role, seniority, jobDescription, resume, warmup }`
+after the auth frame. The resume is sanitised + injection-fenced server-side.
+
 ### Community — prefix `/v1/community`
 | Method | Path | Body | Purpose |
 |--------|------|------|---------|
