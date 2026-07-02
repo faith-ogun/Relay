@@ -25,6 +25,11 @@ export type AnalyticsEvent =
   | 'lesson_complete'
   | 'live_session_start'
   | 'live_session_end'
+  // The north-star build events (#83). `build_complete` fires when a learner
+  // finishes a real bench build; `first_build_complete` fires once per learner
+  // and is the FBC7 (first-build-completed-in-7-days) numerator.
+  | 'build_complete'
+  | 'first_build_complete'
   // Engagement / retention
   | 'streak_extended'
   | 'challenge_join'

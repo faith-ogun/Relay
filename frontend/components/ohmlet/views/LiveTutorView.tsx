@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { track } from '../../../services/analytics';
+import { trackBuildComplete } from '../../../services/northstar';
 import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
@@ -143,8 +144,10 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
   // Start the session and request mic + camera in the same user gesture so the
   // browser shows the permission prompt right away.
+  const sessionStartRef = useRef<number | null>(null);
   const goLive = () => {
     track('live_session_start');
+    sessionStartRef.current = Date.now();
     connect();
     if (!micOn) toggleMic();
     if (!camOn) toggleCam();
@@ -162,7 +165,18 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   };
 
   // Capture a clean still of the finished build and hand it to the twin studio.
+  // Reaching this at the test stage is our "build complete" signal, so it also
+  // feeds the north-star FBC7 metric (#83).
+  const twinCaptured = useRef(false);
   const captureTwin = useCallback(async () => {
+    if (!twinCaptured.current) {
+      twinCaptured.current = true;
+      const start = sessionStartRef.current;
+      trackBuildComplete({
+        source: 'live_tutor',
+        sessionSeconds: start ? Math.round((Date.now() - start) / 1000) : undefined,
+      });
+    }
     setTwinBusy(true);
     const frame = await grabFrame(1024);
     setTwinBusy(false);
