@@ -652,6 +652,212 @@ void loop() {
     ],
     related: ['ohms-law-explained-with-an-led', 'resistor-color-codes-cheat-sheet', 'build-a-light-activated-alarm-arduino'],
   },
+
+  {
+    slug: 'build-a-push-button-led-arduino',
+    title: 'Build a Push-Button LED with Arduino (Your First Input)',
+    excerpt:
+      'The build that teaches input: wire a pushbutton so it turns an LED on and off, and learn why the button needs a pull-down resistor to behave. Parts list, wiring, full code, and the floating-pin gotcha that trips up every beginner.',
+    metaDescription:
+      'Beginner Arduino pushbutton and LED tutorial. Full wiring, complete digitalRead code, why you need a pull-down resistor, and the INPUT_PULLUP shortcut.',
+    keywords: [
+      'arduino button led',
+      'arduino pushbutton tutorial',
+      'digitalread arduino',
+      'arduino pull-down resistor',
+      'arduino button input',
+    ],
+    category: 'Build Guides',
+    date: 'Jul 02, 2026',
+    read: '9 min read',
+    author: 'The Ohmlet Team',
+    swatch: 'from-ohmlet-blue to-ohmlet-blue-deep',
+    takeaways: [
+      'A pushbutton just connects two points while you hold it. The Arduino has to read that as HIGH or LOW.',
+      'Without a pull-down resistor the input pin floats and reads random noise. The resistor gives it a definite resting state.',
+      'digitalRead returns HIGH or LOW; you copy that straight to the LED.',
+      'INPUT_PULLUP lets you skip the external resistor, at the cost of inverted logic.',
+    ],
+    body: [
+      { type: 'p', text: 'A button turning on an LED sounds trivial, but it is the first time your circuit listens to the world instead of just doing something on a timer. It also hides the single most common beginner trap: the floating input. Get this build right and inputs stop being mysterious.' },
+      { type: 'p', text: 'You will wire a pushbutton with a pull-down resistor, read it with digitalRead, and drive an LED from what you read. Then you will see the INPUT_PULLUP shortcut that lets you drop a resistor.' },
+      { type: 'h2', text: 'What you need' },
+      {
+        type: 'table',
+        head: ['Part', 'Quantity', 'Notes'],
+        rows: [
+          ['Arduino Uno (or compatible)', '1', 'Any board works'],
+          ['Pushbutton (tactile)', '1', 'The 4-leg kind that straddles the breadboard gap'],
+          ['Resistor, 10kΩ', '1', 'The pull-down for the input'],
+          ['LED', '1', 'Any colour'],
+          ['Resistor, 220Ω', '1', 'In series with the LED'],
+          ['Breadboard + jumper wires', '1 set', 'Five or six wires'],
+        ],
+      },
+      { type: 'callout', title: 'The floating-pin problem', text: 'A digital input pin with nothing driving it is like an antenna: it picks up electrical noise and reads HIGH and LOW at random. A pull-down resistor ties it gently to GND so it reads LOW until the button forces it HIGH.' },
+      { type: 'h2', text: 'How it works' },
+      { type: 'p', text: 'A tactile pushbutton connects its two sides only while pressed. We wire one side to 5V and the other side to both the input pin (pin 2) and, through a 10kΩ resistor, to GND. When the button is open, the pin sees GND through the resistor and reads LOW. When you press it, 5V reaches the pin directly and it reads HIGH. The resistor is large enough that pressing does not short 5V to GND.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring: button across the gap, one side to 5V, other side to pin 2 and via a 10kΩ resistor to GND; LED with 220Ω on pin 13 to GND.' },
+      { type: 'h2', text: 'Wiring it up' },
+      {
+        type: 'list',
+        ordered: true,
+        items: [
+          'Straddle the pushbutton across the centre gap of the breadboard so its legs sit on separate rows.',
+          'Connect one side of the button to the 5V rail.',
+          'Connect the other side of the button to digital pin 2. This same row is the input.',
+          'From that input row, connect a 10kΩ resistor down to the GND rail. This is the pull-down.',
+          'Wire the LED: long leg through a 220Ω resistor to pin 13, short leg to the GND rail.',
+          'Tie the breadboard GND rail to an Arduino GND pin.',
+        ],
+      },
+      { type: 'callout', title: 'Which two legs?', text: 'A 4-leg tactile button has pairs that are always connected. If your button reads HIGH all the time, you probably used two legs from the same side, rotate the button 90 degrees.' },
+      { type: 'h2', text: 'The code' },
+      { type: 'p', text: 'This sketch reads the button and copies its state to the LED, and prints the reading so you can watch it in the Serial Monitor.' },
+      {
+        type: 'code',
+        caption: 'button_led.ino',
+        code: `const int BUTTON_PIN = 2;   // button input (with external pull-down)
+const int LED_PIN = 13;     // LED output
+
+void setup() {
+  pinMode(BUTTON_PIN, INPUT); // external 10k pull-down holds it LOW at rest
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int pressed = digitalRead(BUTTON_PIN); // HIGH when pressed, LOW when not
+  Serial.println(pressed);
+  digitalWrite(LED_PIN, pressed);        // LED mirrors the button
+  delay(20);
+}`,
+      },
+      { type: 'callout', title: 'The no-resistor shortcut', text: 'Change pinMode(BUTTON_PIN, INPUT) to INPUT_PULLUP and wire the button between pin 2 and GND (no pull-down resistor). The pin now rests HIGH and reads LOW when pressed, so flip the logic: digitalWrite(LED_PIN, !pressed). Handy, but understand the external pull-down first.' },
+      { type: 'h2', text: 'Troubleshooting' },
+      {
+        type: 'list',
+        items: [
+          'LED flickers on its own: the input is floating. Check the 10kΩ pull-down actually reaches the GND rail.',
+          'Button does nothing: you likely wired two legs from the same side of the button. Rotate it 90 degrees.',
+          'LED is always on: 5V may be reaching the pin permanently, confirm the button, not a jumper, bridges 5V to pin 2.',
+          'LED never lights at all: check the LED is the right way round and its 220Ω resistor is in series.',
+        ],
+      },
+      { type: 'callout', title: 'Catch the miswire in seconds', text: 'In Ohmlet the live tutor watches your breadboard through your camera as you place the button and the pull-down, so a floating input or a same-side button pair gets flagged the moment it happens, instead of after ten minutes of a mysteriously flickering LED.' },
+      { type: 'h2', text: 'Where to take it next' },
+      { type: 'p', text: 'Add a second button and LED, make the button toggle the LED (press once for on, again for off) which introduces debouncing, or use the button to change the speed of a blinking light. Each is a small step from the same circuit into real interactivity.' },
+    ],
+    faqs: [
+      { q: 'Why not just wire the button straight to the pin?', a: 'Because a bare input pin floats and reads noise. You need either an external pull-down resistor (as here) or the internal one via INPUT_PULLUP. One of the two is not optional.' },
+      { q: 'What is the difference between INPUT and INPUT_PULLUP?', a: 'INPUT expects you to supply a pull-down or pull-up resistor. INPUT_PULLUP switches on a resistor inside the chip that pulls the pin HIGH, so the button connects it to GND and the logic inverts.' },
+      { q: 'Do I need to debounce the button?', a: 'For turning an LED on while held, no. The moment you want a single press to toggle a state, mechanical bounce can register several presses, and you add a short debounce delay or a millis() check.' },
+      { q: 'Can I use pin 13 for the LED?', a: 'Yes. Pin 13 also drives the onboard LED, so you will see it mirror your external one, which is a handy sanity check.' },
+    ],
+    related: ['ohms-law-explained-with-an-led', 'build-a-dimmable-led-potentiometer-arduino', 'build-a-light-activated-alarm-arduino'],
+  },
+
+  {
+    slug: 'build-a-dimmable-led-potentiometer-arduino',
+    title: 'Build a Dimmable LED with a Potentiometer and Arduino (PWM)',
+    excerpt:
+      'Turn a knob, dim an LED. This build teaches the two ideas every Arduino project leans on: reading an analog input, and using PWM to fake an analog output. Parts, wiring, full code, and what map() and analogWrite really do.',
+    metaDescription:
+      'Beginner Arduino potentiometer dimmer tutorial. Wire a pot to fade an LED with PWM. Full analogRead, map, and analogWrite code, wiring, and PWM pin notes.',
+    keywords: [
+      'arduino potentiometer led',
+      'arduino dimmer',
+      'analogwrite pwm arduino',
+      'arduino analog input',
+      'arduino fade led',
+    ],
+    category: 'Build Guides',
+    date: 'Jul 02, 2026',
+    read: '9 min read',
+    author: 'The Ohmlet Team',
+    swatch: 'from-ohmlet-green to-ohmlet-green-deep',
+    takeaways: [
+      'A potentiometer is an adjustable voltage divider, the knob picks a voltage between 0 and 5V.',
+      'analogRead turns that voltage into a number from 0 to 1023.',
+      'PWM (analogWrite) switches the pin on and off fast to fake brightness in between fully on and fully off.',
+      'map() rescales the 0 to 1023 reading into the 0 to 255 range analogWrite expects.',
+    ],
+    body: [
+      { type: 'p', text: 'A knob that dims an LED is the perfect bridge between digital and analog thinking. On one side you read a smooth, continuous input; on the other you produce a smooth-looking output from a pin that can technically only be on or off. Two of the most reused ideas in all of Arduino, in one small circuit.' },
+      { type: 'p', text: 'You will wire a potentiometer as an input, read it with analogRead, rescale it with map, and drive an LED with analogWrite on a PWM pin.' },
+      { type: 'h2', text: 'What you need' },
+      {
+        type: 'table',
+        head: ['Part', 'Quantity', 'Notes'],
+        rows: [
+          ['Arduino Uno (or compatible)', '1', 'Any board with PWM pins'],
+          ['Potentiometer, 10kΩ', '1', 'The knob (3 legs)'],
+          ['LED', '1', 'Any colour'],
+          ['Resistor, 220Ω', '1', 'In series with the LED'],
+          ['Breadboard + jumper wires', '1 set', 'Five or six wires'],
+        ],
+      },
+      { type: 'callout', title: 'Find a PWM pin', text: 'Only some Arduino pins can do analogWrite. On an Uno they are marked with a tilde (~): 3, 5, 6, 9, 10, 11. This guide uses pin 9. A plain pin will only give you fully on or fully off, no dimming.' },
+      { type: 'h2', text: 'How it works' },
+      { type: 'p', text: 'A potentiometer has three legs. The two outer legs go to 5V and GND; the middle leg (the wiper) taps off a voltage that slides between 0 and 5V as you turn the knob. That is a voltage divider you control by hand. analogRead on the wiper gives 0 at one end and 1023 at the other.' },
+      { type: 'p', text: 'The LED side uses PWM. The pin cannot output 2.5V, but it can switch between 0V and 5V thousands of times a second. If it is HIGH half the time, the LED looks half as bright. analogWrite(pin, 0..255) sets that on-fraction, called the duty cycle.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring: pot outer legs to 5V and GND, wiper to A0; LED with 220Ω on pin 9 to GND.' },
+      { type: 'h2', text: 'Wiring it up' },
+      {
+        type: 'list',
+        ordered: true,
+        items: [
+          'Place the potentiometer so its three legs sit on separate rows.',
+          'Connect one outer leg to 5V and the other outer leg to GND. Direction does not matter, it only flips which way the knob turns.',
+          'Connect the middle leg (wiper) to analog pin A0.',
+          'Wire the LED: long leg through a 220Ω resistor to pin 9 (a ~ PWM pin), short leg to the GND rail.',
+          'Tie the breadboard GND rail to an Arduino GND pin.',
+        ],
+      },
+      { type: 'h2', text: 'The code' },
+      { type: 'p', text: 'This reads the knob, rescales it, and sets the LED brightness, printing the value so you can watch the range as you turn.' },
+      {
+        type: 'code',
+        caption: 'pot_dimmer.ino',
+        code: `const int POT_PIN = A0;   // potentiometer wiper
+const int LED_PIN = 9;    // must be a PWM pin (marked ~)
+
+void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int raw = analogRead(POT_PIN);              // 0 .. 1023
+  int brightness = map(raw, 0, 1023, 0, 255); // rescale to PWM range
+  analogWrite(LED_PIN, brightness);           // set LED brightness
+  Serial.println(brightness);
+  delay(20);
+}`,
+      },
+      { type: 'callout', title: 'What map() is doing', text: 'map(raw, 0, 1023, 0, 255) is just proportional scaling: it takes a number in the 0 to 1023 range and returns where it sits in the 0 to 255 range. You could write the maths by hand (raw / 4), but map reads clearly and lets you flip or clamp the range later.' },
+      { type: 'h2', text: 'Troubleshooting' },
+      {
+        type: 'list',
+        items: [
+          'LED is either fully on or fully off, no in-between: you are on a non-PWM pin. Move the LED to 3, 5, 6, 9, 10, or 11.',
+          'Turning the knob does nothing: the wiper (middle leg) is not on A0, or the two outer legs are not on 5V and GND.',
+          'Brightness jumps around: a loose wiper connection, reseat the potentiometer.',
+          'It dims backwards: swap the two outer legs, or map from 1023 down to 0.',
+        ],
+      },
+      { type: 'callout', title: 'Prototype it, then build it', text: 'You can drag this exact circuit together in Ohmlet’s simulator and watch the readings change as you turn the knob, then build the real thing with the live tutor confirming the wiper is on an analog pin and the LED is on a PWM pin before you upload.' },
+      { type: 'h2', text: 'Where to take it next' },
+      { type: 'p', text: 'Swap the LED for a small motor driver to make a speed knob, use the pot to set the threshold in the light-activated alarm instead of editing code, or drive three LEDs so the knob sweeps brightness across a bar. Same input, new outputs.' },
+    ],
+    faqs: [
+      { q: 'Why does the LED pin have to be PWM?', a: 'analogWrite works by rapidly switching the pin on and off (PWM). Only the pins wired to the chip’s timers can do that. On an Uno they are marked with a tilde: 3, 5, 6, 9, 10, 11.' },
+      { q: 'What does map() actually return?', a: 'A proportionally rescaled integer. map(value, fromLow, fromHigh, toLow, toHigh) figures out where value sits in the first range and returns the matching point in the second range.' },
+      { q: 'My analogRead only goes up to about 1000, not 1023, is that broken?', a: 'No. Real potentiometers and the ADC rarely hit the exact ends. map() still works, and if it bothers you, constrain or calibrate the ends to your measured min and max.' },
+      { q: 'Can I dim more than one LED?', a: 'Yes, from separate PWM pins with their own resistors. Call analogWrite on each with the brightness you want. They can share the same pot reading or use different scalings.' },
+    ],
+    related: ['ohms-law-explained-with-an-led', 'build-a-push-button-led-arduino', 'build-a-light-activated-alarm-arduino'],
+  },
 ];
 
 export const findPost = (slug: string): BlogPost | undefined => POSTS.find((p) => p.slug === slug);
