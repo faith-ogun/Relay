@@ -98,7 +98,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
           <section key={unit.id} className="mb-9">
             <div className="mb-3 flex items-center gap-3">
               <h2 className="text-lg font-black tracking-tight">{unit.title}</h2>
-              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide" style={{ background: `${ACCENT_HEX[unit.accent]}33`, color: '#46514e' }}>
+              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide" style={{ background: `${ACCENT_HEX[unit.accent]}33`, color: '#474d57' }}>
                 {unit.level}
               </span>
             </div>

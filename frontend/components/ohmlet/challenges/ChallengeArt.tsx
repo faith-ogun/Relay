@@ -29,7 +29,7 @@ export const CHALLENGE_THEME: Record<string, ChallengePalette> = {
 
 export const themeFor = (theme?: string): ChallengePalette => CHALLENGE_THEME[theme ?? ''] ?? CHALLENGE_THEME.gold;
 
-const INK = '#14201e';
+const INK = '#14181f';
 
 // Shared ink-stroke defaults for the line-art.
 // Ink line-art defaults. `fill` is set explicitly per element (so it never
@@ -138,7 +138,7 @@ const Sensors: React.FC<ChallengePalette> = (p) => (
     <rect x={218} y={58} width={40} height={40} rx={8} fill="#fff" {...stroke} />
     <circle cx={238} cy={78} r={11} fill={p.c1} stroke={INK} strokeWidth={3} />
     {/* baseline */}
-    <path d="M60 134h200" stroke="rgba(20,32,30,0.35)" strokeWidth={3} strokeLinecap="round" strokeDasharray="2 9" />
+    <path d="M60 134h200" stroke="rgba(20,24,31,0.35)" strokeWidth={3} strokeLinecap="round" strokeDasharray="2 9" />
   </>
 );
 

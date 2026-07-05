@@ -1143,8 +1143,8 @@ const DrawStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_connection' }
             const connected = drawn.some((c) => c.includes(t.id));
             return (
               <g key={t.id} onClick={() => tap(t.id)} className={checked ? '' : 'cursor-pointer'}>
-                <circle cx={t.x} cy={t.y} r={16} fill={sel ? '#facc2e' : connected ? '#14201e' : '#fff'} stroke="#14201e" strokeWidth={3} />
-                <text x={t.x} y={t.y + 4} textAnchor="middle" fontSize={11} fontWeight={800} fill={sel || connected ? (sel ? '#14201e' : '#fff') : '#14201e'}>
+                <circle cx={t.x} cy={t.y} r={16} fill={sel ? '#facc2e' : connected ? '#14181f' : '#fff'} stroke="#14181f" strokeWidth={3} />
+                <text x={t.x} y={t.y + 4} textAnchor="middle" fontSize={11} fontWeight={800} fill={sel || connected ? (sel ? '#14181f' : '#fff') : '#14181f'}>
                   {t.label}
                 </text>
               </g>
@@ -1388,7 +1388,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
     const p = pointFrom(e);
     ctx.save();
     ctx.setTransform(2, 0, 0, 2, 0, 0);
-    ctx.strokeStyle = eraser ? '#ffffff' : '#14201e';
+    ctx.strokeStyle = eraser ? '#ffffff' : '#14181f';
     ctx.lineWidth = eraser ? 18 : 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1660,7 +1660,7 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
   const r = 92;
   const ang = Math.PI * (1 - frac);
   const angT = Math.PI * (1 - (m.target - m.min) / (m.max - m.min));
-  const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14201e';
+  const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14181f';
   const gauge = (
     <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
       <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">

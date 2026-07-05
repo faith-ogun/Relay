@@ -147,10 +147,10 @@ export const FreeFormEditor: React.FC = () => {
 
           {/* svg */}
           <svg viewBox={`0 0 ${W} ${H}`} className="block w-full select-none"
-            style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.02) 1px,transparent 1px)', backgroundSize: `${GRID}px ${GRID}px`, backgroundPosition: `${OX}px ${OY}px` }}>
+            style={{ background: 'linear-gradient(0deg,rgba(20,24,31,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(20,24,31,.02) 1px,transparent 1px)', backgroundSize: `${GRID}px ${GRID}px`, backgroundPosition: `${OX}px ${OY}px` }}>
             {/* wires */}
             {wires.map((w) => (
-              <line key={w.id} x1={px(w.a[0])} y1={py(w.a[1])} x2={px(w.b[0])} y2={py(w.b[1])} stroke={sel === w.id ? '#549cf0' : '#14201e'} strokeWidth={5} strokeLinecap="round"
+              <line key={w.id} x1={px(w.a[0])} y1={py(w.a[1])} x2={px(w.b[0])} y2={py(w.b[1])} stroke={sel === w.id ? '#549cf0' : '#14181f'} strokeWidth={5} strokeLinecap="round"
                 className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setSel(w.id); setTool('select'); }} />
             ))}
             {/* parts */}
@@ -168,7 +168,7 @@ export const FreeFormEditor: React.FC = () => {
             {tool !== 'select' && Array.from({ length: COLS * ROWS }).map((_, k) => {
               const c = k % COLS, r = Math.floor(k / COLS);
               const isPending = pending && pending[0] === c && pending[1] === r;
-              return <circle key={k} cx={px(c)} cy={py(r)} r={isPending ? 7 : 9} fill={isPending ? '#f3e515' : 'transparent'} stroke={isPending ? '#14201e' : 'transparent'} strokeWidth={2}
+              return <circle key={k} cx={px(c)} cy={py(r)} r={isPending ? 7 : 9} fill={isPending ? '#f3e515' : 'transparent'} stroke={isPending ? '#14181f' : 'transparent'} strokeWidth={2}
                 className="cursor-pointer hover:fill-[#ece7db]" onClick={() => onNode(c, r)} />;
             })}
           </svg>
@@ -270,7 +270,7 @@ const PartGlyph: React.FC<{ part: Part; selected: boolean; current: number; onCl
   const x1 = px(part.a[0]), y1 = py(part.a[1]), x2 = px(part.b[0]), y2 = py(part.b[1]);
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const horiz = y1 === y2;
-  const stroke = selected ? '#549cf0' : '#14201e';
+  const stroke = selected ? '#549cf0' : '#14181f';
   const click = (e: React.MouseEvent) => { e.stopPropagation(); onClick(); };
 
   if (part.kind === 'gnd') return (

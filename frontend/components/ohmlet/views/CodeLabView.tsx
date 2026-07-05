@@ -162,37 +162,37 @@ const Board: React.FC<{ led13: boolean; bright9: number; pressed: boolean; onPre
   const a = (pot / 1023 - 0.5) * 1.5 * Math.PI; // knob wiper angle, ±135°
   return (
     <svg viewBox="0 0 480 260" className="block w-full"
-      style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.03) 1px,transparent 1px)', backgroundSize: '20px 20px' }}>
-      <rect x={40} y={70} width={400} height={120} rx={14} fill="#0c6b5e" stroke="#14201e" strokeWidth={2.5} />
+      style={{ background: 'linear-gradient(0deg,rgba(20,24,31,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,24,31,.03) 1px,transparent 1px)', backgroundSize: '20px 20px' }}>
+      <rect x={40} y={70} width={400} height={120} rx={14} fill="#0c6b5e" stroke="#14181f" strokeWidth={2.5} />
       <rect x={56} y={84} width={66} height={42} rx={5} fill="#0a4a41" stroke="#083c35" strokeWidth={2} />
       <text x={89} y={109} textAnchor="middle" fontSize={11} fontWeight={800} fill="#cfe9e3">UNO</text>
       {/* pin-13 LED (digital) */}
       <g transform="translate(190,48)">
         <circle cx={0} cy={0} r={20} fill="#facc2e" opacity={led13 ? 0.85 : 0} />
-        <circle cx={0} cy={0} r={11} fill={led13 ? '#ffe08a' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 13</text>
+        <circle cx={0} cy={0} r={11} fill={led13 ? '#ffe08a' : '#7c8b88'} stroke="#14181f" strokeWidth={2} />
+        <line x1={0} y1={11} x2={0} y2={68} stroke="#14181f" strokeWidth={3} />
+        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14181f">pin 13</text>
       </g>
       {/* pin-9 LED (PWM brightness) */}
       <g transform="translate(290,48)">
         <circle cx={0} cy={0} r={20} fill="#549cf0" opacity={(bright9 * 0.85).toFixed(2)} />
-        <circle cx={0} cy={0} r={11} fill={bright9 > 0.04 ? '#bcd8fb' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 9 · {Math.round(bright9 * 100)}%</text>
+        <circle cx={0} cy={0} r={11} fill={bright9 > 0.04 ? '#bcd8fb' : '#7c8b88'} stroke="#14181f" strokeWidth={2} />
+        <line x1={0} y1={11} x2={0} y2={68} stroke="#14181f" strokeWidth={3} />
+        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14181f">pin 9 · {Math.round(bright9 * 100)}%</text>
       </g>
       {/* A0 potentiometer */}
       <g transform="translate(80,228)">
-        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">A0</text>
-        <circle cx={0} cy={0} r={20} fill="#f1f5f9" stroke="#14201e" strokeWidth={2.5} />
-        <line x1={0} y1={0} x2={Math.sin(a) * 14} y2={-Math.cos(a) * 14} stroke="#14201e" strokeWidth={3} strokeLinecap="round" />
+        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14181f" strokeWidth={3} />
+        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14181f">A0</text>
+        <circle cx={0} cy={0} r={20} fill="#f1f5f9" stroke="#14181f" strokeWidth={2.5} />
+        <line x1={0} y1={0} x2={Math.sin(a) * 14} y2={-Math.cos(a) * 14} stroke="#14181f" strokeWidth={3} strokeLinecap="round" />
       </g>
       {/* pin-2 button */}
       <g transform="translate(400,228)">
-        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 2</text>
-        <circle cx={0} cy={0} r={20} fill={pressed ? '#e8db11' : '#f1f5f9'} stroke="#14201e" strokeWidth={2.5} />
-        <circle cx={0} cy={0} r={12} fill={pressed ? '#cbb800' : '#cdd6d3'} stroke="#14201e" strokeWidth={2} />
+        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14181f" strokeWidth={3} />
+        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14181f">pin 2</text>
+        <circle cx={0} cy={0} r={20} fill={pressed ? '#e8db11' : '#f1f5f9'} stroke="#14181f" strokeWidth={2.5} />
+        <circle cx={0} cy={0} r={12} fill={pressed ? '#cbb800' : '#cdd6d3'} stroke="#14181f" strokeWidth={2} />
         <rect x={-24} y={-24} width={48} height={48} rx={10} fill="transparent" className="cursor-pointer"
           onMouseDown={() => onPress(true)} onMouseUp={() => onPress(false)} onMouseLeave={() => onPress(false)}
           onTouchStart={(e) => { e.preventDefault(); onPress(true); }} onTouchEnd={() => onPress(false)} />

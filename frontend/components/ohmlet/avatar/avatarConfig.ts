@@ -36,7 +36,7 @@ export const HAIR_COLORS = [
   '#2bb673', '#f3e515', '#ff6f5e', '#ec4899',
 ];
 export const SHIRT_COLORS = [
-  '#f3e515', '#14201e', '#ff6f5e', '#549cf0', '#84cc30', '#7c5cff',
+  '#f3e515', '#14181f', '#ff6f5e', '#549cf0', '#84cc30', '#7c5cff',
   '#ec4899', '#f5b800', '#0f766e', '#faf8f0', '#334155', '#fb923c',
 ];
 export const BG_COLORS = [
@@ -51,7 +51,7 @@ export const OPTIONS = {
   hairStyle: ['normal', 'thick', 'mohawk', 'womanLong', 'womanShort'] as const,
   hairColor: HAIR_COLORS,
   hatStyle: ['none', 'beanie', 'turban'] as const,
-  hatColor: ['#14201e', '#ff6f5e', '#549cf0', '#84cc30', '#f3e515', '#7c5cff', '#faf8f0'],
+  hatColor: ['#14181f', '#ff6f5e', '#549cf0', '#84cc30', '#f3e515', '#7c5cff', '#faf8f0'],
   eyeStyle: ['circle', 'oval', 'smile'] as const,
   eyeBrowStyle: ['up', 'upWoman'] as const,
   glassesStyle: ['none', 'round', 'square'] as const,
