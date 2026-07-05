@@ -65,9 +65,11 @@ export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate, onOpenPost }) =>
               key={p.slug}
               type="button"
               onClick={() => onOpenPost(p.slug)}
-              className="rounded-[1.6rem] bg-white text-left shadow-soft ring-2 ring-ohmlet-line transition-transform hover:-translate-y-1"
+              className={`overflow-hidden rounded-[1.6rem] bg-white bg-gradient-to-br ${p.swatch} bg-top bg-no-repeat bg-[length:100%_7rem] text-left shadow-soft ring-2 ring-ohmlet-line transition-transform hover:-translate-y-1`}
             >
-              <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${p.swatch}`} />
+              {/* Color band is the card's own background (top 7rem), not a child div,
+                  so there is no second rounded corner to misalign = no sub-pixel gap. */}
+              <div className="h-28" aria-hidden="true" />
               <div className="p-6">
                 <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">{p.category}</p>
                 <h3 className="mt-2 text-xl font-black leading-tight tracking-tight text-ohmlet-ink">{p.title}</h3>
