@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Clock, ImageIcon, Lightbulb, Video } from 'lucide-react';
 import { findPost, type Block } from './blog/posts';
+import { BLOG_ART } from './blog/blogArt';
 
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
 
@@ -81,7 +82,23 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
           {block.text}
         </p>
       );
-    case 'media':
+    case 'media': {
+      // Hand-authored SVG diagram when the block names one; otherwise the
+      // purposeful placeholder. Markup is static and in-repo (safe to inline).
+      const art = block.art ? BLOG_ART[block.art] : undefined;
+      if (art) {
+        return (
+          <figure className="mt-8">
+            <div
+              className="overflow-hidden rounded-[1.4rem] bg-white p-3 shadow-soft ring-2 ring-ohmlet-line sm:p-4"
+              dangerouslySetInnerHTML={{ __html: art }}
+            />
+            <figcaption className="mt-3 px-2 text-center text-sm font-semibold text-ohmlet-ink-soft">
+              {block.note}
+            </figcaption>
+          </figure>
+        );
+      }
       return (
         <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-ink/30 bg-ohmlet-cream px-6 py-12 text-center">
           {block.kind === 'video' ? (
@@ -95,6 +112,7 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
           <p className="max-w-md text-sm font-semibold text-ohmlet-ink-soft">{block.note}</p>
         </div>
       );
+    }
     default:
       return null;
   }

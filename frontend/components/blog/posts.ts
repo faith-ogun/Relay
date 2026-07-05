@@ -10,7 +10,7 @@ export type Block =
   | { type: 'list'; ordered?: boolean; items: string[] }
   | { type: 'table'; head: string[]; rows: string[][] }
   | { type: 'callout'; title?: string; text: string }
-  | { type: 'media'; kind: 'image' | 'video'; note: string }
+  | { type: 'media'; kind: 'image' | 'video'; note: string; art?: string }
   | { type: 'code'; caption?: string; code: string }
   | { type: 'quote'; text: string };
 
@@ -71,7 +71,7 @@ export const POSTS: BlogPost[] = [
         'Run it, watch it fail, fix the one thing that is wrong, repeat.',
         'Finish it. Then change one thing on purpose to see what happens.',
       ] },
-      { type: 'media', kind: 'image', note: 'Before/after: a messy breadboard attempt next to a clean finished light-activated alarm.' },
+      { type: 'media', kind: 'image', note: 'Before/after: a messy breadboard attempt next to a clean finished light-activated alarm.', art: 'before-after-alarm' },
       { type: 'h2', text: 'Get feedback while your hands are on the board' },
       { type: 'p', text: 'The slowest way to learn is to wire the whole thing, power it, and discover nothing works with no idea why. The fastest way is to be corrected at the moment you make the mistake, the same way a good lab partner leans over and says "that resistor is on the wrong rail" before you move on.' },
       { type: 'p', text: 'This is the entire reason Ohmlet watches your bench through your camera: it catches the wrong pin or the reversed LED while you can still see what you just did, not twenty minutes later.' },
@@ -113,7 +113,7 @@ export const POSTS: BlogPost[] = [
         'Rows of five holes (labelled a to e and f to j) that connect horizontally.',
         'A center gap that separates the two halves and is sized for chip legs.',
       ] },
-      { type: 'media', kind: 'image', note: 'Annotated breadboard photo showing rails, rows, columns, and the hidden internal strips.' },
+      { type: 'media', kind: 'image', note: 'Annotated breadboard photo showing rails, rows, columns, and the hidden internal strips.', art: 'breadboard-anatomy' },
       { type: 'h2', text: 'How the holes actually connect' },
       { type: 'p', text: 'Inside the main grid, the five holes in a single half-row are joined by one metal clip. So a1, b1, c1, d1, and e1 are all the same electrical point. But e1 and f1 are NOT connected, because the center gap breaks the strip in two.' },
       { type: 'p', text: 'The power rails run the other way: along the length of the board, so the entire + rail is one connected line, and the entire - rail is another. You connect these to your 5V and GND once, then tap power anywhere along them.' },
@@ -172,7 +172,7 @@ export const POSTS: BlogPost[] = [
       { type: 'p', text: 'For a 5V Arduino pin, a red LED that drops about 2V, and a target current of about 13mA (0.013A):' },
       { type: 'quote', text: 'R = (5 - 2) / 0.013 = about 230Ω' },
       { type: 'p', text: 'The nearest common resistor is 220Ω, which is why 220Ω is the classic LED resistor. Slightly higher (like 330Ω) just makes the LED a little dimmer and is perfectly safe.' },
-      { type: 'media', kind: 'image', note: 'Side-by-side: LED with no resistor (burned) vs LED with 220Ω (glowing), with the calculation overlaid.' },
+      { type: 'media', kind: 'image', note: 'Side-by-side: LED with no resistor (burned) vs LED with 220Ω (glowing), with the calculation overlaid.', art: 'ohms-law-led' },
       { type: 'h2', text: 'A quick reference' },
       { type: 'table', head: ['Supply', 'LED drop', 'Target current', 'Resistor'], rows: [
         ['5V', '2.0V (red)', '13mA', '220Ω'],
@@ -226,7 +226,7 @@ export const POSTS: BlogPost[] = [
         'Reseat every jumper wire: breadboard contacts loosen constantly.',
         'Verify you are reading the pin you think you are reading.',
       ] },
-      { type: 'media', kind: 'video', note: 'Screen recording of the serial monitor as a floating pin is fixed with a pull-down resistor: noise to clean readings.' },
+      { type: 'media', kind: 'video', note: 'Screen recording of the serial monitor as a floating pin is fixed with a pull-down resistor: noise to clean readings.', art: 'serial-noise-clean' },
       { type: 'h2', text: 'Trust the serial monitor' },
       { type: 'p', text: 'The single most useful debugging habit is printing your raw sensor value to the serial monitor early and often. Eyes cannot see a 4.8V vs 5.0V difference, but the numbers can. Add Serial.println(analogRead(PIN)) and watch how the value responds as you change the input by hand.' },
       { type: 'p', text: 'When you can see the number react correctly to light, heat, or a press, the hard part is done. Everything after that is just thresholds in code.' },
@@ -279,7 +279,7 @@ export const POSTS: BlogPost[] = [
         'The fourth band is tolerance (gold = 5%, silver = 10%).',
       ] },
       { type: 'callout', title: 'Worked example', text: 'Red, Red, Brown, Gold = 2, 2, ×10 = 220Ω at 5% tolerance. Red, Red, Orange = 2, 2, ×1k = 22kΩ.' },
-      { type: 'media', kind: 'image', note: 'Clean resistor color code wheel or chart graphic for readers to save.' },
+      { type: 'media', kind: 'image', note: 'Clean resistor color code wheel or chart graphic for readers to save.', art: 'resistor-color-code' },
       { type: 'h2', text: '5-band resistors' },
       { type: 'p', text: 'Precision resistors use five bands: three digit bands, one multiplier, and one tolerance. The method is identical, you just read three digits instead of two before the multiplier.' },
       { type: 'h2', text: 'The honest shortcut' },
@@ -316,7 +316,7 @@ export const POSTS: BlogPost[] = [
       { type: 'p', text: 'PWM turns the pin on and off hundreds of times per second. If it is on half the time and off half the time, the LED receives roughly half the power, and because the switching is faster than your eye can follow, you see steady half brightness instead of flicker.' },
       { type: 'h3', text: 'Duty cycle' },
       { type: 'p', text: 'Duty cycle is the fraction of each cycle the pin spends on. 0% duty is off, 100% is full brightness, 50% is half. That single number is what you control.' },
-      { type: 'media', kind: 'image', note: 'Diagram of PWM square waves at 25%, 50%, and 75% duty cycle with the matching LED brightness.' },
+      { type: 'media', kind: 'image', note: 'Diagram of PWM square waves at 25%, 50%, and 75% duty cycle with the matching LED brightness.', art: 'pwm-duty-cycle' },
       { type: 'h2', text: 'PWM on an Arduino' },
       { type: 'p', text: 'On an Arduino Uno, use analogWrite(pin, value) on a PWM-capable pin. The value runs from 0 (off) to 255 (full on), so 128 is about half brightness.' },
       { type: 'callout', title: 'Which pins?', text: 'On the Uno, only pins 3, 5, 6, 9, 10, and 11 support analogWrite. They are usually marked with a ~ symbol on the board.' },
@@ -367,7 +367,7 @@ export const POSTS: BlogPost[] = [
         'At a component’s pin: confirms power reaches it.',
         'Before and after a part: shows the voltage it drops.',
       ] },
-      { type: 'media', kind: 'image', note: 'Photo showing probe placement for a voltage measurement across a breadboard power rail.' },
+      { type: 'media', kind: 'image', note: 'Photo showing probe placement for a voltage measurement across a breadboard power rail.', art: 'multimeter-probe' },
       { type: 'h2', text: '3. Resistance: what is this part?' },
       { type: 'p', text: 'Set the dial to ohms. With the component out of the circuit (or at least unpowered and isolated), touch a probe to each leg. This reads a resistor’s true value, which beats decoding color bands, and confirms whether a sensor like an LDR changes resistance as you cover it.' },
       { type: 'h2', text: 'A debugging routine' },
@@ -432,7 +432,7 @@ export const POSTS: BlogPost[] = [
       { type: 'h2', text: 'How it works: the voltage divider' },
       { type: 'p', text: 'An LDR is just a resistor whose resistance falls as light increases: dark might be 100kΩ, bright daylight might be 1kΩ. An Arduino cannot read resistance directly, only voltage. So we pair the LDR with a fixed 10kΩ resistor to form a voltage divider: the two resistors split the 5V supply in proportion to their resistances, and the Arduino reads the voltage at the midpoint.' },
       { type: 'p', text: 'When it is dark, the LDR resistance is high, so most of the voltage drops across it and the midpoint reads low. When light hits it, the LDR resistance falls and the midpoint voltage rises. That changing midpoint is what analogRead measures.' },
-      { type: 'media', kind: 'image', note: 'Breadboard wiring diagram: LDR and 10kΩ resistor forming a divider, midpoint to A0, buzzer on pin 8.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring diagram: LDR and 10kΩ resistor forming a divider, midpoint to A0, buzzer on pin 8.', art: 'alarm-wiring' },
       { type: 'h2', text: 'Wiring it up' },
       {
         type: 'list',
@@ -558,7 +558,7 @@ void loop() {
           'Sanity check: each LED has exactly one resistor in series, and all cathodes meet at GND.',
         ],
       },
-      { type: 'media', kind: 'image', note: 'Breadboard layout: three LEDs in a column, each with a 220Ω resistor to pins 2/3/4, all cathodes to the GND rail.' },
+      { type: 'media', kind: 'image', note: 'Breadboard layout: three LEDs in a column, each with a 220Ω resistor to pins 2/3/4, all cathodes to the GND rail.', art: 'traffic-light-wiring' },
       { type: 'h2', text: 'The code (simple version)' },
       { type: 'p', text: 'Start with the readable, delay-based version. It cycles like a UK-style light: red, red+amber, green, amber, repeat. Trim it to red/green/amber if you prefer.' },
       {
@@ -697,7 +697,7 @@ void loop() {
       { type: 'callout', title: 'The floating-pin problem', text: 'A digital input pin with nothing driving it is like an antenna: it picks up electrical noise and reads HIGH and LOW at random. A pull-down resistor ties it gently to GND so it reads LOW until the button forces it HIGH.' },
       { type: 'h2', text: 'How it works' },
       { type: 'p', text: 'A tactile pushbutton connects its two sides only while pressed. We wire one side to 5V and the other side to both the input pin (pin 2) and, through a 10kΩ resistor, to GND. When the button is open, the pin sees GND through the resistor and reads LOW. When you press it, 5V reaches the pin directly and it reads HIGH. The resistor is large enough that pressing does not short 5V to GND.' },
-      { type: 'media', kind: 'image', note: 'Breadboard wiring: button across the gap, one side to 5V, other side to pin 2 and via a 10kΩ resistor to GND; LED with 220Ω on pin 13 to GND.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring: button across the gap, one side to 5V, other side to pin 2 and via a 10kΩ resistor to GND; LED with 220Ω on pin 13 to GND.', art: 'pushbutton-wiring' },
       { type: 'h2', text: 'Wiring it up' },
       {
         type: 'list',
@@ -801,7 +801,7 @@ void loop() {
       { type: 'h2', text: 'How it works' },
       { type: 'p', text: 'A potentiometer has three legs. The two outer legs go to 5V and GND; the middle leg (the wiper) taps off a voltage that slides between 0 and 5V as you turn the knob. That is a voltage divider you control by hand. analogRead on the wiper gives 0 at one end and 1023 at the other.' },
       { type: 'p', text: 'The LED side uses PWM. The pin cannot output 2.5V, but it can switch between 0V and 5V thousands of times a second. If it is HIGH half the time, the LED looks half as bright. analogWrite(pin, 0..255) sets that on-fraction, called the duty cycle.' },
-      { type: 'media', kind: 'image', note: 'Breadboard wiring: pot outer legs to 5V and GND, wiper to A0; LED with 220Ω on pin 9 to GND.' },
+      { type: 'media', kind: 'image', note: 'Breadboard wiring: pot outer legs to 5V and GND, wiper to A0; LED with 220Ω on pin 9 to GND.', art: 'potentiometer-wiring' },
       { type: 'h2', text: 'Wiring it up' },
       {
         type: 'list',

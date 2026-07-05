@@ -65,9 +65,9 @@ export const BlogPage: React.FC<BlogPageProps> = ({ onNavigate, onOpenPost }) =>
               key={p.slug}
               type="button"
               onClick={() => onOpenPost(p.slug)}
-              className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-line bg-white text-left shadow-soft transition-transform hover:-translate-y-1"
+              className="rounded-[1.6rem] bg-white text-left shadow-soft ring-2 ring-ohmlet-line transition-transform hover:-translate-y-1"
             >
-              <div className={`h-28 bg-gradient-to-br ${p.swatch}`} />
+              <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${p.swatch}`} />
               <div className="p-6">
                 <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">{p.category}</p>
                 <h3 className="mt-2 text-xl font-black leading-tight tracking-tight text-ohmlet-ink">{p.title}</h3>
