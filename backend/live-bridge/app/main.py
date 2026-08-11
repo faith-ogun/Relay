@@ -23,7 +23,7 @@ from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from ohmlet_live_agent import agent
+from ohmlet_live_agent import agent, child_agent
 from ohmlet_live_agent.interview_agent import interview_agent
 from ohmlet_live_agent.tools import set_priority_models
 import interview as interview_mod
@@ -33,6 +33,9 @@ from billing import router as billing_router
 from privacy import router as privacy_router
 from community import router as community_router
 from interview_router import router as interview_router
+
+import consent
+from consent import router as consent_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -98,6 +101,7 @@ app.include_router(privacy_router)
 app.include_router(community_router)
 # Interview Mode: the post-session feedback report (#21, Max-tier).
 app.include_router(interview_router)
+app.include_router(consent_router)
 
 session_service = InMemorySessionService()
 runner = Runner(
@@ -109,6 +113,14 @@ runner = Runner(
 interview_runner = Runner(
     app_name=APP_NAME,
     agent=interview_agent,
+    session_service=session_service,
+)
+# Child mode (#94): the same live spine on the hardened agent (Vertex safety
+# tightened + a child-safe system prompt). Selected only for a verified minor's
+# session; adults never touch it.
+child_runner = Runner(
+    app_name=APP_NAME,
+    agent=child_agent,
     session_service=session_service,
 )
 
@@ -200,7 +212,8 @@ async def websocket_endpoint(
         await _reject_ws(websocket, "auth_required", "Sign in to start a live session.")
         return
     try:
-        verified_uid = verify_id_token(auth_msg["token"])["uid"]
+        decoded = verify_id_token(auth_msg["token"])
+        verified_uid = decoded["uid"]
     except HTTPException:
         await _reject_ws(websocket, "auth_invalid", "Your session has expired. Sign in again.")
         return
@@ -216,7 +229,24 @@ async def websocket_endpoint(
         await _reject_ws(websocket, "rate_limited", "Too many sessions started. Please wait a minute.")
         return
 
-    logger.info("WS connected: user=%s session=%s", user_id, session_id)
+    # ── Child-safety gate (#94): a minor without verified parental consent may not
+    # open a live (camera + mic) session. Read straight off the verified token's
+    # custom claims; default-deny. Entirely inert unless OHMLET_CHILD_MODE is on, so
+    # adults and today's users are unaffected.
+    consent_block = consent.live_blocked(decoded)
+    if consent_block:
+        logger.info("Live session gated for user=%s reason=%s", user_id, consent_block)
+        await _reject_ws(
+            websocket,
+            consent_block,
+            "A parent or guardian needs to finish setting up Ohmlet before the live tutor can start."
+            if consent_block == "consent_required"
+            else "Let's confirm a couple of details before we start the live tutor.",
+        )
+        return
+    child_session = consent.is_child(decoded)
+
+    logger.info("WS connected: user=%s session=%s child=%s", user_id, session_id, child_session)
 
     # ── Session mode: tutor (default) or interview (#21, Max-only) ──
     mode = "interview" if (websocket.query_params.get("mode") == "interview") else "tutor"
@@ -366,7 +396,9 @@ async def websocket_endpoint(
         # Select the model tier for this session's plan (Free → Flash, Pro/max → Pro).
         set_priority_models(entitlements.has_priority_models(plan))
         # Interview Mode swaps the persona (interviewer) but reuses the whole spine.
-        active_runner = interview_runner if mode == "interview" else runner
+        # Child safety wins over every other persona: a verified minor always runs
+        # on the hardened child agent, never the interview persona.
+        active_runner = child_runner if child_session else (interview_runner if mode == "interview" else runner)
         try:
             event_count = 0
             async for event in active_runner.run_live(

@@ -66,6 +66,26 @@ def is_admin(decoded: dict) -> bool:
     return bool(decoded.get("admin")) or email in ADMIN_EMAILS
 
 
+def set_consent_claims(uid: str, *, is_minor: bool, consent_verified: bool, age_status: str) -> dict:
+    """Write the child-mode age/consent custom claims onto a user (#94).
+
+    These claims ride in the user's ID token and are the teeth behind the live
+    session gate — the WebSocket handshake reads them straight off the verified
+    token (like the admin/Max checks) with no extra round-trip. set_custom_user_claims
+    REPLACES the whole claims blob, so we read the existing claims first and merge,
+    never dropping `admin` or anything else already set. The client must refresh its
+    ID token (getIdToken(true)) afterwards to observe the change.
+    """
+    _ensure_app()
+    existing = dict((firebase_auth.get_user(uid).custom_claims or {}))
+    existing.update(
+        {"isMinor": bool(is_minor), "consentVerified": bool(consent_verified), "ageStatus": age_status}
+    )
+    firebase_auth.set_custom_user_claims(uid, existing)
+    logger.info("consent claims updated: uid=%s isMinor=%s consentVerified=%s", uid, is_minor, consent_verified)
+    return existing
+
+
 # ── FastAPI dependencies ──
 def require_uid(authorization: str | None = Header(default=None)) -> str:
     """Dependency that yields the verified UID for the current request."""

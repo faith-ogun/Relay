@@ -45,6 +45,9 @@ REACTIONS = os.getenv("OHMLET_REACTIONS_COLLECTION", "community_reactions")
 CHALLENGES = os.getenv("OHMLET_CHALLENGES_COLLECTION", "community_challenges")
 MEMBERS = os.getenv("OHMLET_CHALLENGE_MEMBERS_COLLECTION", "community_challenge_members")
 LEADERBOARD = os.getenv("OHMLET_LEADERBOARD_COLLECTION", "community_leaderboard")
+REPORTS = os.getenv("OHMLET_REPORTS_COLLECTION", "community_reports")
+BLOCKS = os.getenv("OHMLET_BLOCKS_COLLECTION", "community_blocks")
+REPORT_HIDE_THRESHOLD = int(os.getenv("OHMLET_REPORT_HIDE_THRESHOLD", "3"))
 
 KINDS = {"build", "win", "question"}
 MAX_TITLE = 140
@@ -194,9 +197,30 @@ def _clean(text: object, cap: int) -> str:
     return text.strip()[:cap]
 
 
+def require_non_minor(claims: dict = Depends(require_claims)) -> dict:
+    """Community WRITES are closed to a verified minor (#94): no posting, commenting,
+    liking, joining challenges, or appearing on the public leaderboard. Reads stay open
+    (the UI hides community for minors); moderation + reporting land with #97."""
+    if claims.get("isMinor"):
+        raise HTTPException(status_code=403, detail="Community is available on grown-up accounts.")
+    return claims
+
+
+def _blocked_set(client, uid: str) -> set[str]:
+    """The set of uids the caller has blocked; their content is filtered from feeds."""
+    try:
+        return {
+            (s.to_dict() or {}).get("targetUid")
+            for s in client.collection(BLOCKS).where(filter=FieldFilter("uid", "==", uid)).limit(500).stream()
+        } - {None}
+    except Exception as exc:
+        logger.warning("blocklist read failed for %s: %s", uid, exc)
+        return set()
+
+
 # ── Feed ──
 @router.post("/posts")
-async def create_post(request: Request, claims: dict = Depends(require_claims)) -> dict:
+async def create_post(request: Request, claims: dict = Depends(require_non_minor)) -> dict:
     uid = claims["uid"]
     try:
         body = await request.json()
@@ -230,18 +254,21 @@ async def create_post(request: Request, claims: dict = Depends(require_claims)) 
 def list_posts(claims: dict = Depends(require_claims)) -> dict:
     uid = claims["uid"]
     client = _client()
+    blocked = _blocked_set(client, uid)
     posts = []
     for snap in (
         client.collection(POSTS).order_by("createdAt", direction=firestore.Query.DESCENDING).limit(FEED_LIMIT).stream()
     ):
         p = snap.to_dict() or {}
+        if p.get("hidden") or p.get("uid") in blocked:  # auto-hidden (reported) or a blocked author
+            continue
         liked = client.collection(REACTIONS).document(f"{snap.id}__{uid}").get().exists
         posts.append({**p, "liked": liked})
     return {"posts": posts}
 
 
 @router.post("/posts/{post_id}/like")
-def toggle_like(post_id: str, claims: dict = Depends(require_claims)) -> dict:
+def toggle_like(post_id: str, claims: dict = Depends(require_non_minor)) -> dict:
     uid = claims["uid"]
     client = _client()
     post_ref = client.collection(POSTS).document(post_id)
@@ -260,20 +287,79 @@ def toggle_like(post_id: str, claims: dict = Depends(require_claims)) -> dict:
     return {"liked": liked, "likes": max(0, likes)}
 
 
+# ── Moderation (#97): report + block. Reads stay open; the UI hides community for
+# minors (#94). Satisfies DSA notice-and-action and the Apple 1.2 / Google UGC bar. ──
+@router.post("/posts/{post_id}/report")
+def report_post(post_id: str, claims: dict = Depends(require_claims)) -> dict:
+    """Report a post. One report per user per post; the post auto-hides once it passes
+    the threshold, pending review. The report row is the durable audit trail."""
+    uid = claims["uid"]
+    client = _client()
+    post_ref = client.collection(POSTS).document(post_id)
+    if not post_ref.get().exists:
+        raise HTTPException(404, "Post not found.")
+    report_ref = client.collection(REPORTS).document(f"{post_id}__{uid}")
+    if report_ref.get().exists:
+        return {"status": "already_reported"}
+    report_ref.set({"postId": post_id, "reporterUid": uid, "createdAt": _now()})
+    reports = (post_ref.get().to_dict() or {}).get("reports", 0) + 1
+    update: dict = {"reports": firestore.Increment(1)}
+    if reports >= REPORT_HIDE_THRESHOLD:
+        update["hidden"] = True
+        logger.warning("post auto-hidden after %d reports: %s", reports, post_id)
+    post_ref.update(update)
+    logger.info("post reported: %s by %s (count=%d)", post_id, uid, reports)
+    return {"status": "reported"}
+
+
+@router.post("/block")
+async def block_user(request: Request, claims: dict = Depends(require_claims)) -> dict:
+    """Hide all of another user's content from the caller."""
+    uid = claims["uid"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target = ((body.get("targetUid") if isinstance(body, dict) else "") or "").strip()
+    if not target or target == uid:
+        raise HTTPException(422, "Nothing to block.")
+    _client().collection(BLOCKS).document(f"{uid}__{target}").set(
+        {"uid": uid, "targetUid": target, "createdAt": _now()}
+    )
+    logger.info("user %s blocked %s", uid, target)
+    return {"status": "blocked", "targetUid": target}
+
+
+@router.post("/unblock")
+async def unblock_user(request: Request, claims: dict = Depends(require_claims)) -> dict:
+    uid = claims["uid"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target = ((body.get("targetUid") if isinstance(body, dict) else "") or "").strip()
+    if target:
+        _client().collection(BLOCKS).document(f"{uid}__{target}").delete()
+    return {"status": "unblocked", "targetUid": target}
+
+
 @router.get("/posts/{post_id}/comments")
 def list_comments(post_id: str, claims: dict = Depends(require_claims)) -> dict:
     client = _client()
+    blocked = _blocked_set(client, claims["uid"])
     # Equality-only filter (no composite index needed); sort in Python.
-    out = [
-        snap.to_dict() or {}
-        for snap in client.collection(COMMENTS).where(filter=FieldFilter("postId", "==", post_id)).limit(200).stream()
-    ]
+    out = []
+    for snap in client.collection(COMMENTS).where(filter=FieldFilter("postId", "==", post_id)).limit(200).stream():
+        c = snap.to_dict() or {}
+        if c.get("uid") in blocked:
+            continue
+        out.append(c)
     out.sort(key=lambda c: c.get("createdAt", ""))
     return {"comments": out}
 
 
 @router.post("/posts/{post_id}/comments")
-async def add_comment(post_id: str, request: Request, claims: dict = Depends(require_claims)) -> dict:
+async def add_comment(post_id: str, request: Request, claims: dict = Depends(require_non_minor)) -> dict:
     uid = claims["uid"]
     try:
         body = await request.json()
@@ -337,7 +423,7 @@ def list_challenges(claims: dict = Depends(require_claims)) -> dict:
 
 
 @router.post("/challenges/{challenge_id}/join")
-def join_challenge(challenge_id: str, claims: dict = Depends(require_claims)) -> dict:
+def join_challenge(challenge_id: str, claims: dict = Depends(require_non_minor)) -> dict:
     uid = claims["uid"]
     client = _client()
     ch_ref = client.collection(CHALLENGES).document(challenge_id)
@@ -352,7 +438,7 @@ def join_challenge(challenge_id: str, claims: dict = Depends(require_claims)) ->
 
 
 @router.post("/challenges/{challenge_id}/leave")
-def leave_challenge(challenge_id: str, claims: dict = Depends(require_claims)) -> dict:
+def leave_challenge(challenge_id: str, claims: dict = Depends(require_non_minor)) -> dict:
     """Leave a challenge: drop the membership and decrement the counter. Idempotent
     (leaving twice is a no-op). Progress is discarded; the user can rejoin later."""
     uid = claims["uid"]
@@ -370,7 +456,7 @@ def leave_challenge(challenge_id: str, claims: dict = Depends(require_claims)) -
 
 # ── Weekly league ──
 @router.post("/xp")
-async def report_xp(request: Request, claims: dict = Depends(require_claims)) -> dict:
+async def report_xp(request: Request, claims: dict = Depends(require_non_minor)) -> dict:
     """Add XP to the caller's weekly league tally. Called when the client awards
     XP (lesson complete). Server-authoritative per (week, uid)."""
     uid = claims["uid"]

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Award, Bug, Flame, Heart, Loader2, MessageCircle, Radar, Send, Share2, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
+import { Award, Ban, Bug, Flag, Flame, Heart, Loader2, MessageCircle, MoreHorizontal, Radar, Send, Share2, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
 import { AVATAR_COLORS } from '../data/leaderboard';
 import {
   addComment,
@@ -12,6 +12,8 @@ import {
   leaveChallenge,
   relativeTime,
   toggleLike,
+  reportPost,
+  blockUser,
   type Challenge,
   type CommunityComment,
   type CommunityPost,
@@ -55,6 +57,18 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
 
   const [likeBurst, setLikeBurst] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const onReport = useCallback(async (id: string) => {
+    setMenuFor(null);
+    setReported((prev) => new Set(prev).add(id));
+    await reportPost(id);
+  }, []);
+  const onBlock = useCallback(async (targetUid: string) => {
+    setMenuFor(null);
+    setPosts((prev) => (prev ? prev.filter((p) => p.uid !== targetUid) : prev));
+    await blockUser(targetUid);
+  }, []);
   const [threads, setThreads] = useState<Record<string, CommunityComment[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
@@ -227,6 +241,35 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                   <span className="hidden shrink-0 rounded-full border border-ohmlet-line bg-ohmlet-cream px-3 py-1 text-xs font-bold text-ohmlet-ink-soft sm:inline">
                     {KIND_LABEL[post.kind]}
                   </span>
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Post options"
+                      onClick={() => setMenuFor(menuFor === post.id ? null : post.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-line/60 hover:text-ohmlet-ink"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                    {menuFor === post.id && (
+                      <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border-2 border-ohmlet-ink bg-white shadow-press-sm">
+                        <button
+                          type="button"
+                          onClick={() => onReport(post.id)}
+                          disabled={reported.has(post.id)}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-bold text-ohmlet-ink transition-colors hover:bg-ohmlet-gold-soft disabled:opacity-50"
+                        >
+                          <Flag className="h-4 w-4" /> {reported.has(post.id) ? 'Reported' : 'Report post'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onBlock(post.uid)}
+                          className="flex w-full items-center gap-2 border-t border-ohmlet-line px-3 py-2.5 text-left text-sm font-bold text-ohmlet-red transition-colors hover:bg-ohmlet-red/10"
+                        >
+                          <Ban className="h-4 w-4" /> Block user
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="px-5 pt-3">

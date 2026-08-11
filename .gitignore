@@ -55,7 +55,8 @@ design/
 content/Books/
 # Personal marketing drafts / screenshots
 content/LinkedIn/
-# Session handoff scratch doc (superseded by CLAUDE.md / AGENTS.md / curriculum plan)
+# Living cross-surface handoff (local only; grab-and-upload into the Claude app).
+# Dated archival copies live in metadata/handoffs/.
 HANDOFF.md
 
 

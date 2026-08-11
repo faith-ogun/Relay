@@ -33,6 +33,13 @@ type UseLiveBridgeOptions = {
   /** Fires once, right after the auth frame is sent, with a JSON sender. Use it
    *  to prime the session (e.g. send the interview context) in the correct order. */
   onReady?: (sendJson: (obj: unknown) => void) => void;
+  /** Child-safe mode (#94): locks the camera to the rear/environment facing so a
+   *  minor's face is never the subject, and applies a shorter session time cap.
+   *  (Full on-device face-detection suppression is a follow-up on top of this.) */
+  childSafe?: boolean;
+  /** Hard per-session time cap in ms (auto-disconnect). 0 = none. Defaults to a
+   *  30-minute cap when childSafe is set. */
+  sessionLimitMs?: number;
 };
 
 export type CameraFacing = 'user' | 'environment';
@@ -83,6 +90,8 @@ export function useLiveBridge({
   visionIntervalMs = 2500,
   mode = 'tutor',
   onReady,
+  childSafe = false,
+  sessionLimitMs = 0,
 }: UseLiveBridgeOptions): UseLiveBridgeReturn {
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -92,6 +101,10 @@ export function useLiveBridge({
   const [facing, setFacing] = useState<CameraFacing>('environment');
   const facingRef = useRef<CameraFacing>('environment');
   const [transcripts, setTranscripts] = useState<LiveTranscript[]>([]);
+
+  // Child-safe session cap (#94): a shorter hard limit on continuous live time for a
+  // minor's session, on top of the plan's monthly budget. 0 = no cap.
+  const effectiveSessionLimitMs = sessionLimitMs || (childSafe ? 30 * 60 * 1000 : 0);
 
   // Track whether we've received any audio data this session.
   // When true, we use outputTranscription for text display and skip content.parts text
@@ -445,6 +458,9 @@ export function useLiveBridge({
   }, [camOn, pushTranscript, startCameraStream, sendFrame, visionIntervalMs]);
 
   const switchCamera = useCallback(async () => {
+    // Child safety: a minor stays on the rear (bench) camera so their face is never
+    // the subject. The front/selfie camera is never activated for a child session.
+    if (childSafe) return;
     const next: CameraFacing = facingRef.current === 'environment' ? 'user' : 'environment';
     facingRef.current = next;
     setFacing(next);
@@ -456,7 +472,7 @@ export function useLiveBridge({
     } catch {
       pushTranscript('system', 'Could not switch camera.');
     }
-  }, [camOn, startCameraStream, pushTranscript]);
+  }, [camOn, childSafe, startCameraStream, pushTranscript]);
 
   const captureSnapshot = useCallback(() => {
     sendFrame();
@@ -529,6 +545,17 @@ export function useLiveBridge({
       disconnect();
     };
   }, [autoConnect, sessionId]);
+
+  // Child-safe session cap (#94): auto-end a minor's session after the limit with a
+  // gentle, kid-readable nudge to take a break.
+  useEffect(() => {
+    if (state !== 'connected' || effectiveSessionLimitMs <= 0) return;
+    const id = setTimeout(() => {
+      pushTranscript('system', "That's a good long session. Time for a break, ask a grown-up if you'd like to start again.");
+      disconnect();
+    }, effectiveSessionLimitMs);
+    return () => clearTimeout(id);
+  }, [state, effectiveSessionLimitMs, disconnect, pushTranscript]);
 
   return {
     state,

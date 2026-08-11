@@ -23,9 +23,13 @@ import {
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { track } from '../../../services/analytics';
-import { trackBuildComplete } from '../../../services/northstar';
+import { trackBuildComplete, hasCompletedFirstBuild } from '../../../services/northstar';
+import { BuildCelebration } from '../conversion/BuildCelebration';
+import { SafetyAck } from './SafetyAck';
 import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
+import { readAgeProfile } from '../childmode/useAgeProfile';
+import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
 import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 import {
@@ -81,6 +85,14 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   }, []);
   const { userId } = useIdentity();
   const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
+  // Child-safe runtime (#94): a verified minor's live session keeps camera + mic OFF
+  // until an explicit tap, locks out the front (face) camera, and gets a shorter cap.
+  const childSafe = useMemo(() => CHILD_MODE_ENABLED && !!readAgeProfile(userId)?.isMinor, [userId]);
+  // Payment age gate (#96): under-18s cannot self-purchase, so show no upsell.
+  const under18 = useMemo(() => {
+    const by = readAgeProfile(userId)?.birthYear;
+    return CHILD_MODE_ENABLED && !!by && new Date().getFullYear() - by < 18;
+  }, [userId]);
 
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
@@ -88,6 +100,10 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // The captured build photo currently being turned into a 3D twin (#31).
   const [twinFrame, setTwinFrame] = useState<string | null>(null);
   const [twinBusy, setTwinBusy] = useState(false);
+  // The first-build conversion moment (#18): set when a build completes.
+  const [celebrate, setCelebrate] = useState<{ first: boolean } | null>(null);
+  // In-session AI safety acknowledgement (#98): gate the first live session.
+  const [showSafety, setShowSafety] = useState(false);
   const budgetImageState = useState(true); // [ok, setOk] for the 402 art fallback
 
   const { canGoLive, liveCapMinutes, liveMinutesRemaining, liveSecondsUsed, consumeLiveSeconds, plan } = usePlan(userId);
@@ -108,7 +124,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     sendText,
     sendStageUpdate,
     videoRef,
-  } = useLiveBridge({ wsUrl, userId, sessionId });
+  } = useLiveBridge({ wsUrl, userId, sessionId, childSafe });
 
   const live = state === 'connected';
   const connecting = state === 'connecting';
@@ -145,12 +161,28 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // Start the session and request mic + camera in the same user gesture so the
   // browser shows the permission prompt right away.
   const sessionStartRef = useRef<number | null>(null);
-  const goLive = () => {
+  const startSession = () => {
     track('live_session_start');
     sessionStartRef.current = Date.now();
     connect();
-    if (!micOn) toggleMic();
-    if (!camOn) toggleCam();
+    // Child safety: never auto-open a minor's camera or mic. They (with a grown-up)
+    // turn each on deliberately using the controls. Everyone else stays voice-first.
+    if (!childSafe) {
+      if (!micOn) toggleMic();
+      if (!camOn) toggleCam();
+    }
+  };
+  // Show the AI safety acknowledgement once (#98), then start the session.
+  const goLive = () => {
+    try {
+      if (!localStorage.getItem('ohmlet.safetyAck.v1')) {
+        setShowSafety(true);
+        return;
+      }
+    } catch {
+      /* storage blocked: proceed without the gate */
+    }
+    startSession();
   };
 
   const snapNow = () => {
@@ -172,16 +204,18 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     if (!twinCaptured.current) {
       twinCaptured.current = true;
       const start = sessionStartRef.current;
+      const wasFirst = !hasCompletedFirstBuild(userId);
       trackBuildComplete({
         source: 'live_tutor',
         sessionSeconds: start ? Math.round((Date.now() - start) / 1000) : undefined,
       });
+      setCelebrate({ first: wasFirst }); // #18 conversion moment
     }
     setTwinBusy(true);
     const frame = await grabFrame(1024);
     setTwinBusy(false);
     if (frame) setTwinFrame(frame);
-  }, [grabFrame]);
+  }, [grabFrame, userId]);
 
   const send = (text: string) => {
     if (!text.trim() || !live) return;
@@ -242,6 +276,20 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   if (!live && !connecting) {
     return (
       <div className="ohmlet-rise mx-auto max-w-3xl">
+        {showSafety && (
+          <SafetyAck
+            onAccept={() => {
+              try {
+                localStorage.setItem('ohmlet.safetyAck.v1', '1');
+              } catch {
+                /* ignore storage errors */
+              }
+              setShowSafety(false);
+              startSession();
+            }}
+            onCancel={() => setShowSafety(false)}
+          />
+        )}
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build with a tutor that sees your bench.</h1>
 
@@ -304,6 +352,19 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // ── Live session ──
   return (
     <div className="ohmlet-rise">
+      {celebrate && (
+        <BuildCelebration
+          buildTitle={build.title}
+          isPro={plan !== 'free'}
+          isFirstBuild={celebrate.first}
+          canUpgrade={!under18}
+          onUpgrade={() => {
+            onUpgrade?.();
+            setCelebrate(null);
+          }}
+          onClose={() => setCelebrate(null)}
+        />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-ohmlet-red px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white">

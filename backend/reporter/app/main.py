@@ -61,6 +61,8 @@ class TwinView(BaseModel):
     sizeBytes: Optional[int] = None
     createdAt: Optional[str] = None
     error: Optional[str] = None
+    shared: Optional[bool] = None
+    shareId: Optional[str] = None
 
     @staticmethod
     def of(rec: dict) -> "TwinView":
@@ -74,6 +76,8 @@ class TwinView(BaseModel):
             sizeBytes=rec.get("sizeBytes"),
             createdAt=rec.get("createdAt"),
             error=rec.get("error"),
+            shared=rec.get("shared"),
+            shareId=rec.get("shareId"),
         )
 
 
@@ -184,6 +188,66 @@ def delete_twin(twin_id: str, uid: str = Depends(guard)) -> dict:
     storage.delete_record(tid)
     obs.audit("reporter.twin_deleted", uid=uid, twinId=tid)
     return {"deleted": True, "id": tid}
+
+
+# ── Public sharing (#79): make a completed twin viewable by anyone with the link. ──
+@app.post("/v1/twins/{twin_id}/share")
+def share_twin(twin_id: str, uid: str = Depends(guard)) -> dict:
+    """Owner makes a ready twin public; returns an unguessable share id."""
+    tid = validation.clean_id(twin_id)
+    rec = storage.get_record(uid, tid)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Twin not found.")
+    if rec.get("status") != "ready":
+        raise HTTPException(status_code=409, detail="Twin is not ready yet.")
+    share_id = storage.create_share(uid, tid)
+    obs.audit("reporter.twin_shared", uid=uid, twinId=tid)
+    return {"shareId": share_id}
+
+
+@app.post("/v1/twins/{twin_id}/unshare")
+def unshare_twin(twin_id: str, uid: str = Depends(guard)) -> dict:
+    tid = validation.clean_id(twin_id)
+    if not storage.get_record(uid, tid):
+        raise HTTPException(status_code=404, detail="Twin not found.")
+    storage.clear_share(uid, tid)
+    obs.audit("reporter.twin_unshared", uid=uid, twinId=tid)
+    return {"shared": False, "id": tid}
+
+
+def _resolve_shared(share_id: str) -> dict:
+    """Resolve a public share id to a ready, still-shared twin record, or 404."""
+    sid = (share_id or "").strip()[:64]
+    share = storage.resolve_share(sid) if sid else None
+    if not share:
+        raise HTTPException(status_code=404, detail="Shared build not found.")
+    rec = storage.get_record(share["uid"], share["twinId"])
+    if not rec or rec.get("status") != "ready" or not rec.get("shared"):
+        raise HTTPException(status_code=404, detail="Shared build not found.")
+    return {**share, "rec": rec, "sid": sid}
+
+
+# Public (NO auth): the unguessable share id is the access control.
+@app.get("/v1/shared/{share_id}")
+def get_shared_twin(share_id: str) -> dict:
+    r = _resolve_shared(share_id)
+    rec = r["rec"]
+    # Public-safe metadata only (no owner identity).
+    return {"shareId": r["sid"], "title": rec.get("title", "My build"), "createdAt": rec.get("createdAt")}
+
+
+@app.get("/v1/shared/{share_id}/model")
+def get_shared_model(share_id: str) -> Response:
+    """Stream a shared twin's GLB to anyone with the link (public artifact)."""
+    r = _resolve_shared(share_id)
+    glb = storage.download_glb(r["uid"], r["twinId"])
+    if glb is None:
+        raise HTTPException(status_code=404, detail="Twin model is missing.")
+    return Response(
+        content=glb,
+        media_type=storage.GLB_CONTENT_TYPE,
+        headers={"Cache-Control": "public, max-age=86400", "Content-Disposition": f'inline; filename="{r["sid"]}.glb"'},
+    )
 
 
 @app.get("/health")

@@ -62,3 +62,16 @@ export function trackBuildComplete(opts: {
     /* instrumentation is best-effort and must never break a user flow */
   }
 }
+
+/**
+ * Whether this learner has already completed their first build (the FBC7 numerator).
+ * Read this BEFORE trackBuildComplete to tell whether the current build is the first,
+ * so the conversion moment can celebrate it (#18).
+ */
+export function hasCompletedFirstBuild(uid: string): boolean {
+  try {
+    return Boolean(localStorage.getItem(firstBuildKey(uid)));
+  } catch {
+    return false;
+  }
+}

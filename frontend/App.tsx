@@ -4,7 +4,9 @@ import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
 import { AuthPage } from './components/auth/AuthPage';
-import { OnboardingQuestions } from './components/auth/OnboardingQuestions';
+import { Onboarding } from './components/ohmlet/childmode/Onboarding';
+import { CHILD_MODE_ENABLED } from './components/ohmlet/childmode/ageModel';
+import { readAgeProfile } from './components/ohmlet/childmode/useAgeProfile';
 import { ErrorPage } from './components/errors/ErrorPage';
 import { useAuth } from './hooks/useAuth';
 
@@ -184,8 +186,19 @@ const App: React.FC = () => {
     if (loading) return;
     if (!user && isProtected) {
       navigate('login');
-    } else if (user && (route === 'login' || route === 'signup')) {
+      return;
+    }
+    if (user && (route === 'login' || route === 'signup')) {
       navigate('ohmlet-app');
+      return;
+    }
+    // Child mode: the neutral age gate must be answered (and an unconsented minor
+    // held at the parent step) before the workspace. Dead when the flag is off.
+    if (CHILD_MODE_ENABLED && user && (route === 'ohmlet-app' || route === 'workspace')) {
+      const prof = readAgeProfile(user.uid);
+      if (!prof || (prof.isMinor && prof.ageStatus !== 'minor_consented')) {
+        navigate('welcome');
+      }
     }
   }, [loading, user, route, navigate, isProtected]);
 
@@ -209,7 +222,7 @@ const App: React.FC = () => {
 
   if (route === 'welcome') {
     if (!user) return <AuthSplash />;
-    return <OnboardingQuestions userId={user.uid} onDone={() => navigate('ohmlet-app')} />;
+    return <Onboarding userId={user.uid} onDone={() => navigate('ohmlet-app')} />;
   }
 
   // ── Workspace (auth-gated) ──

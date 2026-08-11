@@ -78,6 +78,13 @@ def _return_base(request: Request) -> str:
 async def create_checkout(request: Request, claims: dict = Depends(require_claims)) -> dict:
     _require_configured()
     uid = claims["uid"]
+    # Payment age gate (#96): a user under 18 cannot self-purchase; a parent or
+    # guardian manages a child account's plan. Enforced server-side, never trusting
+    # the client UI. Inert unless child mode is on and we know the birth year.
+    from consent import purchase_blocked
+
+    if purchase_blocked(uid):
+        raise HTTPException(403, "For accounts under 18, a parent or guardian manages the subscription.")
     email = claims.get("email")
     try:
         payload = await request.json()

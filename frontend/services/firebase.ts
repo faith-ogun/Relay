@@ -37,9 +37,9 @@ export const auth = getAuth(firebaseApp);
  * out. Sent as `Authorization: Bearer <token>` on backend calls so the server
  * can verify identity itself (#44). The SDK caches and refreshes it.
  */
-export async function getIdToken(): Promise<string | null> {
+export async function getIdToken(forceRefresh = false): Promise<string | null> {
   const u = auth.currentUser;
-  return u ? u.getIdToken() : null;
+  return u ? u.getIdToken(forceRefresh) : null;
 }
 
 export const googleProvider = new GoogleAuthProvider();

@@ -9,6 +9,7 @@ const apiBase = () => (import.meta.env.VITE_OHMLET_API_BASE_URL || '').trim().re
 
 export interface CommunityPost {
   id: string;
+  uid: string;
   authorName: string;
   kind: 'build' | 'win' | 'question';
   title: string;
@@ -133,6 +134,20 @@ export async function fetchLeaderboard(): Promise<Leaderboard | null> {
 export async function reportXp(amount: number): Promise<void> {
   if (amount <= 0) return;
   await api('/v1/community/xp', { method: 'POST', body: JSON.stringify({ amount }) });
+}
+
+/** Report a post (DSA notice-and-action + store UGC requirement). */
+export async function reportPost(postId: string): Promise<{ status: string } | null> {
+  return api(`/v1/community/posts/${postId}/report`, { method: 'POST' });
+}
+
+/** Block a user so their content is hidden from you. */
+export async function blockUser(targetUid: string): Promise<{ status: string } | null> {
+  return api('/v1/community/block', { method: 'POST', body: JSON.stringify({ targetUid }) });
+}
+
+export async function unblockUser(targetUid: string): Promise<{ status: string } | null> {
+  return api('/v1/community/unblock', { method: 'POST', body: JSON.stringify({ targetUid }) });
 }
 
 /** Compact relative time, e.g. "3m", "2h", "5d". */

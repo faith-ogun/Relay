@@ -22,6 +22,8 @@ export interface Twin {
   sizeBytes?: number | null;
   createdAt?: string | null;
   error?: string | null;
+  shared?: boolean;
+  shareId?: string | null;
 }
 
 export class ReporterError extends Error {
@@ -33,6 +35,64 @@ export class ReporterError extends Error {
 async function authHeaders(): Promise<Record<string, string> | null> {
   const token = await getIdToken();
   return token ? { Authorization: `Bearer ${token}` } : null;
+}
+
+// ── Public sharing (#79) ──
+
+export interface SharedTwin {
+  shareId: string;
+  title: string;
+  createdAt?: string | null;
+}
+
+/** Owner: make a ready twin public. Returns the share id, or null on failure. */
+export async function shareTwin(twinId: string): Promise<string | null> {
+  const base = apiBase();
+  if (!base) return null;
+  const headers = await authHeaders();
+  if (!headers) return null;
+  try {
+    const res = await fetch(`${base}/v1/twins/${twinId}/share`, { method: 'POST', headers });
+    if (!res.ok) return null;
+    return ((await res.json()) as { shareId?: string }).shareId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Owner: stop sharing a twin. */
+export async function unshareTwin(twinId: string): Promise<boolean> {
+  const base = apiBase();
+  if (!base) return false;
+  const headers = await authHeaders();
+  if (!headers) return false;
+  try {
+    return (await fetch(`${base}/v1/twins/${twinId}/unshare`, { method: 'POST', headers })).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Public (no auth): a shared twin's metadata by share id. */
+export async function fetchSharedTwin(shareId: string): Promise<SharedTwin | null> {
+  const base = apiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/v1/shared/${encodeURIComponent(shareId)}`);
+    return res.ok ? ((await res.json()) as SharedTwin) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Public URL for a shared twin's GLB (no auth), loaded directly by the viewer. */
+export function sharedModelUrl(shareId: string): string {
+  return `${apiBase()}/v1/shared/${encodeURIComponent(shareId)}/model`;
+}
+
+/** The public share-page link to hand out (the new /t/:id route). */
+export function shareLink(shareId: string): string {
+  return `${window.location.origin}/t/${shareId}`;
 }
 
 /**

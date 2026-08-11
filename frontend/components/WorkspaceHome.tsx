@@ -38,6 +38,8 @@ import { useIdentity } from '../hooks/useIdentity';
 import { useAvatar } from '../hooks/useAvatar';
 import { OhmletAvatar } from './ohmlet/avatar/OhmletAvatar';
 import { useAuth } from '../hooks/useAuth';
+import { readAgeProfile } from './ohmlet/childmode/useAgeProfile';
+import { CHILD_MODE_ENABLED } from './ohmlet/childmode/ageModel';
 import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
 import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
@@ -221,6 +223,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   const { userId, isAdmin } = useIdentity();
   const { user } = useAuth();
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
+  // Child-safe (#94): a verified minor gets no community/social surfaces (no feed,
+  // no posting, and they never appear on the public leaderboard).
+  const childSafe = useMemo(() => CHILD_MODE_ENABLED && !!readAgeProfile(userId)?.isMinor, [userId]);
   const { plan, setPlan } = usePlan(userId);
   const { config: avatar } = useAvatar(userId);
 
@@ -274,7 +279,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
   const handleComplete = useCallback(
     (id: string, gained: number, level: number) => {
-      void reportXp(gained); // feed the weekly league (best-effort)
+      if (!childSafe) void reportXp(gained); // feed the weekly league (best-effort; not for minors)
       track('lesson_complete', { lesson_id: id, level, xp: gained });
       // First completion of a new calendar day extends/refreshes the streak.
       if (progress.lastActiveDate !== dayStr(0)) {
@@ -348,7 +353,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           </div>
 
           <nav className="flex flex-col gap-1">
-            {NAV.map((item) => {
+            {NAV.filter((item) => !childSafe || item.id !== 'community').map((item) => {
               const Icon = item.icon;
               const on = active === item.id;
               return (
@@ -443,7 +448,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           {active === 'interview' && <InterviewView onUpgrade={onUpgrade} onOpenLessons={() => setActive('path')} />}
           {active === 'simulator' && <SimulatorView />}
           {active === 'sandbox' && <SandboxView />}
-          {active === 'community' && <CommunityView currentUser={displayName} />}
+          {active === 'community' && !childSafe && <CommunityView currentUser={displayName} />}
           {active === 'achievements' && (
             <AchievementsView stats={{ xp, streak, builds: completed.size, units: unitsCompleted }} />
           )}
@@ -510,7 +515,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               {/* Ways to learn */}
               <h3 className="mt-9 text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Ways to learn today</h3>
               <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {WAYS.map((w) => {
+                {WAYS.filter((w) => !childSafe || w.id !== 'community').map((w) => {
                   const Icon = w.icon;
                   return (
                     <button key={w.id} onClick={() => setActive(w.id)} className={`${w.accent} group rounded-2xl border-2 border-ohmlet-ink p-4 text-left shadow-press-sm transition-transform hover:-translate-y-1`}>
@@ -587,7 +592,8 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                     </div>
                   </section>
 
-                  {/* League */}
+                  {/* League (hidden for minors: it is public + competitive) */}
+                  {!childSafe && (
                   <section className="flex items-center gap-3 rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
                     <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ohmlet-gold to-ohmlet-gold-deep text-ohmlet-ink">
                       <Trophy className="h-6 w-6" />
@@ -600,6 +606,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                       View <ArrowRight className="h-4 w-4" />
                     </button>
                   </section>
+                  )}
 
                   {/* Achievements */}
                   <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
