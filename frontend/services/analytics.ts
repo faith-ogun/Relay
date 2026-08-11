@@ -37,6 +37,11 @@ export type AnalyticsEvent =
   | 'simulator_open'
   | 'sketch_compile'
   | 'twin_generated'
+  // The 3D-twin share loop (#79): a learner publishes a twin, a visitor lands on
+  // the public page, and (the loop closing) that visitor clicks through to build.
+  | 'twin_shared'
+  | 'shared_twin_view'
+  | 'shared_twin_cta'
   | 'interview_start'
   | 'interview_complete'
   // Monetisation. The actual subscription cancel completes inside Stripe's

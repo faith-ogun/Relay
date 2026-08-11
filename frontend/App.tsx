@@ -29,6 +29,7 @@ const AchievementsPreview = lazyNamed(() => import('./components/ohmlet/views/Ac
 const PartsGallery = React.lazy(() => import('./components/ohmlet/sandbox/PartsGallery'));
 const UpgradeSuccess = lazyNamed(() => import('./components/UpgradeSuccess'), 'UpgradeSuccess');
 const AccountPage = lazyNamed(() => import('./components/AccountPage'), 'AccountPage');
+const SharedTwinPage = lazyNamed(() => import('./components/ohmlet/twin/SharedTwinPage'), 'SharedTwinPage');
 
 type AppRoute =
   | 'landing'
@@ -50,6 +51,7 @@ type AppRoute =
   | 'account'
   | 'ohmlet-app'
   | 'workspace'
+  | 'shared-twin'
   | 'notfound';
 
 const ROUTE_PATHS: Record<AppRoute, string> = {
@@ -72,6 +74,9 @@ const ROUTE_PATHS: Record<AppRoute, string> = {
   account: '/account',
   'ohmlet-app': '/ohmlet-app',
   workspace: '/workspace',
+  // Public shared-build pages are /t/:shareId; the bare path is only the base
+  // used by navigate(), which never targets this route directly.
+  'shared-twin': '/t',
   notfound: '/404',
 };
 
@@ -111,6 +116,8 @@ const resolveRoute = (pathname: string): AppRoute => {
   if (normalized === '/parts') return 'parts';
   if (normalized === '/account') return 'account';
   if (normalized === '/workspace') return 'workspace';
+  // Public shared build (#79) — no auth, the unguessable id is the access control.
+  if (/^\/t\/[^/]+$/.test(normalized)) return 'shared-twin';
 
   // Anything else is a real 404 (e.g. someone trying /free to be sneaky).
   return 'notfound';
@@ -119,6 +126,11 @@ const resolveRoute = (pathname: string): AppRoute => {
 const resolveBlogSlug = (pathname: string): string | null => {
   const match = normalizePath(pathname).match(/^\/blog\/(.+)$/);
   return match ? match[1] : null;
+};
+
+const resolveShareId = (pathname: string): string | null => {
+  const match = normalizePath(pathname).match(/^\/t\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]) : null;
 };
 
 const AuthSplash: React.FC = () => (
@@ -139,6 +151,7 @@ const PageSpinner: React.FC = () => (
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
+  const [shareId, setShareId] = useState<string | null>(() => resolveShareId(window.location.pathname));
   const { user, loading, isAdmin, signOut } = useAuth();
 
   const navigate = useCallback((nextRoute: AppRoute) => {
@@ -147,6 +160,7 @@ const App: React.FC = () => {
       window.history.pushState({}, '', nextPath);
     }
     setBlogSlug(null);
+    setShareId(null);
     setRoute(nextRoute);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
@@ -157,6 +171,7 @@ const App: React.FC = () => {
       window.history.pushState({}, '', nextPath);
     }
     setBlogSlug(slug);
+    setShareId(null);
     setRoute('blog');
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
@@ -171,6 +186,7 @@ const App: React.FC = () => {
     const onPopState = () => {
       setRoute(resolveRoute(window.location.pathname));
       setBlogSlug(resolveBlogSlug(window.location.pathname));
+      setShareId(resolveShareId(window.location.pathname));
       window.scrollTo({ top: 0, behavior: 'auto' });
     };
     window.addEventListener('popstate', onPopState);
@@ -206,6 +222,21 @@ const App: React.FC = () => {
   // pages render instantly; only the auth-sensitive routes show the splash).
   if (loading && (isProtected || isAuthRoute)) {
     return <AuthSplash />;
+  }
+
+  // ── Public shared build (#79) ──
+  // Fully public: no auth, no gate. It is the first thing many visitors ever see
+  // of Ohmlet, so it renders straight away and converts into signup.
+  if (route === 'shared-twin' && shareId) {
+    return (
+      <Suspense fallback={<AuthSplash />}>
+        <SharedTwinPage
+          shareId={shareId}
+          onStart={() => navigate(user ? 'ohmlet-app' : 'signup')}
+          onHome={backToLanding}
+        />
+      </Suspense>
+    );
   }
 
   // ── Auth onboarding ──
