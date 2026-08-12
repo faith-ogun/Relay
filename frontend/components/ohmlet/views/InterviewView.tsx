@@ -6,6 +6,7 @@ import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { usePlan } from '../../../hooks/usePlan';
 import { track } from '../../../services/analytics';
+import { liveBridgeWsUrl } from '../../../services/liveBridgeUrl';
 import {
   extractResume, fileToBase64, generateReport, getReport, listReports, InterviewError,
   type InterviewContext, type InterviewReport, type ReportListItem, type TranscriptTurn,
@@ -37,7 +38,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
   const { can } = usePlan(userId);
   const allowed = can('interview');
 
-  const wsUrl = useMemo(() => (import.meta.env.VITE_OHMLET_WS_URL || 'ws://localhost:8082').replace(/\/$/, ''), []);
+  const wsUrl = useMemo(() => liveBridgeWsUrl(), []);
   const sessionId = useRef(`intv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
 
   const [phase, setPhase] = useState<Phase>('setup');

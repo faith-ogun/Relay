@@ -11,14 +11,27 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 import obs
+import ratelimit
+from auth import uid_from_bearer
 from cors import install_cors
 from resilience import CircuitBreaker, CircuitOpenError, run_resilient
 
 app = FastAPI(title="Ohmlet Quiz Engine", version="0.1.0")
+
+
+# ── Auth + rate-limit guard ──
+def guard(request: Request, authorization: Optional[str] = Header(default=None)) -> str:
+    """Verify the Firebase token (derive UID server-side), bind it for logging,
+    and apply the per-identity REST rate limit. Every generation endpoint depends
+    on this: both call Vertex on our billing account, so neither may be public."""
+    uid = uid_from_bearer(authorization)
+    obs.set_uid(uid)
+    ratelimit.enforce_rest(request, uid)
+    return uid
 
 # ── Model routing (latency + lifecycle) ──
 # Drawing assessment and question generation are well within Flash's ability and
@@ -176,7 +189,7 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting."""
 
 
 @app.post("/generate", response_model=GenerateResponse)
-async def generate_questions(req: GenerateRequest):
+async def generate_questions(req: GenerateRequest, uid: str = Depends(guard)):
     """Generate personalized questions based on skill profile."""
     profile_dict = req.skill_profile.model_dump()
 
@@ -257,7 +270,7 @@ async def generate_questions(req: GenerateRequest):
 
 
 @app.post("/assess-drawing", response_model=AssessDrawingResponse)
-async def assess_drawing(req: AssessDrawingRequest):
+async def assess_drawing(req: AssessDrawingRequest, uid: str = Depends(guard)):
     """Assess a user's drawing/annotation using Cloud Vision."""
     client = _get_genai_client()
     if not client:

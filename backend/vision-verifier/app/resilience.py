@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from threading import Lock
-from typing import Callable, TypeVar
+from typing import Any, Callable, TypeVar
 
 logger = logging.getLogger("ohmlet.resilience")
 T = TypeVar("T")
@@ -68,6 +68,16 @@ class CircuitBreaker:
             if self._opened_at is None:
                 return "closed"
             return "half-open" if time.monotonic() - self._opened_at >= self.reset_timeout else "open"
+
+    def call(self, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+        """Run `fn(*args, **kwargs)` behind this breaker.
+
+        The ergonomic single-attempt form of `run_resilient`, for the common
+        `breaker.call(provider.generate, image)` shape. Raises CircuitOpenError
+        if the breaker is open; otherwise re-raises whatever fn raises, after
+        recording the failure.
+        """
+        return run_resilient(lambda: fn(*args, **kwargs), breaker=self)
 
 
 def run_resilient(fn: Callable[[], T], *, breaker: CircuitBreaker, retries: int = 0, backoff: float = 0.4) -> T:

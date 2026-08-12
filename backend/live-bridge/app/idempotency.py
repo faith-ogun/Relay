@@ -53,9 +53,13 @@ def claim_event(key: str) -> bool:
 
     try:
         return _claim(client.transaction())
-    except Exception as exc:  # on infra error, do not double-process
-        logger.warning("idempotency claim failed for %s: %s", key, exc)
-        return False
+    except Exception as exc:
+        # Fail LOUD, never silently "already handled". Returning False here would
+        # make the caller ack a Stripe event we never processed, and Stripe would
+        # not retry: the customer pays and is never upgraded. Raising makes the
+        # webhook 5xx so the delivery is retried.
+        logger.error("idempotency claim errored for %s: %s", key, exc)
+        raise
 
 
 def release_event(key: str) -> None:

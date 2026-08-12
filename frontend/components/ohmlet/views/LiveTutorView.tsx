@@ -40,6 +40,7 @@ import {
   type PartStatus,
 } from '../../../services/visionVerifier';
 import { reporterConfigured } from '../../../services/reporter';
+import { liveBridgeWsUrl } from '../../../services/liveBridgeUrl';
 import { TwinStudio } from '../twin/TwinStudio';
 
 /**
@@ -79,10 +80,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     [buildTitle],
   );
 
-  const wsUrl = useMemo(() => {
-    const raw = import.meta.env.VITE_OHMLET_WS_URL || 'ws://localhost:8082';
-    return raw.replace(/\/$/, '');
-  }, []);
+  const wsUrl = useMemo(() => liveBridgeWsUrl(), []);
   const { userId } = useIdentity();
   const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
   // Child-safe runtime (#94): a verified minor's live session keeps camera + mic OFF

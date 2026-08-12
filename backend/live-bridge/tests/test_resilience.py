@@ -67,3 +67,32 @@ def test_run_resilient_returns_on_success():
     cb = CircuitBreaker("t", fail_max=2, reset_timeout=60)
     assert run_resilient(lambda: 42, breaker=cb) == 42
     assert cb.state == "closed"
+
+
+# ── breaker.call() ──
+# Regression guard: three production call sites (the 3D-twin generator and both
+# interview endpoints) invoke `breaker.call(fn, *args)`. The method was missing
+# for months, so every one of those calls raised AttributeError, was swallowed
+# by a broad `except Exception`, and surfaced as a 502/503. The feature never
+# worked. These tests fail loudly if the method is ever dropped again.
+def test_breaker_call_exists_and_passes_through_args():
+    cb = CircuitBreaker("t", fail_max=2, reset_timeout=60)
+    assert hasattr(cb, "call"), "CircuitBreaker.call is used by reporter + interview_router"
+    assert cb.call(lambda a, b=0: a + b, 40, b=2) == 42
+    assert cb.state == "closed"
+
+
+def test_breaker_call_records_failures_and_short_circuits():
+    cb = CircuitBreaker("t", fail_max=2, reset_timeout=60)
+
+    def boom():
+        raise RuntimeError("boom")
+
+    for _ in range(2):
+        with pytest.raises(RuntimeError):
+            cb.call(boom)
+    assert cb.state == "open"
+
+    # Once open, further calls short-circuit instead of hitting the upstream.
+    with pytest.raises(CircuitOpenError):
+        cb.call(lambda: "should not run")

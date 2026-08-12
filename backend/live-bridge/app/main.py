@@ -300,6 +300,14 @@ async def websocket_endpoint(
             while True:
                 raw = await websocket.receive()
 
+                # Starlette RETURNS the disconnect frame rather than raising, so
+                # without this a clean hang-up falls through, the next receive()
+                # raises, and every normal close is logged as an ERROR (which
+                # buries real failures in the 5xx alerting).
+                if raw.get("type") == "websocket.disconnect":
+                    logger.info("WS client disconnected: %s", session_id)
+                    break
+
                 # Binary frame → audio PCM
                 if "bytes" in raw and raw["bytes"]:
                     audio_blob = types.Blob(

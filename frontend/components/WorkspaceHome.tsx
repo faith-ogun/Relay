@@ -30,9 +30,10 @@ import { InterviewView } from './ohmlet/views/InterviewView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
-import { reportXp } from '../services/community';
+import { reportXp, fetchLeaderboard, type Leaderboard } from '../services/community';
 import { track } from '../services/analytics';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
+import { ACHIEVEMENTS, isEarned } from './ohmlet/data/achievements';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
 import { useAvatar } from '../hooks/useAvatar';
@@ -106,8 +107,6 @@ const lessonAccentHex = (lessonId: string): string => {
   return ACCENT_HEX.gold;
 };
 
-const LEAGUE = 'Copper';
-const LEAGUE_RANK = 4;
 const GOAL_TARGET = 3;
 
 const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ className?: string }>; beta?: boolean }> = [
@@ -129,10 +128,6 @@ const WAYS: Array<{ id: ViewId; title: string; sub: string; icon: React.Componen
   { id: 'community', title: 'See the community', sub: 'Builds + challenges', icon: Users, accent: 'bg-[#fdece8]' },
 ];
 
-const ACHIEVEMENT_PREVIEW = [
-  { name: 'First Spark', desc: 'Completed your first build', icon: Zap, tint: 'bg-ohmlet-gold' },
-  { name: 'Consistent Builder', desc: '3-day streak', icon: Flame, tint: 'bg-ohmlet-red' },
-];
 
 /**
  * Gentle note shown when the learner returns from the Stripe Customer Portal
@@ -259,6 +254,34 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   const [running, setRunning] = useState<{ id: string; accent: string; level: number } | null>(null);
 
   const next = nextLesson(completed) ?? allLessons()[0];
+  // Real weekly standing (never a hardcoded rank). Null until it loads, and it
+  // stays null if the service is unreachable, so the card simply does not show
+  // rather than inventing a position.
+  const [league, setLeague] = useState<Leaderboard | null>(null);
+  useEffect(() => {
+    if (childSafe) return; // minors never appear on the public leaderboard
+    let alive = true;
+    fetchLeaderboard()
+      .then((lb) => alive && setLeague(lb))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [childSafe]);
+  // Real progress through the curriculum, not a decorative fraction.
+  const pathProgressPct = useMemo(() => {
+    const total = allLessons().length;
+    return total ? Math.round((completed.size / total) * 100) : 0;
+  }, [completed]);
+  // The two most recent achievements the learner has ACTUALLY earned. Empty for a
+  // new account, which is the honest state; never a sample of what they might get.
+  const earnedPreview = useMemo(
+    () =>
+      ACHIEVEMENTS.filter((a) =>
+        isEarned(a, { xp, streak, builds: completed.size, units: unitsCompleted }),
+      ).slice(0, 2),
+    [xp, streak, completed, unitsCompleted],
+  );
   const pathPreview = allLessons().slice(0, 4);
   const goalDone = Math.min(GOAL_TARGET, progress.lastActiveDate === dayStr(0) ? progress.completedToday : 0);
   const goalPct = Math.round((goalDone / GOAL_TARGET) * 100);
@@ -395,7 +418,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                 <OhmletAvatar config={avatar} size={40} ring />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
-                  <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan · {LEAGUE} League</p>
+                  <p className="text-xs font-bold text-ohmlet-ink-soft">{PLAN_META[plan].label} plan</p>
                 </div>
                 {onAccount && (
                   <button
@@ -460,7 +483,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Today</p>
-                  <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Welcome back, faith.</h1>
+                  <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Welcome back, {displayName}.</h1>
                 </div>
                 <div className="flex items-center gap-2">
                   <Stat icon={Flame} value={`${streak}`} label="streak" tint="text-ohmlet-red" />
@@ -483,7 +506,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                     <h2 className="mt-2 text-2xl font-black tracking-tight">{next.title}</h2>
                     <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">{next.summary}</p>
                     <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-ohmlet-line">
-                      <div className="h-full rounded-full" style={{ width: `${completed.size ? 45 : 15}%`, background: continueAccent }} />
+                      <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${pathProgressPct}%`, background: continueAccent }} />
                     </div>
                   </div>
                   <button
@@ -593,14 +616,20 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   </section>
 
                   {/* League (hidden for minors: it is public + competitive) */}
-                  {!childSafe && (
+                  {!childSafe && league && (
                   <section className="flex items-center gap-3 rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
                     <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ohmlet-gold to-ohmlet-gold-deep text-ohmlet-ink">
                       <Trophy className="h-6 w-6" />
                     </span>
                     <div>
-                      <p className="text-base font-black">{LEAGUE} League</p>
-                      <p className="text-xs font-bold text-ohmlet-ink-soft">Rank #{LEAGUE_RANK} this week</p>
+                      <p className="text-base font-black">
+                        {league.me.rank ? `Rank #${league.me.rank} this week` : 'This week'}
+                      </p>
+                      <p className="text-xs font-bold text-ohmlet-ink-soft">
+                        {league.me.xp > 0
+                          ? `${league.me.xp} XP earned`
+                          : 'Earn XP to join this week’s board'}
+                      </p>
                     </div>
                     <button onClick={() => setActive('community')} className="ml-auto inline-flex items-center gap-1 text-sm font-black text-ohmlet-blue-deep">
                       View <ArrowRight className="h-4 w-4" />
@@ -618,20 +647,23 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                       <button onClick={() => setActive('achievements')} className="text-sm font-black text-ohmlet-blue-deep">All</button>
                     </div>
                     <div className="mt-3 space-y-2">
-                      {ACHIEVEMENT_PREVIEW.map((a) => {
-                        const Icon = a.icon;
-                        return (
-                          <div key={a.name} className="flex items-center gap-3 rounded-xl border border-ohmlet-line p-2.5">
-                            <span className={`flex h-9 w-9 items-center justify-center rounded-xl border-2 border-ohmlet-ink text-ohmlet-ink ${a.tint}`}>
-                              <Icon className="h-4 w-4" />
+                      {earnedPreview.length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-ohmlet-line p-3 text-xs font-semibold text-ohmlet-ink-soft">
+                          Finish a lesson or a build to unlock your first one.
+                        </p>
+                      ) : (
+                        earnedPreview.map((a) => (
+                          <div key={a.id} className="flex items-center gap-3 rounded-xl border border-ohmlet-line p-2.5">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink">
+                              <Award className="h-4 w-4" />
                             </span>
                             <div>
-                              <p className="text-sm font-black leading-tight">{a.name}</p>
+                              <p className="text-sm font-black leading-tight">{a.title}</p>
                               <p className="text-xs font-semibold text-ohmlet-ink-soft">{a.desc}</p>
                             </div>
                           </div>
-                        );
-                      })}
+                        ))
+                      )}
                     </div>
                   </section>
                 </div>
