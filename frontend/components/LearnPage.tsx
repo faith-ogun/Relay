@@ -14,6 +14,8 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { CURRICULUM, allLessons, type CurriculumAccent } from './ohmlet/data/curriculum';
+
 type IconType = React.ComponentType<{ className?: string }>;
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
 
@@ -21,40 +23,17 @@ interface LearnPageProps {
   onNavigate: Nav;
 }
 
-const paths: Array<{ name: string; level: string; blurb: string; builds: string; accent: string; icon: IconType }> = [
-  {
-    name: 'First Light',
-    level: 'Beginner',
-    blurb: 'Your first powered circuit. Read a breadboard, place an LED and resistor, and learn why Ohm’s law keeps it alive.',
-    builds: '6 builds',
-    accent: 'bg-ohmlet-gold-soft',
-    icon: Lightbulb,
-  },
-  {
-    name: 'Sense the World',
-    level: 'Beginner → Intermediate',
-    blurb: 'Light, temperature, motion. Wire up sensors and learn to read analog signals you can actually trust.',
-    builds: '8 builds',
-    accent: 'bg-ohmlet-blue-soft',
-    icon: Thermometer,
-  },
-  {
-    name: 'Make It Move',
-    level: 'Intermediate',
-    blurb: 'Motors, servos, and relays. Drive real-world outputs safely and understand the current behind them.',
-    builds: '7 builds',
-    accent: 'bg-ohmlet-gold-soft',
-    icon: Radio,
-  },
-  {
-    name: 'Code Your Circuit',
-    level: 'Intermediate',
-    blurb: 'Bring it to life with Arduino. Digital and analog I/O, the serial monitor, and debugging your own sketch.',
-    builds: '9 builds',
-    accent: 'bg-ohmlet-blue-soft',
-    icon: Code2,
-  },
-];
+// The path below is rendered from the SHIPPED curriculum, so the unit names,
+// order and counts on this public page can never drift from what a learner
+// actually gets after paying.
+const TOTAL_LESSONS = allLessons().length;
+
+const UNIT_TINT: Record<CurriculumAccent, string> = {
+  gold: 'bg-ohmlet-gold-soft',
+  blue: 'bg-ohmlet-blue-soft',
+  green: 'bg-[#eef7e0]',
+  red: 'bg-[#fdece8]',
+};
 
 const topics: Array<{ title: string; icon: IconType; skills: string[] }> = [
   {
@@ -119,38 +98,35 @@ export const LearnPage: React.FC<LearnPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Build paths */}
+      {/* The learning path — the REAL curriculum units, in the order they unlock */}
       <section className="bg-ohmlet-cream px-6 py-20 md:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-2xl">
-            <h2 className="text-3xl font-black tracking-[-0.02em] text-ohmlet-ink md:text-5xl">Build paths</h2>
+            <h2 className="text-3xl font-black tracking-[-0.02em] text-ohmlet-ink md:text-5xl">The learning path</h2>
             <p className="mt-4 text-lg font-semibold text-ohmlet-ink-soft">
-              Guided sequences of real builds. Each one stacks on the last, so skills compound instead of scattering.
+              {CURRICULUM.length} units, {TOTAL_LESSONS} lessons, in the order they unlock. Each one stacks on the last,
+              so skills compound instead of scattering.
             </p>
           </div>
 
           <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {paths.map((path) => {
-              const Icon = path.icon;
-              return (
-                <article
-                  key={path.name}
-                  className={`${path.accent} group rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 shadow-press transition-transform hover:-translate-y-1`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-white text-ohmlet-ink">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <span className="rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
-                      {path.builds}
-                    </span>
-                  </div>
-                  <h3 className="mt-5 text-2xl font-black tracking-tight text-ohmlet-ink">{path.name}</h3>
-                  <p className="mt-1 text-sm font-extrabold uppercase tracking-wide text-ohmlet-ink-soft">{path.level}</p>
-                  <p className="mt-3 text-base font-semibold leading-relaxed text-ohmlet-ink-soft">{path.blurb}</p>
-                </article>
-              );
-            })}
+            {CURRICULUM.map((unit, i) => (
+              <article
+                key={unit.id}
+                className={`${UNIT_TINT[unit.accent] ?? 'bg-white'} group rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 shadow-press transition-transform hover:-translate-y-1`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-white text-lg font-black text-ohmlet-ink">
+                    {i + 1}
+                  </span>
+                  <span className="rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
+                    {unit.level}
+                  </span>
+                </div>
+                <h3 className="mt-5 text-2xl font-black tracking-tight text-ohmlet-ink">{unit.title}</h3>
+                <p className="mt-3 text-base font-semibold leading-relaxed text-ohmlet-ink-soft">{unit.subtitle}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
