@@ -6,7 +6,11 @@
 // These render only inside the child-mode flow, which is gated by
 // VITE_OHMLET_CHILD_MODE, so nothing here appears until child mode is switched on.
 
-export const PRIVACY_CONTACT = 'privacy@ohmlet.org';
+// Single source of truth with the legal pages: parents are told to write here to
+// exercise their child's data rights, so it must be a mailbox that exists.
+import { PRIVACY_EMAIL } from '../../legal/content';
+
+export const PRIVACY_CONTACT = PRIVACY_EMAIL;
 
 export interface NoticeSection {
   heading: string;

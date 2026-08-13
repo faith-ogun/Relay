@@ -15,16 +15,29 @@
 // The children's section is gated on the same flag as the feature it describes,
 // so the published policy cannot promise a gate that is switched off.
 //
-// STILL OUTSTANDING FOR FAITH: the controller identity. GDPR Art 13 requires the
-// controller's identity and contact details. Section 1 currently names Ohmlet
-// and gives an email but no legal entity or address. That must be completed
-// before taking real payments.
+// CONTROLLER IDENTITY (GDPR Art 13): section 1 names Ohmlet, states plainly that
+// it is an unincorporated service operated from Ireland, gives a monitored email
+// as the contact point, and undertakes to provide full controller details in
+// writing on request. That is a deliberate founder decision: no personal name and
+// no home address on a public, scrapeable page while Ohmlet is a sole trader.
+//
+// It is a defensible position for a small online service, NOT a settled one. A
+// regulator may expect a named controller and a postal address. Two things
+// close it properly, and both belong to the solicitor review in task #99:
+//   1. incorporating, after which the company name and registered address go here;
+//   2. or a registered/virtual address if launching before that.
+// Revisit if a user, a regulator, or a business partner asks for it.
 
 import { CHILD_MODE_ENABLED } from '../ohmlet/childmode/ageModel';
 
 export const POLICY_UPDATED = 'August 13, 2026';
 export const CONTACT_EMAIL = 'hello@ohmlet.org';
-export const PRIVACY_EMAIL = 'privacy@ohmlet.org';
+// Points at the single mailbox that actually exists. A dedicated privacy@ alias
+// was published across the policy before one had been created: an address nobody
+// reads is worse than no address, because data-rights requests sent there would
+// bounce or vanish, and answering them is a legal obligation with a deadline.
+// When a privacy@ alias exists, change this one line.
+export const PRIVACY_EMAIL = CONTACT_EMAIL;
 
 export type LegalBlock =
   | { type: 'p'; text: string }
@@ -107,11 +120,11 @@ export const PRIVACY: LegalDoc = {
       blocks: [
         {
           type: 'p',
-          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. For the purposes of data protection law, Ohmlet is the data controller for the personal data described in this policy. Ohmlet is operated from Ireland.',
+          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. For the purposes of data protection law, Ohmlet is the data controller for the personal data described in this policy. Ohmlet is an independent service operated from Ireland, and is not yet incorporated as a company.',
         },
         {
           type: 'p',
-          text: `You can reach us about anything in this policy at ${PRIVACY_EMAIL}.`,
+          text: `The fastest way to reach us about anything in this policy, including any request about your data, is ${PRIVACY_EMAIL}. We answer from a monitored mailbox and will respond within the time limits the law sets. If you need our full controller details in writing, for example to make a formal complaint or a legal request, email us and we will provide them.`,
         },
       ],
     },
