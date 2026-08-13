@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -430,8 +431,34 @@ async def websocket_endpoint(
 
     # ── Idle guardrail: stop billing for an abandoned session ───────────────────
 
+    # Seconds of THIS session already written to the shared monthly counter.
+    # Flushing as we go (rather than once at close) is what stops two concurrent
+    # sessions from each spending the full remaining balance.
+    charged_seconds = 0.0
+
+    def _settle_budget() -> float:
+        """Settle usage so far and re-read what is left across ALL sessions.
+
+        Runs in a worker thread: Firestore's client is synchronous and this loop
+        also carries live audio.
+        """
+        nonlocal charged_seconds
+        charged_seconds, remaining = entitlements.settle_live_session(
+            user_id, plan, meter.duration_seconds(), charged_seconds
+        )
+        return remaining
+
     async def watchdog() -> None:
+        nonlocal remaining_seconds
         timeout = float(os.getenv("OHMLET_IDLE_TIMEOUT_SEC", "180"))
+        # How often this session's consumption is flushed to the shared monthly
+        # counter and the shared total re-read. This is what makes CONCURRENT
+        # sessions see each other: the connect-time snapshot alone let every tab
+        # or device spend the full remaining balance independently, multiplying
+        # live-tutor spend past the plan's margin. The exploitable window is now
+        # one sync interval instead of a whole session.
+        sync_every = float(os.getenv("OHMLET_BUDGET_SYNC_SEC", "30"))
+        last_sync = time.monotonic()
         while True:
             await asyncio.sleep(10)
             # Idle: stop billing for an abandoned session.
@@ -444,8 +471,21 @@ async def websocket_endpoint(
                 except Exception:
                     pass
                 return
-            # Budget: cut the session off when it runs past the plan's daily cap.
-            if remaining_seconds != float("inf") and meter.duration_seconds() >= remaining_seconds:
+
+            # Periodically settle usage against the shared counter. Firestore is
+            # sync, and this coroutine shares the loop with live audio, so it runs
+            # in a worker thread.
+            if remaining_seconds != float("inf") and time.monotonic() - last_sync >= sync_every:
+                last_sync = time.monotonic()
+                try:
+                    remaining_seconds = await asyncio.to_thread(_settle_budget)
+                except Exception as exc:  # never kill a session over a metering blip
+                    logger.warning("budget sync failed for %s: %s", user_id, exc)
+
+            # Budget: cut the session off when this plan's allowance is spent.
+            # `remaining_seconds` is refreshed above, and `charged_seconds` is
+            # already reflected in it, so compare only the not-yet-charged part.
+            if remaining_seconds != float("inf") and meter.duration_seconds() - charged_seconds >= remaining_seconds:
                 logger.info(
                     "Live budget reached (%.0fs) for user=%s session=%s; closing",
                     remaining_seconds, user_id, session_id,
@@ -481,9 +521,12 @@ async def websocket_endpoint(
     finally:
         live_queue.close()
         persist_usage(meter)
-        # Charge this session's wall-clock time against today's live budget so the
-        # cap holds across reconnects and multiple sessions in a day.
-        entitlements.add_live_seconds(user_id, meter.duration_seconds())
+        # Charge only what the periodic sync has not already written, so a long
+        # session is never billed twice for the same seconds. The cap therefore
+        # holds across reconnects, across concurrent sessions, and across days.
+        charged_seconds, _ = entitlements.settle_live_session(
+            user_id, plan, meter.duration_seconds(), charged_seconds
+        )
         logger.info("WS session closed: %s", session_id)
 
 

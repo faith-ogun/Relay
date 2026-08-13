@@ -162,6 +162,26 @@ def live_seconds_remaining(user_id: str, plan: str) -> float:
     return max(0.0, cap_min * 60.0 - live_seconds_used_this_period(user_id))
 
 
+def settle_live_session(user_id: str, plan: str, elapsed_seconds: float, charged_seconds: float) -> tuple[float, float]:
+    """Bill the not-yet-charged part of a live session, then report what is left.
+
+    Live sessions settle repeatedly while running, not once at close, so that two
+    concurrent sessions (two tabs, phone + laptop) can SEE each other's spend. A
+    connect-time snapshot alone let each one spend the whole remaining balance
+    independently, multiplying live-tutor cost past the plan's margin.
+
+    `charged_seconds` is what this session has already written. Only the delta is
+    added, so repeated calls never double-bill the same seconds.
+
+    Returns (charged_seconds, remaining_seconds), both refreshed.
+    """
+    delta = elapsed_seconds - charged_seconds
+    if delta > 0:
+        add_live_seconds(user_id, delta)
+        charged_seconds = elapsed_seconds
+    return charged_seconds, live_seconds_remaining(user_id, plan)
+
+
 def add_live_seconds(user_id: str, seconds: float) -> None:
     """Atomically add consumed live seconds to this month's budget (best-effort)."""
     if seconds <= 0:

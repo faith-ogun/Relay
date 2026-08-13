@@ -185,11 +185,36 @@ deploy_reporter() {
 }
 
 deploy_frontend() {
+  if ! command -v firebase >/dev/null 2>&1; then
+    err "firebase CLI not found. Install it with: npm i -g firebase-tools"
+    err "Then authenticate once with: firebase login"
+    exit 1
+  fi
+
   info "Building frontend..."
   ( cd frontend && npm run build )
 
-  info "Frontend built successfully in frontend/dist/"
-  ok "Deploy frontend/dist/ to your hosting provider (e.g. Firebase Hosting, Cloud Storage, Vercel)"
+  # The build must not silently ship a localhost service URL. The live tutor
+  # once went to production pointing at ws://localhost:8082 because one VITE_*
+  # key was missing from frontend/.env, and nothing caught it.
+  # A port is required: our dev fallbacks are all localhost:PORT, and they only
+  # survive minification when the corresponding VITE_* var is MISSING (otherwise
+  # the `||` short-circuits and the literal is dropped). A bare "http://localhost"
+  # is the Firebase Auth SDK's own popup constant, not ours, so it must not trip.
+  if grep -rqE "(ws|http)s?://localhost:[0-9]+" frontend/dist/assets/*.js 2>/dev/null; then
+    err "Refusing to deploy: the built bundle still contains a localhost URL."
+    err "A VITE_* service URL is missing from frontend/.env — fix it and rebuild."
+    exit 1
+  fi
+  ok "Build clean (no localhost URLs in the bundle)"
+
+  # Hosting AND the Firestore rules. The rules are the only thing standing
+  # between the client and the database, so they ship with the app that relies
+  # on them rather than drifting out of sync in git.
+  info "Deploying hosting + Firestore rules to ${PROJECT_ID}..."
+  ( cd frontend && firebase deploy --only hosting,firestore:rules --project "$PROJECT_ID" )
+
+  ok "Frontend and Firestore rules deployed"
 }
 
 verify_services() {
