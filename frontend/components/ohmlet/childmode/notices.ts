@@ -43,7 +43,13 @@ export const PARENT_NOTICE: ParentNotice = {
         'The camera is off by default, and a session is voice-first. Your child chooses when it goes on.',
         'The tutor sticks to low-voltage battery and USB builds, and refuses anything with mains power, hot tools, or anything that could hurt, pointing back to you instead.',
         'The tutor never asks your child for personal details, and does not track or react to their mood.',
-        'Content safety is set to its strictest level, community features are restricted, and we keep a child\'s data for a shorter time.',
+        // Only claims that are actually implemented. The model-level safety
+        // settings were previously advertised here as "strictest", but the live
+        // audio API discards them (LiveConnectConfig carries no safety_settings),
+        // so the real, verifiable control is the child instruction set plus the
+        // community lockdown. Shorter retention for children is not built yet
+        // and must not be promised until it is.
+        'The tutor runs on a stricter child instruction set, and community features are switched off for their account.',
         'The tutor is clear that it is a computer helper, not a real person.',
       ],
     },

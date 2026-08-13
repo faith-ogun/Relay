@@ -4,10 +4,25 @@
 // table of contents, anchored sections, and consistent styling.
 //
 // IMPORTANT: these are well-researched, product-specific drafts, not a lawyer's
-// final word. Have them reviewed before launch, and fill in the registered
-// company details once the entity is incorporated.
+// final word. Have them reviewed before launch (task #99).
+//
+// THE RULE FOR THIS FILE: it may only describe what the code ACTUALLY does
+// today. A privacy policy is a binding representation, so a promise the product
+// does not keep is a legal exposure, not a nice-to-have. Two were found and
+// removed in the 2026-08 audit: it claimed session transcripts were stored for
+// the user to review (they are client-side React state and are never persisted)
+// and that the camera is off by default (a session auto-enables it for adults).
+// The children's section is gated on the same flag as the feature it describes,
+// so the published policy cannot promise a gate that is switched off.
+//
+// STILL OUTSTANDING FOR FAITH: the controller identity. GDPR Art 13 requires the
+// controller's identity and contact details. Section 1 currently names Ohmlet
+// and gives an email but no legal entity or address. That must be completed
+// before taking real payments.
 
-export const POLICY_UPDATED = 'July 11, 2026';
+import { CHILD_MODE_ENABLED } from '../ohmlet/childmode/ageModel';
+
+export const POLICY_UPDATED = 'August 13, 2026';
 export const CONTACT_EMAIL = 'hello@ohmlet.org';
 export const PRIVACY_EMAIL = 'privacy@ohmlet.org';
 
@@ -35,6 +50,50 @@ export interface LegalDoc {
 // PRIVACY POLICY
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Rendered ONLY when child mode is switched on, because it describes protections
+// that only exist behind that flag. Publishing it while the flag is off would
+// promise a parental-consent gate that is not running.
+const CHILDREN_SECTION_LIVE: LegalSection = {
+  id: 'children',
+    heading: '10. Children, and parental consent',
+    blocks: [
+      { type: 'p', text: 'Ohmlet is for learners of all ages, with extra care built in for younger builders. This section explains how we handle a child\'s data and how a parent or guardian gives consent. It applies wherever Ohmlet offers accounts to people below the age of digital consent.' },
+      { type: 'sub', text: 'Working out the right protections' },
+      { type: 'p', text: 'When you set up an account we ask for your birth year and country. We use these only to work out the age of digital consent that applies to you, which ranges from 13 to 16 depending on where you live. We ask for the birth year, never a full date of birth.' },
+      { type: 'sub', text: 'If a learner is below the age of digital consent' },
+      { type: 'p', text: 'A parent or guardian must set up the account and give verifiable parental consent before the live camera-and-voice tutor is switched on. Until that consent is verified, the live tutor stays off. For these accounts the parent or guardian is treated as the account holder and agrees to our Terms on the child\'s behalf.' },
+      { type: 'sub', text: 'How a parent gives consent' },
+      { type: 'p', text: 'We use a verifiable method that confirms an adult is giving consent. Today that is a small card verification handled by our payment processor (Stripe) that confirms an adult payment method through your bank\'s security check; it does not charge you. We may add further approved methods over time. We keep a record that consent was given, so we can honour a parent\'s rights and prove consent if asked.' },
+      { type: 'sub', text: 'What we collect from younger learners, and what we do not' },
+      {
+        type: 'list',
+        items: [
+          'We minimise what we collect: the birth year (not a full date of birth), the account basics needed to sign in, and learning progress.',
+          'The tutor is instructed never to ask a child for personal information (such as full name, address, school, or contact details), and to steer back to the build if a child shares any.',
+          'The camera is off by default. When it is on, we send periodic snapshots, never a stored video, and we do not keep raw video.',
+          'We do not use a child\'s data for advertising, we do not build advertising profiles, and the tutor does not infer or react to a child\'s emotions.',
+          'Community features are restricted for children\'s accounts.',
+        ],
+      },
+      { type: 'sub', text: 'Children in the United States (COPPA)' },
+      { type: 'p', text: 'For children under 13 in the United States, we comply with the Children\'s Online Privacy Protection Act (COPPA). We obtain verifiable parental consent before collecting personal information from a child, we collect only what is needed for the tutor to work, and a parent can review their child\'s information, ask us to delete it, and refuse to allow any further collection at any time.' },
+      { type: 'sub', text: 'Parent and guardian rights' },
+      { type: 'p', text: `A parent or guardian can, at any time, review the personal information we hold about their child, ask us to delete it, and withdraw consent, which switches the live tutor back off. Email ${PRIVACY_EMAIL} and we will help. If you believe a child has used Ohmlet without the consent this section requires, contact us and we will remove their information.` },
+    ],
+};
+
+// What the published policy says while child mode is OFF. It must describe the
+// product as it actually is: there is no age gate today, so we cannot claim one.
+const CHILDREN_SECTION_TODAY: LegalSection = {
+  id: 'children',
+  heading: '10. Children',
+  blocks: [
+    { type: 'p', text: 'Ohmlet is intended for adults and for learners at or above the age of digital consent where they live, which ranges from 13 to 16 across Europe. We do not currently offer accounts designed for children below that age.' },
+    { type: 'p', text: `We do not knowingly collect personal data from a child below the age of digital consent. If you are a parent or guardian and believe a child has created an account or given us personal data, contact us at ${PRIVACY_EMAIL} and we will delete it promptly.` },
+    { type: 'p', text: 'We are building a supervised experience for younger builders, with verifiable parental consent before the live camera-and-voice tutor can be used. When it is available this section will be replaced with the full detail, and we will tell existing users before anything changes.' },
+  ],
+};
+
 export const PRIVACY: LegalDoc = {
   slug: 'privacy',
   title: 'Privacy Policy',
@@ -48,7 +107,7 @@ export const PRIVACY: LegalDoc = {
       blocks: [
         {
           type: 'p',
-          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. For the purposes of data protection law, Ohmlet is the data controller for the personal data described in this policy. Ohmlet is operated from Ireland; our registered company details will be listed here once incorporation completes.',
+          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. For the purposes of data protection law, Ohmlet is the data controller for the personal data described in this policy. Ohmlet is operated from Ireland.',
         },
         {
           type: 'p',
@@ -65,7 +124,7 @@ export const PRIVACY: LegalDoc = {
         { type: 'sub', text: 'Learning data' },
         { type: 'p', text: 'Your progress through lessons and builds, XP, streaks, achievements, quiz answers, and anything you post to the community.' },
         { type: 'sub', text: 'Live session data (camera and microphone)' },
-        { type: 'p', text: 'When you start a live tutor session, we process audio from your microphone and periodic still images (snapshots) from your camera so the tutor can hear and see your workbench. We also keep a text transcript of the session so you can review it. See section 4 for exactly how this works.' },
+        { type: 'p', text: 'When you start a live tutor session, we process audio from your microphone and periodic still images (snapshots) from your camera so the tutor can hear and see your workbench. A live text transcript appears in your browser during the session so you can follow along; we do not store it, and it is gone when the session ends. See section 4 for exactly how this works.' },
         { type: 'sub', text: 'Payment information' },
         { type: 'p', text: 'If you subscribe, your payment is handled by Stripe. We receive confirmation of your plan and status, but we do not store your full card number; Stripe does that as a payment processor.' },
         { type: 'sub', text: 'Technical and usage data' },
@@ -97,10 +156,10 @@ export const PRIVACY: LegalDoc = {
         {
           type: 'list',
           items: [
-            'The camera is off by default. A session is voice-first; you choose when to turn the camera on, and you can turn it off or end the session at any time.',
+            'Nothing starts until you do. A live session only begins when you press Go live, and your browser asks your permission for the microphone and camera before either is used. When you start a session both are switched on, because the tutor needs to hear you and see your bench; you can mute the microphone or turn the camera off at any point during the session, or end it outright.',
             'When the camera is on, we send periodic still snapshots (not a continuous video recording) to power the tutor, alongside your audio.',
             'We do not store raw video. Snapshots are processed to give you guidance and are not retained as a video file.',
-            'We keep the text transcript of the conversation so you can review your session and so we can support you, and we keep usage metrics such as session length.',
+            'The conversation transcript is rendered live in your browser only. We do not send it to our servers and we do not store it, so it disappears when the session ends. We do keep usage metrics such as session length.',
             'Point the camera at your workbench, not at people or anything private. You are in control of what is in frame.',
           ],
         },
@@ -155,7 +214,8 @@ export const PRIVACY: LegalDoc = {
           type: 'list',
           items: [
             'Account and learning data: while your account is active, and for a short period after you delete it, to handle any final issues.',
-            'Session transcripts and usage metrics: for a limited period to provide your history and improve the service.',
+            'Live session transcripts: not retained at all. They exist only in your browser while the session is open.',
+            'Usage metrics (such as session length): for a limited period, to run the service and improve it.',
             'Payment and billing records: as long as tax and accounting law requires.',
           ],
         },
@@ -180,35 +240,7 @@ export const PRIVACY: LegalDoc = {
         { type: 'p', text: `To exercise any of these, email ${PRIVACY_EMAIL}. You can also export or delete your data from your account settings. If you believe we have mishandled your data, you have the right to complain to the Irish Data Protection Commission (dataprotection.ie), or your local supervisory authority.` },
       ],
     },
-    {
-      id: 'children',
-      heading: '10. Children, and parental consent',
-      blocks: [
-        { type: 'p', text: 'Ohmlet is for learners of all ages, with extra care built in for younger builders. This section explains how we handle a child\'s data and how a parent or guardian gives consent. It applies wherever Ohmlet offers accounts to people below the age of digital consent.' },
-        { type: 'sub', text: 'Working out the right protections' },
-        { type: 'p', text: 'When you set up an account we ask for your birth year and country. We use these only to work out the age of digital consent that applies to you, which ranges from 13 to 16 depending on where you live. We ask for the birth year, never a full date of birth.' },
-        { type: 'sub', text: 'If a learner is below the age of digital consent' },
-        { type: 'p', text: 'A parent or guardian must set up the account and give verifiable parental consent before the live camera-and-voice tutor is switched on. Until that consent is verified, the live tutor stays off. For these accounts the parent or guardian is treated as the account holder and agrees to our Terms on the child\'s behalf.' },
-        { type: 'sub', text: 'How a parent gives consent' },
-        { type: 'p', text: 'We use a verifiable method that confirms an adult is giving consent. Today that is a small card verification handled by our payment processor (Stripe) that confirms an adult payment method through your bank\'s security check; it does not charge you. We may add further approved methods over time. We keep a record that consent was given, so we can honour a parent\'s rights and prove consent if asked.' },
-        { type: 'sub', text: 'What we collect from younger learners, and what we do not' },
-        {
-          type: 'list',
-          items: [
-            'We minimise what we collect: the birth year (not a full date of birth), the account basics needed to sign in, and learning progress.',
-            'The tutor is instructed never to ask a child for personal information (such as full name, address, school, or contact details), and to steer back to the build if a child shares any.',
-            'The camera is off by default. When it is on, we send periodic snapshots, never a stored video, and we do not keep raw video.',
-            'We do not use a child\'s data for advertising, we do not build advertising profiles, and the tutor does not infer or react to a child\'s emotions.',
-            'Community features are restricted for children\'s accounts.',
-            'We keep a child\'s session data for a shorter period than an adult\'s.',
-          ],
-        },
-        { type: 'sub', text: 'Children in the United States (COPPA)' },
-        { type: 'p', text: 'For children under 13 in the United States, we comply with the Children\'s Online Privacy Protection Act (COPPA). We obtain verifiable parental consent before collecting personal information from a child, we collect only what is needed for the tutor to work, and a parent can review their child\'s information, ask us to delete it, and refuse to allow any further collection at any time.' },
-        { type: 'sub', text: 'Parent and guardian rights' },
-        { type: 'p', text: `A parent or guardian can, at any time, review the personal information we hold about their child, ask us to delete it, and withdraw consent, which switches the live tutor back off. Email ${PRIVACY_EMAIL} and we will help. If you believe a child has used Ohmlet without the consent this section requires, contact us and we will remove their information.` },
-      ],
-    },
+    CHILD_MODE_ENABLED ? CHILDREN_SECTION_LIVE : CHILDREN_SECTION_TODAY,
     {
       id: 'security',
       heading: '11. How we protect your data',
@@ -255,8 +287,17 @@ export const TERMS: LegalDoc = {
       id: 'eligibility',
       heading: '2. Eligibility and age',
       blocks: [
-        { type: 'p', text: 'Ohmlet is for learners of all ages. If you are at or above the age of digital consent in your country, which is between 13 and 16 depending on where you live, you can hold your own account.' },
-        { type: 'p', text: 'If you are below that age, a parent or guardian must set up the account for you, give verifiable consent, and agree to these terms as the contracting party on your behalf. They are responsible for supervising your use of Ohmlet. The live camera-and-voice tutor stays switched off until that consent is verified. How we ask for and verify a parent\'s consent, and the extra protections that apply to a child\'s account, are described in our Privacy Policy.' },
+        // Mirrors the Privacy Policy: only assert the parental-consent route when
+        // the feature that implements it is switched on.
+        ...(CHILD_MODE_ENABLED
+          ? [
+              { type: 'p', text: 'Ohmlet is for learners of all ages. If you are at or above the age of digital consent in your country, which is between 13 and 16 depending on where you live, you can hold your own account.' } as LegalBlock,
+              { type: 'p', text: 'If you are below that age, a parent or guardian must set up the account for you, give verifiable consent, and agree to these terms as the contracting party on your behalf. They are responsible for supervising your use of Ohmlet. The live camera-and-voice tutor stays switched off until that consent is verified. How we ask for and verify a parent\'s consent, and the extra protections that apply to a child\'s account, are described in our Privacy Policy.' } as LegalBlock,
+            ]
+          : [
+              { type: 'p', text: 'You must be at or above the age of digital consent in your country, which is between 13 and 16 depending on where you live, to hold an Ohmlet account. Accounts designed for younger builders, with verifiable parental consent, are not available yet.' } as LegalBlock,
+              { type: 'p', text: 'To buy a subscription you must be 18 or over, or have a parent or guardian make the purchase for you.' } as LegalBlock,
+            ]),
         { type: 'p', text: 'Working with real electronics may need adult help whatever your age; please read the safety section (section 9).' },
       ],
     },
