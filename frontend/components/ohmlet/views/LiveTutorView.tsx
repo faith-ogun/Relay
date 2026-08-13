@@ -41,6 +41,7 @@ import {
 } from '../../../services/visionVerifier';
 import { reporterConfigured } from '../../../services/reporter';
 import { liveBridgeWsUrl } from '../../../services/liveBridgeUrl';
+import { recordMetric } from '../../../services/achievementEvents';
 import { readLocal, userKey, writeLocal } from '../../../services/localState';
 import { TwinStudio } from '../twin/TwinStudio';
 
@@ -162,6 +163,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   const sessionStartRef = useRef<number | null>(null);
   const startSession = () => {
     track('live_session_start');
+    recordMetric('liveSessions');
     sessionStartRef.current = Date.now();
     connect();
     // Child safety: never auto-open a minor's camera or mic. They (with a grown-up)

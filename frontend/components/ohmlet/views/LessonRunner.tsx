@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { recordMetric } from '../../../services/achievementEvents';
 import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
@@ -243,7 +244,14 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setChecked(true);
     ok ? playCorrect() : playWrong();
     if (!ok) setHearts((h) => Math.max(0, h - 1));
+    // A drawing the grader accepted. Counted once per correct grade, and never
+    // in preview (the author console renders lessons without a real learner).
+    if (ok && !preview) recordMetric('drawings');
   };
+
+  // Tracks whether ANY graded answer came back wrong during this run, which is
+  // what makes a completion "perfect".
+  const anyWrongRef = useRef(false);
 
   // An interactive teach step (with hotspots) gates Continue until every part is explored.
   const teachHotspots = step?.type === 'teach' ? step.hotspots : undefined;
@@ -260,6 +268,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     let nextQueue = queue;
     if (willRequeue) {
       // Came up wrong: it returns at the end of the run until cleared.
+      anyWrongRef.current = true;
       nextQueue = [...queue, idx];
     } else {
       // Teach seen, or graded answer cleared: this step is done for good.
@@ -268,6 +277,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     if (pos + 1 >= nextQueue.length) {
       setDone(true);
       playComplete();
+      if (!preview && !anyWrongRef.current) recordMetric('perfect');
       onComplete(lessonId, earnedXp, level);
       return;
     }

@@ -44,8 +44,11 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
   const [persistError, setPersistError] = useState<string | null>(null);
   const hydratedRef = useRef(false);
 
-  const updateState = useCallback((patch: Partial<T>) => {
-    setState((prev) => mergeState(prev, patch));
+  // Accepts a patch, or an updater derived from the latest state. The updater
+  // form matters for counters: two increments dispatched in the same tick would
+  // otherwise both read the same stale value and one would be lost.
+  const updateState = useCallback((patch: Partial<T> | ((prev: T) => Partial<T>)) => {
+    setState((prev) => mergeState(prev, typeof patch === 'function' ? patch(prev) : patch));
   }, []);
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import {
   type Twin,
 } from '../../../services/reporter';
 import { track } from '../../../services/analytics';
+import { recordMetric } from '../../../services/achievementEvents';
 import { useDialog } from '../../../hooks/useDialog';
 
 // Three.js viewer is heavy — load it only when a twin is ready to show.
@@ -62,6 +63,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
       setModelUrl(url);
       setPhase('ready');
       track('twin_generated', { build_id: buildId });
+      recordMetric('twins');
     } catch (e) {
       const err = e as ReporterError;
       if (err.status === 402) {

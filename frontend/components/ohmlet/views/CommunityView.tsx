@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Award, Ban, Bug, Flag, Flame, Heart, Loader2, MessageCircle, MoreHorizontal, Radar, Send, Share2, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
 import { AVATAR_COLORS } from '../data/leaderboard';
+import { recordMetric } from '../../../services/achievementEvents';
 import {
   addComment,
   createPost,
@@ -92,6 +93,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
     if (!title && !body) return;
     setPosting(true);
     const created = await createPost('build', title, body);
+    if (created) recordMetric('posts');
     setPosting(false);
     if (created) {
       setPosts((prev) => [created, ...(prev ?? [])]);
@@ -126,6 +128,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
     if (!text) return;
     setDrafts((prev) => ({ ...prev, [id]: '' }));
     const created = await addComment(id, text);
+    if (created) recordMetric('comments');
     if (created) {
       setThreads((prev) => ({ ...prev, [id]: [...(prev[id] || []), created] }));
       setPosts((prev) => (prev ?? []).map((p) => (p.id === id ? { ...p, comments: p.comments + 1 } : p)));
@@ -146,6 +149,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
       prev.map((c) => (c.id === target.id ? { ...c, joined: true, participantCount: c.participantCount + 1 } : c)),
     );
     const res = await joinChallenge(target.id);
+    if (res?.joined) recordMetric('challenges');
     if (res) {
       setChallenges((prev) =>
         prev.map((c) => (c.id === target.id ? { ...c, joined: res.joined, participantCount: res.participantCount } : c)),

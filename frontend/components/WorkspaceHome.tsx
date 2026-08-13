@@ -42,6 +42,7 @@ import { useAuth } from '../hooks/useAuth';
 import { readAgeProfile } from './ohmlet/childmode/useAgeProfile';
 import { CHILD_MODE_ENABLED } from './ohmlet/childmode/ageModel';
 import { useOhmletUserState } from '../hooks/useOhmletUserState';
+import { useAchievementMetrics } from '../hooks/useAchievementMetrics';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
 import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
 
@@ -257,17 +258,23 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   // Real weekly standing (never a hardcoded rank). Null until it loads, and it
   // stays null if the service is unreachable, so the card simply does not show
   // rather than inventing a position.
+  // Counters for the achievements that xp/streak/builds/units do not cover.
+  const { metrics, creditLeagueWin } = useAchievementMetrics(userId);
   const [league, setLeague] = useState<Leaderboard | null>(null);
   useEffect(() => {
     if (childSafe) return; // minors never appear on the public leaderboard
     let alive = true;
     fetchLeaderboard()
-      .then((lb) => alive && setLeague(lb))
+      .then((lb) => {
+        if (!alive || !lb) return;
+        setLeague(lb);
+        creditLeagueWin(lb.week, lb.me.rank);
+      })
       .catch(() => undefined);
     return () => {
       alive = false;
     };
-  }, [childSafe]);
+  }, [childSafe, creditLeagueWin]);
   // Real progress through the curriculum, not a decorative fraction.
   const pathProgressPct = useMemo(() => {
     const total = allLessons().length;
@@ -473,7 +480,27 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           {active === 'sandbox' && <SandboxView />}
           {active === 'community' && !childSafe && <CommunityView currentUser={displayName} />}
           {active === 'achievements' && (
-            <AchievementsView stats={{ xp, streak, builds: completed.size, units: unitsCompleted }} />
+            <AchievementsView
+              stats={{
+                xp,
+                streak,
+                builds: completed.size,
+                units: unitsCompleted,
+                liveSessions: metrics.liveSessions,
+                drawings: metrics.drawings,
+                perfect: metrics.perfect,
+                twins: metrics.twins,
+                posts: metrics.posts,
+                comments: metrics.comments,
+                challenges: metrics.challenges,
+                leagueWins: metrics.leagueWins,
+                // 'likes' (likes RECEIVED on your posts) is deliberately absent.
+                // It is not an event this client ever observes, and summing it
+                // from the feed would depend on the author uid that the feed is
+                // due to stop exposing for privacy reasons. It needs a small
+                // server endpoint (a per-user community stat), not a guess.
+              }}
+            />
           )}
           {active === 'draw' && <SandboxView />}
 
