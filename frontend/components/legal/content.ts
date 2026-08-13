@@ -15,15 +15,16 @@
 // The children's section is gated on the same flag as the feature it describes,
 // so the published policy cannot promise a gate that is switched off.
 //
-// CONTROLLER IDENTITY (GDPR Art 13): section 1 names Ohmlet, states plainly that
-// it is an unincorporated service operated from Ireland, gives a monitored email
-// as the contact point, and undertakes to provide full controller details in
-// writing on request. That is a deliberate founder decision: no personal name and
-// no home address on a public, scrapeable page while Ohmlet is a sole trader.
+// CONTROLLER IDENTITY (GDPR Art 13): section 1 NAMES the controller (Faith
+// Ogundimu, trading as Ohmlet, a sole trader in Ireland), states plainly that
+// Ohmlet is not yet incorporated, gives a monitored email as the contact point,
+// and undertakes to provide full controller details in writing on request.
 //
-// It is a defensible position for a small online service, NOT a settled one. A
-// regulator may expect a named controller and a postal address. Two things
-// close it properly, and both belong to the solicitor review in task #99:
+// A postal address is deliberately NOT published: a sole trader's address is a
+// home address, and a public page is scraped and archived, so that is a personal
+// safety decision rather than a compliance oversight. Naming the controller is
+// the part that actually matters for identifying who holds the data, and it is
+// done. Two things close the remainder, both on the solicitor review (task #99):
 //   1. incorporating, after which the company name and registered address go here;
 //   2. or a registered/virtual address if launching before that.
 // Revisit if a user, a regulator, or a business partner asks for it.
@@ -120,7 +121,7 @@ export const PRIVACY: LegalDoc = {
       blocks: [
         {
           type: 'p',
-          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. For the purposes of data protection law, Ohmlet is the data controller for the personal data described in this policy. Ohmlet is an independent service operated from Ireland, and is not yet incorporated as a company.',
+          text: 'Ohmlet ("we", "us", "our") provides a live, voice and camera AI tutor for learning electronics by building. Ohmlet is operated from Ireland by Faith Ogundimu as a sole trader, and is not yet incorporated as a company. For the purposes of data protection law, Faith Ogundimu, trading as Ohmlet, is the data controller for the personal data described in this policy.',
         },
         {
           type: 'p',
