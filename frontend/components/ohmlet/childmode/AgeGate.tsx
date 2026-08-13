@@ -21,6 +21,10 @@ export interface AgeGateResult {
 }
 
 interface AgeGateProps {
+  /** The signed-in user this decision belongs to. Answers are stored per user,
+   *  never per device: a shared family or classroom machine must not hand one
+   *  account's age answer to the next person who signs up. */
+  userId: string;
   onResolved: (result: AgeGateResult) => void;
 }
 
@@ -42,7 +46,7 @@ const COUNTRIES: Array<{ code: string; label: string }> = [
   { code: 'XX', label: 'Somewhere else' },
 ];
 
-export const AgeGate: React.FC<AgeGateProps> = ({ onResolved }) => {
+export const AgeGate: React.FC<AgeGateProps> = ({ userId, onResolved }) => {
   const resolvedRef = useRef(false);
   const [birthYear, setBirthYear] = useState<number | ''>('');
   const [country, setCountry] = useState<string>('');
@@ -53,10 +57,11 @@ export const AgeGate: React.FC<AgeGateProps> = ({ onResolved }) => {
     onResolved(result);
   };
 
-  // Answer-once: if this device already answered, honour that decision rather
-  // than re-prompting (a rejected minor must not retry a passing date).
+  // Answer-once: if THIS USER already answered on this device, honour that
+  // decision rather than re-prompting (a rejected minor must not retry a
+  // passing date).
   useEffect(() => {
-    const prior = readAgeGateDecision();
+    const prior = readAgeGateDecision(userId);
     if (prior) {
       resolve({
         birthYear: prior.birthYear,
@@ -65,7 +70,7 @@ export const AgeGate: React.FC<AgeGateProps> = ({ onResolved }) => {
         assessment: assessAge(prior.birthYear, prior.country),
       });
     }
-  }, []); // run once on mount
+  }, [userId]); // re-checked if the signed-in user changes
 
   const years = useMemo(() => {
     const now = new Date().getUTCFullYear();
@@ -79,7 +84,7 @@ export const AgeGate: React.FC<AgeGateProps> = ({ onResolved }) => {
     const by = Number(birthYear);
     const assessment = assessAge(by, country);
     const status = initialStatusFor(assessment);
-    writeAgeGateDecision({ birthYear: by, country, decidedAt: new Date().toISOString(), ageStatus: status });
+    writeAgeGateDecision(userId, { birthYear: by, country, decidedAt: new Date().toISOString(), ageStatus: status });
     resolve({ birthYear: by, country, status, assessment });
   };
 

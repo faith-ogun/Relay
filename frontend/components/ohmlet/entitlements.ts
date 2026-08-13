@@ -33,7 +33,7 @@ export interface PlanMeta {
 export const PLAN_META: Record<Plan, PlanMeta> = {
   free: { id: 'free', label: 'Free', priceMonthly: null, blurb: 'Learn the fundamentals and try a live session.' },
   pro: { id: 'pro', label: 'Pro', priceMonthly: 12, blurb: 'Unlimited learning and real bench time.' },
-  max: { id: 'max', label: 'max', priceMonthly: 29, blurb: 'Everything in Pro, plus Interview Mode.' },
+  max: { id: 'max', label: 'Max', priceMonthly: 29, blurb: 'Everything in Pro, plus Interview Mode.' },
 };
 
 // Which features each plan unlocks. Plans are additive (pro = free + extra).

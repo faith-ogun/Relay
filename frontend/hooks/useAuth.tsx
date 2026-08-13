@@ -16,11 +16,13 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
+  getAdditionalUserInfo,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
+import { clearUserState } from '../services/localState';
 
 const ADMIN_EMAILS = (
   (import.meta.env.VITE_OHMLET_ADMIN_EMAILS as string | undefined) ||
@@ -65,7 +67,9 @@ export interface AuthValue {
   isAdmin: boolean;
   signInEmail: (email: string, password: string) => Promise<void>;
   signUpEmail: (name: string, email: string, password: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
+  /** Resolves true when this popup created a brand-new account, so the caller
+   *  can route them through onboarding instead of straight into the app. */
+  signInGoogle: () => Promise<boolean>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -95,7 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInGoogle = useCallback(async () => {
-    await signInWithPopup(auth, googleProvider);
+    // The credential carries whether this is a first-ever sign-in. Discarding it
+    // meant every Google signup was treated as a returning login, so new users
+    // were dropped straight into the workspace and never saw onboarding.
+    const cred = await signInWithPopup(auth, googleProvider);
+    return getAdditionalUserInfo(cred)?.isNewUser === true;
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
@@ -103,7 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = useCallback(async () => {
+    // Capture the uid BEFORE the sign-out, then clear anything this device
+    // remembers about them. Ohmlet is used on shared machines, so leaving the
+    // age answer, plan, progress or safety acknowledgement behind would carry
+    // one person's state into the next person's session.
+    const uid = auth.currentUser?.uid ?? null;
     await firebaseSignOut(auth);
+    clearUserState(uid);
   }, []);
 
   const value = useMemo<AuthValue>(

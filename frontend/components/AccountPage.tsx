@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Download, CreditCard, Pencil, ShieldCheck, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useIdentity } from '../hooks/useIdentity';
+import { clearUserState } from '../services/localState';
 import { usePlan } from '../hooks/usePlan';
 import { useAvatar } from '../hooks/useAvatar';
 import { PLAN_META } from './ohmlet/entitlements';
@@ -59,6 +60,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
       setDeleteError('We could not delete your account. Please contact hello@ohmlet.org.');
       return;
     }
+    // The page promises this deletes their personal data. signOut() clears local
+    // state too, but it is caught below, so clear explicitly first: a failed
+    // sign-out must not leave their birth year and progress on the device.
+    clearUserState(userId);
     await signOut().catch(() => {});
     window.location.assign('/');
   };

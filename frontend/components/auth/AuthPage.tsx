@@ -76,9 +76,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
     setError(null);
     setBusy('google');
     try {
-      await signInGoogle();
-      track('login', { method: 'google' });
-      onAuthed(false);
+      const isNewUser = await signInGoogle();
+      track(isNewUser ? 'sign_up' : 'login', { method: 'google' });
+      onAuthed(isNewUser);
     } catch (err) {
       const msg = authErrorMessage(err);
       // A cancelled popup is not an error worth shouting about.

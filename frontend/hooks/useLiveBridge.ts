@@ -117,6 +117,10 @@ export function useLiveBridge({
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const camIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // In-flight guards: a getUserMedia prompt can stay open for seconds, and the
+  // toggle buttons remain clickable the whole time.
+  const micBusyRef = useRef(false);
+  const camBusyRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null!);
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   const playbackCtxRef = useRef<AudioContext | null>(null);
@@ -335,22 +339,28 @@ export function useLiveBridge({
   // ── Mic toggle ──
 
   const toggleMic = useCallback(async () => {
-    if (micOn) {
-      // Stop mic
-      processorRef.current?.disconnect();
-      audioContextRef.current?.close();
-      micStreamRef.current?.getTracks().forEach((t) => t.stop());
-      micStreamRef.current = null;
-      audioContextRef.current = null;
-      processorRef.current = null;
-      setMicOn(false);
-      return;
-    }
-
+    // Same in-flight guard as the camera: `micOn` flips only after the prompt
+    // resolves, so a double tap would otherwise orphan the first mic stream and
+    // leave the microphone open with nothing holding a reference to it.
+    if (micBusyRef.current) return;
+    micBusyRef.current = true;
     try {
+      if (micOn) {
+        // Stop mic
+        processorRef.current?.disconnect();
+        audioContextRef.current?.close();
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+        audioContextRef.current = null;
+        processorRef.current = null;
+        setMicOn(false);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
       });
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
       micStreamRef.current = stream;
 
       const ctx = new AudioContext({ sampleRate: stream.getAudioTracks()[0].getSettings().sampleRate || 48000 });
@@ -372,7 +382,11 @@ export function useLiveBridge({
       processor.connect(ctx.destination);
       setMicOn(true);
     } catch (err) {
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
       pushTranscript('system', 'Microphone access denied or unavailable.');
+    } finally {
+      micBusyRef.current = false;
     }
   }, [micOn, pushTranscript]);
 
@@ -425,6 +439,10 @@ export function useLiveBridge({
         facingMode: { ideal: mode },
       },
     });
+    // Never leak a stream we are about to replace: whatever is in the ref loses
+    // its only reference here, so if its tracks are not stopped the OS camera
+    // light stays on with nothing able to turn it off.
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
     camStreamRef.current = stream;
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -434,26 +452,37 @@ export function useLiveBridge({
   }, []);
 
   const toggleCam = useCallback(async () => {
-    if (camOn) {
-      if (camIntervalRef.current) clearInterval(camIntervalRef.current);
-      camStreamRef.current?.getTracks().forEach((t) => t.stop());
-      camStreamRef.current = null;
-      setCamOn(false);
-      return;
-    }
-
+    // `camOn` only flips AFTER getUserMedia resolves, so without this guard a
+    // second tap while the permission prompt is open starts a second stream.
+    // The second one overwrote the ref and the interval id, so the first kept
+    // the camera live and kept uploading frames after the user turned it off.
+    if (camBusyRef.current) return;
+    camBusyRef.current = true;
     try {
+      if (camOn) {
+        if (camIntervalRef.current) clearInterval(camIntervalRef.current);
+        camIntervalRef.current = null;
+        camStreamRef.current?.getTracks().forEach((t) => t.stop());
+        camStreamRef.current = null;
+        setCamOn(false);
+        return;
+      }
+
       await startCameraStream(facingRef.current);
 
       // Snapshot vision: a slow heartbeat keeps the tutor loosely aware while the
       // preview stays full framerate. visionIntervalMs = 0 disables the heartbeat.
-      if (visionIntervalMs > 0) {
-        camIntervalRef.current = setInterval(sendFrame, visionIntervalMs);
-      }
+      if (camIntervalRef.current) clearInterval(camIntervalRef.current);
+      camIntervalRef.current = visionIntervalMs > 0 ? setInterval(sendFrame, visionIntervalMs) : null;
 
       setCamOn(true);
     } catch {
+      // Leave nothing half-open if the grant failed or was revoked mid-flight.
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      camStreamRef.current = null;
       pushTranscript('system', 'Camera access denied or unavailable.');
+    } finally {
+      camBusyRef.current = false;
     }
   }, [camOn, pushTranscript, startCameraStream, sendFrame, visionIntervalMs]);
 

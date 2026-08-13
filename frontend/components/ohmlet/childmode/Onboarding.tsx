@@ -65,7 +65,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onDone }) => {
   }
 
   if (!ageProfile) {
-    return <AgeGate onResolved={handleAgeResolved} />;
+    return <AgeGate userId={userId} onResolved={handleAgeResolved} />;
   }
 
   if (ageProfile.isMinor && ageProfile.ageStatus !== 'minor_consented') {

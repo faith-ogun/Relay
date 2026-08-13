@@ -1,3 +1,5 @@
+import { readLocal, userKey, writeLocal } from '../../../services/localState';
+
 // ── Child mode: age + parental-consent domain model (task #94) ──
 //
 // Foundation for compliant minors' access. Full design + citations:
@@ -143,7 +145,13 @@ export function buildAgeProfile(birthYear: number, country: string): AgeProfile 
 // A rejected user must not be able to immediately re-enter a passing date. We
 // persist the decision locally as friction; the SERVER flag (custom claim /
 // Firestore) is the real gate. FTC + ICO both endorse this pattern.
-const GATE_KEY = 'ohmlet.ageGate.v1';
+// Keyed PER USER, never per device. Ohmlet is explicitly used on shared family
+// and classroom machines, and a device-global key meant the next person to sign
+// up silently inherited the previous person's answer: a child could be handed an
+// adult's birth year (unlocking the front camera, the community and self-
+// purchase), or an adult could inherit a child's and be trapped at the parental
+// consent screen. The SERVER claim is still the real gate; this is friction.
+const gateKey = (uid: string | null | undefined) => userKey('ageGate.v1', uid);
 
 export interface AgeGateDecision {
   birthYear: number;
@@ -152,19 +160,16 @@ export interface AgeGateDecision {
   ageStatus: AgeStatus;
 }
 
-export function readAgeGateDecision(): AgeGateDecision | null {
+export function readAgeGateDecision(uid: string | null | undefined): AgeGateDecision | null {
+  const raw = readLocal(gateKey(uid));
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(GATE_KEY);
-    return raw ? (JSON.parse(raw) as AgeGateDecision) : null;
+    return JSON.parse(raw) as AgeGateDecision;
   } catch {
     return null;
   }
 }
 
-export function writeAgeGateDecision(decision: AgeGateDecision): void {
-  try {
-    localStorage.setItem(GATE_KEY, JSON.stringify(decision));
-  } catch {
-    /* private mode / quota: the server flag still governs */
-  }
+export function writeAgeGateDecision(uid: string | null | undefined, decision: AgeGateDecision): void {
+  writeLocal(gateKey(uid), JSON.stringify(decision));
 }

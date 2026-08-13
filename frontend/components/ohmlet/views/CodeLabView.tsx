@@ -59,7 +59,17 @@ export const CodeLabView: React.FC = () => {
   useEffect(() => { potRef.current = pot; }, [pot]);
 
   const stop = () => { cancelAnimationFrame(rafRef.current); runnerRef.current = null; setStatus((s) => (s === 'running' ? 'idle' : s)); setLed13(false); setBright9(0); };
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  // Mounted flag: a compile can still be in flight when the user leaves the tab.
+  // Cancelling only the CURRENT rAF is not enough, because the awaited compile
+  // then starts a fresh loop that nothing can reach (the Stop button is gone and
+  // the loop only exits when runnerRef is null), leaving a 16MHz emulator and
+  // five setState calls per frame running on a dead component for the session.
+  const aliveRef = useRef(true);
+  useEffect(() => () => {
+    aliveRef.current = false;
+    cancelAnimationFrame(rafRef.current);
+    runnerRef.current = null;
+  }, []);
 
   const run = async () => {
     if (status === 'running') { stop(); return; }
@@ -67,6 +77,7 @@ export const CodeLabView: React.FC = () => {
     setStatus('compiling'); setErrors([]); setMessage(''); setSerial('');
     try {
       const res = await compileSketch(code);
+      if (!aliveRef.current) return; // left the tab mid-compile: never start the loop
       if (!res.ok || !res.hex) { setStatus('error'); setErrors(res.errors || []); setMessage(res.errors?.length ? '' : 'Compile failed.'); return; }
       const runner = new AVRRunner(res.hex);
       runnerRef.current = runner;
@@ -88,6 +99,7 @@ export const CodeLabView: React.FC = () => {
       };
       rafRef.current = requestAnimationFrame(loop);
     } catch (e) {
+      if (!aliveRef.current) return; // no state updates on an unmounted component
       setStatus('error');
       setMessage(e instanceof CompilerError ? e.message : 'Something went wrong compiling your sketch.');
     }

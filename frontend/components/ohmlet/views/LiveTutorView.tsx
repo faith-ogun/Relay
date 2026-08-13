@@ -41,6 +41,7 @@ import {
 } from '../../../services/visionVerifier';
 import { reporterConfigured } from '../../../services/reporter';
 import { liveBridgeWsUrl } from '../../../services/liveBridgeUrl';
+import { readLocal, userKey, writeLocal } from '../../../services/localState';
 import { TwinStudio } from '../twin/TwinStudio';
 
 /**
@@ -173,7 +174,10 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // Show the AI safety acknowledgement once (#98), then start the session.
   const goLive = () => {
     try {
-      if (!localStorage.getItem('ohmlet.safetyAck.v1')) {
+      // Per-user: on a shared device this must not be inherited from whoever
+      // signed in last, or someone starts a live session never having seen the
+      // mains-power and AI-fallibility warning.
+      if (!readLocal(userKey('safetyAck.v1', userId))) {
         setShowSafety(true);
         return;
       }
@@ -223,6 +227,11 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
   // ── Out of live budget (the upgrade moment, a friendly 402) ──
   if (!live && !connecting && !canGoLive) {
+    // Max is the top tier: there is nothing to upgrade to, so never pitch a
+    // subscriber the plan they already pay for. Under-18s cannot self-purchase
+    // (#96), so they get no upsell either.
+    const atTopTier = plan === 'max';
+    const canUpsell = !atTopTier && !under18;
     const upgradeTo = plan === 'free' ? PLAN_META.pro : PLAN_META.max;
     const upgradeHours = Math.round(LIVE_MINUTES_PER_MONTH[upgradeTo.id] / 60);
     const upgradeLine = `${upgradeHours} hours of live time a month`;
@@ -252,19 +261,22 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                 You have used all {liveCapMinutes} live minutes on the {PLAN_META[plan].label} plan this month.
               </p>
               <p className="mt-1.5 text-sm font-semibold text-ohmlet-ink-soft">
-                Your lessons, sandbox, and community stay open, and live resets at the start of next month. Learners who
-                upgrade go hands-on far more often, which is where it really sticks.
+                {canUpsell
+                  ? 'Your lessons, sandbox, and community stay open, and live resets at the start of next month. Learners who upgrade go hands-on far more often, which is where it really sticks.'
+                  : 'Your lessons, sandbox, and community stay open, and your live time resets at the start of next month.'}
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-3 px-7 py-6 sm:flex-row sm:justify-center">
-            <button
-              onClick={onUpgrade}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
-            >
-              Upgrade to {upgradeTo.label} for {upgradeLine}
-            </button>
-          </div>
+          {canUpsell && (
+            <div className="flex flex-col items-center gap-3 px-7 py-6 sm:flex-row sm:justify-center">
+              <button
+                onClick={onUpgrade}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
+              >
+                Upgrade to {upgradeTo.label} for {upgradeLine}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -278,7 +290,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           <SafetyAck
             onAccept={() => {
               try {
-                localStorage.setItem('ohmlet.safetyAck.v1', '1');
+                writeLocal(userKey('safetyAck.v1', userId), '1');
               } catch {
                 /* ignore storage errors */
               }
