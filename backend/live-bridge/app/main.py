@@ -37,6 +37,7 @@ from interview_router import router as interview_router
 
 import consent
 from consent import router as consent_router
+from curriculum import router as curriculum_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -103,6 +104,9 @@ app.include_router(community_router)
 # Interview Mode: the post-session feedback report (#21, Max-tier).
 app.include_router(interview_router)
 app.include_router(consent_router)
+# Curriculum served from the backend so a lesson fix reaches mobile without an
+# App Store review, and the authored lessons stay out of client bundles (#70).
+app.include_router(curriculum_router)
 
 session_service = InMemorySessionService()
 runner = Runner(

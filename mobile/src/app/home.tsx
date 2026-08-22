@@ -31,13 +31,26 @@ export default function Home() {
           Build a voltage divider with an LDR and trigger an LED or buzzer when the light drops.
           Twenty minutes, six parts.
         </Text>
-        <Button label="Start building" onPress={() => {}} style={{ marginTop: space.md }} />
+        <Button label="Start building" onPress={() => router.push('/path')} style={{ marginTop: space.md }} />
       </View>
+
+      <Pressable
+        onPress={() => router.push('/path')}
+        style={s.rowCard}
+        accessibilityRole="button"
+        accessibilityLabel="Open the learning path"
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={s.rowTitle}>Learning path</Text>
+          <Text style={s.rowSub}>12 units, 142 lessons, in the order they unlock</Text>
+        </View>
+        <Text style={s.chevron}>›</Text>
+      </Pressable>
 
       <Text style={s.sectionHeading}>Coming next</Text>
       <Text style={s.note}>
-        The live tutor, the lesson runner, and the paywall are being wired to the same backend the
-        web app already uses. This screen is the shell they mount into.
+        The live tutor, the full lesson run loop, and the paywall are being wired to the same
+        backend the web app already uses.
       </Text>
 
       <View style={s.debug}>
@@ -78,6 +91,14 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
     marginTop: 6, lineHeight: 20,
   },
+  rowCard: {
+    marginTop: space.md, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, padding: space.md, ...pressSmall,
+  },
+  rowTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
+  rowSub: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2 },
+  chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
   debug: {
     marginTop: space.xl, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', borderWidth: 2, borderColor: colors.line,
