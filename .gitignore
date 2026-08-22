@@ -62,3 +62,6 @@ HANDOFF.md
 
 # live-bridge billing config (mode-specific Stripe price IDs)
 backend/live-bridge/.deploy.env
+
+# Personal task tracker (local only, like HANDOFF.md)
+FAITH.md
