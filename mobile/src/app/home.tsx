@@ -1,62 +1,111 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
+import { getManifest, allLessons, type Manifest } from '../services/curriculum';
+import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
-import { API_BASE } from '../services/config';
 
 export default function Home() {
-  const { displayName, signOut } = useAuth();
+  const { displayName, signOut, user } = useAuth();
+  const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [progress, setProgress] = useState<Progress>(EMPTY);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const leave = async () => {
-    await signOut();
-    router.replace('/sign-in');
-  };
+  const load = useCallback(async () => {
+    const [m, p] = await Promise.all([
+      getManifest(),
+      user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
+    ]);
+    setManifest(m);
+    setProgress(p);
+  }, [user?.uid]);
+
+  useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
+
+  // Progress changes when a lesson is finished, so refresh on return to this tab.
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  const { next, completedCount, totalCount } = useMemo(() => {
+    if (!manifest) return { next: null, completedCount: 0, totalCount: 0 };
+    const lessons = allLessons(manifest);
+    const doneIds = new Set(Object.keys(progress.lessonLevels));
+    return {
+      next: lessons.find((l) => !doneIds.has(l.id)) ?? null,
+      completedCount: lessons.filter((l) => doneIds.has(l.id)).length,
+      totalCount: lessons.length,
+    };
+  }, [manifest, progress]);
+
+  const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  const leave = async () => { await signOut(); router.replace('/sign-in'); };
+
+  if (loading) {
+    return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
+  }
 
   return (
-    <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <View style={s.topRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.eyebrow}>TODAY</Text>
-          {/* Real name, never a hardcoded one. */}
-          <Text style={s.title}>Welcome back, {displayName}.</Text>
+    <ScrollView
+      style={s.flex}
+      contentContainerStyle={s.scroll}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+          tintColor={colors.goldDeep}
+        />
+      }
+    >
+      <Text style={s.eyebrow}>TODAY</Text>
+      <Text style={s.title}>Welcome back, {displayName}.</Text>
+
+      {/* Real counters, straight from persisted progress. */}
+      <View style={s.stats}>
+        <Stat value={String(progress.xp)} label="XP" tint={colors.goldDeep} />
+        <Stat value={String(progress.streak)} label="day streak" tint={colors.red} />
+        <Stat value={`${completedCount}`} label={`of ${totalCount} lessons`} tint={colors.blueDeep} />
+      </View>
+
+      {next ? (
+        <View style={s.hero}>
+          <Text style={s.heroKicker}>{completedCount === 0 ? 'START HERE' : 'PICK UP WHERE YOU LEFT OFF'}</Text>
+          <Text style={s.heroTitle}>{next.title}</Text>
+          {!!next.summary && <Text style={s.heroBody}>{next.summary}</Text>}
+
+          <View style={s.track}>
+            <View style={[s.fill, { width: `${pct}%` }]} />
+          </View>
+          <Text style={s.trackLabel}>{pct}% of the path complete</Text>
+
+          <Button
+            label={completedCount === 0 ? 'Start your first lesson' : 'Continue'}
+            onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: next.id } })}
+            style={{ marginTop: space.md }}
+          />
         </View>
-      </View>
-
-      <View style={s.card}>
-        <Text style={s.cardKicker}>NEXT UP</Text>
-        <Text style={s.cardTitle}>Light-Activated Alarm</Text>
-        <Text style={s.cardBody}>
-          Build a voltage divider with an LDR and trigger an LED or buzzer when the light drops.
-          Twenty minutes, six parts.
-        </Text>
-        <Button label="Start building" onPress={() => router.push('/path')} style={{ marginTop: space.md }} />
-      </View>
-
-      <Pressable
-        onPress={() => router.push('/path')}
-        style={s.rowCard}
-        accessibilityRole="button"
-        accessibilityLabel="Open the learning path"
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.rowTitle}>Learning path</Text>
-          <Text style={s.rowSub}>12 units, 142 lessons, in the order they unlock</Text>
+      ) : manifest ? (
+        <View style={s.hero}>
+          <Text style={s.heroKicker}>PATH COMPLETE</Text>
+          <Text style={s.heroTitle}>You've finished every lesson.</Text>
+          <Text style={s.heroBody}>
+            {totalCount} lessons done. Take it to the bench: start a live session and build something real.
+          </Text>
         </View>
-        <Text style={s.chevron}>›</Text>
-      </Pressable>
+      ) : (
+        <View style={s.hero}>
+          <Text style={s.heroKicker}>OFFLINE</Text>
+          <Text style={s.heroTitle}>Can't reach your lessons</Text>
+          <Text style={s.heroBody}>
+            Pull down to retry. Lessons you've already opened still work without a connection.
+          </Text>
+        </View>
+      )}
 
-      <Text style={s.sectionHeading}>Coming next</Text>
-      <Text style={s.note}>
-        The live tutor, the full lesson run loop, and the paywall are being wired to the same
-        backend the web app already uses.
-      </Text>
-
-      <View style={s.debug}>
-        <Text style={s.debugLabel}>BACKEND</Text>
-        <Text style={s.debugValue}>{API_BASE ? 'connected' : 'not configured'}</Text>
-      </View>
+      <Row title="Live tutor" sub="Camera + voice on your real bench" onPress={() => router.push('/live')} />
+      <Row title="Learning path" sub={`${manifest?.units.length ?? 12} units, in the order they unlock`} onPress={() => router.push('/path')} />
 
       <Pressable onPress={leave} style={s.signOut} accessibilityRole="button">
         <Text style={s.signOutText}>Sign out</Text>
@@ -65,33 +114,50 @@ export default function Home() {
   );
 }
 
+const Stat: React.FC<{ value: string; label: string; tint: string }> = ({ value, label, tint }) => (
+  <View style={s.stat}>
+    <Text style={[s.statValue, { color: tint }]}>{value}</Text>
+    <Text style={s.statLabel}>{label}</Text>
+  </View>
+);
+
+const Row: React.FC<{ title: string; sub: string; onPress: () => void }> = ({ title, sub, onPress }) => (
+  <Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={title}>
+    <View style={{ flex: 1 }}>
+      <Text style={s.rowTitle}>{title}</Text>
+      <Text style={s.rowSub}>{sub}</Text>
+    </View>
+    <Text style={s.chevron}>›</Text>
+  </Pressable>
+);
+
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.4, paddingBottom: space.xxl },
-  topRow: { flexDirection: 'row', alignItems: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
+  scroll: { padding: space.lg, paddingTop: space.xxl * 1.3, paddingBottom: space.xxl },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
-  title: {
-    fontFamily: font.black, fontSize: type.title, color: colors.ink,
-    letterSpacing: -0.6, marginTop: 4,
+  title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.6, marginTop: 4 },
+  stats: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
+  stat: {
+    flex: 1, backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,
+    borderRadius: radius.md, paddingVertical: space.md, alignItems: 'center',
   },
-  card: {
-    marginTop: space.lg, backgroundColor: colors.white, borderWidth: 2.5,
-    borderColor: colors.ink, borderRadius: radius.lg, padding: space.lg, ...pressSmall,
+  statValue: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.5 },
+  statLabel: { fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2, textAlign: 'center' },
+  hero: {
+    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, padding: space.lg, ...pressSmall,
   },
-  cardKicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2, color: colors.inkSoft },
-  cardTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 6 },
-  cardBody: {
-    fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
-    marginTop: 6, lineHeight: 20,
+  heroKicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2, color: colors.inkSoft },
+  heroTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 6, lineHeight: type.heading * 1.25 },
+  heroBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 6, lineHeight: 20 },
+  track: {
+    height: 10, borderRadius: 5, backgroundColor: colors.cream, borderWidth: 2,
+    borderColor: colors.ink, marginTop: space.md, overflow: 'hidden',
   },
-  sectionHeading: {
-    fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: space.xl,
-  },
-  note: {
-    fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
-    marginTop: 6, lineHeight: 20,
-  },
-  rowCard: {
+  fill: { height: '100%', backgroundColor: colors.gold },
+  trackLabel: { fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft, marginTop: 6 },
+  row: {
     marginTop: space.md, flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
     borderRadius: radius.lg, padding: space.md, ...pressSmall,
@@ -99,14 +165,6 @@ const s = StyleSheet.create({
   rowTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   rowSub: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2 },
   chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
-  debug: {
-    marginTop: space.xl, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', borderWidth: 2, borderColor: colors.line,
-    borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: colors.white,
-  },
-  debugLabel: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2, color: colors.inkSoft },
-  debugValue: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   signOut: { marginTop: space.xl, alignItems: 'center', paddingVertical: space.sm },
   signOutText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
 });
