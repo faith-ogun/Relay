@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useLiveBridge, type Stage } from '../hooks/useLiveBridge';
+import { usePlan } from '../hooks/usePlan';
 import { liveBridgeWsUrl } from '../services/config';
 import { colors, font, radius, space, type } from '../theme/tokens';
 
@@ -25,6 +26,7 @@ export default function LiveTutor() {
   const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
+  const { canGoLive, minutesRemaining, unlimited, plan, loading: planLoading } = usePlan();
 
   const live = useLiveBridge({
     wsUrl: liveBridgeWsUrl(),
@@ -64,6 +66,26 @@ export default function LiveTutor() {
     live.sendStage(next);
   };
 
+  // ── Out of live budget ──
+  // The server enforces this at the socket too; showing it here means a learner
+  // finds out before the camera opens rather than after.
+  if (!connected && !connecting && !planLoading && !canGoLive) {
+    return (
+      <View style={s.preflight}>
+        <Pressable onPress={() => router.back()} style={s.backLink}>
+          <Text style={s.backText}>‹ Back</Text>
+        </Pressable>
+        <Text style={s.eyebrow}>LIVE TUTOR</Text>
+        <Text style={s.title}>That's this month's bench time.</Text>
+        <Text style={s.body}>
+          Your lessons, path and progress all stay open, and live time resets at the start of next
+          month. More time is available on a paid plan.
+        </Text>
+        <Button label="See plans" onPress={() => router.push('/plans')} style={{ marginTop: space.lg }} />
+      </View>
+    );
+  }
+
   // ── Pre-flight ──
   if (!connected && !connecting) {
     return (
@@ -87,6 +109,14 @@ export default function LiveTutor() {
               tutor both work now — type your questions and it replies out loud.
             </Text>
           </View>
+        )}
+
+        {!planLoading && (
+          <Text style={s.budget}>
+            {unlimited
+              ? 'Unlimited live time on your plan.'
+              : `${minutesRemaining ?? 0} minutes of live time left this month on ${plan === 'free' ? 'the Free plan' : `the ${plan} plan`}.`}
+          </Text>
         )}
 
         {!!live.error && <Text style={s.error}>{live.error}</Text>}
@@ -201,6 +231,7 @@ const s = StyleSheet.create({
   noticeTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
   error: { fontFamily: font.bold, fontSize: type.small, color: colors.red, marginTop: space.md },
+  budget: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, marginTop: space.lg },
 
   stage: { flex: 1, backgroundColor: colors.ink },
   camOff: { alignItems: 'center', justifyContent: 'center' },

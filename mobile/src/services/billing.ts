@@ -60,3 +60,72 @@ export function billingUnavailableReason(s: BillingState): string | null {
     case 'error': return 'Plans could not be loaded. Please try again shortly.';
   }
 }
+
+
+// ── Offerings and purchase ──
+//
+// Prices are NEVER hardcoded. App Store Connect owns them, RevenueCat reports
+// them, and they differ by storefront and currency. A hardcoded price would be
+// wrong for most of the world and would drift the moment it changed.
+
+export interface Package {
+  id: string;
+  /** Localised, storefront-correct price string, e.g. "£12.99". */
+  priceString: string;
+  /** 'monthly' | 'annual' | other, from RevenueCat's package type. */
+  period: string;
+  title: string;
+}
+
+export async function getOfferings(): Promise<Package[]> {
+  const s = await initBilling();
+  if (s.status !== 'ready' || !purchases) return [];
+  try {
+    const offerings = await purchases.getOfferings();
+    const current = offerings.current;
+    if (!current) return [];
+    return current.availablePackages.map((pkg) => ({
+      id: pkg.identifier,
+      priceString: pkg.product.priceString,
+      period: pkg.packageType,
+      title: pkg.product.title,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export type PurchaseResult =
+  | { ok: true }
+  | { ok: false; cancelled: true }
+  | { ok: false; cancelled: false; message: string };
+
+export async function purchasePackage(packageId: string): Promise<PurchaseResult> {
+  const s = await initBilling();
+  if (s.status !== 'ready' || !purchases) {
+    return { ok: false, cancelled: false, message: billingUnavailableReason(s) ?? 'Unavailable.' };
+  }
+  try {
+    const offerings = await purchases.getOfferings();
+    const pkg = offerings.current?.availablePackages.find((p) => p.identifier === packageId);
+    if (!pkg) return { ok: false, cancelled: false, message: 'That plan is not available right now.' };
+    await purchases.purchasePackage(pkg);
+    return { ok: true };
+  } catch (e) {
+    const err = e as { userCancelled?: boolean };
+    if (err?.userCancelled) return { ok: false, cancelled: true };
+    return { ok: false, cancelled: false, message: 'The purchase did not complete.' };
+  }
+}
+
+/** Restore prior purchases. Apple requires this to be reachable in-app. */
+export async function restorePurchases(): Promise<boolean> {
+  const s = await initBilling();
+  if (s.status !== 'ready' || !purchases) return false;
+  try {
+    await purchases.restorePurchases();
+    return true;
+  } catch {
+    return false;
+  }
+}
