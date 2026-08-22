@@ -5,6 +5,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '../components/Button';
+import { BoardScanScene } from '../components/scenes/BoardScanScene';
+import { TwinScene } from '../components/scenes/TwinScene';
+import { VoiceScene } from '../components/scenes/VoiceScene';
 import { markOnboardingSeen } from '../services/firstRun';
 import { colors, font, space, type } from '../theme/tokens';
 
@@ -18,18 +21,21 @@ const { width } = Dimensions.get('window');
 const SLIDES = [
   {
     art: require('../../assets/brand/mascot-probe.png'),
+    Scene: BoardScanScene,
     kicker: 'IT SEES YOUR BENCH',
     title: 'Point your camera at the board.',
     body: 'The tutor checks your components before you wire anything, then watches the board as you build. A resistor in the wrong row gets caught while you are still holding it.',
   },
   {
     art: require('../../assets/brand/mascot-point.png'),
+    Scene: VoiceScene,
     kicker: 'IT TALKS BACK',
     title: 'Ask out loud, mid-build.',
     body: 'Voice guidance step by step. Ask why the circuit works while your hands are busy, and it writes and debugs the Arduino sketch with you.',
   },
   {
     art: require('../../assets/brand/mascot-celebrate.png'),
+    Scene: TwinScene,
     kicker: 'YOU KEEP THE BUILD',
     title: 'Finish, and it becomes a 3D twin.',
     body: 'Every completed circuit turns into a model you can spin, keep, and share. Your XP and streak carry across every session.',
@@ -76,12 +82,17 @@ export default function Onboarding() {
         scrollEventThrottle={16}
         style={s.flex}
       >
-        {SLIDES.map((slide) => (
+        {SLIDES.map(({ Scene, ...slide }) => (
           <View key={slide.kicker} style={[s.slide, { width }]}>
             <Image source={slide.art} style={s.art} resizeMode="contain" accessibilityRole="image" accessibilityLabel="" />
             <Text style={s.kicker}>{slide.kicker}</Text>
             <Text style={s.title}>{slide.title}</Text>
             <Text style={s.body}>{slide.body}</Text>
+            {/* The animated scene shows the mechanic the copy describes, and
+                fills what was otherwise dead space at the bottom of the slide. */}
+            <View style={s.scene}>
+              <Scene />
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -105,7 +116,7 @@ const s = StyleSheet.create({
   skip: { position: 'absolute', top: space.xxl * 1.3, right: space.lg, zIndex: 10, padding: space.sm },
   skipText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   slide: { alignItems: 'center', paddingHorizontal: space.lg, paddingTop: space.xl },
-  art: { width: 190, height: 190, marginBottom: space.lg },
+  art: { width: 132, height: 132, marginBottom: space.md },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
   title: {
     fontFamily: font.black, fontSize: type.title, color: colors.ink,
@@ -115,6 +126,7 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.md, lineHeight: 22,
   },
+  scene: { marginTop: space.lg, alignItems: 'center', justifyContent: 'center', flex: 1 },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.md },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: space.xs },
   dot: {
