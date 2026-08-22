@@ -7,7 +7,7 @@ import { StepView } from '../../lesson/StepView';
 import { useRun } from '../../lesson/useRun';
 import type { Lesson } from '../../lesson/types';
 import { getLesson } from '../../services/curriculum';
-import { applyCompletion, loadProgress, saveProgress } from '../../services/progress';
+import { applyCompletion, bumpMetric, loadProgress, saveProgress } from '../../services/progress';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, font, pressSmall, radius, space, type } from '../../theme/tokens';
 
@@ -24,6 +24,20 @@ export default function LessonScreen() {
 
   const registerGrader = useCallback((g: (() => void) | null) => { graderRef.current = g; }, []);
 
+  // Drawings the grader accepted during this run, credited once at completion
+  // so a retry cannot inflate the count mid-run.
+  const drawingsRight = useRef(0);
+  const lastGraded = useRef<string | null>(null);
+  useEffect(() => {
+    if (!run.checked || run.correct !== true || !run.step) return;
+    const key = `${run.position}:${run.step.type}`;
+    if (lastGraded.current === key) return;      // effect can re-fire on re-render
+    lastGraded.current = key;
+    if (run.step.type === 'draw_circuit' || run.step.type === 'draw_fix') {
+      drawingsRight.current += 1;
+    }
+  }, [run.checked, run.correct, run.step, run.position]);
+
   useEffect(() => {
     let alive = true;
     getLesson(String(id))
@@ -39,7 +53,11 @@ export default function LessonScreen() {
     setSaved(true);
     void (async () => {
       const current = await loadProgress(user.uid);
-      await saveProgress(user.uid, applyCompletion(current, String(id), run.earnedXp));
+      let next = applyCompletion(current, String(id), run.earnedXp);
+      // A run cleared with no wrong answer is what the "perfect" achievements count.
+      if (!run.anyWrong) next = bumpMetric(next, 'perfect');
+      if (drawingsRight.current > 0) next = bumpMetric(next, 'drawings', drawingsRight.current);
+      await saveProgress(user.uid, next);
     })();
   }, [run.done, run.earnedXp, saved, user?.uid, lesson, id]);
 

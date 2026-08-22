@@ -106,6 +106,9 @@ export default function Home() {
 
       <Row title="Live tutor" sub="Camera + voice on your real bench" onPress={() => router.push('/live')} />
       <Row title="Learning path" sub={`${manifest?.units.length ?? 12} units, in the order they unlock`} onPress={() => router.push('/path')} />
+      <Row title="Achievements" sub="Your trophy case" onPress={() => router.push('/achievements')} />
+      <Row title="Community" sub="Builds, challenges and the weekly league" onPress={() => router.push('/community')} />
+      <Row title="3D twins" sub="Models of everything you've built" onPress={() => router.push('/twins')} />
       <Row title="Plans" sub="More live tutoring time" onPress={() => router.push('/plans')} />
 
       <Pressable onPress={leave} style={s.signOut} accessibilityRole="button">

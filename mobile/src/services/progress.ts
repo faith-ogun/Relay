@@ -12,6 +12,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from './config';
 import { getIdToken } from './firebase';
 
+/** Counters behind the achievements that xp/streak/lessons do not cover. */
+export interface Metrics {
+  liveSessions: number;
+  drawings: number;
+  perfect: number;
+  twins: number;
+  posts: number;
+  comments: number;
+  challenges: number;
+  leagueWins: number;
+  /** ISO week already credited, so one week can only ever count once. */
+  lastLeagueWeek: string;
+}
+
 export interface Progress {
   /** lesson id -> level (1 bronze, 2 silver, 3 gold). Present means completed. */
   lessonLevels: Record<string, number>;
@@ -19,10 +33,17 @@ export interface Progress {
   streak: number;
   completedToday: number;
   lastActiveDate: string;
+  metrics: Metrics;
 }
+
+export const EMPTY_METRICS: Metrics = {
+  liveSessions: 0, drawings: 0, perfect: 0, twins: 0,
+  posts: 0, comments: 0, challenges: 0, leagueWins: 0, lastLeagueWeek: '',
+};
 
 export const EMPTY: Progress = {
   lessonLevels: {}, xp: 0, streak: 0, completedToday: 0, lastActiveDate: '',
+  metrics: EMPTY_METRICS,
 };
 
 const CACHE_KEY = (uid: string) => `ohmlet.progress.v1:${uid}`;
@@ -61,10 +82,10 @@ export async function loadProgress(uid: string): Promise<Progress> {
     const remote = (envelope?.data ?? null) as Progress | null;
     if (remote && typeof remote === 'object') {
       await AsyncStorage.setItem(CACHE_KEY(uid), JSON.stringify(remote)).catch(() => {});
-      return { ...EMPTY, ...remote };
+      return { ...EMPTY, ...remote, metrics: { ...EMPTY_METRICS, ...(remote.metrics ?? {}) } };
     }
   } catch { /* fall through */ }
-  return local ?? EMPTY;
+  return local ? { ...EMPTY, ...local, metrics: { ...EMPTY_METRICS, ...(local.metrics ?? {}) } } : EMPTY;
 }
 
 export async function saveProgress(uid: string, next: Progress): Promise<void> {
@@ -113,4 +134,42 @@ export function applyCompletion(
     completedToday: sameDay ? current.completedToday + 1 : 1,
     lastActiveDate: day,
   };
+}
+
+
+/** Increment a counter. Returns a new Progress; the caller persists it. */
+export function bumpMetric(current: Progress, metric: keyof Omit<Metrics, 'lastLeagueWeek'>, by = 1): Progress {
+  const metrics = { ...EMPTY_METRICS, ...current.metrics };
+  return { ...current, metrics: { ...metrics, [metric]: (metrics[metric] ?? 0) + by } };
+}
+
+/**
+ * Credit a top-three weekly finish exactly once per league week, keyed by the
+ * week id the leaderboard itself reports so revisits cannot inflate it.
+ */
+export function creditLeagueWin(current: Progress, week: string, rank: number | null): Progress {
+  const metrics = { ...EMPTY_METRICS, ...current.metrics };
+  if (!week || !rank || rank > 3 || metrics.lastLeagueWeek === week) return current;
+  return { ...current, metrics: { ...metrics, lastLeagueWeek: week, leagueWins: metrics.leagueWins + 1 } };
+}
+
+/** The stats an achievement is evaluated against. */
+export function achievementStats(p: Progress, unitsCompleted = 0) {
+  const m = { ...EMPTY_METRICS, ...p.metrics };
+  return {
+    xp: p.xp,
+    streak: p.streak,
+    builds: Object.keys(p.lessonLevels).length,
+    units: unitsCompleted,
+    liveSessions: m.liveSessions,
+    drawings: m.drawings,
+    perfect: m.perfect,
+    twins: m.twins,
+    posts: m.posts,
+    comments: m.comments,
+    challenges: m.challenges,
+    leagueWins: m.leagueWins,
+    // 'likes' (likes RECEIVED) is server-side data this client never observes;
+    // it stays absent rather than being guessed at.
+  } as Record<string, number>;
 }

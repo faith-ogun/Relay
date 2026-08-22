@@ -51,3 +51,21 @@ def test_lessons_carry_steps_and_xp():
     sample = store["The Closed Loop"]
     assert sample["steps"], "lesson has no steps"
     assert sample["xpReward"] > 0
+
+
+def test_achievement_catalogue_is_complete():
+    """All 50 achievements must serve, each with the fields a client needs to
+    render a card and decide whether it is earned."""
+    data = curriculum._achievements()
+    items = data["achievements"]
+    assert len(items) == 50
+    required = {"id", "title", "desc", "metric", "threshold", "tier"}
+    for a in items:
+        missing = required - set(a)
+        assert not missing, f"{a.get('id')} missing {missing}"
+    assert data["version"] == curriculum.content_version()
+
+
+def test_achievement_ids_are_unique():
+    ids = [a["id"] for a in curriculum._achievements()["achievements"]]
+    assert len(ids) == len(set(ids))

@@ -43,6 +43,14 @@ def _curriculum() -> dict[str, Any]:
 
 
 @lru_cache(maxsize=1)
+def _achievements() -> dict[str, Any]:
+    """The achievement catalogue. Small, and identical for every learner —
+    only which ones are EARNED differs, and that is computed client-side from
+    the learner's own metrics."""
+    return json.loads((DATA_DIR / "achievements.json").read_text())
+
+
+@lru_cache(maxsize=1)
 def _lessons() -> dict[str, Any]:
     """Full lesson content, keyed by lesson id. ~700KB, loaded once per instance."""
     return json.loads((DATA_DIR / "lessons.json").read_text())
@@ -100,3 +108,18 @@ def lesson(lesson_id: str, response: Response, uid: str = Depends(require_uid)) 
 def version(uid: str = Depends(require_uid)) -> dict[str, str]:
     """Cheap poll so a client can decide whether its cache is stale."""
     return {"version": content_version()}
+
+
+@router.get("/achievements")
+def achievements(uid: str = Depends(require_uid)) -> dict[str, Any]:
+    """The full achievement catalogue: titles, thresholds, tiers and art keys.
+
+    Served rather than bundled for the same reason as the lessons — the set
+    grows, and a new achievement should not need an App Store review.
+    """
+    try:
+        data = _achievements()
+    except Exception as exc:
+        logger.error("achievements unavailable: %s", exc)
+        raise HTTPException(status_code=503, detail="Achievements aren't available right now.")
+    return {"version": data.get("version", ""), "achievements": data.get("achievements", [])}

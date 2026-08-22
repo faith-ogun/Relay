@@ -1,8 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
+import { captureRef } from 'react-native-view-shot';
+import { DrawCanvas, type DrawCanvasHandle } from './DrawCanvas';
+import { drawingGraderConfigured, gradeDrawing } from '../services/drawingGrader';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import type {
-  LessonStep, StepChoice, StepDragOrder, StepFill, StepMatch, StepTeach, StepTrueFalse,
+  LessonStep, StepChoice, StepConnect, StepDraw, StepDragOrder, StepFill, StepMatch,
+  StepTeach, StepTrueFalse,
 } from './types';
 
 interface Props {
@@ -30,6 +36,11 @@ export const StepView: React.FC<Props> = (props) => {
       return <MatchStep {...props} step={step as StepMatch} />;
     case 'drag_order':
       return <OrderStep {...props} step={step as StepDragOrder} />;
+    case 'draw_connection':
+      return <ConnectStep {...props} step={step as StepConnect} />;
+    case 'draw_circuit':
+    case 'draw_fix':
+      return <DrawStep {...props} step={step as StepDraw} />;
     default:
       // multiple_choice, predict_reading, predict_behavior, choose_resistor,
       // identify_component all present as a choice list.
@@ -371,9 +382,176 @@ const s = StyleSheet.create({
   matchDone: { borderColor: colors.ink },
   matchLeft: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   matchRight: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 3 },
+  board: {
+    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5,
+    borderColor: colors.ink, borderRadius: radius.md, padding: space.sm,
+  },
+  undo: {
+    borderWidth: 2, borderColor: colors.ink, borderRadius: radius.sm,
+    paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'flex-start', marginTop: space.sm,
+  },
+  undoText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
+  drawTools: { flexDirection: 'row', gap: space.sm },
+  grading: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
   orderNum: {
     fontFamily: font.black, fontSize: type.small, color: colors.ink,
     width: 22, height: 22, borderRadius: 11, backgroundColor: colors.gold,
     textAlign: 'center', lineHeight: 22, overflow: 'hidden',
   },
 });
+
+
+// ── Draw a connection (tap two terminals) ──────────────────────────────────
+const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [active, setActive] = useState<string | null>(null);
+  const [wires, setWires] = useState<Array<[string, string]>>([]);
+
+  useEffect(() => { setWires([]); setActive(null); }, [step]);
+
+  const expected = step.expectedConnections ?? [];
+  useEffect(() => {
+    const ready = wires.length === expected.length;
+    onCanCheck(ready);
+    registerGrader(!ready ? null : () => {
+      // Order within a wire does not matter: a connection is undirected.
+      const key = (a: string, b: string) => [a, b].sort().join('|');
+      const drawn = new Set(wires.map(([a, b]) => key(a, b)));
+      onSubmit(expected.every(([a, b]) => drawn.has(key(a, b))));
+    });
+    return () => registerGrader(null);
+  }, [wires, expected, onCanCheck, registerGrader, onSubmit]);
+
+  const tap = (id: string) => {
+    if (checked) return;
+    if (active === null) { setActive(id); return; }
+    if (active === id) { setActive(null); return; }
+    setWires((w) => [...w, [active, id]]);
+    setActive(null);
+  };
+
+  const pos = (id: string) => step.terminals.find((t) => t.id === id);
+  // The authored coordinates assume a 320x140 board; scale to the device width.
+  const W = 320, H = 140;
+
+  return (
+    <View>
+      <Text style={s.kicker}>WIRE IT UP</Text>
+      <Text style={s.question}>{step.instruction}</Text>
+      <Text style={s.hint}>Tap one terminal, then the one it connects to.</Text>
+
+      <View style={s.board}>
+        <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
+          {wires.map(([a, b], i) => {
+            const p1 = pos(a), p2 = pos(b);
+            if (!p1 || !p2) return null;
+            return (
+              <Line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                    stroke={colors.red} strokeWidth={3} strokeLinecap="round" />
+            );
+          })}
+          {step.terminals.map((t) => (
+            <React.Fragment key={t.id}>
+              <Circle
+                cx={t.x} cy={t.y} r={14}
+                fill={active === t.id ? colors.gold : colors.white}
+                stroke={colors.ink} strokeWidth={2.5}
+                onPress={() => tap(t.id)}
+              />
+              <SvgText
+                x={t.x} y={t.y + 4} fontSize={10} fontWeight="bold"
+                fill={colors.ink} textAnchor="middle" onPress={() => tap(t.id)}
+              >
+                {t.label}
+              </SvgText>
+            </React.Fragment>
+          ))}
+        </Svg>
+      </View>
+
+      {wires.length > 0 && !checked && (
+        <Pressable onPress={() => setWires((w) => w.slice(0, -1))} style={s.undo}>
+          <Text style={s.undoText}>Undo last wire</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+};
+
+// ── Draw the circuit (freeform, graded by vision) ──────────────────────────
+const DrawStep: React.FC<Props & { step: StepDraw }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const canvasRef = useRef<DrawCanvasHandle>(null);
+  const shotRef = useRef<View>(null);
+  const [hasInk, setHasInk] = useState(false);
+  const [grading, setGrading] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => { setHasInk(false); setNote(null); canvasRef.current?.clear(); }, [step]);
+
+  useEffect(() => {
+    onCanCheck(hasInk && !grading);
+    registerGrader(!hasInk || grading ? null : async () => {
+      setGrading(true);
+      setNote(null);
+      try {
+        const uri = await captureRef(shotRef, { format: 'jpg', quality: 0.7, result: 'base64' });
+        const verdict = await gradeDrawing(uri, step.expected ?? [], step.type);
+        if (!verdict) {
+          // The grader is unreachable. Accept the attempt rather than marking a
+          // learner wrong for a network failure, and say so honestly.
+          setNote('Could not reach the grader, so this one is counted as complete.');
+          onSubmit(true);
+          return;
+        }
+        setNote(verdict.feedback || null);
+        onSubmit(verdict.correct);
+      } catch {
+        setNote('Could not read the drawing, so this one is counted as complete.');
+        onSubmit(true);
+      } finally {
+        setGrading(false);
+      }
+    });
+    return () => registerGrader(null);
+  }, [hasInk, grading, step, onCanCheck, registerGrader, onSubmit]);
+
+  return (
+    <View>
+      <Text style={s.kicker}>DRAW IT</Text>
+      <Text style={s.question}>{step.instruction}</Text>
+
+      <View ref={shotRef} collapsable={false} style={{ marginTop: space.md }}>
+        <DrawCanvas ref={canvasRef} onInkChange={setHasInk} height={280} />
+      </View>
+
+      <View style={s.drawTools}>
+        <Pressable onPress={() => canvasRef.current?.undo()} disabled={checked || !hasInk} style={s.undo}>
+          <Text style={s.undoText}>Undo</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => { canvasRef.current?.clear(); setHasInk(false); }}
+          disabled={checked || !hasInk}
+          style={s.undo}
+        >
+          <Text style={s.undoText}>Clear</Text>
+        </Pressable>
+      </View>
+
+      {grading && (
+        <View style={s.grading}>
+          <ActivityIndicator color={colors.goldDeep} />
+          <Text style={s.hint}>Looking at your drawing…</Text>
+        </View>
+      )}
+
+      {!!note && <Text style={s.hint}>{note}</Text>}
+      {!!step.hint && !checked && !grading && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!drawingGraderConfigured() && (
+        <Text style={s.hint}>Drawing feedback is unavailable right now; your attempt still counts.</Text>
+      )}
+    </View>
+  );
+};

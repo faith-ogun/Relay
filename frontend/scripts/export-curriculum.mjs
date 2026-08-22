@@ -25,9 +25,28 @@ async function loadModule(entry) {
     write: false,
     format: 'esm',
     platform: 'neutral',
-    // Lesson/curriculum modules import lucide icons for the UI; those are
-    // irrelevant to the data and cannot evaluate outside React.
-    external: ['react', 'react-dom', 'lucide-react'],
+    // These modules import React and lucide icons for the UI. None of that is
+    // data, and none of it can evaluate outside a React runtime — so every such
+    // import is replaced with an inert stub. Any icon or component referenced by
+    // the data becomes a harmless no-op that JSON.stringify then drops.
+    plugins: [
+      {
+        name: 'stub-ui-imports',
+        setup(build) {
+          const UI = /^(react|react-dom|react\/jsx-runtime|react\/jsx-dev-runtime|lucide-react)$/;
+          build.onResolve({ filter: UI }, (args) => ({ path: args.path, namespace: 'ui-stub' }));
+          build.onLoad({ filter: /.*/, namespace: 'ui-stub' }, () => ({
+            contents: `
+              const noop = () => null;
+              export const jsx = noop; export const jsxs = noop; export const jsxDEV = noop;
+              export const Fragment = noop; export const createElement = noop;
+              export default new Proxy({}, { get: () => noop });
+            `,
+            loader: 'js',
+          }));
+        },
+      },
+    ],
     logLevel: 'silent',
   });
   const code = result.outputFiles[0].text;
@@ -37,6 +56,7 @@ async function loadModule(entry) {
 
 const lessons = await loadModule('components/ohmlet/data/lessons.ts');
 const curriculum = await loadModule('components/ohmlet/data/curriculum.ts');
+const achievements = await loadModule('components/ohmlet/data/achievements.tsx');
 
 // CURRICULUM carries React icon components per unit; strip anything non-serialisable.
 const units = JSON.parse(JSON.stringify(curriculum.CURRICULUM, (k, v) =>
@@ -44,6 +64,12 @@ const units = JSON.parse(JSON.stringify(curriculum.CURRICULUM, (k, v) =>
 ));
 
 const lessonContent = JSON.parse(JSON.stringify(lessons.LESSON_CONTENT ?? lessons.default ?? {}, (k, v) =>
+  typeof v === 'function' ? undefined : v,
+));
+
+// Achievements: plain data only. The web module also carries React icon
+// components, which cannot cross the wire and are re-derived per client.
+const achievementList = JSON.parse(JSON.stringify(achievements.ACHIEVEMENTS ?? [], (k, v) =>
   typeof v === 'function' ? undefined : v,
 ));
 
@@ -62,9 +88,11 @@ const version = createHash('sha256')
 
 writeFileSync(resolve(out, 'curriculum.json'), JSON.stringify({ version, units }, null, 0));
 writeFileSync(resolve(out, 'lessons.json'), JSON.stringify({ version, lessons: lessonContent }, null, 0));
+writeFileSync(resolve(out, 'achievements.json'), JSON.stringify({ version, achievements: achievementList }, null, 0));
 
 console.log(`units:          ${unitCount}`);
 console.log(`lesson entries: ${lessonIds.length}`);
 console.log(`lesson content: ${contentCount}`);
+console.log(`achievements:   ${achievementList.length}`);
 console.log(`version:        ${version}`);
 console.log(`written to:     ${out}`);

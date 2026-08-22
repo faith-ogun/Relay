@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useLiveBridge, type Stage } from '../hooks/useLiveBridge';
 import { usePlan } from '../hooks/usePlan';
+import { bumpMetric, loadProgress, saveProgress } from '../services/progress';
 import { liveBridgeWsUrl } from '../services/config';
 import { colors, font, radius, space, type } from '../theme/tokens';
 
@@ -60,6 +61,18 @@ export default function LiveTutor() {
 
   const connected = live.state === 'connected';
   const connecting = live.state === 'connecting';
+
+  // Count a live session once it genuinely connects, not when the button is
+  // pressed — a refused or failed connection is not a session.
+  const counted = useRef(false);
+  useEffect(() => {
+    if (!connected || counted.current || !user?.uid) return;
+    counted.current = true;
+    void (async () => {
+      const p = await loadProgress(user.uid);
+      await saveProgress(user.uid, bumpMetric(p, 'liveSessions'));
+    })();
+  }, [connected, user?.uid]);
 
   const changeStage = (next: Stage) => {
     setStage(next);

@@ -55,8 +55,28 @@ export interface StepDragOrder {
   correctOrder: number[];
 }
 
+export interface StepConnect {
+  type: 'draw_connection';
+  instruction: string;
+  terminals: Array<{ x: number; y: number; label: string; id: string }>;
+  expectedConnections: Array<[string, string]>;
+  explanation: string;
+}
+
+export interface StepDraw {
+  // draw_circuit is freeform; draw_fix starts from a broken diagram. Both are
+  // graded by the vision model rather than by string comparison.
+  type: 'draw_circuit' | 'draw_fix';
+  instruction: string;
+  expected: string[];
+  hint: string;
+  explanation: string;
+  circuitDiagram?: string;
+}
+
 export type LessonStep =
   | StepTeach | StepChoice | StepTrueFalse | StepFill | StepMatch | StepDragOrder
+  | StepConnect | StepDraw
   | { type: string; [k: string]: unknown };   // authored types not yet on mobile
 
 export interface Lesson {
@@ -69,6 +89,7 @@ export interface Lesson {
 export const SUPPORTED = new Set([
   'teach', 'multiple_choice', 'true_false', 'fill_blank', 'match', 'drag_order',
   'predict_reading', 'predict_behavior', 'choose_resistor', 'identify_component',
+  'draw_connection', 'draw_circuit', 'draw_fix',
 ]);
 
 export const isTeach = (s: LessonStep): boolean => s.type === 'teach';
