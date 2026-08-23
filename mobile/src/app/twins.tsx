@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { TwinViewer } from '../components/TwinViewer';
 import {
@@ -102,7 +103,7 @@ export default function Twins() {
   // ── List ──
   return (
     <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => router.back()} style={s.backLink}>
+      <Pressable onPress={() => goBack('/home')} style={s.backLink}>
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
       <Text style={s.eyebrow}>3D TWINS</Text>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { usePlan } from '../hooks/usePlan';
 import {
@@ -46,7 +47,7 @@ export default function Plans() {
 
   return (
     <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => router.back()} style={s.backLink} accessibilityRole="button">
+      <Pressable onPress={() => goBack('/home')} style={s.backLink} accessibilityRole="button">
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
 

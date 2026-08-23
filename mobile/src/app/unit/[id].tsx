@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { goBack } from '../../services/nav';
 import { getManifest, type CurriculumUnit } from '../../services/curriculum';
 import { colors, font, pressSmall, radius, space, type } from '../../theme/tokens';
 
@@ -33,7 +34,7 @@ export default function UnitDetail() {
     return (
       <View style={s.center}>
         <Text style={s.emptyTitle}>Unit not found</Text>
-        <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button">
+        <Pressable onPress={() => goBack('/path')} style={s.back} accessibilityRole="button">
           <Text style={s.backText}>Go back</Text>
         </Pressable>
       </View>
@@ -42,7 +43,7 @@ export default function UnitDetail() {
 
   return (
     <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => router.back()} style={s.backLink} accessibilityRole="button">
+      <Pressable onPress={() => goBack('/path')} style={s.backLink} accessibilityRole="button">
         <Text style={s.backLinkText}>‹ Learning path</Text>
       </Pressable>
 

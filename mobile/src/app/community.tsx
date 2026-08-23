@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -59,7 +60,7 @@ export default function Community() {
         <Text style={s.emptyBody}>
           Younger builders get the lessons, the simulator and the live tutor, without the social feed.
         </Text>
-        <Button label="Go back" onPress={() => router.back()} style={{ marginTop: space.lg }} />
+        <Button label="Go back" onPress={() => goBack('/home')} style={{ marginTop: space.lg }} />
       </View>
     );
   }
@@ -83,7 +84,7 @@ export default function Community() {
             onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />
         }
       >
-        <Pressable onPress={() => router.back()} style={s.backLink}><Text style={s.backText}>‹ Back</Text></Pressable>
+        <Pressable onPress={() => goBack('/home')} style={s.backLink}><Text style={s.backText}>‹ Back</Text></Pressable>
         <Text style={s.eyebrow}>COMMUNITY</Text>
         <Text style={s.title}>Builders like you.</Text>
 

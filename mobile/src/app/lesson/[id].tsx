@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { goBack } from '../../services/nav';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Button } from '../../components/Button';
 import { StepView } from '../../lesson/StepView';
@@ -78,7 +79,7 @@ export default function LessonScreen() {
       <Center>
         <Text style={s.bigTitle}>Couldn't load this lesson</Text>
         <Text style={s.body}>It may need a connection the first time you open it.</Text>
-        <Button label="Go back" onPress={() => router.back()} style={{ marginTop: space.lg }} />
+        <Button label="Go back" onPress={() => goBack('/path')} style={{ marginTop: space.lg }} />
       </Center>
     );
   }
@@ -91,7 +92,7 @@ export default function LessonScreen() {
           No harm done. Run it again — the questions you missed come back first.
         </Text>
         <Button label="Try again" onPress={run.retry} style={{ marginTop: space.lg }} />
-        <Pressable onPress={() => router.back()} style={s.quiet}><Text style={s.quietText}>Leave lesson</Text></Pressable>
+        <Pressable onPress={() => goBack('/path')} style={s.quiet}><Text style={s.quietText}>Leave lesson</Text></Pressable>
       </Center>
     );
   }
@@ -106,7 +107,7 @@ export default function LessonScreen() {
             ? 'Cleared every question, including the ones that came back.'
             : 'Straight through with no mistakes.'}
         </Text>
-        <Button label="Back to the path" onPress={() => router.back()} style={{ marginTop: space.lg }} />
+        <Button label="Back to the path" onPress={() => goBack('/path')} style={{ marginTop: space.lg }} />
       </Center>
     );
   }
@@ -118,7 +119,7 @@ export default function LessonScreen() {
     <View style={s.screen}>
       {/* Top bar: leave, progress, hearts */}
       <View style={s.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="Leave lesson" accessibilityRole="button">
+        <Pressable onPress={() => goBack('/path')} hitSlop={12} accessibilityLabel="Leave lesson" accessibilityRole="button">
           <Text style={s.close}>✕</Text>
         </Pressable>
         <View style={s.track} accessibilityRole="progressbar"

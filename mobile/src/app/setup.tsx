@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import {
   BENCH_NOTE, DEFAULT_PROFILE, saveProfile,
@@ -53,8 +54,11 @@ const STEPS = 5;   // intro + four questions
 
 export default function Setup() {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<LearnerProfile>({ ...DEFAULT_PROFILE });
-  const [touched, setTouched] = useState<Set<number>>(new Set());
+  // Deliberately partial. Filling this with defaults made an option look chosen
+  // while Continue stayed grey, so the screen said "this is selected" and the
+  // button said "you have selected nothing". Nothing is selected until it is
+  // tapped, and the defaults are only applied to whatever went unanswered.
+  const [draft, setDraft] = useState<Partial<LearnerProfile>>({});
   const fade = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
@@ -78,22 +82,25 @@ export default function Setup() {
     });
   };
 
-  const back = () => (step === 0 ? router.back() : advance(step - 1));
+  const back = () => (step === 0 ? goBack('/onboarding') : advance(step - 1));
 
   const finish = async () => {
-    await saveProfile({ ...draft, completedAt: new Date().toISOString() });
+    await saveProfile({ ...DEFAULT_PROFILE, ...draft, completedAt: new Date().toISOString() });
     router.replace('/sign-in');
   };
 
   const next = () => (step === STEPS - 1 ? void finish() : advance(step + 1));
 
-  // The intro has nothing to answer; a question needs a tap before Continue
-  // lights up, so nobody skips past a question by reflex and gets a default.
-  const canContinue = step === 0 || touched.has(step);
+  // The intro has nothing to answer; a question needs a tap first, so nobody
+  // skips past by reflex and silently gets a default they never saw.
+  const FIELD_FOR_STEP: Array<keyof LearnerProfile | null> = [
+    null, 'experience', 'bench', 'goal', 'dailyGoal',
+  ];
+  const field = FIELD_FOR_STEP[step];
+  const canContinue = step === 0 || (field !== null && draft[field] !== undefined);
 
   const pick = <T,>(key: keyof LearnerProfile, value: T) => {
-    setDraft((prev) => ({ ...prev, [key]: value }) as LearnerProfile);
-    setTouched((prev) => new Set(prev).add(step));
+    setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
   const body = useMemo(() => {
@@ -120,7 +127,7 @@ export default function Setup() {
             options={BENCH}
             selected={draft.bench}
             onSelect={(v) => pick('bench', v)}
-            footnote={BENCH_NOTE[draft.bench]}
+            footnote={draft.bench ? BENCH_NOTE[draft.bench] : undefined}
           />
         );
       case 3:
@@ -194,7 +201,7 @@ interface QuestionProps<T> {
   title: string;
   sub?: string;
   options: Choice<T>[];
-  selected: T;
+  selected: T | undefined;
   onSelect: (value: T) => void;
   footnote?: string;
 }

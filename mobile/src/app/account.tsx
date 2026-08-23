@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { File, Paths } from 'expo-file-system';
 import { useAuth } from '../hooks/useAuth';
 import { usePlan } from '../hooks/usePlan';
@@ -101,7 +102,7 @@ export default function Account() {
 
   return (
     <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => router.back()} style={s.backLink} accessibilityRole="button">
+      <Pressable onPress={() => goBack('/home')} style={s.backLink} accessibilityRole="button">
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
 

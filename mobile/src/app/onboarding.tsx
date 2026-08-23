@@ -4,6 +4,7 @@ import {
   Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { BoardScanScene } from '../components/scenes/BoardScanScene';
 import { TwinScene } from '../components/scenes/TwinScene';
@@ -74,7 +75,7 @@ export default function Onboarding() {
   // A swipe already does this, but not everyone reaches for a swipe, and
   // someone who tapped "Get started" by accident needs a visible way out.
   const back = () => {
-    if (index === 0) return void router.back();
+    if (index === 0) return void goBack('/welcome');
     scroller.current?.scrollTo({ x: (index - 1) * width, animated: true });
   };
 

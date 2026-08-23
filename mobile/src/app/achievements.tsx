@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -62,7 +63,7 @@ export default function Achievements() {
 
   return (
     <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => router.back()} style={s.backLink} accessibilityRole="button">
+      <Pressable onPress={() => goBack('/home')} style={s.backLink} accessibilityRole="button">
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
 

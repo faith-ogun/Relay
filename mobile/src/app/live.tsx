@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useLiveBridge, type Stage } from '../hooks/useLiveBridge';
@@ -85,7 +86,7 @@ export default function LiveTutor() {
   if (!connected && !connecting && !planLoading && !canGoLive) {
     return (
       <View style={s.preflight}>
-        <Pressable onPress={() => router.back()} style={s.backLink}>
+        <Pressable onPress={() => goBack('/home')} style={s.backLink}>
           <Text style={s.backText}>‹ Back</Text>
         </Pressable>
         <Text style={s.eyebrow}>LIVE TUTOR</Text>
@@ -103,7 +104,7 @@ export default function LiveTutor() {
   if (!connected && !connecting) {
     return (
       <View style={s.preflight}>
-        <Pressable onPress={() => router.back()} style={s.backLink}>
+        <Pressable onPress={() => goBack('/home')} style={s.backLink}>
           <Text style={s.backText}>‹ Back</Text>
         </Pressable>
 
@@ -217,7 +218,7 @@ export default function LiveTutor() {
             <Text style={s.ctrlText}>Look now</Text>
           </Pressable>
           <Pressable
-            onPress={() => { live.disconnect(); router.back(); }}
+            onPress={() => { live.disconnect(); goBack('/home'); }}
             style={[s.ctrl, s.ctrlEnd]}
             accessibilityRole="button"
           >

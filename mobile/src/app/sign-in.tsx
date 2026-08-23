@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { AppleGlyph, GoogleGlyph, SocialButton } from '../components/SocialButton';
 import { authErrorMessage, useAuth } from '../hooks/useAuth';
@@ -70,7 +71,7 @@ export default function SignIn() {
   return (
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button">
+        <Pressable onPress={() => goBack('/welcome')} style={s.back} accessibilityRole="button">
           <Text style={s.backText}>‹ Back</Text>
         </Pressable>
 
