@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '../components/Button';
+import { CurrentLoopScene } from '../components/scenes/CurrentLoopScene';
 import { colors, font, space, type } from '../theme/tokens';
 
 /**
@@ -14,15 +15,17 @@ import { colors, font, space, type } from '../theme/tokens';
 export default function Welcome() {
   const mascot = useRef(new Animated.Value(0)).current;
   const copy = useRef(new Animated.Value(0)).current;
+  const scene = useRef(new Animated.Value(0)).current;
   const actions = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(110, [
       Animated.timing(mascot, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(copy, { toValue: 1, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(scene, { toValue: 1, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(actions, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
-  }, [mascot, copy, actions]);
+  }, [mascot, copy, scene, actions]);
 
   const rise = (v: Animated.Value, distance = 24) => ({
     opacity: v,
@@ -51,6 +54,13 @@ export default function Welcome() {
           </Text>
         </Animated.View>
       </View>
+
+      {/* The screen's one continuous motion, and the first idea the curriculum
+          teaches: one loop, one current, nothing used up along the way. */}
+      <Animated.View style={[rise(scene), s.scene]}>
+        <CurrentLoopScene />
+        <Text style={s.sceneCaption}>ONE LOOP. ONE CURRENT.</Text>
+      </Animated.View>
 
       <Animated.View style={[rise(actions), s.actions]}>
         <Button label="Get started" onPress={() => router.push('/onboarding')} />
@@ -87,6 +97,10 @@ const s = StyleSheet.create({
   sub: {
     fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.md, lineHeight: 22, paddingHorizontal: space.sm,
+  },
+  scene: { alignItems: 'center', gap: space.xs },
+  sceneCaption: {
+    fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.4, color: colors.inkSoft,
   },
   actions: { gap: space.xs },
   secondary: { paddingVertical: space.md, alignItems: 'center' },
