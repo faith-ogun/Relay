@@ -154,7 +154,14 @@ export function creditLeagueWin(current: Progress, week: string, rank: number | 
 }
 
 /** The stats an achievement is evaluated against. */
-export function achievementStats(p: Progress, unitsCompleted = 0) {
+/** Counters only the server can see; see `fetchCommunityStats`. */
+export interface ServerStats {
+  likesReceived: number;
+  posts: number;
+  comments: number;
+}
+
+export function achievementStats(p: Progress, unitsCompleted = 0, server?: ServerStats | null) {
   const m = { ...EMPTY_METRICS, ...p.metrics };
   return {
     xp: p.xp,
@@ -165,11 +172,13 @@ export function achievementStats(p: Progress, unitsCompleted = 0) {
     drawings: m.drawings,
     perfect: m.perfect,
     twins: m.twins,
-    posts: m.posts,
-    comments: m.comments,
     challenges: m.challenges,
     leagueWins: m.leagueWins,
-    // 'likes' (likes RECEIVED) is server-side data this client never observes;
-    // it stays absent rather than being guessed at.
+    // Likes RECEIVED only exist on other people's screens, so they come from
+    // the server. Posts and comments prefer the server's count too: it survives
+    // a cleared cache and a second device, where the local tally does not.
+    likes: server?.likesReceived ?? 0,
+    posts: Math.max(m.posts, server?.posts ?? 0),
+    comments: Math.max(m.comments, server?.comments ?? 0),
   } as Record<string, number>;
 }

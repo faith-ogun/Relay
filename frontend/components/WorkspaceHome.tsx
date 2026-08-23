@@ -30,7 +30,10 @@ import { InterviewView } from './ohmlet/views/InterviewView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
-import { reportXp, fetchLeaderboard, type Leaderboard } from '../services/community';
+import {
+  reportXp, fetchLeaderboard, fetchCommunityStats,
+  type CommunityStats, type Leaderboard,
+} from '../services/community';
 import { track } from '../services/analytics';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
 import { ACHIEVEMENTS, isEarned } from './ohmlet/data/achievements';
@@ -275,6 +278,24 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
       alive = false;
     };
   }, [childSafe, creditLeagueWin]);
+
+  // Likes received and the authoritative post/comment counts. Fetched once per
+  // session and only when the Achievements view is opened, since it is the only
+  // surface that reads them. A failure leaves the local tallies in place.
+  const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
+  useEffect(() => {
+    if (childSafe || active !== 'achievements' || communityStats) return;
+    let alive = true;
+    fetchCommunityStats()
+      .then((cs) => {
+        if (alive && cs) setCommunityStats(cs);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [childSafe, active, communityStats]);
+
   // Real progress through the curriculum, not a decorative fraction.
   const pathProgressPct = useMemo(() => {
     const total = allLessons().length;
@@ -490,15 +511,15 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                 drawings: metrics.drawings,
                 perfect: metrics.perfect,
                 twins: metrics.twins,
-                posts: metrics.posts,
-                comments: metrics.comments,
                 challenges: metrics.challenges,
                 leagueWins: metrics.leagueWins,
-                // 'likes' (likes RECEIVED on your posts) is deliberately absent.
-                // It is not an event this client ever observes, and summing it
-                // from the feed would depend on the author uid that the feed is
-                // due to stop exposing for privacy reasons. It needs a small
-                // server endpoint (a per-user community stat), not a guess.
+                // Likes RECEIVED only exist on other people's screens, so they
+                // come from the server. Posts and comments take the server's
+                // count when it is higher: it survives a cleared cache and a
+                // second device, where the local tally does not.
+                likes: communityStats?.likesReceived ?? 0,
+                posts: Math.max(metrics.posts, communityStats?.posts ?? 0),
+                comments: Math.max(metrics.comments, communityStats?.comments ?? 0),
               }}
             />
           )}

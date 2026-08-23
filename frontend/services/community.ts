@@ -84,6 +84,22 @@ async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
   }
 }
 
+export interface CommunityStats {
+  /** Likes this user's own posts have received. Only the server can see this. */
+  likesReceived: number;
+  posts: number;
+  comments: number;
+}
+
+/**
+ * Social counters the client cannot observe about itself. Likes RECEIVED live
+ * on other people's screens, so they are summed server-side from the caller's
+ * own posts rather than guessed at from the feed.
+ */
+export async function fetchCommunityStats(): Promise<CommunityStats | null> {
+  return api<CommunityStats>('/v1/community/stats');
+}
+
 export async function fetchFeed(): Promise<CommunityPost[]> {
   const data = await api<{ posts: CommunityPost[] }>('/v1/community/posts');
   return data?.posts ?? [];

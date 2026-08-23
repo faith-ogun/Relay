@@ -404,6 +404,39 @@ def _ensure_challenges(client) -> None:
             ref.set({**c, "participantCount": 0, "createdAt": _now()})
 
 
+@router.get("/stats")
+def community_stats(claims: dict = Depends(require_claims)) -> dict:
+    """Social counters the client cannot observe about itself.
+
+    Likes RECEIVED live on other people's screens: a client only ever sees the
+    likes it *gives*, so three achievements ("Well Liked", "Crowd Favourite",
+    "Community Hero") were unearnable no matter how popular a build got. The
+    count is summed server-side from the author's own posts, which keeps it
+    honest — a client cannot inflate a number it never writes.
+
+    Posts and comments are returned from the same authoritative source so the
+    achievement screen agrees with the feed even if local state was cleared or
+    the user signed in on a second device.
+    """
+    uid = claims["uid"]
+    client = _client()
+
+    likes_received = 0
+    posts = 0
+    for snap in client.collection(POSTS).where(filter=FieldFilter("uid", "==", uid)).stream():
+        p = snap.to_dict() or {}
+        posts += 1
+        # Hidden (reported) posts still count: moderation is not a punishment
+        # for the likes a post already earned.
+        likes_received += max(0, int(p.get("likes") or 0))
+
+    comments = sum(
+        1 for _ in client.collection(COMMENTS).where(filter=FieldFilter("uid", "==", uid)).stream()
+    )
+
+    return {"likesReceived": likes_received, "posts": posts, "comments": comments}
+
+
 @router.get("/challenges")
 def list_challenges(claims: dict = Depends(require_claims)) -> dict:
     uid = claims["uid"]

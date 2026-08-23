@@ -66,6 +66,16 @@ async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   }
 }
 
+export interface CommunityStats {
+  /** Likes this user's own posts have received. Only the server can see this. */
+  likesReceived: number;
+  posts: number;
+  comments: number;
+}
+
+/** Social counters the client cannot observe about itself. */
+export const fetchCommunityStats = () => call<CommunityStats>('/stats');
+
 export const fetchFeed = () => call<{ posts: Post[] }>('/posts');
 export const fetchComments = (postId: string) =>
   call<{ comments: Comment[] }>(`/posts/${encodeURIComponent(postId)}/comments`);

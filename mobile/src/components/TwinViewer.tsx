@@ -4,6 +4,7 @@ import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import Svg, { Path } from 'react-native-svg';
 import { colors, font, type } from '../theme/tokens';
 
 interface Props {
@@ -94,14 +95,6 @@ export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
             reject,
           );
         });
-      } else {
-        // No model: a placeholder solid so the surface is never blank while
-        // the real mesh is still downloading.
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(1.4, 1.4, 1.4),
-          new THREE.MeshStandardMaterial({ color: 0xfacc2e, roughness: 0.6, metalness: 0.1 }),
-        );
-        pivot.add(mesh);
       }
 
       camera.position.set(0, 0.6, 4.2);
@@ -122,6 +115,26 @@ export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
       setFailed(true);
     }
   }, [model]);
+
+  // No bytes means there is no twin to show. Rendering a stand-in solid here
+  // would put a yellow cube on screen that a learner reads as their build, so
+  // the surface says plainly that nothing has been generated yet.
+  if (!model) {
+    return (
+      <View style={[s.fallback, { height }]}>
+        <View style={s.emptyMark}>
+          <Svg width={38} height={38} viewBox="0 0 38 38">
+            <Path d="M19 3 L34 11.5 L34 26.5 L19 35 L4 26.5 L4 11.5 Z"
+                  fill="none" stroke={colors.gold} strokeWidth={2.2} strokeLinejoin="round" />
+            <Path d="M4 11.5 L19 20 L34 11.5 M19 20 L19 35"
+                  fill="none" stroke="rgba(250,204,46,0.45)" strokeWidth={2.2} strokeLinejoin="round" />
+          </Svg>
+        </View>
+        <Text style={s.emptyTitle}>No twin yet</Text>
+        <Text style={s.fallbackText}>Finish a build with the live tutor and a 3D twin is generated for it.</Text>
+      </View>
+    );
+  }
 
   if (failed) {
     return (
@@ -153,8 +166,14 @@ const s = StyleSheet.create({
   loading: { alignItems: 'center', justifyContent: 'center' },
   fallback: {
     backgroundColor: colors.ink, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 28, gap: 6,
   },
-  fallbackText: { fontFamily: font.bold, fontSize: type.small, color: 'rgba(255,255,255,0.7)' },
+  emptyMark: { marginBottom: 4, opacity: 0.9 },
+  emptyTitle: { fontFamily: font.black, fontSize: type.body, color: colors.white },
+  fallbackText: {
+    fontFamily: font.semibold, fontSize: type.small, color: 'rgba(255,255,255,0.62)',
+    textAlign: 'center', lineHeight: 19,
+  },
   hint: {
     position: 'absolute', bottom: 10, left: 10,
     backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999,

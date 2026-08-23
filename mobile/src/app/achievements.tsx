@@ -7,7 +7,8 @@ import {
   getAchievements, isEarned, progressOf, TIER_COLOR, TIER_LABEL, UNTRACKED,
   type Achievement, type Tier,
 } from '../services/achievements';
-import { achievementStats, EMPTY, loadProgress, type Progress } from '../services/progress';
+import { achievementStats, EMPTY, loadProgress, type Progress, type ServerStats } from '../services/progress';
+import { fetchCommunityStats } from '../services/community';
 import { getManifest } from '../services/curriculum';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
@@ -17,18 +18,23 @@ export default function Achievements() {
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [units, setUnits] = useState(0);
   const [open, setOpen] = useState<Achievement | null>(null);
+  const [server, setServer] = useState<ServerStats | null>(null);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const [list, prog, manifest] = await Promise.all([
+      const [list, prog, manifest, stats] = await Promise.all([
         getAchievements(),
         user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
         getManifest(),
+        // Community stats are a bonus, not a gate: the screen renders from
+        // local progress if the call fails, rather than blocking on the network.
+        user?.uid ? fetchCommunityStats() : Promise.resolve(null),
       ]);
       if (!alive) return;
       setItems(list);
       setProgress(prog);
+      if (stats && stats.ok) setServer(stats.data);
       // A unit counts as complete when every lesson under it is done.
       if (manifest) {
         const done = new Set(Object.keys(prog.lessonLevels));
@@ -39,7 +45,7 @@ export default function Achievements() {
     return () => { alive = false; };
   }, [user?.uid]);
 
-  const stats = useMemo(() => achievementStats(progress, units), [progress, units]);
+  const stats = useMemo(() => achievementStats(progress, units, server), [progress, units, server]);
 
   const ordered = useMemo(() => {
     if (!items) return [];

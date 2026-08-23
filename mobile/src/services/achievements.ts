@@ -70,8 +70,12 @@ export const progressOf = (a: Achievement, stats: Record<string, number>): numbe
   a.threshold <= 0 ? 1 : Math.min(1, (stats[a.metric] ?? 0) / a.threshold);
 
 /**
- * Metrics with no source on this client (currently only likes received, which
- * is server-side community data). A locked card for one of these says so
- * rather than showing a progress ring stuck at zero.
+ * Metrics with no source on this client. Empty: `likes` (likes received) used
+ * to live here because only the server can see it, and the three achievements
+ * that depend on it were unearnable. `/v1/community/stats` now supplies it.
+ *
+ * Kept as the mechanism, not the exception: a metric added to the curriculum
+ * before its source exists belongs here so its card says so, instead of showing
+ * a progress ring frozen at zero.
  */
-export const UNTRACKED = new Set(['likes']);
+export const UNTRACKED = new Set<string>();
