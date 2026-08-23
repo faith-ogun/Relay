@@ -5,6 +5,9 @@ import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
+import {
+  BENCH_NOTE, GOAL_FRAMING, loadProfile, type LearnerProfile,
+} from '../services/learnerProfile';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 export default function Home() {
@@ -13,14 +16,17 @@ export default function Home() {
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
 
   const load = useCallback(async () => {
-    const [m, p] = await Promise.all([
+    const [m, p, prof] = await Promise.all([
       getManifest(),
       user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
+      loadProfile(),
     ]);
     setManifest(m);
     setProgress(p);
+    setProfile(prof);
   }, [user?.uid]);
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
@@ -40,6 +46,13 @@ export default function Home() {
   }, [manifest, progress]);
 
   const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // The daily target the learner set during setup. Their streak counts against
+  // it, so it is shown rather than kept private, and it is the reason the setup
+  // question was worth asking.
+  const dailyGoal = profile?.dailyGoal ?? 1;
+  const doneToday = Math.min(progress.completedToday, dailyGoal);
+  const goalMet = progress.completedToday >= dailyGoal;
 
 
   if (loading) {
@@ -68,9 +81,29 @@ export default function Home() {
         <Stat value={`${completedCount}`} label={`of ${totalCount} lessons`} tint={colors.blueDeep} />
       </View>
 
+      {/* Today's target, against the goal they chose. */}
+      <View style={[s.daily, goalMet && s.dailyDone]}>
+        <View style={s.dailyPips}>
+          {Array.from({ length: dailyGoal }).map((_, i) => (
+            <View key={i} style={[s.pip, i < doneToday && s.pipOn]} />
+          ))}
+        </View>
+        <Text style={s.dailyText}>
+          {goalMet
+            ? `Daily goal done: ${progress.completedToday} today.`
+            : `${doneToday} of ${dailyGoal} today`}
+        </Text>
+      </View>
+
       {next ? (
         <View style={s.hero}>
-          <Text style={s.heroKicker}>{completedCount === 0 ? 'START HERE' : 'PICK UP WHERE YOU LEFT OFF'}</Text>
+          <Text style={s.heroKicker}>
+            {completedCount === 0
+              ? 'START HERE'
+              : profile
+                ? GOAL_FRAMING[profile.goal]
+                : 'PICK UP WHERE YOU LEFT OFF'}
+          </Text>
           <Text style={s.heroTitle}>{next.title}</Text>
           {!!next.summary && <Text style={s.heroBody}>{next.summary}</Text>}
 
@@ -103,8 +136,20 @@ export default function Home() {
         </View>
       )}
 
-      <Row title="Live tutor" sub="Camera + voice on your real bench" onPress={() => router.push('/live')} />
-      <Row title="Learning path" sub={`${manifest?.units.length ?? 12} units, in the order they unlock`} onPress={() => router.push('/path')} />
+      <Row
+        title="Live tutor"
+        sub={profile ? BENCH_NOTE[profile.bench] : 'Camera + voice on your real bench'}
+        onPress={() => router.push('/live')}
+      />
+      <Row
+        title="Learning path"
+        sub={
+          profile?.experience === 'lots' && completedCount === 0
+            ? 'Know some of this already? Jump in further along.'
+            : `${manifest?.units.length ?? 12} units, in the order they unlock`
+        }
+        onPress={() => router.push('/path')}
+      />
       <Row title="Achievements" sub="Your trophy case" onPress={() => router.push('/achievements')} />
       <Row title="Community" sub="Builds, challenges and the weekly league" onPress={() => router.push('/community')} />
       <Row title="3D twins" sub="Models of everything you've built" onPress={() => router.push('/twins')} />
@@ -136,6 +181,17 @@ const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingTop: space.xxl * 1.3, paddingBottom: space.xxl },
+  daily: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    backgroundColor: colors.white, paddingVertical: 10, paddingHorizontal: space.md,
+    marginBottom: space.md,
+  },
+  dailyDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
+  dailyPips: { flexDirection: 'row', gap: 5 },
+  pip: { width: 14, height: 8, borderRadius: 4, backgroundColor: colors.line },
+  pipOn: { backgroundColor: colors.goldDeep },
+  dailyText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.6, marginTop: 4 },
   stats: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },

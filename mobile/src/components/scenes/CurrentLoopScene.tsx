@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, G } from 'react-native-svg';
 import Animated, {
-  Easing, useAnimatedProps, useSharedValue, withRepeat, withTiming,
+  cancelAnimation, Easing, useAnimatedProps, useSharedValue, withRepeat, withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { Battery, Led, Resistor, Wire } from '../circuits/primitives';
@@ -52,9 +53,19 @@ const CHARGES = [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.84];
 export const CurrentLoopScene: React.FC = () => {
   const t = useSharedValue(0);
 
-  useEffect(() => {
-    t.value = withRepeat(withTiming(1, { duration: 4200, easing: Easing.linear }), -1, false);
-  }, [t]);
+  // Started on focus rather than on mount. The welcome screen is mounted while
+  // the router is still resolving where the person belongs, so a mount-time
+  // animation could finish or never visibly begin before the screen was on
+  // screen: the current sat still until you navigated away and came back.
+  // Stopping on blur also means the loop is not burning frames behind another
+  // screen.
+  useFocusEffect(
+    useCallback(() => {
+      t.value = 0;
+      t.value = withRepeat(withTiming(1, { duration: 4200, easing: Easing.linear }), -1, false);
+      return () => cancelAnimation(t);
+    }, [t]),
+  );
 
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

@@ -59,7 +59,10 @@ export default function Onboarding() {
 
   const finish = async () => {
     await markOnboardingSeen();
-    router.replace('/sign-in');
+    // Setup comes before the account on purpose: four taps of investment is a
+    // better place to ask for an email than a cold form, and the answers shape
+    // what Home shows the moment they land on it.
+    router.replace('/setup');
   };
 
   const next = () => {
@@ -67,11 +70,32 @@ export default function Onboarding() {
     scroller.current?.scrollTo({ x: (index + 1) * width, animated: true });
   };
 
+  // Back goes a slide at a time, and off the first slide returns to Welcome.
+  // A swipe already does this, but not everyone reaches for a swipe, and
+  // someone who tapped "Get started" by accident needs a visible way out.
+  const back = () => {
+    if (index === 0) return void router.back();
+    scroller.current?.scrollTo({ x: (index - 1) * width, animated: true });
+  };
+
   return (
     <View style={s.screen}>
-      <Pressable onPress={finish} style={s.skip} accessibilityRole="button" accessibilityLabel="Skip">
-        <Text style={s.skipText}>Skip</Text>
-      </Pressable>
+      <View style={s.topBar}>
+        <Pressable onPress={back} style={s.topButton} accessibilityRole="button" accessibilityLabel="Back" hitSlop={10}>
+          <Text style={s.backGlyph}>‹</Text>
+        </Pressable>
+        {/* One filled segment per slide seen: it says how much is left, which
+            three dots at the bottom of the screen do not. */}
+        <View style={s.progress} accessibilityRole="progressbar"
+              accessibilityLabel={`Step ${index + 1} of ${SLIDES.length}`}>
+          {SLIDES.map((slide, i) => (
+            <View key={slide.kicker} style={[s.progressSeg, i <= index && s.progressSegOn]} />
+          ))}
+        </View>
+        <Pressable onPress={finish} style={s.topButton} accessibilityRole="button" accessibilityLabel="Skip" hitSlop={10}>
+          <Text style={s.skipText}>Skip</Text>
+        </Pressable>
+      </View>
 
       <ScrollView
         ref={scroller}
@@ -98,23 +122,25 @@ export default function Onboarding() {
       </ScrollView>
 
       <View style={s.footer}>
-        <View style={s.dots} accessibilityRole="progressbar" accessibilityLabel={`Step ${index + 1} of ${SLIDES.length}`}>
-          {SLIDES.map((slide, i) => {
-            const active = i === index;
-            return <View key={slide.kicker} style={[s.dot, active ? s.dotActive : null]} />;
-          })}
-        </View>
-        <Button label={last ? 'Create my account' : 'Next'} onPress={next} />
+        <Button label={last ? 'Set up my path' : 'Next'} onPress={next} />
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.xxl * 1.2 },
+  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.xxl * 1.3 },
   flex: { flex: 1 },
-  skip: { position: 'absolute', top: space.xxl * 1.3, right: space.lg, zIndex: 10, padding: space.sm },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    paddingHorizontal: space.lg, paddingBottom: space.sm,
+  },
+  topButton: { minWidth: 44, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+  backGlyph: { fontFamily: font.black, fontSize: 30, lineHeight: 32, color: colors.ink },
   skipText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
+  progress: { flex: 1, flexDirection: 'row', gap: 5 },
+  progressSeg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  progressSegOn: { backgroundColor: colors.ink },
   slide: { alignItems: 'center', paddingHorizontal: space.lg, paddingTop: space.xl },
   art: { width: 132, height: 132, marginBottom: space.md },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
@@ -128,10 +154,4 @@ const s = StyleSheet.create({
   },
   scene: { marginTop: space.lg, alignItems: 'center', justifyContent: 'center', flex: 1 },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.md },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: space.xs },
-  dot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: colors.line,
-    borderWidth: 1.5, borderColor: colors.line,
-  },
-  dotActive: { width: 26, backgroundColor: colors.gold, borderColor: colors.ink },
 });

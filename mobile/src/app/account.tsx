@@ -4,11 +4,11 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { useAuth } from '../hooks/useAuth';
 import { usePlan } from '../hooks/usePlan';
 import { deleteMyAccount, fetchMyData } from '../services/privacy';
 import { clearLocalState } from '../services/progress';
+import { clearProfile } from '../services/learnerProfile';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 const LEGAL_BASE = 'https://ohmlet.org';
@@ -59,11 +59,20 @@ export default function Account() {
       if (file.exists) file.delete();
       file.create();
       file.write(JSON.stringify(result.data, null, 2));
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json' });
-      } else {
-        Alert.alert('Export ready', `Saved to ${file.uri}`);
+      // Imported here rather than at module scope. A missing native module
+      // throws on import, which would take down the whole Account screen and
+      // with it the only route to account deletion. The export is the optional
+      // part; deletion must never be unreachable.
+      try {
+        const Sharing = await import('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json' });
+          return;
+        }
+      } catch {
+        /* fall through to the path alert */
       }
+      Alert.alert('Export ready', `Your data was saved to:\n\n${file.uri}`);
     } catch {
       Alert.alert('Could not save your export', 'Please try again.');
     }
@@ -83,8 +92,9 @@ export default function Account() {
       return;
     }
     // The server has already revoked every session. Clear what this device kept
-    // so the next person to open the app does not inherit any of it.
-    await clearLocalState(user?.uid);
+    // so the next person to open the app does not inherit any of it, including
+    // the setup answers, which describe a person as much as their progress does.
+    await Promise.all([clearLocalState(user?.uid), clearProfile()]);
     await signOut().catch(() => undefined);
     router.replace('/welcome');
   };

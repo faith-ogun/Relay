@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Button } from '../components/Button';
 import { CurrentLoopScene } from '../components/scenes/CurrentLoopScene';
 import { colors, font, space, type } from '../theme/tokens';
@@ -18,14 +18,21 @@ export default function Welcome() {
   const scene = useRef(new Animated.Value(0)).current;
   const actions = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    Animated.stagger(110, [
+  // Replayed on focus, not on mount: this screen is mounted while the router is
+  // still deciding where to send you, so a mount-time entrance could play to an
+  // audience of nobody and then sit finished.
+  useFocusEffect(
+    useCallback(() => {
+      [mascot, copy, scene, actions].forEach((v) => v.setValue(0));
+      Animated.stagger(110, [
       Animated.timing(mascot, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(copy, { toValue: 1, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(scene, { toValue: 1, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(actions, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
-  }, [mascot, copy, scene, actions]);
+      ]).start();
+      return () => undefined;
+    }, [mascot, copy, scene, actions]),
+  );
 
   const rise = (v: Animated.Value, distance = 24) => ({
     opacity: v,
