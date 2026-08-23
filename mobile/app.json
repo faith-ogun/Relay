@@ -5,7 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ohmlet",
+    "scheme": [
+      "ohmlet",
+      "com.googleusercontent.apps.182102811288-7s9pk39kbo8tjt1sf4flou49jim43o4b"
+    ],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
@@ -14,7 +17,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Ohmlet uses your camera so the tutor can see your breadboard and check your wiring as you build.",
         "NSMicrophoneUsageDescription": "Ohmlet uses your microphone so you can talk to the tutor while you build."
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "org.ohmlet.app",

@@ -94,22 +94,38 @@ export async function signInWithApple(): Promise<SocialResult> {
 }
 
 /**
- * Google via the system browser (expo-auth-session), so it works in Expo Go
- * without a native module. Needs an iOS OAuth client id from the Firebase
- * console; without one the button is hidden rather than shown broken.
+ * Google via the system browser (expo-auth-session), so no native module is
+ * needed. Without an iOS client id the button is hidden rather than shown
+ * broken.
+ *
+ * Two things here are specific to a Google *iOS* OAuth client and are easy to
+ * get wrong:
+ *
+ *   - The redirect must be the REVERSED client id scheme. Google rejects a
+ *     custom scheme like `ohmlet://` for an iOS client type, so the app also
+ *     registers that scheme (see `app.json`) or iOS has nowhere to deliver the
+ *     callback.
+ *   - The nonce must be fresh per request. It was a constant, which is the same
+ *     as having none: the whole point is that an id token captured from one
+ *     sign-in cannot be replayed into another.
  */
 export async function signInWithGoogle(): Promise<SocialResult> {
   if (!googleClientId) {
     return { ok: false, cancelled: false, message: 'Google sign-in is not configured yet.' };
   }
   try {
-    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'ohmlet' });
+    // `<reversed>:/oauth2redirect` is the form Google's iOS clients expect.
+    const reversed = googleClientId.split('.apps.googleusercontent.com')[0];
+    const redirectUri = `com.googleusercontent.apps.${reversed}:/oauth2redirect`;
+    const nonce = Array.from(Crypto.getRandomBytes(16))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
     const request = new AuthSession.AuthRequest({
       clientId: googleClientId,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
-      extraParams: { nonce: 'ohmlet' },
+      extraParams: { nonce },
     });
     const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
     const result = await request.promptAsync(discovery);
