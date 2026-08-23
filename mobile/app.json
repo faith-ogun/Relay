@@ -4,7 +4,7 @@
     "slug": "ohmlet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/brand/app-icon.png",
     "scheme": [
       "ohmlet",
       "com.googleusercontent.apps.182102811288-7s9pk39kbo8tjt1sf4flou49jim43o4b"
@@ -23,10 +23,8 @@
     "android": {
       "package": "org.ohmlet.app",
       "adaptiveIcon": {
-        "backgroundColor": "#facc2e",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/brand/android-foreground.png",
+        "backgroundColor": "#facc2e"
       },
       "permissions": [
         "android.permission.CAMERA",

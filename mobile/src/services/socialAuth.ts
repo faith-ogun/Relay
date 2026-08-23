@@ -125,7 +125,20 @@ export async function signInWithGoogle(): Promise<SocialResult> {
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
-      extraParams: { nonce },
+      // AuthRequest turns PKCE on by default, which appends `code_challenge`
+      // and `code_challenge_method`. Those belong to the authorization-code
+      // flow; asking for an id_token directly and sending them makes Google
+      // reject the whole request with
+      // "Parameter not allowed for this message type: code_challenge_method".
+      // The nonce below is what protects this flow from replay, not PKCE.
+      usePKCE: false,
+      extraParams: {
+        nonce,
+        // Without this Google silently reuses whichever account the system
+        // browser is already signed into, so someone with several accounts is
+        // never asked which one they want.
+        prompt: 'select_account',
+      },
     });
     const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
     const result = await request.promptAsync(discovery);
