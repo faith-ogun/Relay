@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '../services/nav';
+import { useAuth } from '../hooks/useAuth';
+import { useChildSafe } from '../hooks/useChildSafe';
+import { ClosedForNow } from '../components/ClosedForNow';
 import { Button } from '../components/Button';
 import { usePlan } from '../hooks/usePlan';
 import {
@@ -13,7 +16,22 @@ import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 const ORDER: Plan[] = ['free', 'pro', 'max'];
 
+/** RevenueCat's package type spelled the way a person would say it. */
+function periodLabel(period: string): string {
+  switch (period.toUpperCase()) {
+    case 'MONTHLY': return 'month';
+    case 'ANNUAL': return 'year';
+    case 'WEEKLY': return 'week';
+    case 'SIX_MONTH': return 'six months';
+    case 'THREE_MONTH': return 'three months';
+    case 'TWO_MONTH': return 'two months';
+    default: return '';   // lifetime and one-off packages do not renew
+  }
+}
+
 export default function Plans() {
+  const { user } = useAuth();
+  const { childSafe, resolved: childResolved } = useChildSafe();
   const { plan, minutesRemaining, unlimited, refresh } = usePlan();
   const [packages, setPackages] = useState<Package[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -22,12 +40,27 @@ export default function Plans() {
   useEffect(() => {
     let alive = true;
     void (async () => {
-      await initBilling();
+      if (childSafe) return;
+      // The uid matters: RevenueCat assigns an anonymous id without it, and
+      // the webhook then has no way to map a purchase back to the account. The
+      // learner would pay and stay on the free cap.
+      await initBilling(user?.uid);
       const pkgs = await getOfferings();
       if (alive) setPackages(pkgs);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [childSafe, user?.uid]);
+
+  // Child mode (#94): refuse even when reached directly, since hiding a row on
+  // Home is not a control.
+  if (childResolved && childSafe) {
+    return (
+      <ClosedForNow
+        title="Plans are managed by a grown-up"
+        body="Ohmlet does not take payments from an account that belongs to a minor. A parent or guardian can manage a plan from their own account."
+      />
+    );
+  }
 
   const unavailable = billingUnavailableReason(billingState());
 
@@ -97,17 +130,37 @@ export default function Plans() {
           </View>
         ) : (
           packages.map((pkg) => (
-            <Button
-              key={pkg.id}
-              label={busy === pkg.id ? 'One moment…' : `${pkg.title} — ${pkg.priceString}`}
-              onPress={() => void buy(pkg.id)}
-              disabled={!!busy}
-              style={{ marginBottom: space.sm }}
-            />
+            <View key={pkg.id} style={{ marginBottom: space.md }}>
+              <Button
+                label={busy === pkg.id ? 'One moment…' : `${pkg.title} — ${pkg.priceString}`}
+                onPress={() => void buy(pkg.id)}
+                disabled={!!busy}
+              />
+              {/* Guideline 3.1.2 wants the length and the renewal terms on the
+                  paywall itself, not only in App Store Connect. */}
+              {!!periodLabel(pkg.period) && (
+                <Text style={s.terms}>
+                  {pkg.priceString} per {periodLabel(pkg.period)}, renews automatically until
+                  cancelled. Cancel any time in your Apple ID settings.
+                </Text>
+              )}
+            </View>
           ))
         )}
 
         {!!note && <Text style={s.note}>{note}</Text>}
+
+        {/* Guideline 3.1.2 requires functional links to both from the paywall.
+            Their absence is a rejection, not a warning. */}
+        <View style={s.legalRow}>
+          <Pressable onPress={() => Linking.openURL('https://ohmlet.org/terms')} accessibilityRole="link">
+            <Text style={s.legalLink}>Terms of Use</Text>
+          </Pressable>
+          <Text style={s.legalDot}>·</Text>
+          <Pressable onPress={() => Linking.openURL('https://ohmlet.org/privacy')} accessibilityRole="link">
+            <Text style={s.legalLink}>Privacy Policy</Text>
+          </Pressable>
+        </View>
 
         {/* Apple requires restore to be reachable in-app. */}
         <Pressable
@@ -168,6 +221,16 @@ const s = StyleSheet.create({
   noticeTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
   note: { fontFamily: font.bold, fontSize: type.small, color: colors.ink, marginTop: space.sm, textAlign: 'center' },
+  terms: {
+    fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft,
+    marginTop: 6, lineHeight: 16, textAlign: 'center',
+  },
+  legalRow: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: space.sm, marginTop: space.md,
+  },
+  legalLink: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
+  legalDot: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   restore: { marginTop: space.md, alignItems: 'center', paddingVertical: space.sm },
   restoreText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
   legal: {

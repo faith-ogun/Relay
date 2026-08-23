@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { router, useFocusEffect } from 'expo-router';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useChildSafe } from '../hooks/useChildSafe';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import {
@@ -12,6 +13,7 @@ import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 export default function Home() {
   const { displayName, user } = useAuth();
+  const { childSafe } = useChildSafe();
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -151,9 +153,15 @@ export default function Home() {
         onPress={() => router.push('/path')}
       />
       <Row title="Achievements" sub="Your trophy case" onPress={() => router.push('/achievements')} />
-      <Row title="Community" sub="Builds, challenges and the weekly league" onPress={() => router.push('/community')} />
+      {/* Child mode (#94): a minor sees no public social surface and no way to
+          spend money. The server enforces both; this keeps them off the screen. */}
+      {!childSafe && (
+        <Row title="Community" sub="Builds, challenges and the weekly league" onPress={() => router.push('/community')} />
+      )}
       <Row title="3D twins" sub="Models of everything you've built" onPress={() => router.push('/twins')} />
-      <Row title="Plans" sub="More live tutoring time" onPress={() => router.push('/plans')} />
+      {!childSafe && (
+        <Row title="Plans" sub="More live tutoring time" onPress={() => router.push('/plans')} />
+      )}
 
       <Row title="Account" sub="Your plan, your data, and privacy" onPress={() => router.push('/account')} />
     </ScrollView>

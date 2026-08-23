@@ -32,6 +32,7 @@ import interview as interview_mod
 from state_store import router as state_router
 from account import router as account_router
 from billing import router as billing_router
+from revenuecat import router as revenuecat_router
 from privacy import router as privacy_router
 from community import router as community_router
 from interview_router import router as interview_router
@@ -125,6 +126,7 @@ app.include_router(state_router)
 app.include_router(account_router)
 # Stripe billing: Checkout, Customer Portal, and the plan-writing webhook.
 app.include_router(billing_router)
+app.include_router(revenuecat_router)
 # Privacy rights (GDPR/CCPA/...): data export + account deletion.
 app.include_router(privacy_router)
 # Community: feed, comments, reactions, challenges, weekly league (#63).

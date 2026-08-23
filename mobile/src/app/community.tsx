@@ -7,6 +7,8 @@ import { router } from 'expo-router';
 import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useChildSafe } from '../hooks/useChildSafe';
+import { ClosedForNow } from '../components/ClosedForNow';
 import {
   addComment, blockUser, createPost, fetchChallenges, fetchComments, fetchFeed,
   fetchLeaderboard, joinChallenge, leaveChallenge, relativeTime, reportPost, toggleLike,
@@ -19,6 +21,7 @@ type Tab = 'feed' | 'challenges' | 'league';
 type LoadState = 'loading' | 'ready' | 'offline' | 'forbidden';
 
 export default function Community() {
+  const { childSafe, resolved: childResolved } = useChildSafe();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('feed');
   const [state, setState] = useState<LoadState>('loading');
@@ -46,6 +49,17 @@ export default function Community() {
   }, [user?.uid]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Child mode (#94): refused before anything is fetched. Hiding the row on
+  // Home is not a control, and the server refuses this too.
+  if (childResolved && childSafe) {
+    return (
+      <ClosedForNow
+        title="Community is for older builders"
+        body="Ohmlet keeps the public feed, challenges and the league closed while an account belongs to someone under the age of digital consent. Everything else in the app is open to you."
+      />
+    );
+  }
 
   if (state === 'loading') {
     return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
