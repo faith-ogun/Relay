@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { getIdToken } from '../services/firebase';
 import { pcmToWavBase64, base64ToBytes } from '../services/pcm';
 
@@ -42,7 +42,7 @@ export function useLiveBridge({ wsUrl, userId, sessionId, visionIntervalMs = 250
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
   const frameTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   // Set by the screen: returns one base64 JPEG of the current preview.
   const grabFrameRef = useRef<null | (() => Promise<string | null>)>(null);
@@ -58,17 +58,16 @@ export function useLiveBridge({ wsUrl, userId, sessionId, visionIntervalMs = 250
   }, []);
 
   // ── Agent audio ──
+  // expo-audio, not expo-av: the latter is deprecated and slated for removal.
   const playAudio = useCallback(async (b64: string) => {
     try {
       const wav = pcmToWavBase64(base64ToBytes(b64));
       // Replace rather than layer: chunks arrive faster than they play, and
       // overlapping them turns speech into noise.
-      await soundRef.current?.unloadAsync().catch(() => {});
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/wav;base64,${wav}` },
-        { shouldPlay: true },
-      );
-      soundRef.current = sound;
+      playerRef.current?.remove();
+      const player = createAudioPlayer({ uri: `data:audio/wav;base64,${wav}` });
+      playerRef.current = player;
+      player.play();
     } catch {
       /* a dropped chunk is better than a crashed session */
     }
@@ -116,6 +115,10 @@ export function useLiveBridge({ wsUrl, userId, sessionId, visionIntervalMs = 250
       return;
     }
 
+    // Play through the speaker even with the ringer switch off — a tutor that
+    // talks is useless if a silent switch mutes it.
+    await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+
     const ws = new WebSocket(`${wsUrl}/ws/${encodeURIComponent(userId)}/${encodeURIComponent(sessionId)}`);
     wsRef.current = ws;
 
@@ -144,8 +147,8 @@ export function useLiveBridge({ wsUrl, userId, sessionId, visionIntervalMs = 250
     try { wsRef.current?.send(JSON.stringify({ type: 'close' })); } catch { /* already gone */ }
     wsRef.current?.close();
     wsRef.current = null;
-    void soundRef.current?.unloadAsync().catch(() => {});
-    soundRef.current = null;
+    playerRef.current?.remove();
+    playerRef.current = null;
     setCamOn(false);
     setState('idle');
   }, []);
@@ -184,7 +187,8 @@ export function useLiveBridge({ wsUrl, userId, sessionId, visionIntervalMs = 250
     if (frameTimer.current) clearInterval(frameTimer.current);
     wsRef.current?.close();
     wsRef.current = null;
-    void soundRef.current?.unloadAsync().catch(() => {});
+    playerRef.current?.remove();
+    playerRef.current = null;
   }, []);
 
   return {

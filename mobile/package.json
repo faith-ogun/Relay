@@ -4,12 +4,11 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",
-    "@expo/ui": "~0.2.0-beta.9",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.37",
     "expo-apple-authentication": "~8.0.8",
+    "expo-audio": "~1.1.1",
     "expo-auth-session": "~7.0.11",
-    "expo-av": "^16.0.8",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",
@@ -49,8 +48,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
