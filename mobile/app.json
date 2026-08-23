@@ -24,7 +24,7 @@
       "package": "org.ohmlet.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/android-foreground.png",
-        "backgroundColor": "#facc2e"
+        "backgroundColor": "#fdc90b"
       },
       "permissions": [
         "android.permission.CAMERA",
