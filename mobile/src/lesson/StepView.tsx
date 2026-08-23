@@ -3,12 +3,14 @@ import { ActivityIndicator } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { DrawCanvas, type DrawCanvasHandle } from './DrawCanvas';
+import { CircuitDiagram, regionLabel } from '../components/circuits/CircuitDiagram';
 import { drawingGraderConfigured, gradeDrawing } from '../services/drawingGrader';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import type {
-  LessonStep, StepChoice, StepConnect, StepDraw, StepDragOrder, StepFill, StepMatch,
-  StepTeach, StepTrueFalse,
+  LessonStep, StepBuildToSpec, StepChoice, StepConnect, StepDraw, StepDragOrder,
+  StepFill, StepFixCircuit, StepMatch, StepSpotError, StepTeach, StepTraceCurrent,
+  StepTrueFalse,
 } from './types';
 
 interface Props {
@@ -41,6 +43,14 @@ export const StepView: React.FC<Props> = (props) => {
     case 'draw_circuit':
     case 'draw_fix':
       return <DrawStep {...props} step={step as StepDraw} />;
+    case 'spot_error':
+      return <SpotErrorStep {...props} step={step as StepSpotError} />;
+    case 'fix_the_circuit':
+      return <FixCircuitStep {...props} step={step as StepFixCircuit} />;
+    case 'trace_current':
+      return <TraceCurrentStep {...props} step={step as StepTraceCurrent} />;
+    case 'build_to_spec':
+      return <BuildToSpecStep {...props} step={step as StepBuildToSpec} />;
     default:
       // multiple_choice, predict_reading, predict_behavior, choose_resistor,
       // identify_component all present as a choice list.
@@ -61,6 +71,7 @@ const TeachStep: React.FC<Props & { step: StepTeach }> = ({ step, onCanCheck, re
       <Text style={s.kicker}>LEARN</Text>
       <Text style={s.title}>{step.title}</Text>
       <Text style={s.body}>{step.body}</Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
     </View>
   );
 };
@@ -84,6 +95,7 @@ const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
     <View>
       <Text style={s.kicker}>{predict ? 'PREDICT' : 'QUESTION'}</Text>
       <Text style={s.question}>{step.question}</Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
       <View style={{ gap: space.sm, marginTop: space.md }}>
         {step.options.map((opt, i) => {
           const isPicked = picked === i;
@@ -128,6 +140,7 @@ const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
     <View>
       <Text style={s.kicker}>TRUE OR FALSE</Text>
       <Text style={s.question}>{step.statement}</Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
       <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.lg }}>
         {[true, false].map((val) => {
           const isPicked = picked === val;
@@ -189,6 +202,7 @@ const FillStep: React.FC<Props & { step: StepFill }> = ({
         <Text style={s.blank}>{answer || '_____'}</Text>
         {after}
       </Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
 
       {hasTiles ? (
         <View style={s.tileWrap}>
@@ -346,6 +360,223 @@ const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
   );
 };
 
+
+// ── Spot the error ─────────────────────────────────────────────────────────
+// The learner taps the faulty part on the schematic itself. Reading a circuit
+// and locating a fault is the skill; a multiple-choice list would test recall
+// of the answer text instead.
+const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [picked, setPicked] = useState<string | null>(null);
+
+  useEffect(() => { setPicked(null); }, [step]);
+  useEffect(() => {
+    onCanCheck(picked !== null);
+    registerGrader(picked === null ? null : () => onSubmit(picked === step.correctRegion));
+    return () => registerGrader(null);
+  }, [picked, step, onCanCheck, registerGrader, onSubmit]);
+
+  const right = picked === step.correctRegion;
+  return (
+    <View>
+      <Text style={s.kicker}>SPOT THE ERROR</Text>
+      <Text style={s.question}>{step.question}</Text>
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        onRegionPress={checked ? undefined : setPicked}
+        selected={picked ? [picked] : []}
+        correct={checked ? [step.correctRegion] : []}
+        wrong={checked && !right && picked ? [picked] : []}
+      />
+      <Text style={s.hint}>
+        {checked
+          ? right
+            ? `Right: ${regionLabel(step.circuitDiagram, step.correctRegion)}.`
+            : `The fault is at ${regionLabel(step.circuitDiagram, step.correctRegion)}.`
+          : picked
+            ? `You picked ${regionLabel(step.circuitDiagram, picked)}.`
+            : 'Tap the part that is wrong.'}
+      </Text>
+      {!!step.hint && !checked && !picked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+    </View>
+  );
+};
+
+// ── Fix the circuit ────────────────────────────────────────────────────────
+// Two moves: locate the fault, then choose the repair. Both must be right, so
+// a learner cannot guess the fix without understanding where the problem is.
+const FixCircuitStep: React.FC<Props & { step: StepFixCircuit }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [region, setRegion] = useState<string | null>(null);
+  const [fix, setFix] = useState<number | null>(null);
+
+  useEffect(() => { setRegion(null); setFix(null); }, [step]);
+  const ready = region !== null && fix !== null;
+  useEffect(() => {
+    onCanCheck(ready);
+    registerGrader(!ready ? null : () => onSubmit(region === step.faultRegion && fix === step.correctFix));
+    return () => registerGrader(null);
+  }, [ready, region, fix, step, onCanCheck, registerGrader, onSubmit]);
+
+  const regionRight = region === step.faultRegion;
+  return (
+    <View>
+      <Text style={s.kicker}>FIND IT, THEN FIX IT</Text>
+      <Text style={s.question}>{step.question}</Text>
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        onRegionPress={checked ? undefined : setRegion}
+        selected={region ? [region] : []}
+        correct={checked ? [step.faultRegion] : []}
+        wrong={checked && !regionRight && region ? [region] : []}
+      />
+      <Text style={s.stepLabel}>
+        {region ? `2. Now choose the fix for ${regionLabel(step.circuitDiagram, region)}` : '1. Tap the faulty part'}
+      </Text>
+      <View style={{ gap: space.sm, marginTop: space.sm, opacity: region ? 1 : 0.4 }} pointerEvents={region ? 'auto' : 'none'}>
+        {step.fixes.map((opt, i) => {
+          const isPicked = fix === i;
+          const reveal = checked && (i === step.correctFix || isPicked);
+          const good = checked && i === step.correctFix;
+          return (
+            <Pressable
+              key={`${opt}-${i}`}
+              disabled={checked}
+              onPress={() => setFix(i)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isPicked, disabled: !region }}
+              style={[s.option, isPicked && !checked && s.optionPicked, reveal && (good ? s.optionRight : s.optionWrong)]}
+            >
+              <Text style={s.optionText}>{opt}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {!!step.hint && !checked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+    </View>
+  );
+};
+
+// ── Trace the current ──────────────────────────────────────────────────────
+// Order matters: the learner taps each part in the order current reaches it,
+// which is what distinguishes understanding a loop from naming its parts.
+const TraceCurrentStep: React.FC<Props & { step: StepTraceCurrent }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [path, setPath] = useState<string[]>([]);
+
+  useEffect(() => { setPath([]); }, [step]);
+  const complete = path.length === step.correctPath.length;
+  useEffect(() => {
+    onCanCheck(complete);
+    registerGrader(!complete ? null : () => onSubmit(path.every((id, i) => id === step.correctPath[i])));
+    return () => registerGrader(null);
+  }, [complete, path, step, onCanCheck, registerGrader, onSubmit]);
+
+  const tap = (id: string) => setPath((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  const wrongAt = path.filter((id, i) => id !== step.correctPath[i]);
+
+  return (
+    <View>
+      <Text style={s.kicker}>TRACE THE CURRENT</Text>
+      <Text style={s.question}>{step.question}</Text>
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        onRegionPress={checked ? undefined : tap}
+        selected={path}
+        correct={checked ? path.filter((id, i) => id === step.correctPath[i]) : []}
+        wrong={checked ? wrongAt : []}
+      />
+      <View style={s.pathRow}>
+        {step.correctPath.map((_, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <Text style={s.pathArrow}>→</Text>}
+            <View style={[s.pathSlot, !!path[i] && s.pathSlotFilled]}>
+              <Text style={[s.pathSlotText, !!path[i] && s.pathSlotTextFilled]} numberOfLines={1}>
+                {path[i] ? regionLabel(step.circuitDiagram, path[i]) : i + 1}
+              </Text>
+            </View>
+          </React.Fragment>
+        ))}
+      </View>
+      {!checked && <Text style={s.hint}>Tap each part in order. Tap one again to take it back.</Text>}
+      {checked && (
+        <Text style={s.hint}>
+          The loop runs {step.correctPath.map((id) => regionLabel(step.circuitDiagram, id)).join(' → ')}.
+        </Text>
+      )}
+    </View>
+  );
+};
+
+// ── Build to spec ──────────────────────────────────────────────────────────
+// A palette with more parts than slots, so the learner both selects and orders.
+const BuildToSpecStep: React.FC<Props & { step: StepBuildToSpec }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [placed, setPlaced] = useState<number[]>([]);
+
+  useEffect(() => { setPlaced([]); }, [step]);
+  const full = placed.length === step.slots;
+  useEffect(() => {
+    onCanCheck(full);
+    registerGrader(!full ? null : () => onSubmit(placed.every((p, i) => p === step.correct[i])));
+    return () => registerGrader(null);
+  }, [full, placed, step, onCanCheck, registerGrader, onSubmit]);
+
+  return (
+    <View>
+      <Text style={s.kicker}>BUILD IT</Text>
+      <Text style={s.question}>{step.instruction}</Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
+
+      <View style={s.pathRow}>
+        {Array.from({ length: step.slots }).map((_, i) => {
+          const partIdx = placed[i];
+          const good = checked && partIdx === step.correct[i];
+          const bad = checked && partIdx !== undefined && partIdx !== step.correct[i];
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && <Text style={s.pathArrow}>→</Text>}
+              <Pressable
+                disabled={checked || partIdx === undefined}
+                onPress={() => setPlaced((prev) => prev.filter((_, j) => j !== i))}
+                style={[
+                  s.pathSlot, partIdx !== undefined && s.pathSlotFilled,
+                  good && s.optionRight, bad && s.optionWrong,
+                ]}
+              >
+                <Text style={[s.pathSlotText, partIdx !== undefined && s.pathSlotTextFilled]} numberOfLines={1}>
+                  {partIdx === undefined ? i + 1 : step.palette[partIdx]}
+                </Text>
+              </Pressable>
+            </React.Fragment>
+          );
+        })}
+      </View>
+
+      <View style={s.tileWrap}>
+        {step.palette.map((part, i) => {
+          const used = placed.includes(i);
+          return (
+            <Pressable
+              key={`${part}-${i}`}
+              disabled={checked || used || full}
+              onPress={() => setPlaced((prev) => [...prev, i])}
+              style={[s.tile, (used || (full && !used)) && s.tileUsed]}
+            >
+              <Text style={[s.tileText, used && s.tileTextUsed]}>{part}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {!!step.hint && !checked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+    </View>
+  );
+};
+
 const s = StyleSheet.create({
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, marginTop: 6, letterSpacing: -0.5 },
@@ -361,6 +592,20 @@ const s = StyleSheet.create({
   optionText: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
   optionTextRight: { color: colors.ink },
   blank: { color: colors.blueDeep, fontFamily: font.black },
+  stepLabel: {
+    fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.6,
+    color: colors.inkSoft, marginTop: space.md, textTransform: 'uppercase',
+  },
+  pathRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md },
+  pathArrow: { fontFamily: font.black, fontSize: type.body, color: colors.inkSoft },
+  pathSlot: {
+    flex: 1, minHeight: 46, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    borderStyle: 'dashed', backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  pathSlotFilled: { borderStyle: 'solid', borderColor: colors.ink, backgroundColor: colors.goldSoft },
+  pathSlotText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
+  pathSlotTextFilled: { color: colors.ink },
   input: {
     marginTop: space.md, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
     backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 14,
@@ -522,6 +767,7 @@ const DrawStep: React.FC<Props & { step: StepDraw }> = ({
     <View>
       <Text style={s.kicker}>DRAW IT</Text>
       <Text style={s.question}>{step.instruction}</Text>
+      <CircuitDiagram circuit={step.circuitDiagram} />
 
       <View ref={shotRef} collapsable={false} style={{ marginTop: space.md }}>
         <DrawCanvas ref={canvasRef} onInkChange={setHasInk} height={280} />

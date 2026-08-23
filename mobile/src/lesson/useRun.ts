@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SUPPORTED, isTeach, type Lesson, type LessonStep } from './types';
+import { canRender, isTeach, type Lesson, type LessonStep } from './types';
 
 /**
  * The run loop, mirroring the web LessonRunner.
@@ -31,7 +31,7 @@ export function useRun(lesson: Lesson | null) {
   // Only present steps this client can actually render. An unsupported type is
   // dropped rather than shown broken; the count reflects what the learner sees.
   const steps = useMemo(
-    () => (lesson?.steps ?? []).filter((s) => SUPPORTED.has(s.type)),
+    () => (lesson?.steps ?? []).filter(canRender),
     [lesson],
   );
 

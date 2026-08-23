@@ -42,3 +42,5 @@ example
 /ios
 /android
 .env
+scripts/.render-out.mjs
+scripts/circuits-sheet.svg
