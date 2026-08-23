@@ -10,6 +10,7 @@ import { usePlan } from '../hooks/usePlan';
 import { deleteMyAccount, fetchMyData } from '../services/privacy';
 import { clearLocalState } from '../services/progress';
 import { clearProfile } from '../services/learnerProfile';
+import { clearGates } from '../services/gates';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 const LEGAL_BASE = 'https://ohmlet.org';
@@ -95,7 +96,7 @@ export default function Account() {
     // The server has already revoked every session. Clear what this device kept
     // so the next person to open the app does not inherit any of it, including
     // the setup answers, which describe a person as much as their progress does.
-    await Promise.all([clearLocalState(user?.uid), clearProfile()]);
+    await Promise.all([clearLocalState(user?.uid), clearProfile(), clearGates(user?.uid)]);
     await signOut().catch(() => undefined);
     router.replace('/welcome');
   };

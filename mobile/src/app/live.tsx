@@ -6,6 +6,8 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { goBack } from '../services/nav';
+import { SafetyAck } from '../components/SafetyAck';
+import { acceptSafety, hasAcceptedSafety } from '../services/gates';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useLiveBridge, type Stage } from '../hooks/useLiveBridge';
@@ -51,7 +53,13 @@ export default function LiveTutor() {
     return () => live.registerFrameGrabber(null);
   }, [live]);
 
-  const start = useCallback(async () => {
+  // The safety acknowledgement gates the FIRST live session, before the camera
+  // and microphone are asked for. Shown once per uid, not per device: on a
+  // shared phone the next person has not seen it.
+  const [safetyOpen, setSafetyOpen] = useState(false);
+  const pendingStart = useRef(false);
+
+  const beginSession = useCallback(async () => {
     if (!permission?.granted) {
       const res = await requestPermission();
       if (!res.granted) return;
@@ -59,6 +67,24 @@ export default function LiveTutor() {
     await live.connect();
     live.setCamOn(true);
   }, [permission, requestPermission, live]);
+
+  const start = useCallback(async () => {
+    if (user?.uid && !(await hasAcceptedSafety(user.uid))) {
+      pendingStart.current = true;
+      setSafetyOpen(true);
+      return;
+    }
+    await beginSession();
+  }, [user?.uid, beginSession]);
+
+  const onAcceptSafety = useCallback(async () => {
+    if (user?.uid) await acceptSafety(user.uid);
+    setSafetyOpen(false);
+    if (pendingStart.current) {
+      pendingStart.current = false;
+      await beginSession();
+    }
+  }, [user?.uid, beginSession]);
 
   const connected = live.state === 'connected';
   const connecting = live.state === 'connecting';
@@ -136,6 +162,15 @@ export default function LiveTutor() {
         {!!live.error && <Text style={s.error}>{live.error}</Text>}
 
         <Button label="Start the session" onPress={start} style={{ marginTop: space.lg }} />
+
+        {/* Mounted here as well as in the live view: "Start the session" lives in
+            this pre-flight return, which exits before the live render, so a modal
+            mounted only there would never appear. */}
+        <SafetyAck
+          visible={safetyOpen}
+          onAccept={onAcceptSafety}
+          onCancel={() => { pendingStart.current = false; setSafetyOpen(false); }}
+        />
       </View>
     );
   }
@@ -226,6 +261,12 @@ export default function LiveTutor() {
           </Pressable>
         </View>
       </View>
+
+      <SafetyAck
+        visible={safetyOpen}
+        onAccept={onAcceptSafety}
+        onCancel={() => { pendingStart.current = false; setSafetyOpen(false); }}
+      />
     </KeyboardAvoidingView>
   );
 }
