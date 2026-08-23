@@ -114,47 +114,73 @@ export async function signInWithGoogle(): Promise<SocialResult> {
     return { ok: false, cancelled: false, message: 'Google sign-in is not configured yet.' };
   }
   try {
-    // `<reversed>:/oauth2redirect` is the form Google's iOS clients expect.
+    // `<reversed>:/oauth2redirect` is the form Google's iOS clients require.
     const reversed = googleClientId.split('.apps.googleusercontent.com')[0];
     const redirectUri = `com.googleusercontent.apps.${reversed}:/oauth2redirect`;
     const nonce = Array.from(Crypto.getRandomBytes(16))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
+
+    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+
     const request = new AuthSession.AuthRequest({
       clientId: googleClientId,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
-      responseType: AuthSession.ResponseType.IdToken,
-      // AuthRequest turns PKCE on by default, which appends `code_challenge`
-      // and `code_challenge_method`. Those belong to the authorization-code
-      // flow; asking for an id_token directly and sending them makes Google
-      // reject the whole request with
-      // "Parameter not allowed for this message type: code_challenge_method".
-      // The nonce below is what protects this flow from replay, not PKCE.
-      usePKCE: false,
+      // Authorization CODE plus PKCE, which is what Google supports for an
+      // installed app (RFC 8252). Asking for an id_token directly is the
+      // implicit flow, and Google does not accept it from a client of type iOS:
+      // it rejects the request outright with "Access blocked: Authorisation
+      // Error". Turning PKCE off silenced the parameter it complained about but
+      // left the flow itself wrong, which is why the error came back.
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
       extraParams: {
         nonce,
-        // Without this Google silently reuses whichever account the system
-        // browser is already signed into, so someone with several accounts is
-        // never asked which one they want.
+        // Without this Google reuses whichever account the system browser is
+        // already signed into, so someone with several is never asked.
         prompt: 'select_account',
       },
     });
-    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
-    const result = await request.promptAsync(discovery);
 
+    const result = await request.promptAsync(discovery);
     if (result.type === 'cancel' || result.type === 'dismiss') {
       return { ok: false, cancelled: true };
     }
-    if (result.type !== 'success' || !result.params.id_token) {
+    if (result.type !== 'success' || !result.params.code) {
       return { ok: false, cancelled: false, message: 'Google sign-in did not complete.' };
     }
 
-    const cred = GoogleAuthProvider.credential(result.params.id_token);
+    // Exchange the code for tokens. An iOS client is public, so there is no
+    // client secret; the PKCE verifier is what proves this is the same app that
+    // started the flow.
+    const tokens = await AuthSession.exchangeCodeAsync(
+      {
+        clientId: googleClientId,
+        code: result.params.code,
+        redirectUri,
+        extraParams: { code_verifier: request.codeVerifier ?? '' },
+      },
+      discovery,
+    );
+
+    if (!tokens.idToken) {
+      return { ok: false, cancelled: false, message: 'Google sign-in did not complete.' };
+    }
+
+    const cred = GoogleAuthProvider.credential(tokens.idToken);
     const signed = await signInWithCredential(auth, cred);
     const { getAdditionalUserInfo } = await import('firebase/auth');
     return { ok: true, isNewUser: getAdditionalUserInfo(signed)?.isNewUser === true };
-  } catch {
-    return { ok: false, cancelled: false, message: 'Google sign-in did not complete.' };
+  } catch (e) {
+    // The message is surfaced rather than swallowed: "did not complete" told
+    // nobody anything, and this flow has several distinct ways to fail.
+    const detail = e instanceof Error ? e.message : '';
+    return {
+      ok: false,
+      cancelled: false,
+      message: detail ? `Google sign-in failed: ${detail}` : 'Google sign-in did not complete.',
+    };
   }
 }
+

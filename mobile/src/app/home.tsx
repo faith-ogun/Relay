@@ -144,6 +144,15 @@ export default function Home() {
         onPress={() => router.push('/live')}
       />
       <Row
+        title="Simulator"
+        sub={
+          profile?.bench === 'none'
+            ? 'No board yet? Run real Arduino code here.'
+            : 'Run a sketch without wiring anything up'
+        }
+        onPress={() => router.push('/simulator')}
+      />
+      <Row
         title="Learning path"
         sub={
           profile?.experience === 'lots' && completedCount === 0
