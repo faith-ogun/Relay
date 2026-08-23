@@ -66,6 +66,23 @@ async function authed(path: string, init?: RequestInit) {
   }
 }
 
+/**
+ * Drop everything this device cached about `uid`.
+ *
+ * Called after account deletion. The server has already erased its side and
+ * revoked the session, but the local cache would otherwise survive and show a
+ * deleted account's progress to whoever opens the app next, which on a shared
+ * phone is someone else.
+ */
+export async function clearLocalState(uid: string | null | undefined): Promise<void> {
+  if (!uid) return;
+  try {
+    await AsyncStorage.removeItem(CACHE_KEY(uid));
+  } catch {
+    /* storage unavailable: nothing cached to leak */
+  }
+}
+
 export async function loadProgress(uid: string): Promise<Progress> {
   // Local first so the UI paints immediately.
   let local: Progress | null = null;

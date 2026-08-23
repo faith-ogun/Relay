@@ -8,7 +8,7 @@ import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
 
 export default function Home() {
-  const { displayName, signOut, user } = useAuth();
+  const { displayName, user } = useAuth();
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,6 @@ export default function Home() {
 
   const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const leave = async () => { await signOut(); router.replace('/sign-in'); };
 
   if (loading) {
     return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
@@ -111,9 +110,7 @@ export default function Home() {
       <Row title="3D twins" sub="Models of everything you've built" onPress={() => router.push('/twins')} />
       <Row title="Plans" sub="More live tutoring time" onPress={() => router.push('/plans')} />
 
-      <Pressable onPress={leave} style={s.signOut} accessibilityRole="button">
-        <Text style={s.signOutText}>Sign out</Text>
-      </Pressable>
+      <Row title="Account" sub="Your plan, your data, and privacy" onPress={() => router.push('/account')} />
     </ScrollView>
   );
 }
@@ -169,6 +166,4 @@ const s = StyleSheet.create({
   rowTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   rowSub: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2 },
   chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
-  signOut: { marginTop: space.xl, alignItems: 'center', paddingVertical: space.sm },
-  signOutText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
 });
