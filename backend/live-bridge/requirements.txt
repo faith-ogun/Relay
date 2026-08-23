@@ -1,8 +1,13 @@
 fastapi==0.116.1
 uvicorn[standard]==0.35.0
 pydantic==2.11.7
-google-adk
+# Pinned deliberately. This was bare `google-adk`, so any release published
+# between two deploys shipped straight to the live tutor with no review, and
+# the tutor's whole runtime is ADK. The version below is what runs today and
+# what the tests were written against; bump it on purpose, not by accident.
+google-adk==1.20.0
+google-genai==1.75.0
 google-cloud-firestore==2.21.0
 firebase-admin==6.5.0
-stripe>=11.0.0
-websockets>=13.0
+stripe==15.5.0
+websockets==15.0.1

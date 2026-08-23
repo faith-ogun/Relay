@@ -3,10 +3,18 @@
 The live agent (native-audio model) calls these tools when it needs
 a stronger model for code generation, deep reasoning, or quick lookups.
 Each tool internally uses google.genai to call the appropriate model.
+
+Every tool here is `async` on purpose. ADK's FunctionTool awaits a coroutine
+tool but calls a SYNCHRONOUS one directly on the event loop, with no thread
+offload (see `_invoke_callable`). A Pro-model call takes seconds, so a single
+sync tool would stall the loop for every OTHER live session sharing the
+instance: their audio stops flowing while one learner waits for a code
+generation. Async keeps each session's latency its own.
 """
 
 import contextvars
 import os
+import threading
 from google import genai
 
 # Model routing
@@ -36,19 +44,33 @@ def _reasoning_model() -> str:
     return REASONING_MODEL if _priority_models.get() else FLASH_MODEL
 
 
+# One client per process. It was previously constructed per tool call, which
+# meant re-resolving credentials and building a fresh connection pool on every
+# invocation — pure latency on the learner's critical path. The client is
+# thread-safe and holds the pooled HTTP transport, so it is built once.
+_client: genai.Client | None = None
+_client_lock = threading.Lock()
+
+
 def _get_client() -> genai.Client:
-    """Get a genai client (works with both API key and Vertex AI)."""
-    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE"
-    if use_vertex:
-        return genai.Client(
-            vertexai=True,
-            project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-            location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
-        )
-    return genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    """The process-wide genai client (works with both API key and Vertex AI)."""
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE"
+                if use_vertex:
+                    _client = genai.Client(
+                        vertexai=True,
+                        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+                        location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+                    )
+                else:
+                    _client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    return _client
 
 
-def generate_arduino_code(description: str, components: str, stage: str = "code") -> str:
+async def generate_arduino_code(description: str, components: str, stage: str = "code") -> str:
     """Generate Arduino sketch code for a given circuit description.
 
     Use this tool when the user needs Arduino code written, debugged, or explained.
@@ -79,11 +101,11 @@ Rules:
 
 Return ONLY the Arduino code, no markdown fences."""
 
-    response = client.models.generate_content(model=_code_model(), contents=prompt)
+    response = await client.aio.models.generate_content(model=_code_model(), contents=prompt)
     return response.text
 
 
-def debug_code(code: str, error_message: str) -> str:
+async def debug_code(code: str, error_message: str) -> str:
     """Debug Arduino code given a compile or runtime error.
 
     Use this tool when the user reports an error with their Arduino code.
@@ -108,11 +130,11 @@ Respond with:
 1. A one-line explanation of the bug
 2. The corrected complete code (no markdown fences)"""
 
-    response = client.models.generate_content(model=_code_model(), contents=prompt)
+    response = await client.aio.models.generate_content(model=_code_model(), contents=prompt)
     return response.text
 
 
-def explain_concept(concept: str, context: str = "") -> str:
+async def explain_concept(concept: str, context: str = "") -> str:
     """Explain an electronics or Arduino concept in depth.
 
     Use this tool when the user asks "why" or "how does this work" about a concept
@@ -137,11 +159,11 @@ Rules:
 - Relate it to practical use in Arduino projects
 - If relevant, mention common mistakes beginners make"""
 
-    response = client.models.generate_content(model=_reasoning_model(), contents=prompt)
+    response = await client.aio.models.generate_content(model=_reasoning_model(), contents=prompt)
     return response.text
 
 
-def identify_component(description: str) -> str:
+async def identify_component(description: str) -> str:
     """Quickly identify an electronic component from a description.
 
     Use this tool when the user holds up a component to the camera and you need
@@ -164,5 +186,5 @@ Value/Rating: [if applicable]
 Purpose: [one sentence]
 Tip: [one beginner-friendly tip about using it]"""
 
-    response = client.models.generate_content(model=FLASH_MODEL, contents=prompt)
+    response = await client.aio.models.generate_content(model=FLASH_MODEL, contents=prompt)
     return response.text

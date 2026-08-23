@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -48,6 +49,33 @@ from resilience import CircuitBreaker
 # Vertex fails fast with a friendly message instead of hanging the request (#50).
 _TEXT_CB = CircuitBreaker("text-chat", fail_max=4, reset_timeout=30.0)
 TEXT_TIMEOUT_MS = int(os.getenv("OHMLET_TEXT_TIMEOUT_MS", "20000"))
+
+# One client for the whole process. It used to be constructed per request, which
+# re-resolved credentials and built a new connection pool on every message the
+# learner sent. The client is thread-safe and owns the pooled transport.
+_text_client_instance: "genai.Client | None" = None
+_text_client_lock = threading.Lock()
+
+
+def _text_client():
+    """The process-wide genai client used by the text fallback."""
+    global _text_client_instance
+    if _text_client_instance is None:
+        with _text_client_lock:
+            if _text_client_instance is None:
+                http_opts = genai.types.HttpOptions(timeout=TEXT_TIMEOUT_MS)
+                if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
+                    _text_client_instance = genai.Client(
+                        vertexai=True,
+                        project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
+                        location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+                        http_options=http_opts,
+                    )
+                else:
+                    _text_client_instance = genai.Client(
+                        api_key=os.getenv("GOOGLE_API_KEY", ""), http_options=http_opts
+                    )
+    return _text_client_instance
 import validation
 import obs
 from cors import install_cors
@@ -524,13 +552,41 @@ async def websocket_endpoint(
         await asyncio.gather(*pending, return_exceptions=True)
     finally:
         live_queue.close()
-        persist_usage(meter)
-        # Charge only what the periodic sync has not already written, so a long
-        # session is never billed twice for the same seconds. The cap therefore
-        # holds across reconnects, across concurrent sessions, and across days.
-        charged_seconds, _ = entitlements.settle_live_session(
-            user_id, plan, meter.duration_seconds(), charged_seconds
-        )
+
+        def _final_settle() -> None:
+            """Persist usage and charge the unbilled remainder.
+
+            Both calls are synchronous Firestore, so they run in a worker thread
+            for the same reason the watchdog offloads them: this coroutine shares
+            its loop with every other live session on the instance, and blocking
+            here stalls their audio while one learner's session tears down.
+            """
+            persist_usage(meter)
+            # Charge only what the periodic sync has not already written, so a
+            # long session is never billed twice for the same seconds. The cap
+            # therefore holds across reconnects, concurrent sessions, and days.
+            entitlements.settle_live_session(
+                user_id, plan, meter.duration_seconds(), charged_seconds
+            )
+
+        try:
+            await asyncio.shield(asyncio.to_thread(_final_settle))
+        except Exception as exc:
+            # Billing must never be the reason a socket fails to close, but a
+            # miss here is lost revenue, so it is logged at error level.
+            logger.error("final settle failed for user=%s session=%s: %s", user_id, session_id, exc)
+
+        # Release the ADK session. Without this every live session's full
+        # transcript stayed resident for the life of the container: an unbounded
+        # leak on a long-running instance, and a signed-out learner's
+        # conversation sitting in memory long after they left.
+        try:
+            await session_service.delete_session(
+                app_name=APP_NAME, user_id=user_id, session_id=session_id,
+            )
+        except Exception as exc:
+            logger.warning("ADK session cleanup failed for %s: %s", session_id, exc)
+
         logger.info("WS session closed: %s", session_id)
 
 
@@ -564,17 +620,7 @@ async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> d
     from google import genai
     from ohmlet_live_agent.agent import OHMLET_INSTRUCTION
 
-    http_opts = genai.types.HttpOptions(timeout=TEXT_TIMEOUT_MS)
-    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
-    if use_vertex:
-        client = genai.Client(
-            vertexai=True,
-            project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
-            location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
-            http_options=http_opts,
-        )
-    else:
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""), http_options=http_opts)
+    client = _text_client()
 
     text_model = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
 
@@ -582,7 +628,7 @@ async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> d
         reply = "The tutor is very busy right now. Please try again in a moment."
     else:
         try:
-            response = client.models.generate_content(
+            response = await client.aio.models.generate_content(
                 model=text_model,
                 contents=f"[stage={stage}] {text}",
                 config=genai.types.GenerateContentConfig(

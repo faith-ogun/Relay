@@ -37,12 +37,31 @@ _hits: dict[str, deque[float]] = defaultdict(deque)
 _lock = Lock()
 
 
+# How many proxies we sit behind. Cloud Run itself is one hop. Put a load
+# balancer or CDN in front and this becomes 2, 3, and so on.
+_TRUSTED_HOPS = max(1, int(os.getenv("OHMLET_TRUSTED_PROXY_HOPS", "1")))
+
+
 def _client_ip(request: Request) -> str:
-    """Best-effort client IP. Behind Cloud Run / a proxy, the first hop in
-    X-Forwarded-For is the real client; fall back to the socket peer."""
+    """The client IP, counted from the END of X-Forwarded-For.
+
+    This used to read the FIRST entry, which any caller can forge: a client that
+    sends its own `X-Forwarded-For` gets that value preserved, and the real
+    address appended after it. Reading position 0 therefore read whatever the
+    caller wrote, so rotating a header value gave an unlimited number of rate
+    limit buckets and defeated the limiter entirely on unauthenticated paths.
+
+    Only the entries our own proxies append are trustworthy, and those are at the
+    end. `_TRUSTED_HOPS` says how many of them there are; anything to the left of
+    that is caller-controlled and ignored.
+    """
     fwd = request.headers.get("x-forwarded-for")
     if fwd:
-        return fwd.split(",")[0].strip()
+        hops = [part.strip() for part in fwd.split(",") if part.strip()]
+        if len(hops) >= _TRUSTED_HOPS:
+            return hops[-_TRUSTED_HOPS]
+        # Fewer entries than expected means the request did not arrive through
+        # the proxy chain we assume. Trust the socket instead of guessing.
     return request.client.host if request.client else "unknown"
 
 

@@ -299,15 +299,37 @@ def report_post(post_id: str, claims: dict = Depends(require_claims)) -> dict:
     if not post_ref.get().exists:
         raise HTTPException(404, "Post not found.")
     report_ref = client.collection(REPORTS).document(f"{post_id}__{uid}")
-    if report_ref.get().exists:
+
+    @firestore.transactional
+    def _apply(transaction) -> int | None:
+        """Record the report and decide hiding from the same serialized read.
+
+        Previously the count came from a read AFTER the write, outside any
+        transaction. Two reports landing together both saw the pre-threshold
+        value, so neither set `hidden` even though the total had passed it: a
+        post could clear the reporting threshold and stay visible. Deciding
+        inside the transaction makes the threshold hold under concurrency.
+        """
+        snap = post_ref.get(transaction=transaction)
+        if not snap.exists:
+            return None
+        if report_ref.get(transaction=transaction).exists:
+            return -1
+        count = int((snap.to_dict() or {}).get("reports", 0)) + 1
+        transaction.set(report_ref, {"postId": post_id, "reporterUid": uid, "createdAt": _now()})
+        update: dict = {"reports": count}
+        if count >= REPORT_HIDE_THRESHOLD:
+            update["hidden"] = True
+        transaction.update(post_ref, update)
+        return count
+
+    reports = _apply(client.transaction())
+    if reports is None:
+        raise HTTPException(404, "Post not found.")
+    if reports < 0:
         return {"status": "already_reported"}
-    report_ref.set({"postId": post_id, "reporterUid": uid, "createdAt": _now()})
-    reports = (post_ref.get().to_dict() or {}).get("reports", 0) + 1
-    update: dict = {"reports": firestore.Increment(1)}
     if reports >= REPORT_HIDE_THRESHOLD:
-        update["hidden"] = True
         logger.warning("post auto-hidden after %d reports: %s", reports, post_id)
-    post_ref.update(update)
     logger.info("post reported: %s by %s (count=%d)", post_id, uid, reports)
     return {"status": "reported"}
 
@@ -463,10 +485,31 @@ def join_challenge(challenge_id: str, claims: dict = Depends(require_non_minor))
     if not ch_ref.get().exists:
         raise HTTPException(404, "Challenge not found.")
     member_ref = client.collection(MEMBERS).document(f"{challenge_id}__{uid}")
-    if not member_ref.get().exists:
-        member_ref.set({"challengeId": challenge_id, "uid": uid, "progress": 0, "joinedAt": _now()})
-        ch_ref.update({"participantCount": firestore.Increment(1)})
-    count = (ch_ref.get().to_dict() or {}).get("participantCount", 0)
+
+    @firestore.transactional
+    def _join(transaction) -> int | None:
+        """Membership check and counter bump in one serialized step.
+
+        Checking `exists` and then incrementing left a window where two joins
+        from the same person (a double tap, a retry) both saw no membership and
+        both incremented, permanently inflating the participant count.
+        """
+        snap = ch_ref.get(transaction=transaction)
+        if not snap.exists:
+            return None
+        count = int((snap.to_dict() or {}).get("participantCount", 0))
+        if not member_ref.get(transaction=transaction).exists:
+            transaction.set(
+                member_ref,
+                {"challengeId": challenge_id, "uid": uid, "progress": 0, "joinedAt": _now()},
+            )
+            count += 1
+            transaction.update(ch_ref, {"participantCount": count})
+        return count
+
+    count = _join(client.transaction())
+    if count is None:
+        raise HTTPException(404, "Challenge not found.")
     return {"joined": True, "participantCount": max(0, count)}
 
 
@@ -480,10 +523,23 @@ def leave_challenge(challenge_id: str, claims: dict = Depends(require_non_minor)
     if not ch_ref.get().exists:
         raise HTTPException(404, "Challenge not found.")
     member_ref = client.collection(MEMBERS).document(f"{challenge_id}__{uid}")
-    if member_ref.get().exists:
-        member_ref.delete()
-        ch_ref.update({"participantCount": firestore.Increment(-1)})
-    count = (ch_ref.get().to_dict() or {}).get("participantCount", 0)
+
+    @firestore.transactional
+    def _leave(transaction) -> int | None:
+        """The mirror of _join: one serialized check-and-decrement."""
+        snap = ch_ref.get(transaction=transaction)
+        if not snap.exists:
+            return None
+        count = int((snap.to_dict() or {}).get("participantCount", 0))
+        if member_ref.get(transaction=transaction).exists:
+            transaction.delete(member_ref)
+            count = max(0, count - 1)
+            transaction.update(ch_ref, {"participantCount": count})
+        return count
+
+    count = _leave(client.transaction())
+    if count is None:
+        raise HTTPException(404, "Challenge not found.")
     return {"joined": False, "participantCount": max(0, count)}
 
 
