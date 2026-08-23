@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
+import { flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { SafetyAck } from '../components/SafetyAck';
 import { acceptSafety, hasAcceptedSafety } from '../services/gates';
@@ -95,11 +96,27 @@ export default function LiveTutor() {
   useEffect(() => {
     if (!connected || counted.current || !user?.uid) return;
     counted.current = true;
+    // Fired here, not on the button, for the reason the counter is here: a
+    // refused or failed connection is not a session, and counting one would
+    // overstate activation.
+    track('live_session_start', { stage });
+    startedAt.current = Date.now();
     void (async () => {
       const p = await loadProgress(user.uid);
       await saveProgress(user.uid, bumpMetric(p, 'liveSessions'));
     })();
-  }, [connected, user?.uid]);
+  }, [connected, user?.uid, stage]);
+
+  // Length is the signal that separates "opened it" from "used it". Recorded on
+  // unmount so it covers leaving the screen as well as ending deliberately.
+  const startedAt = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (startedAt.current === null) return;
+    track('live_session_end', {
+      seconds: Math.round((Date.now() - startedAt.current) / 1000),
+    });
+    void flush();
+  }, []);
 
   const changeStage = (next: Stage) => {
     setStage(next);

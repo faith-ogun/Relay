@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { clearEvents, flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { File, Paths } from 'expo-file-system';
 import { useAuth } from '../hooks/useAuth';
@@ -82,6 +83,10 @@ export default function Account() {
 
   const confirmDelete = async () => {
     setBusy('delete');
+    // Recorded BEFORE the account disappears: afterwards there is nobody left
+    // to attribute it to, which is precisely why churn is hard to measure.
+    track('account_delete_start', { plan: plan.plan });
+    await flush();
     const result = await deleteMyAccount();
     setBusy(null);
     if (!result.ok) {
@@ -96,7 +101,9 @@ export default function Account() {
     // The server has already revoked every session. Clear what this device kept
     // so the next person to open the app does not inherit any of it, including
     // the setup answers, which describe a person as much as their progress does.
-    await Promise.all([clearLocalState(user?.uid), clearProfile(), clearGates(user?.uid)]);
+    await Promise.all([
+      clearLocalState(user?.uid), clearProfile(), clearGates(user?.uid), clearEvents(),
+    ]);
     await signOut().catch(() => undefined);
     router.replace('/welcome');
   };

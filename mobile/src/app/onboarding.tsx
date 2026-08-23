@@ -4,6 +4,7 @@ import {
   Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import { BoardScanScene } from '../components/scenes/BoardScanScene';
@@ -60,6 +61,9 @@ export default function Onboarding() {
 
   const finish = async () => {
     await markOnboardingSeen();
+    // `atSlide` is the drop-off point: someone who skips on slide 1 was never
+    // reached by the pitch, which is a different problem from skipping on 3.
+    track('onboarding_complete', { atSlide: index + 1, skipped: !last });
     // Setup comes before the account on purpose: four taps of investment is a
     // better place to ask for an email than a cold form, and the answers shape
     // what Home shows the moment they land on it.

@@ -62,6 +62,7 @@ _UID_FIELD_COLLECTIONS: tuple[tuple[str, str], ...] = (
     (os.getenv("OHMLET_INTERVIEWS_COLLECTION", "ohmlet_interviews"), "uid"),
     (os.getenv("OHMLET_TWINS_COLLECTION", "ohmlet_twins"), "uid"),
     (os.getenv("OHMLET_TWIN_SHARES_COLLECTION", "ohmlet_twin_shares"), "uid"),
+    (os.getenv("OHMLET_EVENTS_COLLECTION", "ohmlet_events"), "uid"),
 )
 
 # Blocks the user is the TARGET of belong to the people who set them: those stay,

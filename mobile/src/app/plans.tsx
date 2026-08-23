@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { useAuth } from '../hooks/useAuth';
 import { useChildSafe } from '../hooks/useChildSafe';
@@ -66,6 +67,7 @@ export default function Plans() {
 
   const buy = async (id: string) => {
     setBusy(id); setNote(null);
+    track('checkout_start', { packageId: id });
     const res = await purchasePackage(id);
     setBusy(null);
     if (res.ok) {

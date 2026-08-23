@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
 import {
@@ -86,6 +87,11 @@ export default function Setup() {
 
   const finish = async () => {
     await saveProfile({ ...DEFAULT_PROFILE, ...draft, completedAt: new Date().toISOString() });
+    track('setup_complete', {
+      experience: draft.experience ?? 'skipped',
+      bench: draft.bench ?? 'skipped',
+      dailyGoal: draft.dailyGoal ?? 0,
+    });
     router.replace('/sign-in');
   };
 
