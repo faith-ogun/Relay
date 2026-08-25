@@ -10,7 +10,8 @@ import {
   assessAge, CHILD_MODE_ENABLED, EARLIEST_BIRTH_YEAR, LATEST_BIRTH_YEAR, consentAgeFor,
 } from '../services/ageModel';
 import { submitAge } from '../services/gates';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 /**
  * Age assurance.
@@ -154,10 +155,10 @@ const s = StyleSheet.create({
   list: { flex: 1, marginTop: space.lg },
   listInner: { paddingHorizontal: space.lg, paddingBottom: space.lg, gap: 8 },
   year: {
-    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: 14, alignItems: 'center',
   },
-  yearOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...pressSmall },
+  yearOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...elevation.card },
   yearText: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
   yearTextOn: { fontFamily: font.black },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.xl, paddingTop: space.sm, gap: space.sm },
@@ -169,7 +170,7 @@ const s = StyleSheet.create({
   mascot: { width: 140, height: 140 },
   blockedTitle: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.5 },
   blockedBodyText: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', lineHeight: 23,
   },
 });

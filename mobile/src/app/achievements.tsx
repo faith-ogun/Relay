@@ -12,7 +12,8 @@ import {
 import { achievementStats, EMPTY, loadProgress, type Progress, type ServerStats } from '../services/progress';
 import { fetchCommunityStats } from '../services/community';
 import { getManifest } from '../services/curriculum';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 export default function Achievements() {
   const { user } = useAuth();
@@ -118,7 +119,7 @@ const Card: React.FC<{ a: Achievement; earned: boolean; pct: number; onPress: ()
   return (
     <Pressable
       onPress={onPress}
-      style={[s.card, earned && { borderColor: colors.ink, ...pressSmall }]}
+      style={[s.card, earned && { borderColor: colors.ink, ...elevation.card }]}
       accessibilityRole="button"
       accessibilityLabel={`${a.title}. ${earned ? 'Unlocked' : `Locked, ${Math.round(pct * 100)} percent`}`}
     >
@@ -151,11 +152,11 @@ const s = StyleSheet.create({
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
-  sub: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: 4, marginBottom: space.lg },
+  sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: 4, marginBottom: space.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   card: {
     width: '31%', backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,
-    borderRadius: radius.md, padding: space.sm, alignItems: 'center',
+    borderRadius: radius.md, ...curve, padding: space.sm, alignItems: 'center',
   },
   medalWrap: { alignItems: 'center', justifyContent: 'center' },
   lock: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
@@ -171,9 +172,9 @@ const s = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, padding: space.lg, width: '100%', ...pressSmall,
+    borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%', ...elevation.card,
   },
-  sheetTier: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  sheetTier: { alignSelf: 'flex-start', borderRadius: 999, ...curve, paddingHorizontal: 10, paddingVertical: 3 },
   sheetTierText: { fontFamily: font.black, fontSize: 9, color: colors.ink, letterSpacing: 1 },
   sheetTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: space.sm },
   sheetDesc: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4 },

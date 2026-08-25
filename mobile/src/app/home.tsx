@@ -10,7 +10,8 @@ import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import { GOAL_FRAMING, loadProfile, type LearnerProfile } from '../services/learnerProfile';
-import { colors, font, pressSmall, radius, space, type, unitColor } from '../theme/tokens';
+import { colors, font, radius, space, type, unitColor, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 /**
  * Learn: the path, and nothing else.
@@ -198,36 +199,36 @@ const s = StyleSheet.create({
 
   unitBlock: { marginBottom: space.xl },
   banner: {
-    borderRadius: radius.lg, borderWidth: 2.5, borderColor: colors.ink,
-    paddingVertical: space.md, paddingHorizontal: space.md, ...pressSmall,
+    borderRadius: radius.lg, ...curve, borderWidth: 2.5, borderColor: colors.ink,
+    paddingVertical: space.md, paddingHorizontal: space.md, ...elevation.card,
   },
   bannerKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6, color: 'rgba(255,255,255,0.85)' },
   bannerTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.white, marginTop: 2 },
 
   trail: { alignItems: 'center', marginTop: space.lg, gap: 14 },
   node: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64, height: 64, borderRadius: 32, ...curve,
     borderWidth: 3, borderColor: colors.line, backgroundColor: colors.white,
-    alignItems: 'center', justifyContent: 'center', ...pressSmall,
+    alignItems: 'center', justifyContent: 'center', ...elevation.card,
   },
   nodeNext: { borderColor: colors.ink, borderWidth: 4, backgroundColor: colors.goldSoft },
   nodeLocked: { opacity: 0.45 },
 
   nextCard: {
-    marginTop: space.lg, borderWidth: 2.5, borderRadius: radius.lg,
-    backgroundColor: colors.white, padding: space.md, ...pressSmall,
+    marginTop: space.lg, borderWidth: 2.5, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.white, padding: space.md, ...elevation.card,
   },
   nextKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6 },
   nextTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 4 },
   nextBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 6, lineHeight: 20 },
   nextButton: {
-    marginTop: space.md, borderRadius: radius.md, borderWidth: 2.5, borderColor: colors.ink,
+    marginTop: space.md, borderRadius: radius.md, ...curve, borderWidth: 2.5, borderColor: colors.ink,
     paddingVertical: 12, alignItems: 'center',
   },
   nextButtonText: { fontFamily: font.black, fontSize: type.body, color: colors.white },
 
   offline: {
-    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.lg,
+    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.lg, ...curve,
     backgroundColor: colors.white, padding: space.lg, marginTop: space.lg,
   },
   offlineTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },

@@ -10,7 +10,7 @@ import { authErrorMessage, useAuth } from '../hooks/useAuth';
 import {
   appleAvailable, googleConfigured, signInWithApple, signInWithGoogle,
 } from '../services/socialAuth';
-import { colors, font, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
 
 type Busy = null | 'apple' | 'google' | 'email';
 
@@ -178,15 +178,15 @@ const s = StyleSheet.create({
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
-  sub: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, lineHeight: 22 },
+  sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, lineHeight: 22 },
   stack: { marginTop: space.xl, gap: space.sm },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginVertical: space.xs },
   rule: { flex: 1, height: 2, backgroundColor: colors.line, borderRadius: 1 },
   dividerText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   label: { fontFamily: font.extrabold, fontSize: type.small, color: colors.ink, marginBottom: 6 },
   input: {
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, backgroundColor: colors.white,
-    paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.semibold, fontSize: type.body, color: colors.ink,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.white,
+    paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   error: { fontFamily: font.bold, fontSize: type.small, color: colors.red, marginTop: space.xs },
   switch: { marginTop: space.lg, alignItems: 'center', paddingVertical: space.sm },

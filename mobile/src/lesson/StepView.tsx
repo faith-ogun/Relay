@@ -6,7 +6,7 @@ import { DrawCanvas, type DrawCanvasHandle } from './DrawCanvas';
 import { CircuitDiagram, regionLabel } from '../components/circuits/CircuitDiagram';
 import { drawingGraderConfigured, gradeDrawing } from '../services/drawingGrader';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, font, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
 import type {
   LessonStep, StepBuildToSpec, StepChoice, StepConnect, StepDraw, StepDragOrder,
   StepFill, StepFixCircuit, StepMatch, StepSpotError, StepTeach, StepTraceCurrent,
@@ -581,9 +581,9 @@ const s = StyleSheet.create({
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, marginTop: 6, letterSpacing: -0.5 },
   question: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 6, lineHeight: type.heading * 1.3 },
-  body: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 24 },
+  body: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 24 },
   option: {
-    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: 14, paddingHorizontal: space.md,
   },
   optionPicked: { borderColor: colors.ink, backgroundColor: colors.goldSoft },
@@ -599,7 +599,7 @@ const s = StyleSheet.create({
   pathRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md },
   pathArrow: { fontFamily: font.black, fontSize: type.body, color: colors.inkSoft },
   pathSlot: {
-    flex: 1, minHeight: 46, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    flex: 1, minHeight: 46, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
     borderStyle: 'dashed', backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6,
   },
@@ -607,21 +607,21 @@ const s = StyleSheet.create({
   pathSlotText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
   pathSlotTextFilled: { color: colors.ink },
   input: {
-    marginTop: space.md, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    marginTop: space.md, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 14,
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   hint: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm },
   tileWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md },
   tile: {
-    borderWidth: 2, borderColor: colors.ink, borderRadius: 999,
+    borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 9, maxWidth: '100%',
   },
   tileUsed: { backgroundColor: colors.line, borderColor: colors.line },
   tileText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   tileTextUsed: { color: colors.inkSoft },
   matchRow: {
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, padding: space.md,
   },
   matchDone: { borderColor: colors.ink },
@@ -629,10 +629,10 @@ const s = StyleSheet.create({
   matchRight: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 3 },
   board: {
     marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5,
-    borderColor: colors.ink, borderRadius: radius.md, padding: space.sm,
+    borderColor: colors.ink, borderRadius: radius.md, ...curve, padding: space.sm,
   },
   undo: {
-    borderWidth: 2, borderColor: colors.ink, borderRadius: radius.sm,
+    borderWidth: 2, borderColor: colors.ink, borderRadius: radius.sm, ...curve,
     paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'flex-start', marginTop: space.sm,
   },
   undoText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
@@ -640,7 +640,7 @@ const s = StyleSheet.create({
   grading: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
   orderNum: {
     fontFamily: font.black, fontSize: type.small, color: colors.ink,
-    width: 22, height: 22, borderRadius: 11, backgroundColor: colors.gold,
+    width: 22, height: 22, borderRadius: 11, ...curve, backgroundColor: colors.gold,
     textAlign: 'center', lineHeight: 22, overflow: 'hidden',
   },
 });

@@ -11,7 +11,7 @@ import type { Lesson } from '../../lesson/types';
 import { getLesson } from '../../services/curriculum';
 import { applyCompletion, bumpMetric, loadProgress, saveProgress } from '../../services/progress';
 import { useAuth } from '../../hooks/useAuth';
-import { colors, font, pressSmall, radius, space, type } from '../../theme/tokens';
+import { colors, font, pressSmall, radius, space, type, curve } from '../../theme/tokens';
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,12 +186,12 @@ const s = StyleSheet.create({
   },
   close: { fontFamily: font.black, fontSize: type.heading, color: colors.inkSoft },
   track: {
-    flex: 1, height: 14, borderRadius: 7, backgroundColor: colors.white,
+    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   fill: { height: '100%', backgroundColor: colors.gold },
   hearts: {
-    borderWidth: 2, borderColor: colors.ink, borderRadius: 999,
+    borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
   },
   heartRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -219,7 +219,7 @@ const s = StyleSheet.create({
     letterSpacing: -1, marginTop: 6, textAlign: 'center',
   },
   body: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.sm, lineHeight: 22,
   },
   quiet: { marginTop: space.md, paddingVertical: space.sm },

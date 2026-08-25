@@ -9,7 +9,8 @@ import { UnoBoard } from '../components/UnoBoard';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
 import { track } from '../services/analytics';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 const STARTER = `// Blink the on-board LED, then fade pin 9.
 void setup() {
@@ -220,7 +221,7 @@ const s = StyleSheet.create({
   stopText: { fontFamily: font.bold, fontSize: type.small, color: colors.red },
   note: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm, lineHeight: 19 },
   errors: {
-    marginTop: space.md, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.md,
+    marginTop: space.md, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.md, ...curve,
     backgroundColor: '#fdece8', padding: space.md, gap: 4,
   },
   errorsTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
@@ -230,12 +231,12 @@ const s = StyleSheet.create({
     color: colors.inkSoft, marginTop: space.xl, marginBottom: space.sm,
   },
   editor: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, backgroundColor: colors.white,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.white,
     padding: space.md, minHeight: 240, textAlignVertical: 'top',
-    fontFamily: 'Menlo', fontSize: 12, color: colors.ink, lineHeight: 18, ...pressSmall,
+    fontFamily: 'Menlo', fontSize: 12, color: colors.ink, lineHeight: 18,
   },
   serial: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve,
     backgroundColor: colors.ink, padding: space.md, minHeight: 90,
   },
   serialText: { fontFamily: 'Menlo', fontSize: 11, color: '#9fe870', lineHeight: 16 },

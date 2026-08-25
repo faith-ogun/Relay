@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, radius } from '../theme/tokens';
+import { colors, radius, curve } from '../theme/tokens';
 
 export interface DrawCanvasHandle {
   clear: () => void;
@@ -103,7 +103,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 2.5,
     borderColor: colors.ink,
-    borderRadius: radius.md,
+    borderRadius: radius.md, ...curve,
     overflow: 'hidden',
   },
 });

@@ -11,7 +11,7 @@ import { BoardScanScene } from '../components/scenes/BoardScanScene';
 import { TwinScene } from '../components/scenes/TwinScene';
 import { VoiceScene } from '../components/scenes/VoiceScene';
 import { markOnboardingSeen } from '../services/firstRun';
-import { colors, font, space, type } from '../theme/tokens';
+import { colors, font, space, type, curve } from '../theme/tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -144,7 +144,7 @@ const s = StyleSheet.create({
   backGlyph: { fontFamily: font.black, fontSize: 30, lineHeight: 32, color: colors.ink },
   skipText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   progress: { flex: 1, flexDirection: 'row', gap: 5 },
-  progressSeg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  progressSeg: { flex: 1, height: 5, borderRadius: 3, ...curve, backgroundColor: colors.line },
   progressSegOn: { backgroundColor: colors.ink },
   slide: { alignItems: 'center', paddingHorizontal: space.lg, paddingTop: space.xl },
   art: { width: 132, height: 132, marginBottom: space.md },
@@ -154,7 +154,7 @@ const s = StyleSheet.create({
     textAlign: 'center', letterSpacing: -0.6, marginTop: space.sm, lineHeight: type.title * 1.15,
   },
   body: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.md, lineHeight: 22,
   },
   scene: { marginTop: space.lg, alignItems: 'center', justifyContent: 'center', flex: 1 },

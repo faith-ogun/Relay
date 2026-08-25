@@ -5,7 +5,7 @@ import {
   Battery, Buzzer, Capacitor, Coil, Diode, Ground, Label, Ldr, Led, Node, OpAmp,
   Resistor, Spark, Transistor, Wire,
 } from './primitives';
-import { colors, font, radius, type } from '../../theme/tokens';
+import { colors, font, radius, type, curve } from '../../theme/tokens';
 
 // The 14 circuits the authored lessons reference by key. 274 steps (11.6% of
 // all steps) carry a `circuitDiagram`, and until now mobile silently dropped
@@ -370,7 +370,7 @@ export const CircuitDiagram: React.FC<CircuitDiagramProps> = ({
 const s = StyleSheet.create({
   wrap: { marginTop: 14 },
   unknown: {
-    marginTop: 14, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    marginTop: 14, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: 22, alignItems: 'center',
   },
   unknownText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },

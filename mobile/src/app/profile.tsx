@@ -9,7 +9,8 @@ import { getAchievements, isEarned, type Achievement } from '../services/achieve
 import { achievementStats } from '../services/progress';
 import { getManifest, allLessons } from '../services/curriculum';
 import { AppTabs } from '../components/AppTabs';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve, tabular } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 /**
  * Profile: everything about YOU, in one place.
@@ -141,10 +142,10 @@ const s = StyleSheet.create({
 
   stats: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
   stat: {
-    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: space.md, alignItems: 'center',
   },
-  statValue: { fontFamily: font.black, fontSize: type.heading },
+  statValue: { ...tabular, fontFamily: font.black, fontSize: type.heading },
   statLabel: { fontFamily: font.bold, fontSize: 10, color: colors.inkSoft, marginTop: 2 },
 
   section: {
@@ -152,12 +153,12 @@ const s = StyleSheet.create({
     color: colors.inkSoft, marginTop: space.xl, marginBottom: space.sm,
   },
   trophyCase: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
-    backgroundColor: colors.goldSoft, padding: space.md, ...pressSmall,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.goldSoft, padding: space.md, ...elevation.card,
   },
   trophyRow: { flexDirection: 'row', gap: space.sm },
   trophy: {
-    flex: 1, borderWidth: 2, borderColor: colors.ink, borderRadius: radius.md,
+    flex: 1, borderWidth: 2, borderColor: colors.ink, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: space.sm, paddingHorizontal: 6,
     alignItems: 'center', justifyContent: 'center', minHeight: 62,
   },
@@ -173,7 +174,7 @@ const s = StyleSheet.create({
 
   row: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, padding: space.md, marginBottom: 8,
   },
   rowTitle: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },

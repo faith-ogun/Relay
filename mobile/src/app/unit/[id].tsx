@@ -3,7 +3,8 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from
 import { useLocalSearchParams, router } from 'expo-router';
 import { goBack } from '../../services/nav';
 import { getManifest, type CurriculumUnit } from '../../services/curriculum';
-import { colors, font, pressSmall, radius, space, type } from '../../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../../theme/tokens';
+import { elevation } from '../../theme/elevation';
 
 export default function UnitDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -84,11 +85,11 @@ const s = StyleSheet.create({
   backLinkText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.6, marginTop: 4 },
-  sub: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: 6, lineHeight: 22 },
+  sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: 6, lineHeight: 22 },
   meta: { fontFamily: font.extrabold, fontSize: type.meta, letterSpacing: 1, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
   skill: {
     backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, padding: space.md, marginBottom: space.md, ...pressSmall,
+    borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md, ...elevation.card,
   },
   skillTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink, marginBottom: space.sm },
   lesson: {
@@ -96,7 +97,7 @@ const s = StyleSheet.create({
     paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.line,
   },
   dot: {
-    width: 10, height: 10, borderRadius: 3, backgroundColor: colors.gold,
+    width: 10, height: 10, borderRadius: 3, ...curve, backgroundColor: colors.gold,
     borderWidth: 1.5, borderColor: colors.ink, marginTop: 5,
     transform: [{ rotate: '45deg' }],
   },

@@ -13,7 +13,8 @@ import {
   purchasePackage, restorePurchases, type Package,
 } from '../services/billing';
 import { PLAN_META, type Plan } from '../services/entitlements';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 const ORDER: Plan[] = ['free', 'pro', 'max'];
 
@@ -194,31 +195,31 @@ const s = StyleSheet.create({
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
-  sub: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
+  sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
   card: {
     backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,
-    borderRadius: radius.lg, padding: space.lg, marginBottom: space.md,
+    borderRadius: radius.lg, ...curve, padding: space.lg, marginBottom: space.md,
   },
-  cardCurrent: { borderColor: colors.ink, borderWidth: 2.5, ...pressSmall },
+  cardCurrent: { borderColor: colors.ink, borderWidth: 2.5, ...elevation.card },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   badge: {
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink,
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: 999, ...curve, paddingHorizontal: 10, paddingVertical: 3,
   },
   badgeText: { fontFamily: font.black, fontSize: type.meta, color: colors.ink, letterSpacing: 1 },
   cardBlurb: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4 },
   perks: { marginTop: space.md, gap: 8 },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tick: {
-    width: 10, height: 10, borderRadius: 3, backgroundColor: colors.gold,
+    width: 10, height: 10, borderRadius: 3, ...curve, backgroundColor: colors.gold,
     borderWidth: 1.5, borderColor: colors.ink, transform: [{ rotate: '45deg' }],
   },
   perkText: { fontFamily: font.semibold, fontSize: type.small, color: colors.ink, flex: 1 },
   buyBlock: { marginTop: space.md },
   notice: {
     backgroundColor: colors.blueSoft, borderWidth: 2, borderColor: colors.blueDeep,
-    borderRadius: radius.md, padding: space.md,
+    borderRadius: radius.md, ...curve, padding: space.md,
   },
   noticeTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },

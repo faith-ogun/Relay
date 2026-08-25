@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { getManifest, type CurriculumUnit, type Manifest } from '../services/curriculum';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 const TINT: Record<CurriculumUnit['accent'], string> = {
   gold: colors.goldSoft,
@@ -102,21 +103,21 @@ const s = StyleSheet.create({
     letterSpacing: -0.8, marginTop: 4,
   },
   sub: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     marginTop: 6, marginBottom: space.lg,
   },
   unit: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
-    padding: space.lg, marginBottom: space.md, ...pressSmall,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
+    padding: space.lg, marginBottom: space.md, ...elevation.card,
   },
   unitTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   number: {
-    width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: colors.ink,
+    width: 44, height: 44, borderRadius: 22, ...curve, borderWidth: 2, borderColor: colors.ink,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
   },
   numberText: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   levelPill: {
-    borderWidth: 2, borderColor: colors.ink, borderRadius: 999,
+    borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
   },
   levelText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1, color: colors.ink },

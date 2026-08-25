@@ -15,7 +15,7 @@ import { useLiveBridge, type Stage } from '../hooks/useLiveBridge';
 import { usePlan } from '../hooks/usePlan';
 import { bumpMetric, loadProgress, saveProgress } from '../services/progress';
 import { liveBridgeWsUrl } from '../services/config';
-import { colors, font, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
 
 const STAGES: Array<{ id: Stage; label: string }> = [
   { id: 'inventory', label: 'Parts' },
@@ -295,10 +295,10 @@ const s = StyleSheet.create({
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
-  body: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 22 },
+  body: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 22 },
   notice: {
     marginTop: space.lg, backgroundColor: colors.blueSoft, borderWidth: 2,
-    borderColor: colors.blueDeep, borderRadius: radius.md, padding: space.md,
+    borderColor: colors.blueDeep, borderRadius: radius.md, ...curve, padding: space.md,
   },
   noticeTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
@@ -313,7 +313,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', gap: 6, justifyContent: 'center',
   },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, ...curve,
     backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
   },
   chipActive: { backgroundColor: colors.gold, borderColor: colors.ink },
@@ -332,19 +332,19 @@ const s = StyleSheet.create({
   controls: { backgroundColor: colors.cream, padding: space.md, paddingBottom: space.xl, gap: space.sm },
   askRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
   input: {
-    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 11,
-    fontFamily: font.semibold, fontSize: type.body, color: colors.ink,
+    fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   send: {
-    width: 46, height: 46, borderRadius: radius.md, backgroundColor: colors.gold,
+    width: 46, height: 46, borderRadius: radius.md, ...curve, backgroundColor: colors.gold,
     borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center',
   },
   sendOff: { opacity: 0.4 },
   sendText: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   buttonRow: { flexDirection: 'row', gap: space.sm },
   ctrl: {
-    flex: 1, borderWidth: 2, borderColor: colors.ink, borderRadius: radius.md,
+    flex: 1, borderWidth: 2, borderColor: colors.ink, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: 11, alignItems: 'center',
   },
   ctrlText: { fontFamily: font.black, fontSize: type.small, color: colors.ink },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { colors, font } from '../theme/tokens';
+import { colors, font, curve, tabular } from '../theme/tokens';
 
 /**
  * The three numbers that say how you are doing, in a strip across the top.
@@ -61,9 +61,9 @@ const s = StyleSheet.create({
   strip: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
   pill: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 2, borderColor: colors.line, borderRadius: 999,
+    borderWidth: 2, borderColor: colors.line, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingVertical: 7,
   },
   pillDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  value: { fontFamily: font.black, fontSize: 14, color: colors.ink },
+  value: { ...tabular, fontFamily: font.black, fontSize: 14, color: colors.ink },
 });

@@ -5,7 +5,7 @@ import { Renderer } from 'expo-three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import Svg, { Path } from 'react-native-svg';
-import { colors, font, type } from '../theme/tokens';
+import { colors, font, type, curve } from '../theme/tokens';
 
 interface Props {
   /** Raw GLB bytes. Fetched with auth by the caller. */
@@ -162,10 +162,10 @@ export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
 };
 
 const s = StyleSheet.create({
-  wrap: { backgroundColor: colors.ink, borderRadius: 18, overflow: 'hidden', borderWidth: 2.5, borderColor: colors.ink },
+  wrap: { backgroundColor: colors.ink, borderRadius: 18, ...curve, overflow: 'hidden', borderWidth: 2.5, borderColor: colors.ink },
   loading: { alignItems: 'center', justifyContent: 'center' },
   fallback: {
-    backgroundColor: colors.ink, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.ink, borderRadius: 18, ...curve, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 28, gap: 6,
   },
   emptyMark: { marginBottom: 4, opacity: 0.9 },
@@ -176,7 +176,7 @@ const s = StyleSheet.create({
   },
   hint: {
     position: 'absolute', bottom: 10, left: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, ...curve,
     paddingHorizontal: 10, paddingVertical: 4,
   },
   hintText: { fontFamily: font.black, fontSize: 9, color: colors.white, letterSpacing: 1 },

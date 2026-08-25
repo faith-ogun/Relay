@@ -9,7 +9,8 @@ import { TwinViewer } from '../components/TwinViewer';
 import {
   fetchTwinModel, listTwins, shareLink, shareTwin, unshareTwin, type Twin,
 } from '../services/twins';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 export default function Twins() {
   const [twins, setTwins] = useState<Twin[] | null>(null);
@@ -159,9 +160,9 @@ const s = StyleSheet.create({
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
-  sub: { fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg, lineHeight: 22 },
+  sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg, lineHeight: 22 },
   viewerPlaceholder: {
-    height: 340, backgroundColor: colors.ink, borderRadius: 18,
+    height: 340, backgroundColor: colors.ink, borderRadius: 18, ...curve,
     alignItems: 'center', justifyContent: 'center',
   },
   detailTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: space.md },
@@ -169,14 +170,14 @@ const s = StyleSheet.create({
   warn: { fontFamily: font.semibold, fontSize: type.small, color: colors.red, marginTop: space.sm, lineHeight: 20 },
   card: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white,
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
-    padding: space.md, marginBottom: space.sm, ...pressSmall,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
+    padding: space.md, marginBottom: space.sm, ...elevation.card,
   },
   cardTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
   notice: {
     backgroundColor: colors.blueSoft, borderWidth: 2, borderColor: colors.blueDeep,
-    borderRadius: radius.md, padding: space.lg,
+    borderRadius: radius.md, ...curve, padding: space.lg,
   },
   noticeTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },

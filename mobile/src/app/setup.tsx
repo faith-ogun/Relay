@@ -8,7 +8,8 @@ import {
   BENCH_NOTE, DEFAULT_PROFILE, saveProfile,
   type Bench, type DailyGoal, type Experience, type Goal, type LearnerProfile,
 } from '../services/learnerProfile';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 /**
  * Setup: four questions between the tour and the account.
@@ -257,7 +258,7 @@ const s = StyleSheet.create({
   topButton: { minWidth: 44, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   backGlyph: { fontFamily: font.black, fontSize: 30, lineHeight: 32, color: colors.ink },
   progress: { flex: 1, flexDirection: 'row', gap: 5 },
-  progressSeg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  progressSeg: { flex: 1, height: 5, borderRadius: 3, ...curve, backgroundColor: colors.line },
   progressSegOn: { backgroundColor: colors.ink },
 
   body: { flex: 1, paddingHorizontal: space.lg },
@@ -266,9 +267,9 @@ const s = StyleSheet.create({
   intro: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg },
   mascot: { width: 150, height: 150 },
   bubble: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
     backgroundColor: colors.white, paddingHorizontal: space.lg, paddingVertical: space.md,
-    maxWidth: 320, ...pressSmall,
+    maxWidth: 320, ...elevation.card,
   },
   bubbleText: {
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
@@ -287,16 +288,16 @@ const s = StyleSheet.create({
   options: { marginTop: space.lg, gap: space.sm },
   option: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, paddingVertical: 14, paddingHorizontal: space.md,
   },
-  optionOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...pressSmall },
+  optionOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...elevation.card },
   radio: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2.5, borderColor: colors.line,
+    width: 22, height: 22, borderRadius: 11, ...curve, borderWidth: 2.5, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center',
   },
   radioOn: { borderColor: colors.ink },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.ink },
+  radioDot: { width: 10, height: 10, borderRadius: 5, ...curve, backgroundColor: colors.ink },
   optionText: { flex: 1 },
   optionLabel: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
   optionLabelOn: { fontFamily: font.black },

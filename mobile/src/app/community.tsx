@@ -17,7 +17,8 @@ import {
   type Challenge, type Comment, type Leaderboard, type Post,
 } from '../services/community';
 import { bumpMetric, creditLeagueWin, loadProgress, saveProgress } from '../services/progress';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 type Tab = 'feed' | 'challenges' | 'league';
 type LoadState = 'loading' | 'ready' | 'offline' | 'forbidden';
@@ -389,24 +390,24 @@ const s = StyleSheet.create({
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4, marginBottom: space.md },
   tabs: { flexDirection: 'row', gap: 6, marginBottom: space.md },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: 999, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white, alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 9, borderRadius: 999, ...curve, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white, alignItems: 'center' },
   tabActive: { borderColor: colors.ink, backgroundColor: colors.gold },
   tabText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
   tabTextActive: { color: colors.ink },
   post: {
     backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, padding: space.md, marginBottom: space.md, ...pressSmall,
+    borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md, ...elevation.card,
   },
   postTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   avatar: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.goldSoft,
+    width: 36, height: 36, borderRadius: 18, ...curve, backgroundColor: colors.goldSoft,
     borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center',
   },
   avatarText: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   author: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   meta: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft, marginTop: 1 },
   dots: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
-  menu: { marginTop: space.sm, borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, overflow: 'hidden' },
+  menu: { marginTop: space.sm, borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, overflow: 'hidden' },
   menuItem: { paddingVertical: 10, paddingHorizontal: space.md, borderBottomWidth: 1, borderBottomColor: colors.line },
   menuText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   postTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink, marginTop: space.sm },
@@ -422,16 +423,16 @@ const s = StyleSheet.create({
   commentBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 2 },
   replyRow: { flexDirection: 'row', gap: 8, marginTop: space.sm },
   replyInput: {
-    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm,
+    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve,
     paddingHorizontal: 12, paddingVertical: 8, fontFamily: font.semibold, fontSize: type.small, color: colors.ink,
   },
   replySend: {
-    width: 38, height: 38, borderRadius: radius.sm, backgroundColor: colors.gold,
+    width: 38, height: 38, borderRadius: radius.sm, ...curve, backgroundColor: colors.gold,
     borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center',
   },
   replySendText: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   leaderRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.line },
-  leaderMe: { backgroundColor: colors.goldSoft, borderRadius: radius.sm, paddingHorizontal: 8 },
+  leaderMe: { backgroundColor: colors.goldSoft, borderRadius: radius.sm, ...curve, paddingHorizontal: 8 },
   leaderRank: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft, width: 24 },
   leaderName: { flex: 1, fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   leaderNameMe: { fontFamily: font.black },
@@ -443,12 +444,12 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(20,24,31,0.5)', alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
-  sheet: { backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, padding: space.lg, width: '100%' },
+  sheet: { backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%' },
   sheetTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginBottom: space.md },
   input: {
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.white,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: space.sm,
-    fontFamily: font.semibold, fontSize: type.body, color: colors.ink,
+    fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   error: { fontFamily: font.bold, fontSize: type.small, color: colors.red },
   sheetClose: { marginTop: space.sm, alignItems: 'center', paddingVertical: space.sm },

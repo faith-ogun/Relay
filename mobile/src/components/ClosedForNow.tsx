@@ -38,7 +38,7 @@ const s = StyleSheet.create({
   mascot: { width: 130, height: 130 },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, textAlign: 'center', letterSpacing: -0.5 },
   text: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', lineHeight: 23,
   },
 });

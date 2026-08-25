@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
 
 interface Props {
   label: string;
@@ -51,7 +51,7 @@ export const GoogleGlyph: React.FC = () => (
 
 const s = StyleSheet.create({
   base: {
-    borderRadius: radius.md, paddingVertical: 15, paddingHorizontal: space.lg,
+    borderRadius: radius.md, ...curve, paddingVertical: 15, paddingHorizontal: space.lg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2,
   },
   apple: { backgroundColor: colors.ink, borderColor: colors.ink },

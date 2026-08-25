@@ -102,7 +102,7 @@ const s = StyleSheet.create({
     letterSpacing: -1, textAlign: 'center', lineHeight: type.display * 1.1,
   },
   sub: {
-    fontFamily: font.semibold, fontSize: type.body, color: colors.inkSoft,
+    fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.md, lineHeight: 22, paddingHorizontal: space.sm,
   },
   scene: { alignItems: 'center', gap: space.xs },

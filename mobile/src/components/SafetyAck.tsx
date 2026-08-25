@@ -2,7 +2,8 @@ import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from './Button';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 // The live tutor pairs AI-generated guidance with real electronics, so this is
 // shown once before a learner's first live session. The wording is copied from
@@ -63,11 +64,11 @@ const s = StyleSheet.create({
   },
   sheet: {
     width: '100%', maxWidth: 420, backgroundColor: colors.white,
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
-    padding: space.lg, ...pressSmall,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
+    padding: space.lg, ...elevation.card,
   },
   badge: {
-    width: 54, height: 54, borderRadius: radius.md, borderWidth: 2.5, borderColor: colors.ink,
+    width: 54, height: 54, borderRadius: radius.md, ...curve, borderWidth: 2.5, borderColor: colors.ink,
     backgroundColor: colors.goldSoft, alignItems: 'center', justifyContent: 'center',
   },
   title: {
@@ -76,7 +77,7 @@ const s = StyleSheet.create({
   },
   points: { marginTop: space.md, gap: space.sm },
   point: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold, marginTop: 7 },
+  dot: { width: 7, height: 7, borderRadius: 4, ...curve, backgroundColor: colors.gold, marginTop: 7 },
   pointText: {
     flex: 1, fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, lineHeight: 21,
   },

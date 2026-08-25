@@ -12,7 +12,8 @@ import { deleteMyAccount, fetchMyData } from '../services/privacy';
 import { clearLocalState } from '../services/progress';
 import { clearProfile } from '../services/learnerProfile';
 import { clearGates } from '../services/gates';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 const LEGAL_BASE = 'https://ohmlet.org';
 
@@ -225,8 +226,8 @@ const s = StyleSheet.create({
   email: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 2 },
 
   planCard: {
-    marginTop: space.lg, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg,
-    backgroundColor: colors.goldSoft, padding: space.md, ...pressSmall,
+    marginTop: space.lg, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.goldSoft, padding: space.md, ...elevation.card,
   },
   planLabel: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.6, color: colors.inkSoft },
   planName: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 2 },
@@ -238,7 +239,7 @@ const s = StyleSheet.create({
   },
   action: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, padding: space.md, marginBottom: 8,
   },
   actionBusy: { opacity: 0.6 },
@@ -251,13 +252,13 @@ const s = StyleSheet.create({
   signOutText: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft },
 
   danger: {
-    marginTop: space.xl, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.lg,
+    marginTop: space.xl, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.lg, ...curve,
     backgroundColor: '#fdece8', padding: space.md, gap: space.sm,
   },
   dangerTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   dangerBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.ink, lineHeight: 19 },
   dangerButton: {
-    marginTop: space.sm, backgroundColor: colors.red, borderRadius: radius.md,
+    marginTop: space.sm, backgroundColor: colors.red, borderRadius: radius.md, ...curve,
     paddingVertical: 14, alignItems: 'center',
   },
   dangerButtonOff: { opacity: 0.45 },
@@ -265,7 +266,7 @@ const s = StyleSheet.create({
   confirmBlock: { gap: space.sm },
   confirmLabel: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.4, color: colors.ink },
   confirmInput: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, backgroundColor: colors.white,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.white,
     paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.black, fontSize: type.body,
     color: colors.ink, letterSpacing: 2,
   },
