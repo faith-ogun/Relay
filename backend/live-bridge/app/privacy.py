@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+import checkpoints as checkpoints_mod
 import entitlements
 import hearts as hearts_mod
 import obs
@@ -235,6 +236,10 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
     if hearts_snap.exists:
         out["hearts"] = hearts_snap.to_dict()
 
+    cp_snap = client.collection(checkpoints_mod.CHECKPOINTS_COLLECTION).document(uid).get()
+    if cp_snap.exists:
+        out["checkpoints"] = cp_snap.to_dict()
+
     for d in _budget_docs(client, uid):
         snap = d.get()
         if snap.exists:
@@ -302,6 +307,7 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
         (entitlements.PLANS_COLLECTION, uid),
         (STATE_COLLECTION, uid),
         (hearts_mod.HEARTS_COLLECTION, uid),
+        (checkpoints_mod.CHECKPOINTS_COLLECTION, uid),
         (entitlements.CUSTOMERS_COLLECTION, customer),
     ):
         if doc_id:

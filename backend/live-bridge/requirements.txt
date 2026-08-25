@@ -7,6 +7,16 @@ pydantic==2.11.7
 # what the tests were written against; bump it on purpose, not by accident.
 google-adk==1.20.0
 google-genai==1.75.0
+# Pinned because 2.35.0 breaks every Firestore call with
+# "400 Invalid database id %28default%29" — it URL-encodes the default database
+# id into the request path. Bisected 2026-08-25: 2.34.0 is fine, 2.35.0 is not.
+#
+# This is a TRANSITIVE dependency, which is how it reached production unnoticed:
+# the direct pins above held, a routine rebuild resolved a fresh google-api-core,
+# and every Firestore read in the service started failing — community 500s, state
+# 502s, plan and hearts lookups falling back to defaults. Pinning a direct
+# dependency is not enough when the thing that breaks is underneath it.
+google-api-core==2.34.0
 google-cloud-firestore==2.21.0
 # Imported directly by privacy.py to purge a deleted user's 3D twin files. It
 # arrived transitively via firebase-admin before, which is exactly the kind of

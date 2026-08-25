@@ -13,6 +13,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
+import checkpoints as checkpoints_mod
 import entitlements
 import hearts as hearts_mod
 import idempotency
@@ -102,3 +103,24 @@ def spend_heart(
             logger.warning("heart idempotency claim failed for %s: %s", uid, exc)
 
     return hearts_mod.spend(uid, plan)
+
+
+@router.get("/checkpoints")
+def get_checkpoints(claims: dict = Depends(require_claims)) -> dict:
+    """What the learner has claimed, and what is earned but unpaid."""
+    return checkpoints_mod.status(claims["uid"])
+
+
+@router.post("/checkpoints/claim")
+def claim_checkpoints(claims: dict = Depends(require_claims)) -> dict:
+    """Grant every checkpoint earned and not yet paid for.
+
+    No idempotency header needed: the transaction inside is the guard, and a
+    repeated call simply finds nothing left to grant. That is a stronger promise
+    than a key, which only protects against a retry of the SAME request.
+    """
+    uid = claims["uid"]
+    result = checkpoints_mod.claim_all(uid)
+    if result["granted"]:
+        obs.audit("checkpoint.granted", uid=uid, xp=result["xp"], count=len(result["granted"]))
+    return result
