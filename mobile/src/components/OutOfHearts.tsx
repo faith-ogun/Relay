@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { Image } from 'expo-image';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 import { Button } from './Button';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
@@ -94,15 +95,28 @@ export const OutOfHearts: React.FC<{
           />
         </Svg>
         <View style={s.ringCore}>
-          <Svg width={44} height={44} viewBox="0 0 24 24">
-            <Path
-              d="M12 20.5S3.5 15.4 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.8-8.5 10.9-8.5 10.9z"
-              fill={refilled ? colors.red : 'none'}
-              stroke={refilled ? colors.red : colors.inkMute}
-              strokeWidth={2.2}
-              strokeLinejoin="round"
+          {refilled ? (
+            // The reward at the end of a wait that can run to ninety minutes.
+            // Swapping the muted outline for real artwork is what makes the
+            // arrival an event rather than a colour change.
+            <Image
+              source={require('../../assets/brand/heart-refilled.png')}
+              style={s.refilledArt}
+              contentFit="contain"
+              transition={220}
+              accessible={false}
             />
-          </Svg>
+          ) : (
+            <Svg width={44} height={44} viewBox="0 0 24 24">
+              <Path
+                d="M12 20.5S3.5 15.4 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.8-8.5 10.9-8.5 10.9z"
+                fill="none"
+                stroke={colors.inkMute}
+                strokeWidth={2.2}
+                strokeLinejoin="round"
+              />
+            </Svg>
+          )}
         </View>
       </Animated.View>
 
@@ -156,6 +170,10 @@ const s = StyleSheet.create({
   },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
   ringCore: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  // Sized against the ring's 112pt interior (132 outer minus the 10pt stroke
+  // each side), checked by rendering it inside the real ring rather than
+  // guessing from the numbers.
+  refilledArt: { width: 96, height: 88 },
   copy: { alignItems: 'center', marginTop: space.lg },
   title: {
     fontFamily: font.black, fontSize: type.title, color: colors.ink,
