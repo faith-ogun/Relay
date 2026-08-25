@@ -8,7 +8,7 @@ import { HeartsMeter } from '../../components/HeartsMeter';
 import { OutOfHearts } from '../../components/OutOfHearts';
 import { useHearts } from '../../hooks/useHearts';
 import { track } from '../../services/analytics';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Button } from '../../components/Button';
 import { StepView } from '../../lesson/StepView';
 import { useRun } from '../../lesson/useRun';
@@ -17,6 +17,7 @@ import { getLesson } from '../../services/curriculum';
 import { applyCompletion, bumpMetric, loadProgress, saveProgress } from '../../services/progress';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, font, pressSmall, radius, space, type, curve } from '../../theme/tokens';
+import { duration } from '../../theme/motion';
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -118,11 +119,19 @@ export default function LessonScreen() {
     transform: [{ translateX: -(1 - progress.value) * trackWidth.value }],
   }));
 
-  const bannerY = useSharedValue(120);
+  // Slides up, does not bounce. A spring with overshoot made the verdict wobble
+  // on arrival, which reads as uncertainty about the answer — and any overshoot
+  // on a panel anchored to the bottom pushes its top line out of view.
+  const bannerY = useSharedValue(40);
   useEffect(() => {
-    bannerY.value = withSpring(run.checked ? 0 : 120, { damping: 18, stiffness: 160 });
+    bannerY.value = run.checked
+      ? withTiming(0, { duration: duration.snappy })
+      : withTiming(40, { duration: duration.instant });
   }, [run.checked, bannerY]);
-  const bannerStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bannerY.value }] }));
+  const bannerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bannerY.value }],
+    opacity: 1 - bannerY.value / 40,
+  }));
 
   if (loading) return <Center><ActivityIndicator color={colors.goldDeep} /></Center>;
 
@@ -195,23 +204,29 @@ export default function LessonScreen() {
         )}
       </ScrollView>
 
-      {/* Feedback slides up over the action bar once an answer is graded. */}
-      {run.checked && (
-        <Animated.View style={[s.banner, run.correct ? s.bannerGood : s.bannerBad, bannerStyle]}>
-          <Text style={s.bannerTitle}>{run.correct ? 'Correct' : 'Not quite'}</Text>
-          {!!explanation && <Text style={s.bannerBody}>{explanation}</Text>}
-        </Animated.View>
-      )}
+      {/* Feedback and the action sit in ONE bottom stack, in flow.
+          The banner used to be absolutely positioned at bottom:96 while the
+          action bar measures ~112, so the bar covered its first line and
+          "Correct" was cut in half — worse with an explanation under it. In flow
+          the bar cannot overlap it at any text size. */}
+      <View style={s.bottom}>
+        {run.checked && (
+          <Animated.View style={[s.banner, run.correct ? s.bannerGood : s.bannerBad, bannerStyle]}>
+            <Text style={s.bannerTitle}>{run.correct ? 'Correct' : 'Not quite'}</Text>
+            {!!explanation && <Text style={s.bannerBody}>{explanation}</Text>}
+          </Animated.View>
+        )}
 
-      <View style={s.actions}>
-        <Button
-          label={run.checked ? 'Continue' : 'Check'}
-          disabled={!run.checked && !canCheck}
-          onPress={() => {
-            if (run.checked) return run.advance();
-            graderRef.current?.();
-          }}
-        />
+        <View style={s.actions}>
+          <Button
+            label={run.checked ? 'Continue' : 'Check'}
+            disabled={!run.checked && !canCheck}
+            onPress={() => {
+              if (run.checked) return run.advance();
+              graderRef.current?.();
+            }}
+          />
+        </View>
       </View>
     </View>
   );
@@ -238,8 +253,8 @@ const s = StyleSheet.create({
   },
   fill: { height: '100%', width: '100%', backgroundColor: colors.gold },
   content: { padding: space.lg, paddingBottom: space.xxl * 2 },
+  bottom: { backgroundColor: colors.cream },
   banner: {
-    position: 'absolute', left: 0, right: 0, bottom: 96,
     paddingHorizontal: space.lg, paddingVertical: space.md,
     borderTopWidth: 2.5,
   },
@@ -252,7 +267,7 @@ const s = StyleSheet.create({
   },
   actions: {
     padding: space.lg, paddingBottom: space.xl,
-    borderTopWidth: 2, borderTopColor: colors.line, backgroundColor: colors.cream,
+    backgroundColor: colors.cream,
   },
   kickerBig: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.greenDeep },
   bigTitle: {

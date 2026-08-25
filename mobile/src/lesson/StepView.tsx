@@ -9,8 +9,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
 import type {
   LessonStep, StepBuildToSpec, StepChoice, StepConnect, StepDraw, StepDragOrder,
-  StepFill, StepFixCircuit, StepMatch, StepSpotError, StepTeach, StepTraceCurrent,
-  StepTrueFalse,
+  StepFill, StepFixCircuit, StepIdentify, StepMatch, StepSpotError, StepTeach,
+  StepTraceCurrent, StepTrueFalse,
 } from './types';
 
 interface Props {
@@ -45,6 +45,13 @@ export const StepView: React.FC<Props> = (props) => {
       return <DrawStep {...props} step={step as StepDraw} />;
     case 'spot_error':
       return <SpotErrorStep {...props} step={step as StepSpotError} />;
+    case 'identify_component':
+      // Tap a part on the diagram, NOT a list of options. This used to fall
+      // through to ChoiceStep, which does step.options.map(...) — and an
+      // identify_component step has no `options` at all, it has a circuit and a
+      // correctComponent. Every one of the 48 in the corpus threw, taking down
+      // 42 of the 142 lessons the moment the step came up.
+      return <IdentifyStep {...props} step={step as StepIdentify} />;
     case 'fix_the_circuit':
       return <FixCircuitStep {...props} step={step as StepFixCircuit} />;
     case 'trace_current':
@@ -52,8 +59,8 @@ export const StepView: React.FC<Props> = (props) => {
     case 'build_to_spec':
       return <BuildToSpecStep {...props} step={step as StepBuildToSpec} />;
     default:
-      // multiple_choice, predict_reading, predict_behavior, choose_resistor,
-      // identify_component all present as a choice list.
+      // multiple_choice, predict_reading, predict_behavior and choose_resistor
+      // all present as a choice list.
       return <ChoiceStep {...props} step={step as StepChoice} />;
   }
 };
@@ -77,10 +84,37 @@ const TeachStep: React.FC<Props & { step: StepTeach }> = ({ step, onCanCheck, re
 };
 
 // ── Choice ─────────────────────────────────────────────────────────────────
+/**
+ * A presentation order for a set of options, guaranteed not to be the authored
+ * one when there is more than one arrangement available.
+ *
+ * Authored order is a tell: correct answers cluster where the author put them,
+ * and a learner who has seen a question once remembers the POSITION rather than
+ * the physics. Shuffling on every presentation means a requeued question has to
+ * be answered again rather than recognised.
+ */
+function shuffledOrder(n: number): number[] {
+  const order = Array.from({ length: n }, (_, i) => i);
+  if (n < 2) return order;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    for (let i = order.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    if (order.some((v, i) => v !== i)) break;
+  }
+  return order;
+}
+
 const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
   step, checked, correct, onSubmit, onCanCheck, registerGrader,
 }) => {
   const [picked, setPicked] = useState<number | null>(null);
+
+  const options = step.options ?? [];
+  // Re-rolled whenever the step changes, which includes a requeued step coming
+  // back round: the same question never appears in the same arrangement twice.
+  const order = useMemo(() => shuffledOrder(options.length), [step, options.length]);
 
   useEffect(() => { setPicked(null); }, [step]);
   useEffect(() => {
@@ -97,15 +131,18 @@ const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
       <Text style={s.question}>{step.question}</Text>
       <CircuitDiagram circuit={step.circuitDiagram} />
       <View style={{ gap: space.sm, marginTop: space.md }}>
-        {step.options.map((opt, i) => {
-          const isPicked = picked === i;
-          const reveal = checked && (i === step.correct || isPicked);
-          const good = checked && i === step.correct;
+        {order.map((originalIndex) => {
+          const opt = options[originalIndex];
+          // `picked` and `step.correct` both stay in AUTHORED indices, so only
+          // the render order changes. Grading never has to know about the shuffle.
+          const isPicked = picked === originalIndex;
+          const reveal = checked && (originalIndex === step.correct || isPicked);
+          const good = checked && originalIndex === step.correct;
           return (
             <Pressable
-              key={`${opt}-${i}`}
+              key={`${opt}-${originalIndex}`}
               disabled={checked}
-              onPress={() => setPicked(i)}
+              onPress={() => setPicked(originalIndex)}
               accessibilityRole="radio"
               accessibilityState={{ selected: isPicked }}
               style={[
@@ -365,6 +402,43 @@ const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
 // The learner taps the faulty part on the schematic itself. Reading a circuit
 // and locating a fault is the skill; a multiple-choice list would test recall
 // of the answer text instead.
+const IdentifyStep: React.FC<Props & { step: StepIdentify }> = ({
+  step, checked, onSubmit, onCanCheck, registerGrader,
+}) => {
+  const [picked, setPicked] = useState<string | null>(null);
+
+  useEffect(() => { setPicked(null); }, [step]);
+  useEffect(() => {
+    onCanCheck(picked !== null);
+    registerGrader(picked === null ? null : () => onSubmit(picked === step.correctComponent));
+    return () => registerGrader(null);
+  }, [picked, step, onCanCheck, registerGrader, onSubmit]);
+
+  const right = picked === step.correctComponent;
+  return (
+    <View>
+      <Text style={s.kicker}>IDENTIFY</Text>
+      <Text style={s.question}>{step.question}</Text>
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        onRegionPress={checked ? undefined : setPicked}
+        selected={picked ? [picked] : []}
+        correct={checked ? [step.correctComponent] : []}
+        wrong={checked && !right && picked ? [picked] : []}
+      />
+      <Text style={s.hint}>
+        {checked
+          ? right
+            ? `Right: ${regionLabel(step.circuitDiagram, step.correctComponent)}.`
+            : `That one is ${regionLabel(step.circuitDiagram, step.correctComponent)}.`
+          : picked
+            ? `You picked ${regionLabel(step.circuitDiagram, picked)}.`
+            : 'Tap the part on the diagram.'}
+      </Text>
+    </View>
+  );
+};
+
 const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {

@@ -86,6 +86,22 @@ export interface StepSpotError {
   hint?: string;
 }
 
+/**
+ * Tap the named component on a circuit diagram.
+ *
+ * Note there are no `options`: this is a diagram interaction, not a choice list.
+ * It was routed to the choice renderer, which mapped over the absent array and
+ * threw — taking down 42 of the 142 lessons.
+ */
+export interface StepIdentify {
+  type: 'identify_component';
+  question: string;
+  circuitDiagram: string;
+  correctComponent: string;
+  explanation: string;
+  hint?: string;
+}
+
 export interface StepFixCircuit {
   type: 'fix_the_circuit';
   question: string;
@@ -123,7 +139,7 @@ export interface StepBuildToSpec {
 export type LessonStep =
   | StepTeach | StepChoice | StepTrueFalse | StepFill | StepMatch | StepDragOrder
   | StepConnect | StepDraw
-  | StepSpotError | StepFixCircuit | StepTraceCurrent | StepBuildToSpec
+  | StepSpotError | StepIdentify | StepFixCircuit | StepTraceCurrent | StepBuildToSpec
   | { type: string; [k: string]: unknown };   // authored types not yet on mobile
 
 export interface Lesson {
@@ -155,6 +171,11 @@ export function canRender(step: LessonStep): boolean {
   switch (step.type) {
     case 'spot_error':
       return hasRegions(circuit, [(step as StepSpotError).correctRegion]);
+    case 'identify_component':
+      // Needs a hit area for the component it asks about. Without one the step
+      // is unanswerable, so it is dropped rather than shown as a diagram that
+      // ignores every tap.
+      return hasRegions(circuit, [(step as StepIdentify).correctComponent]);
     case 'fix_the_circuit':
       return hasRegions(circuit, [(step as StepFixCircuit).faultRegion]);
     case 'trace_current':
