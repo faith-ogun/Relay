@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,30 @@ router = APIRouter(prefix="/v1/curriculum", tags=["curriculum"])
 def _curriculum() -> dict[str, Any]:
     """The unit/skill/lesson structure. Small (~28KB), safe to hold in memory."""
     return json.loads((DATA_DIR / "curriculum.json").read_text())
+
+
+# Where the achievement artwork is served from.
+#
+# Deliberately NOT OHMLET_APP_URL: that points at ohmlet.org, which is still a
+# Namecheap parking page, so building asset URLs from it would 404 every medal
+# until DNS is switched. The Firebase Hosting origin serves the files today and
+# keeps serving them after the custom domain is attached.
+ASSET_ORIGIN = os.getenv("OHMLET_ASSET_ORIGIN", "https://ohmlet-app.web.app").rstrip("/")
+
+
+def _absolute_art(item: dict[str, Any]) -> dict[str, Any]:
+    """Turn a root-relative art path into a URL a native client can load.
+
+    The catalogue stores `/achievements/build-1.webp`, which resolves fine in a
+    browser and means nothing on a phone: there is no document origin to resolve
+    it against. Mobile rendered a plain coloured disc instead, so all 50 medals
+    were art-less. Rewriting server-side fixes both clients at once and keeps the
+    authored JSON origin-agnostic.
+    """
+    art = item.get("art")
+    if isinstance(art, str) and art.startswith("/"):
+        return {**item, "art": f"{ASSET_ORIGIN}{art}"}
+    return item
 
 
 @lru_cache(maxsize=1)
@@ -122,4 +147,5 @@ def achievements(uid: str = Depends(require_uid)) -> dict[str, Any]:
     except Exception as exc:
         logger.error("achievements unavailable: %s", exc)
         raise HTTPException(status_code=503, detail="Achievements aren't available right now.")
-    return {"version": data.get("version", ""), "achievements": data.get("achievements", [])}
+    items = [_absolute_art(a) for a in data.get("achievements", [])]
+    return {"version": data.get("version", ""), "achievements": items}

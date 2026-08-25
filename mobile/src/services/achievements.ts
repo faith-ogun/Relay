@@ -25,7 +25,10 @@ export interface Achievement {
   art?: string;
 }
 
-const CACHE = 'ohmlet.achievements.v1';
+// v2: the catalogue now carries ABSOLUTE art URLs. A v1 cache holds
+// root-relative paths that a phone cannot resolve, so it is dropped rather
+// than left to render 50 art-less medals until the next successful fetch.
+const CACHE = 'ohmlet.achievements.v2';
 
 export const TIER_LABEL: Record<Tier, string> = {
   common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',

@@ -378,7 +378,12 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   return (
     <div className="min-h-screen bg-ohmlet-cream font-display text-ohmlet-ink">
       <PortalReturnNote plan={plan} onSeePlans={onUpgrade} />
-      <div className="mx-auto flex max-w-[1320px]">
+      {/* Full-bleed, so the rail sits flush against the viewport edge. Capping
+          and centring the whole shell left a band of empty cream to the LEFT of
+          the sidebar on any wide screen, which reads as a rendering fault rather
+          than a margin. The reading width is capped on the content instead, where
+          it belongs. */}
+      <div className="flex">
         {/* ── Left rail ── */}
         <aside
           className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ohmlet-line bg-white py-6 transition-[width] duration-200 lg:flex ${
@@ -486,6 +491,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
         {/* ── Main ── */}
         <main className="min-w-0 flex-1 px-5 py-6 md:px-8">
+          {/* The measure lives here: long-form content stays readable on a wide
+              display without the chrome drifting away from the edge. */}
+          <div className="mx-auto w-full max-w-[1180px]">
           {active === 'path' && (
             <div>
               <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Learning path</p>
@@ -733,6 +741,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               </button>
             )
           )}
+          </div>
         </main>
       </div>
     </div>

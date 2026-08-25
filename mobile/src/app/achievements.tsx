@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Lock } from '../components/icons';
 import { goBack } from '../services/nav';
 import Svg, { Circle } from 'react-native-svg';
+import { Image } from 'expo-image';
 import { useAuth } from '../hooks/useAuth';
 import {
   getAchievements, isEarned, progressOf, TIER_COLOR, TIER_LABEL, UNTRACKED,
@@ -116,6 +117,12 @@ const Card: React.FC<{ a: Achievement; earned: boolean; pct: number; onPress: ()
 }) => {
   const tint = TIER_COLOR[a.tier as Tier] ?? colors.line;
   const circumference = 2 * Math.PI * (RING - 4);
+  // The artwork is the reward. It was declared on the type and never rendered,
+  // so every medal was a flat coloured disc. If a file is missing or the network
+  // is down the disc is still there underneath, so the grid degrades to what it
+  // used to be rather than to a hole.
+  const [artOk, setArtOk] = useState(true);
+  const showArt = !!a.art && artOk;
   return (
     <Pressable
       onPress={onPress}
@@ -136,6 +143,17 @@ const Card: React.FC<{ a: Achievement; earned: boolean; pct: number; onPress: ()
           )}
           <Circle cx={RING} cy={RING} r={RING - 11} fill={earned ? tint : colors.cream} />
         </Svg>
+        {showArt && (
+          <Image
+            source={{ uri: a.art }}
+            style={[s.art, !earned && s.artLocked]}
+            contentFit="contain"
+            transition={180}
+            cachePolicy="disk"
+            onError={() => setArtOk(false)}
+            accessible={false}
+          />
+        )}
         {!earned && <View style={s.lock}><Lock size={16} /></View>}
       </View>
       <Text style={[s.cardTitle, !earned && s.cardTitleLocked]} numberOfLines={2}>{a.title}</Text>
@@ -159,6 +177,10 @@ const s = StyleSheet.create({
     borderRadius: radius.md, ...curve, padding: space.sm, alignItems: 'center',
   },
   medalWrap: { alignItems: 'center', justifyContent: 'center' },
+  art: { position: 'absolute', width: RING * 1.5, height: RING * 1.5 },
+  // Locked art is present but drained, so the grid reads as a case with gaps
+  // to fill rather than a wall of identical grey discs.
+  artLocked: { opacity: 0.28 },
   lock: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   cardTitle: {
     fontFamily: font.black, fontSize: type.meta, color: colors.ink,

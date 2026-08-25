@@ -14,7 +14,7 @@ import { ClosedForNow } from '../components/ClosedForNow';
 import {
   addComment, blockUser, createPost, fetchChallenges, fetchComments, fetchFeed,
   fetchLeaderboard, joinChallenge, leaveChallenge, relativeTime, reportPost, toggleLike,
-  type Challenge, type Comment, type Leaderboard, type Post,
+  type Challenge, type Comment, type FailReason, type Leaderboard, type Post,
 } from '../services/community';
 import { bumpMetric, creditLeagueWin, loadProgress, saveProgress } from '../services/progress';
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
@@ -23,11 +23,49 @@ import { elevation } from '../theme/elevation';
 type Tab = 'feed' | 'challenges' | 'league';
 type LoadState = 'loading' | 'ready' | 'offline' | 'forbidden';
 
+/**
+ * What to say when the feed will not load.
+ *
+ * Every one of these used to read "check your connection", which is wrong for
+ * four of the five and sends someone to fiddle with their wifi while their
+ * session quietly needs refreshing. Naming the failure is also what makes a
+ * screenshot diagnosable.
+ */
+const FAILURE_COPY: Record<FailReason, { title: string; body: string }> = {
+  offline: {
+    title: "Can't reach the community",
+    body: 'Your device could not reach Ohmlet. Check your connection and try again.',
+  },
+  timeout: {
+    title: 'That took too long',
+    body: 'Ohmlet answered too slowly to wait for, which usually means a weak connection. Trying again often works straight away.',
+  },
+  unauthenticated: {
+    title: 'Your session needs refreshing',
+    body: 'Sign out and back in, and the feed will load.',
+  },
+  forbidden: {
+    title: 'Community is off for this account',
+    body: 'Younger builders get the lessons, the simulator and the live tutor, without the social feed.',
+  },
+  rate_limited: {
+    title: 'Slow down a moment',
+    body: 'Too many requests in a short window. Wait a minute and try again.',
+  },
+  server: {
+    title: 'Something went wrong on our side',
+    body: 'This one is ours, not yours. It is worth trying again shortly.',
+  },
+};
+
 export default function Community() {
   const { childSafe, resolved: childResolved } = useChildSafe();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('feed');
   const [state, setState] = useState<LoadState>('loading');
+  // Kept separately from `state` so the screen can name the failure instead of
+  // blaming the learner's connection for a server error or an expired session.
+  const [failure, setFailure] = useState<FailReason>('offline');
   const [posts, setPosts] = useState<Post[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [league, setLeague] = useState<Leaderboard | null>(null);
@@ -36,7 +74,12 @@ export default function Community() {
 
   const load = useCallback(async () => {
     const [feed, chal, board] = await Promise.all([fetchFeed(), fetchChallenges(), fetchLeaderboard()]);
-    if (!feed.ok) { setState(feed.reason === 'forbidden' ? 'forbidden' : 'offline'); return; }
+    if (!feed.ok) {
+      if (feed.reason === 'forbidden') { setState('forbidden'); return; }
+      setFailure(feed.reason);
+      setState('offline');
+      return;
+    }
     setPosts(feed.data.posts ?? []);
     if (chal.ok) setChallenges(chal.data.challenges ?? []);
     if (board.ok) {
@@ -83,11 +126,12 @@ export default function Community() {
   }
 
   if (state === 'offline') {
+    const copy = FAILURE_COPY[failure] ?? FAILURE_COPY.offline;
     return (
       <View style={s.center}>
-        <Text style={s.emptyTitle}>Can't reach the community</Text>
-        <Text style={s.emptyBody}>Check your connection and pull down to try again.</Text>
-        <Button label="Retry" onPress={() => void load()} style={{ marginTop: space.lg }} />
+        <Text style={s.emptyTitle}>{copy.title}</Text>
+        <Text style={s.emptyBody}>{copy.body}</Text>
+        <Button label="Try again" onPress={() => void load()} style={{ marginTop: space.lg }} />
       </View>
     );
   }

@@ -42,16 +42,55 @@ export interface Challenge {
 export interface LeaderRow { rank: number; name: string; xp: number; isMe: boolean }
 export interface Leaderboard { week: string; leaders: LeaderRow[]; me: { xp: number; rank: number | null } }
 
-/** Distinguishes "nothing here" from "could not reach the server". */
-export type Result<T> = { ok: true; data: T } | { ok: false; reason: 'offline' | 'forbidden' | 'error' };
+/**
+ * Why a call failed, at the resolution the UI needs.
+ *
+ * This used to be three values, and everything that was not a 403 collapsed into
+ * "offline". So a rate limit, a 500, an expired session and a genuinely dead
+ * connection all rendered the same "check your connection" screen — which is
+ * wrong three times out of four, and leaves nobody, including us, able to tell
+ * what actually happened from a screenshot.
+ */
+export type FailReason =
+  | 'offline'          // the request never reached a server
+  | 'timeout'          // it reached one and nothing came back in time
+  | 'unauthenticated'  // no usable ID token: the session needs refreshing
+  | 'forbidden'        // the server refused this account (child mode)
+  | 'rate_limited'     // 429
+  | 'server';          // 5xx, or any other unexpected status
 
-async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
+export type Result<T> = { ok: true; data: T } | { ok: false; reason: FailReason };
+
+/**
+ * React Native's fetch has NO default timeout, so a request on a weak mobile
+ * connection can sit open indefinitely and the screen just looks dead. Twelve
+ * seconds is long enough to cover a Cloud Run cold start on a slow link and
+ * short enough that a real failure surfaces while the learner is still looking
+ * at the screen.
+ */
+const TIMEOUT_MS = 12_000;
+
+/** One retry, because the FIRST request after the service scales to zero pays a
+ *  cold start and is the one most likely to time out. Retrying a read is safe;
+ *  writes are excluded below. */
+const RETRY_DELAY_MS = 900;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function once<T>(path: string, init?: RequestInit): Promise<Result<T>> {
   if (!API_BASE) return { ok: false, reason: 'offline' };
   const token = await getIdToken();
-  if (!token) return { ok: false, reason: 'offline' };
+  // A missing token is a session problem, not a network problem, and telling
+  // someone to check their connection when they need to sign in again wastes
+  // their time.
+  if (!token) return { ok: false, reason: 'unauthenticated' };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(`${API_BASE}/v1/community${path}`, {
       ...init,
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -59,11 +98,29 @@ async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
       },
     });
     if (res.status === 403) return { ok: false, reason: 'forbidden' };
-    if (!res.ok) return { ok: false, reason: 'error' };
+    if (res.status === 401) return { ok: false, reason: 'unauthenticated' };
+    if (res.status === 429) return { ok: false, reason: 'rate_limited' };
+    if (!res.ok) return { ok: false, reason: 'server' };
     return { ok: true, data: (await res.json()) as T };
-  } catch {
-    return { ok: false, reason: 'offline' };
+  } catch (err) {
+    const aborted = (err as { name?: string } | null)?.name === 'AbortError';
+    return { ok: false, reason: aborted ? 'timeout' : 'offline' };
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/** Failures worth trying again once: nothing was durably decided by the server. */
+const TRANSIENT: ReadonlySet<FailReason> = new Set<FailReason>(['timeout', 'offline', 'server']);
+
+async function call<T>(path: string, init?: RequestInit): Promise<Result<T>> {
+  const first = await once<T>(path, init);
+  // Never retry a write: a POST that timed out may well have been applied, and
+  // a second one would double-post or double-like.
+  const isWrite = !!init?.method && init.method.toUpperCase() !== 'GET';
+  if (first.ok || isWrite || !TRANSIENT.has(first.reason)) return first;
+  await sleep(RETRY_DELAY_MS);
+  return once<T>(path, init);
 }
 
 export interface CommunityStats {
