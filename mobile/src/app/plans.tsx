@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
+import { Image } from 'expo-image';
 import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { useAuth } from '../hooks/useAuth';
@@ -41,6 +42,12 @@ function periodLabel(period: string): string {
  * the screen is three identical rectangles with different words in them — which
  * is what it was.
  */
+/** Tier artwork. Only the paid tiers get an illustration: giving Free one too
+ *  would flatten the hierarchy the images exist to create. */
+const ART: Partial<Record<Plan, number>> = {
+  pro: require('../../assets/brand/plan-pro.png'),
+};
+
 const TONE: Record<Plan, {
   card: object; strip: object; stripText: object;
   text: object; muted: object; tick: string;
@@ -173,20 +180,34 @@ export default function Plans() {
             </View>
 
             <View style={s.cardBody}>
-              <View style={s.cardTop}>
-                <Text style={[s.cardTitle, tone.text]}>{meta.label}</Text>
-                <View style={s.priceWrap}>
-                  <Text style={[s.price, tone.text]}>
-                    {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `€${meta.priceMonthly}`}
-                  </Text>
-                  {(pkg || meta.priceMonthly !== null) && (
-                    <Text style={[s.pricePer, tone.muted]}>
-                      /{pkg && periodLabel(pkg.period) ? periodLabel(pkg.period) : 'month'}
+              {/* Art sits beside the TITLE, not beside the perks: the perk lines
+                  are long, and squeezing them into the leftover 180pt would
+                  wrap every one of them onto three lines. */}
+              <View style={s.headRow}>
+                <View style={s.headText}>
+                  <Text style={[s.cardTitle, tone.text]}>{meta.label}</Text>
+                  <View style={s.priceWrap}>
+                    <Text style={[s.price, tone.text]}>
+                      {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `€${meta.priceMonthly}`}
                     </Text>
-                  )}
+                    {(pkg || meta.priceMonthly !== null) && (
+                      <Text style={[s.pricePer, tone.muted]}>
+                        /{pkg && periodLabel(pkg.period) ? periodLabel(pkg.period) : 'month'}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[s.cardBlurb, tone.muted]}>{meta.blurb}</Text>
                 </View>
+                {!!ART[p] && (
+                  <Image
+                    source={ART[p]}
+                    style={s.art}
+                    contentFit="contain"
+                    accessible={false}
+                    transition={0}
+                  />
+                )}
               </View>
-              <Text style={[s.cardBlurb, tone.muted]}>{meta.blurb}</Text>
 
               <View style={s.perks}>
                 {meta.perks.map((perk) => (
@@ -286,9 +307,11 @@ const s = StyleSheet.create({
   strip: { paddingHorizontal: space.md, paddingVertical: 7 },
   stripText: { fontFamily: font.black, fontSize: 10, letterSpacing: 2 },
   cardBody: { padding: space.md },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  headText: { flex: 1, minWidth: 0 },
+  art: { width: 130, height: 133, marginTop: -6, marginRight: -6 },
   cardTitle: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.6 },
-  priceWrap: { flexDirection: 'row', alignItems: 'flex-end' },
+  priceWrap: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
   price: { fontFamily: font.black, fontSize: type.heading, letterSpacing: -0.4 },
   pricePer: { fontFamily: font.bold, fontSize: type.small, marginBottom: 2 },
   cardBlurb: { fontFamily: font.bold, fontSize: type.small, marginTop: 2 },
