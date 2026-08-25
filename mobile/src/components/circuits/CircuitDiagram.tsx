@@ -294,6 +294,61 @@ const REGIONS: Record<string, Region[]> = {
     { id: 'transistor', label: 'transistor', x: 104, y: 100, w: 54, h: 50 },
     { id: 'base_resistor', label: 'base resistor', x: 40, y: 104, w: 58, h: 42 },
   ],
+
+  // ── Added 2026-08-25 ──
+  //
+  // These circuits had no hit areas at all, so every identify_component step
+  // that used them was dropped by canRender: 25 steps across six diagrams,
+  // including all eleven on ldr_alarm, which is the flagship LDR build. The
+  // rectangles are sized to the drawn symbol plus a finger's margin, since a
+  // 20px component is not a tap target.
+  ldr_alarm: [
+    { id: 'ldr', label: 'the LDR', x: 16, y: 32, w: 62, h: 32 },
+    { id: 'r_bias', label: 'the 10k resistor', x: 38, y: 88, w: 46, h: 46 },
+    // The divider junction: the node the sketch would read on an analog pin.
+    // Must CONTAIN the node at (60,82), not sit beside it — the overlay showed
+    // the first attempt starting at x=82, so the junction itself was untappable.
+    { id: 'a0', label: 'the divider junction', x: 50, y: 66, w: 76, h: 22 },
+    { id: 'transistor', label: 'the transistor', x: 132, y: 60, w: 56, h: 48 },
+    { id: 'buzzer', label: 'the buzzer', x: 228, y: 28, w: 56, h: 44 },
+  ],
+  voltage_divider: [
+    { id: 'r1', label: 'R1', x: 126, y: 34, w: 48, h: 48 },
+    { id: 'r2', label: 'R2', x: 126, y: 86, w: 48, h: 48 },
+    { id: 'a0', label: 'the midpoint tap', x: 178, y: 66, w: 76, h: 36 },
+  ],
+  parallel_circuit: [
+    { id: 'battery', label: 'battery', x: 18, y: 62, w: 48, h: 52 },
+    { id: 'r1', label: 'R1', x: 116, y: 38, w: 78, h: 44 },
+    { id: 'r2', label: 'R2', x: 116, y: 88, w: 78, h: 44 },
+  ],
+  rc_low_pass: [
+    { id: 'resistor', label: 'the resistor', x: 84, y: 34, w: 64, h: 42 },
+    { id: 'capacitor', label: 'the capacitor', x: 114, y: 82, w: 60, h: 44 },
+  ],
+  voltage_regulator: [
+    { id: 'reg', label: 'the 7805 regulator', x: 96, y: 28, w: 78, h: 46 },
+    { id: 'cin', label: 'the input capacitor', x: 52, y: 78, w: 56, h: 44 },
+    { id: 'cout', label: 'the output capacitor', x: 186, y: 78, w: 60, h: 44 },
+  ],
+  opamp_inverting: [
+    { id: 'opamp', label: 'the op-amp', x: 134, y: 54, w: 54, h: 52 },
+    { id: 'rin', label: 'Rin', x: 56, y: 36, w: 56, h: 42 },
+    { id: 'rf', label: 'Rf', x: 144, y: 4, w: 56, h: 40 },
+  ],
+  opamp_noninverting: [
+    { id: 'opamp', label: 'the op-amp', x: 134, y: 54, w: 54, h: 52 },
+    { id: 'rg', label: 'Rg', x: 56, y: 36, w: 56, h: 42 },
+    { id: 'rf', label: 'Rf', x: 144, y: 6, w: 56, h: 40 },
+  ],
+  h_bridge: [
+    { id: 'motor', label: 'the motor', x: 146, y: 58, w: 50, h: 50 },
+  ],
+  breadboard_layout: [
+    // The two supply rails run the full width at the top and bottom of the board.
+    { id: 'power_rail', label: 'the positive rail', x: 24, y: 22, w: 272, h: 26 },
+    { id: 'ground_rail', label: 'the ground rail', x: 24, y: 112, w: 272, h: 26 },
+  ],
 };
 
 /** Region ids a learner can tap on `circuit`, or [] if it has none. */
