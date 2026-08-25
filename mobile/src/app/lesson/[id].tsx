@@ -3,6 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useLocalSearchParams, router } from 'expo-router';
 import { Close, Heart } from '../../components/icons';
 import { goBack } from '../../services/nav';
+import { LessonComplete } from '../../components/LessonComplete';
+import { track } from '../../services/analytics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Button } from '../../components/Button';
 import { StepView } from '../../lesson/StepView';
@@ -50,6 +52,10 @@ export default function LessonScreen() {
 
   // Persist once, when the run completes. Guarded so a re-render cannot
   // double-award XP.
+  // What the completion screen reports back. Read from the SAVED progress
+  // rather than recomputed, so the streak shown is the streak that was written.
+  const [outcome, setOutcome] = useState<{ streak: number; extended: boolean } | null>(null);
+
   useEffect(() => {
     if (!run.done || saved || !user?.uid || !lesson) return;
     setSaved(true);
@@ -60,6 +66,13 @@ export default function LessonScreen() {
       if (!run.anyWrong) next = bumpMetric(next, 'perfect');
       if (drawingsRight.current > 0) next = bumpMetric(next, 'drawings', drawingsRight.current);
       await saveProgress(user.uid, next);
+      setOutcome({ streak: next.streak, extended: next.streak > current.streak });
+      track('lesson_complete', {
+        lessonId: String(id),
+        xp: run.earnedXp,
+        perfect: !run.anyWrong,
+        streak: next.streak,
+      });
     })();
   }, [run.done, run.earnedXp, saved, user?.uid, lesson, id]);
 
@@ -103,16 +116,13 @@ export default function LessonScreen() {
 
   if (run.done) {
     return (
-      <Center>
-        <Text style={s.kickerBig}>LESSON COMPLETE</Text>
-        <Text style={s.bigTitle}>+{run.earnedXp} XP</Text>
-        <Text style={s.body}>
-          {run.anyWrong
-            ? 'Cleared every question, including the ones that came back.'
-            : 'Straight through with no mistakes.'}
-        </Text>
-        <Button label="Back to the path" onPress={() => goBack('/path')} style={{ marginTop: space.lg }} />
-      </Center>
+      <LessonComplete
+        earnedXp={run.earnedXp}
+        perfect={!run.anyWrong}
+        streak={outcome?.streak ?? 0}
+        streakExtended={outcome?.extended ?? false}
+        onDone={() => goBack('/home')}
+      />
     );
   }
 
