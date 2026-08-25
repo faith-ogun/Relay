@@ -28,6 +28,10 @@ export interface CurriculumLesson {
 export interface CurriculumSkill {
   id: string;
   title: string;
+  /** Authored icon name (Zap, Gauge, Trophy...). The curriculum's own
+   *  human-chosen variety, and what the path uses to tell one stretch from
+   *  the next. */
+  icon?: string;
   lessons: CurriculumLesson[];
 }
 

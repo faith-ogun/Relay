@@ -3,12 +3,17 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from
 import { useLocalSearchParams, router } from 'expo-router';
 import { goBack } from '../../services/nav';
 import { getManifest, type CurriculumUnit } from '../../services/curriculum';
-import { colors, font, radius, space, type, curve } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { UnitPath } from '../../components/path/UnitPath';
+import { loadProgress } from '../../services/progress';
+import { useAuth } from '../../hooks/useAuth';
+import { track } from '../../services/analytics';
+import { colors, font, space, type, curve, tabular } from '../../theme/tokens';
 
 export default function UnitDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [unit, setUnit] = useState<CurriculumUnit | null>(null);
+  const [completed, setCompleted] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,10 +27,26 @@ export default function UnitDetail() {
     return () => { alive = false; };
   }, [id]);
 
+  useEffect(() => {
+    let alive = true;
+    if (!user?.uid) return;
+    void loadProgress(user.uid).then((p) => {
+      if (alive) setCompleted(new Set(Object.keys(p.lessonLevels)));
+    });
+    return () => { alive = false; };
+  }, [user?.uid]);
+
   const lessonTotal = useMemo(
     () => unit?.skills.reduce((n, s) => n + s.lessons.length, 0) ?? 0,
     [unit],
   );
+
+  const doneCount = useMemo(
+    () => unit?.skills.reduce(
+      (n, sk) => n + sk.lessons.filter((l) => completed.has(l.id)).length, 0) ?? 0,
+    [unit, completed],
+  );
+  const donePct = lessonTotal ? doneCount / lessonTotal : 0;
 
   if (loading) {
     return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
@@ -51,28 +72,24 @@ export default function UnitDetail() {
       <Text style={s.eyebrow}>{unit.level.toUpperCase()}</Text>
       <Text style={s.title}>{unit.title}</Text>
       <Text style={s.sub}>{unit.subtitle}</Text>
-      <Text style={s.meta}>{unit.skills.length} skills · {lessonTotal} lessons</Text>
 
-      {unit.skills.map((skill, si) => (
-        <View key={skill.id} style={s.skill}>
-          <Text style={s.skillTitle}>{si + 1}. {skill.title}</Text>
-          {skill.lessons.map((lesson) => (
-            <Pressable
-              key={lesson.id}
-              style={s.lesson}
-              onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
-              accessibilityRole="button"
-              accessibilityLabel={`Lesson: ${lesson.title}`}
-            >
-              <View style={s.dot} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.lessonTitle}>{lesson.title}</Text>
-                {!!lesson.summary && <Text style={s.lessonSummary}>{lesson.summary}</Text>}
-              </View>
-            </Pressable>
-          ))}
+      {/* Progress as a bar, not a sentence. "6 of 12" is a fact; a filled bar is
+          a position, and position is what someone opening a unit is looking for. */}
+      <View style={s.progressRow}>
+        <View style={s.progressTrack}>
+          <View style={[s.progressFill, { width: `${Math.round(donePct * 100)}%` }]} />
         </View>
-      ))}
+        <Text style={s.progressText}>{doneCount} / {lessonTotal}</Text>
+      </View>
+
+      <UnitPath
+        unit={unit}
+        completed={completed}
+        onStart={(lessonId) => {
+          track('lesson_start', { lessonId, unitId: unit.id });
+          router.push({ pathname: '/lesson/[id]', params: { id: lessonId } });
+        }}
+      />
     </ScrollView>
   );
 }
@@ -86,23 +103,16 @@ const s = StyleSheet.create({
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.6, marginTop: 4 },
   sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: 6, lineHeight: 22 },
-  meta: { fontFamily: font.extrabold, fontSize: type.meta, letterSpacing: 1, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
-  skill: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md, ...elevation.card,
+  progressRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    marginTop: space.md, marginBottom: space.xl,
   },
-  skillTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink, marginBottom: space.sm },
-  lesson: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.line,
+  progressTrack: {
+    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
-  dot: {
-    width: 10, height: 10, borderRadius: 3, ...curve, backgroundColor: colors.gold,
-    borderWidth: 1.5, borderColor: colors.ink, marginTop: 5,
-    transform: [{ rotate: '45deg' }],
-  },
-  lessonTitle: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
-  lessonSummary: { fontFamily: font.regular, fontSize: type.meta, color: colors.inkSoft, marginTop: 2, lineHeight: 16 },
+  progressFill: { height: '100%', backgroundColor: colors.gold },
+  progressText: { fontFamily: font.black, fontSize: type.small, color: colors.ink, ...tabular },
   emptyTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   back: { marginTop: space.md, paddingVertical: space.sm },
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
