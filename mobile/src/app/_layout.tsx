@@ -29,9 +29,21 @@ function Shell() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.cream },
-          animation: 'fade',
+          // Tab destinations are siblings, not a stack: a cross-fade between
+          // them reads as loading, because a fade is what a screen does while it
+          // is waiting. Native tab bars switch instantly. Pushes still animate,
+          // which is set per route rather than globally.
+          animation: 'none',
         }}
-      />
+      >
+        {/* Detail screens are pushed, so they slide the way iOS expects. */}
+        <Stack.Screen name="lesson/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="unit/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="twins" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="plans" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="account" options={{ animation: 'slide_from_right' }} />
+      </Stack>
     </View>
   );
 }

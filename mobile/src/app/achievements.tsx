@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { Lock } from '../components/icons';
 import { goBack } from '../services/nav';
 import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../hooks/useAuth';
@@ -134,7 +135,7 @@ const Card: React.FC<{ a: Achievement; earned: boolean; pct: number; onPress: ()
           )}
           <Circle cx={RING} cy={RING} r={RING - 11} fill={earned ? tint : colors.cream} />
         </Svg>
-        {!earned && <Text style={s.lock}>🔒</Text>}
+        {!earned && <View style={s.lock}><Lock size={16} /></View>}
       </View>
       <Text style={[s.cardTitle, !earned && s.cardTitleLocked]} numberOfLines={2}>{a.title}</Text>
       <Text style={s.cardTier}>{TIER_LABEL[a.tier as Tier]}</Text>
@@ -157,7 +158,7 @@ const s = StyleSheet.create({
     borderRadius: radius.md, padding: space.sm, alignItems: 'center',
   },
   medalWrap: { alignItems: 'center', justifyContent: 'center' },
-  lock: { position: 'absolute', fontSize: 16 },
+  lock: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   cardTitle: {
     fontFamily: font.black, fontSize: type.meta, color: colors.ink,
     textAlign: 'center', marginTop: 6, lineHeight: 14,

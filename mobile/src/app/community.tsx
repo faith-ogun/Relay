@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Comment as CommentIcon, Heart } from '../components/icons';
 import { goBack } from '../services/nav';
 import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
@@ -201,14 +202,20 @@ const Feed: React.FC<{ posts: Post[]; onChanged: () => Promise<void>; onCompose:
               accessibilityRole="button"
               accessibilityLabel={p.liked ? 'Unlike' : 'Like'}
             >
-              <Text style={[s.actionText, p.liked && s.actionOn]}>♥ {p.likes}</Text>
+              <View style={s.actionRow}>
+                <Heart size={16} color={p.liked ? colors.red : colors.inkSoft} filled={p.liked} />
+                <Text style={[s.actionText, p.liked && s.actionOn]}>{p.likes}</Text>
+              </View>
             </Pressable>
             <Pressable
               onPress={() => setOpenComments(openComments === p.id ? null : p.id)}
               style={s.action}
               accessibilityRole="button"
             >
-              <Text style={s.actionText}>💬 {p.comments}</Text>
+              <View style={s.actionRow}>
+                <CommentIcon size={16} />
+                <Text style={s.actionText}>{p.comments}</Text>
+              </View>
             </Pressable>
           </View>
 
@@ -406,6 +413,7 @@ const s = StyleSheet.create({
   postBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
   postActions: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   action: { paddingVertical: 4 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   actionText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   actionOn: { color: colors.red },
   comments: { marginTop: space.md, borderTopWidth: 2, borderTopColor: colors.line, paddingTop: space.sm },

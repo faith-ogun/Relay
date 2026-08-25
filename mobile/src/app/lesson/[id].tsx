@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { Close, Heart } from '../../components/icons';
 import { goBack } from '../../services/nav';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Button } from '../../components/Button';
@@ -120,14 +121,17 @@ export default function LessonScreen() {
       {/* Top bar: leave, progress, hearts */}
       <View style={s.topBar}>
         <Pressable onPress={() => goBack('/path')} hitSlop={12} accessibilityLabel="Leave lesson" accessibilityRole="button">
-          <Text style={s.close}>✕</Text>
+          <Close size={22} />
         </Pressable>
         <View style={s.track} accessibilityRole="progressbar"
               accessibilityValue={{ min: 0, max: run.total, now: Math.round(run.progress * run.total) }}>
           <Animated.View style={[s.fill, barStyle]} />
         </View>
         <View style={s.hearts} accessibilityLabel={`${run.hearts} hearts left`}>
-          <Text style={s.heartText}>♥ {run.hearts}</Text>
+          <View style={s.heartRow}>
+            <Heart size={17} color={colors.red} filled />
+            <Text style={s.heartText}>{run.hearts}</Text>
+          </View>
         </View>
       </View>
 
@@ -190,6 +194,7 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999,
     backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
   },
+  heartRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   heartText: { fontFamily: font.black, fontSize: type.small, color: colors.red },
   content: { padding: space.lg, paddingBottom: space.xxl * 2 },
   banner: {
