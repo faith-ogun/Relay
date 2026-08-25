@@ -56,7 +56,10 @@ const HeartsPill: React.FC = () => {
   // A minor cannot self-purchase (#96): they get the count, not a doorway to
   // a paywall.
   const { childSafe } = useChildSafe();
-  if (!loaded) return <View style={[s.pill, s.pillIdle]} />;
+  // Nothing, not a blank pill. If the hearts service is unreachable this state
+  // is permanent, and an empty pill in the strip would read as broken for the
+  // whole session; the other three simply take the space.
+  if (!loaded) return null;
 
   if (unlimited) {
     return (
@@ -135,9 +138,6 @@ const s = StyleSheet.create({
   pillGold: { borderColor: colors.goldPlate, backgroundColor: colors.goldSoft },
   pillEmpty: { borderColor: colors.inkFaint, backgroundColor: colors.inkFaint },
   pillPressed: { transform: [{ scale: 0.97 }] },
-  // Holds the slot while the first hearts fetch lands, so the strip does not
-  // reflow under the reader's eye a beat after the screen appears.
-  pillIdle: { borderColor: colors.line, backgroundColor: colors.white },
   value: { ...tabular, fontFamily: font.black, fontSize: 14, color: colors.ink },
   valueWait: { fontSize: 12, color: colors.inkSoft, letterSpacing: 0.2 },
 });

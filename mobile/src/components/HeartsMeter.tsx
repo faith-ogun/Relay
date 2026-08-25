@@ -55,7 +55,10 @@ export const HeartsMeter: React.FC<{ onPress?: () => void }> = ({ onPress: reque
   // a paywall for them. Without the handler it renders as plain status.
   const onPress = childSafe ? undefined : requested;
 
-  if (!loaded) return <View style={s.placeholder} />;
+  // Nothing, not a blank pill. If the hearts service is unreachable this state
+  // is permanent, and a reserved-but-empty slot would read as broken for the
+  // whole session. The one-frame reflow when hearts arrive is the cheaper cost.
+  if (!loaded) return null;
 
   if (unlimited) {
     return (
@@ -112,7 +115,4 @@ const s = StyleSheet.create({
     fontFamily: font.black, fontSize: type.meta, color: colors.inkSoft,
     letterSpacing: 0.3, fontVariant: ['tabular-nums'],
   },
-  // Holds the row's height while the first fetch lands, so the top bar does
-  // not jump once hearts arrive.
-  placeholder: { width: 74, height: 27 },
 });
