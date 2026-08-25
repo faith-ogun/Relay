@@ -46,6 +46,7 @@ function periodLabel(period: string): string {
  *  would flatten the hierarchy the images exist to create. */
 const ART: Partial<Record<Plan, number>> = {
   pro: require('../../assets/brand/plan-pro.png'),
+  max: require('../../assets/brand/plan-max.png'),
 };
 
 const TONE: Record<Plan, {
@@ -309,7 +310,9 @@ const s = StyleSheet.create({
   cardBody: { padding: space.md },
   headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   headText: { flex: 1, minWidth: 0 },
-  art: { width: 130, height: 133, marginTop: -6, marginRight: -6 },
+  // Both paid tiers share the slot, so the two cards line up when scrolled
+  // past each other. Height follows the taller of the two source images.
+  art: { width: 130, height: 134, marginTop: -6, marginRight: -6 },
   cardTitle: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.6 },
   priceWrap: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
   price: { fontFamily: font.black, fontSize: type.heading, letterSpacing: -0.4 },
