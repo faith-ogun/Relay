@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Svg, { Circle, Path as SvgPath, Rect } from 'react-native-svg';
+import Svg, { Path as SvgPath, Rect } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image } from 'expo-image';
 import { Lock } from '../icons';
 import { SkillGlyph } from './SkillGlyph';
 import type { CurriculumUnit } from '../../services/curriculum';
@@ -243,23 +244,8 @@ const ACCENT: Record<string, string> = {
   red: colors.red,
 };
 
-/** A reward chest. Drawn rather than borrowed: a checkpoint that wears the same
- *  glyph as the lessons around it reads as one more lesson, which is precisely
- *  the complaint. */
-const Chest: React.FC<{ size?: number; color?: string; lid?: string }> = ({
-  size = 30, color = colors.ink, lid = colors.gold,
-}) => (
-  <Svg width={size} height={size} viewBox="0 0 32 32">
-    {/* body */}
-    <Rect x={3.5} y={14} width={25} height={13} rx={2.5} fill={lid} stroke={color} strokeWidth={2.2} />
-    {/* lid */}
-    <SvgPath d="M3.5 14.5a12.5 8 0 0 1 25 0z" fill={lid} stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-    {/* band + lock */}
-    <Rect x={13} y={12.5} width={6} height={9} rx={1.4} fill={colors.white} stroke={color} strokeWidth={2.2} />
-    <Circle cx={16} cy={17.5} r={1.5} fill={color} />
-    <SvgPath d="M3.5 20.5h25" stroke={color} strokeWidth={2} strokeLinecap="round" />
-  </Svg>
-);
+const CHEST = require('../../../assets/brand/checkpoint-chest.png');
+const CHEST_OPEN = require('../../../assets/brand/checkpoint-chest-open.png');
 
 const Tick: React.FC<{ size?: number }> = ({ size = 13 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -307,10 +293,15 @@ const Checkpoint: React.FC<{ title: string; done: boolean; xp: number }> = ({ ti
     accessibilityLabel={`Checkpoint: ${title}. ${done ? `Cleared, ${xp} XP` : `Worth ${xp} XP`}`}
   >
     <View style={[cp.chest, done && cp.chestDone]}>
-      <Chest
-        size={34}
-        color={colors.ink}
-        lid={done ? colors.gold : colors.inkFaint}
+      {/* Closed until it is earned, open once it is. A fixed square with
+          contain normalises the two, which have different aspect ratios —
+          the open lid makes it taller. */}
+      <Image
+        source={done ? CHEST_OPEN : CHEST}
+        style={[cp.chestArt, !done && cp.chestArtLocked]}
+        contentFit="contain"
+        transition={done ? 260 : 0}
+        accessible={false}
       />
     </View>
     <View style={cp.body}>
@@ -373,6 +364,10 @@ const cp = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   chestDone: { borderColor: colors.ink },
+  chestArt: { width: 44, height: 44 },
+  // Drained rather than hidden, so an unearned checkpoint reads as a reward
+  // not yet taken rather than as an empty slot.
+  chestArtLocked: { opacity: 0.38 },
   body: { flex: 1, minWidth: 0 },
   kicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 2.2, color: colors.goldText },
   title: {
