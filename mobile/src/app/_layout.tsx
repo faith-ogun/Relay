@@ -29,20 +29,21 @@ function Shell() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.cream },
-          // Tab destinations are siblings, not a stack: a cross-fade between
-          // them reads as loading, because a fade is what a screen does while it
-          // is waiting. Native tab bars switch instantly. Pushes still animate,
-          // which is set per route rather than globally.
-          animation: 'none',
+          // `default` on iOS is the real UIKit push: interactive edge-swipe
+          // back, parallax on the outgoing view, correct dimming. A hand-rolled
+          // slide is strictly worse, and `slide_from_right` falls back to this
+          // on iOS anyway.
+          animation: 'default',
         }}
       >
-        {/* Detail screens are pushed, so they slide the way iOS expects. */}
-        <Stack.Screen name="lesson/[id]" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="unit/[id]" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="twins" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="plans" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="account" options={{ animation: 'slide_from_right' }} />
+        {/* Tab destinations are siblings, not a stack. A cross-fade between them
+            reads as loading, because a fade is what a screen does while it is
+            waiting, and iOS does not animate a tab switch at all. */}
+        <Stack.Screen name="home" options={{ animation: 'none' }} />
+        <Stack.Screen name="simulator" options={{ animation: 'none' }} />
+        <Stack.Screen name="live" options={{ animation: 'none' }} />
+        <Stack.Screen name="community" options={{ animation: 'none' }} />
+        <Stack.Screen name="profile" options={{ animation: 'none' }} />
       </Stack>
     </View>
   );

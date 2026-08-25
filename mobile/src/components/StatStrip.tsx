@@ -42,14 +42,14 @@ export const StatStrip: React.FC<{
   const met = doneToday >= dailyGoal;
   return (
     <View style={s.strip}>
-      <View style={s.pill}><Bolt /><Text style={s.value}>{xp}</Text></View>
+      <View style={s.pill}><Bolt /><Text style={s.value} maxFontSizeMultiplier={1.2}>{xp}</Text></View>
       <View style={s.pill}>
         <Flame lit={streak > 0} />
-        <Text style={[s.value, streak > 0 && { color: colors.red }]}>{streak}</Text>
+        <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.2}>{streak}</Text>
       </View>
       <View style={[s.pill, met && s.pillDone]}>
         <Target done={met} />
-        <Text style={[s.value, met && { color: colors.greenDeep }]}>
+        <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.2}>
           {Math.min(doneToday, dailyGoal)}/{dailyGoal}
         </Text>
       </View>

@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Ohmlet uses your camera so the tutor can see your breadboard and check your wiring as you build.",
-        "NSMicrophoneUsageDescription": "Ohmlet uses your microphone so you can talk to the tutor while you build."
+        "NSMicrophoneUsageDescription": "Ohmlet uses your microphone so you can talk to the tutor while you build.",
+        "CADisableMinimumFrameDurationOnPhone": true
       },
       "usesAppleSignIn": true,
       "privacyManifests": {

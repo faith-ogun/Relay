@@ -24,8 +24,11 @@ export const BrandSplash: React.FC = () => {
     Animated.sequence([
       Animated.parallel([
         Animated.spring(rise, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
+        // NOT useNativeDriver: the legacy native driver animates transform and
+        // opacity only, so a stroke property driven through it silently never
+        // moves. This ring is the first animation in the app and it was dead.
         Animated.timing(charge, {
-          toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+          toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false,
         }),
       ]),
       Animated.timing(word, {

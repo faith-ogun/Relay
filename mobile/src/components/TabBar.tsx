@@ -4,9 +4,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, curve, font, tabular, tracking, type } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
-import { motion } from '../theme/motion';
 import * as Haptics from 'expo-haptics';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
 /**
  * The five places you can be.
@@ -109,7 +107,7 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
             accessibilityLabel={item.label}
           >
             <Icon active={on} />
-            <Text style={[s.label, on && s.labelOn]}>{item.label}</Text>
+            <Text style={[s.label, on && s.labelOn]} maxFontSizeMultiplier={1.15}>{item.label}</Text>
           </Pressable>
         );
       })}

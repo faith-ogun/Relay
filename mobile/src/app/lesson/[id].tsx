@@ -65,7 +65,10 @@ export default function LessonScreen() {
 
   const progress = useSharedValue(0);
   useEffect(() => { progress.value = withTiming(run.progress, { duration: 340 }); }, [run.progress, progress]);
-  const barStyle = useAnimatedStyle(() => ({ width: `${Math.round(progress.value * 100)}%` }));
+  const trackWidth = useSharedValue(0);
+  const barStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -(1 - progress.value) * trackWidth.value }],
+  }));
 
   const bannerY = useSharedValue(120);
   useEffect(() => {
@@ -123,8 +126,12 @@ export default function LessonScreen() {
         <Pressable onPress={() => goBack('/path')} hitSlop={12} accessibilityLabel="Leave lesson" accessibilityRole="button">
           <Close size={22} />
         </Pressable>
-        <View style={s.track} accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: run.total, now: Math.round(run.progress * run.total) }}>
+        <View
+          style={s.track}
+          onLayout={(e) => { trackWidth.value = e.nativeEvent.layout.width; }}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: run.total, now: Math.round(run.progress * run.total) }}
+        >
           <Animated.View style={[s.fill, barStyle]} />
         </View>
         <View style={s.hearts} accessibilityLabel={`${run.hearts} hearts left`}>
@@ -189,7 +196,7 @@ const s = StyleSheet.create({
     flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
-  fill: { height: '100%', backgroundColor: colors.gold },
+  fill: { height: '100%', width: '100%', backgroundColor: colors.gold },
   hearts: {
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
