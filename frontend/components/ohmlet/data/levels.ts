@@ -29,8 +29,10 @@ export const LEVEL_META: Record<1 | 2 | 3, LevelMeta> = {
   3: { name: 'Gold', color: '#e3a91b', soft: '#fbeec2' },
 };
 
-/** Hearts allotted for an attempt at the given level (Gold is less forgiving). */
-export const heartsForLevel = (level: number): number => (level >= 3 ? 2 : 3);
+// Hearts used to be allotted per level here (Gold got two, the rest three).
+// They are now an account resource the server owns (services/hearts.ts), so a
+// per-run allowance would contradict the pool it is meant to draw from. Gold
+// stays harder through its steps, which is where the difficulty belongs.
 
 /** XP awarded for reaching a level: full for Bronze, half each for Silver/Gold. */
 export const xpForLevel = (baseXp: number, level: number): number =>

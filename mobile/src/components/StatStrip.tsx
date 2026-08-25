@@ -1,6 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { InfinityMark } from './icons';
+import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
+import { useChildSafe } from '../hooks/useChildSafe';
+import { track } from '../services/analytics';
 import { colors, font, curve, tabular } from '../theme/tokens';
 
 /**
@@ -33,6 +38,67 @@ const Target: React.FC<{ done: boolean }> = ({ done }) => (
   </Svg>
 );
 
+const HeartGlyph: React.FC<{ full: boolean }> = ({ full }) => (
+  <Svg width={17} height={17} viewBox="0 0 24 24">
+    <Path d="M12 20.5S3.5 15.4 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.8-8.5 10.9-8.5 10.9z"
+          fill={full ? colors.red : 'none'} stroke={full ? colors.red : colors.inkMute}
+          strokeWidth={1.9} strokeLinejoin="round" />
+  </Svg>
+);
+
+/**
+ * Hearts in the strip are a single count, not the three glyphs the lesson shows.
+ * Here they are one number among four; there they are the thing being spent, and
+ * the difference in treatment is the difference between context and content.
+ */
+const HeartsPill: React.FC = () => {
+  const { hearts, unlimited, loaded, nextIn, empty } = useHeartsCountdown();
+  // A minor cannot self-purchase (#96): they get the count, not a doorway to
+  // a paywall.
+  const { childSafe } = useChildSafe();
+  if (!loaded) return <View style={[s.pill, s.pillIdle]} />;
+
+  if (unlimited) {
+    return (
+      <View style={[s.pill, s.pillGold]} accessibilityLabel="Unlimited hearts">
+        <HeartGlyph full />
+        <InfinityMark size={16} color={colors.goldText} />
+      </View>
+    );
+  }
+
+  const label = empty ? `Out of hearts, next in ${formatWait(nextIn)}` : `${hearts ?? 0} hearts`;
+  const body = (
+    <>
+      <HeartGlyph full={!empty} />
+      <Text
+        style={[s.value, empty ? s.valueWait : { color: colors.red }]}
+        maxFontSizeMultiplier={1.2}
+        numberOfLines={1}
+      >
+        {empty ? formatWait(nextIn) || '--' : hearts ?? 0}
+      </Text>
+    </>
+  );
+
+  if (childSafe) {
+    return (
+      <View style={[s.pill, empty && s.pillEmpty]} accessibilityLabel={label}>{body}</View>
+    );
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => { track('hearts_paywall_view'); router.push('/plans'); }}
+      style={({ pressed }) => [s.pill, empty && s.pillEmpty, pressed && s.pillPressed]}
+    >
+      {body}
+    </Pressable>
+  );
+};
+
 export const StatStrip: React.FC<{
   xp: number;
   streak: number;
@@ -47,6 +113,7 @@ export const StatStrip: React.FC<{
         <Flame lit={streak > 0} />
         <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.2}>{streak}</Text>
       </View>
+      <HeartsPill />
       <View style={[s.pill, met && s.pillDone]}>
         <Target done={met} />
         <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.2}>
@@ -58,12 +125,19 @@ export const StatStrip: React.FC<{
 };
 
 const s = StyleSheet.create({
-  strip: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
+  strip: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 10 },
   pill: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     borderWidth: 2, borderColor: colors.line, borderRadius: 999, ...curve,
     backgroundColor: colors.white, paddingVertical: 7,
   },
   pillDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
+  pillGold: { borderColor: colors.goldPlate, backgroundColor: colors.goldSoft },
+  pillEmpty: { borderColor: colors.inkFaint, backgroundColor: colors.inkFaint },
+  pillPressed: { transform: [{ scale: 0.97 }] },
+  // Holds the slot while the first hearts fetch lands, so the strip does not
+  // reflow under the reader's eye a beat after the screen appears.
+  pillIdle: { borderColor: colors.line, backgroundColor: colors.white },
   value: { ...tabular, fontFamily: font.black, fontSize: 14, color: colors.ink },
+  valueWait: { fontSize: 12, color: colors.inkSoft, letterSpacing: 0.2 },
 });

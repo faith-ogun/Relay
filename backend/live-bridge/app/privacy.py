@@ -33,6 +33,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 import entitlements
+import hearts as hearts_mod
 import obs
 from auth import _ensure_app, require_claims
 
@@ -230,6 +231,10 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
     if state_snap.exists:
         out["progress"] = state_snap.to_dict()
 
+    hearts_snap = client.collection(hearts_mod.HEARTS_COLLECTION).document(uid).get()
+    if hearts_snap.exists:
+        out["hearts"] = hearts_snap.to_dict()
+
     for d in _budget_docs(client, uid):
         snap = d.get()
         if snap.exists:
@@ -296,6 +301,7 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
     for coll, doc_id in (
         (entitlements.PLANS_COLLECTION, uid),
         (STATE_COLLECTION, uid),
+        (hearts_mod.HEARTS_COLLECTION, uid),
         (entitlements.CUSTOMERS_COLLECTION, customer),
     ):
         if doc_id:

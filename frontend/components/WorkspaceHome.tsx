@@ -368,6 +368,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
         level={running.level}
         onExit={() => setRunning(null)}
         onComplete={handleComplete}
+        onUpgrade={onUpgrade}
       />
     );
   }

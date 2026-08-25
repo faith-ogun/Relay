@@ -1,10 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recordMetric } from '../../../services/achievementEvents';
-import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { ArrowRight, Check, Eraser, Heart, Infinity as InfinityIcon, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
 import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
 import { findLesson } from '../data/curriculum';
-import { LEVEL_META, buildLeveledSteps, heartsForLevel, xpForLevel } from '../data/levels';
+import { LEVEL_META, buildLeveledSteps, xpForLevel } from '../data/levels';
+import { useHearts } from '../../../hooks/useHearts';
+import { HeartsWall } from './HeartsWall';
+import { usePlan } from '../../../hooks/usePlan';
+import { useIdentity } from '../../../hooks/useIdentity';
+import { readAgeProfile } from '../childmode/useAgeProfile';
+import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
 import { assessDrawing } from '../../../services/quizEngineClient';
 import { playCorrect, playWrong, playComplete, isSfxMuted, setSfxMuted } from '../../../services/sfx';
 
@@ -32,6 +38,9 @@ interface LessonRunnerProps {
   preview?: boolean;
   onExit: () => void;
   onComplete: (lessonId: string, xp: number, level: number) => void;
+  /** Route to pricing. Absent in the author preview, where hearts are never
+   *  spent and the upsell must not render as a control that does nothing. */
+  onUpgrade?: () => void;
 }
 
 const shuffle = <T,>(arr: T[]): T[] => {
@@ -56,7 +65,7 @@ const shuffledOrder = (n: number): number[] => {
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, preview = false, onExit, onComplete }) => {
+export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, preview = false, onExit, onComplete, onUpgrade }) => {
   const lesson = findLesson(lessonId);
   const content = LESSON_CONTENT[lessonId];
   // Steps are transformed for the attempted level (Bronze = as authored;
@@ -71,7 +80,40 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [queue, setQueue] = useState<number[]>(() => steps.map((_, i) => i));
   const [pos, setPos] = useState(0);
   const [mastered, setMastered] = useState<Set<number>>(new Set());
-  const [hearts, setHearts] = useState(() => heartsForLevel(level));
+  // Hearts are an ACCOUNT resource, not a per-run allowance seeded from the
+  // level. They used to reset on every retry and on every page refresh, which
+  // made them a pacing device; they are now the free tier's real constraint and
+  // the thing Pro removes, so the server owns the balance and the regen clock.
+  const heartPool = useHearts();
+  // The author console renders lessons without a learner behind them. It must
+  // never spend a real person's hearts.
+  const unlimitedHearts = preview || heartPool.unlimited;
+  const misses = useRef(0);
+  const [runId, setRunId] = useState(() => Date.now());
+
+  // Payment age gate (#96): under-18s cannot self-purchase, and Max is the top
+  // tier, so neither is shown an offer they could not act on.
+  const { userId } = useIdentity();
+  const { plan } = usePlan(userId);
+  const under18 = useMemo(() => {
+    const by = readAgeProfile(userId)?.birthYear;
+    return CHILD_MODE_ENABLED && !!by && new Date().getFullYear() - by < 18;
+  }, [userId]);
+  const canUpsell = !under18 && plan !== 'max';
+
+  // Latched so the wall survives the heart it is waiting for arriving. Left
+  // unlatched it would vanish the instant the balance ticked up, and the moment
+  // the learner is waiting for would be the one moment they never see.
+  const [wall, setWall] = useState(false);
+  useEffect(() => {
+    if (heartPool.empty && !unlimitedHearts) setWall(true);
+  }, [heartPool.empty, unlimitedHearts]);
+
+  const loseHeart = useCallback(() => {
+    if (unlimitedHearts) return;
+    misses.current += 1;
+    void heartPool.spend(`${lessonId}:${runId}:${misses.current}`);
+  }, [unlimitedHearts, heartPool, lessonId, runId]);
   const [muted, setMuted] = useState(isSfxMuted);
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
@@ -106,7 +148,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(heartsForLevel(level));
+    misses.current = 0;
     setDone(false);
   }, [steps, level]);
 
@@ -233,7 +275,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setCorrect(ok);
     setChecked(true);
     ok ? playCorrect() : playWrong();
-    if (!ok) setHearts((h) => Math.max(0, h - 1));
+    if (!ok) loseHeart();
   };
 
   // draw_circuit grades asynchronously (Vision call inside the step). The step reports
@@ -243,7 +285,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setCorrect(ok);
     setChecked(true);
     ok ? playCorrect() : playWrong();
-    if (!ok) setHearts((h) => Math.max(0, h - 1));
+    if (!ok) loseHeart();
     // A drawing the grader accepted. Counted once per correct grade, and never
     // in preview (the author console renders lessons without a real learner).
     if (ok && !preview) recordMetric('drawings');
@@ -289,7 +331,10 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(heartsForLevel(level));
+    misses.current = 0;
+    // A fresh run, so its first miss cannot reuse a spent idempotency key and
+    // come back refunded.
+    setRunId(Date.now());
     setDone(false);
     setChecked(false);
     setCorrect(null);
@@ -330,23 +375,17 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   }
 
   // ── Out of hearts ──
-  if (hearts === 0 && checked && correct === false) {
+  //
+  // Held back until the feedback for the last wrong answer has been read, so the
+  // wall never replaces an explanation the learner has not seen yet. The same
+  // condition refuses entry when someone opens a lesson already empty.
+  if (wall && !checked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
-        <div className="w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
-          <img src="/mascot/encourage.png" alt="" aria-hidden className="mx-auto h-24 w-auto" draggable={false} />
-          <h2 className="mt-4 text-2xl font-black tracking-tight">Out of hearts</h2>
-          <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">
-            Take a breath and run it again. Repetition is how the concepts stick.
-          </p>
-          <button onClick={retry} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none">
-            <RotateCcw className="h-4 w-4" /> Try again
-          </button>
-          <button onClick={onExit} className="mt-3 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
-            Leave lesson
-          </button>
-        </div>
-      </div>
+      <HeartsWall
+        onResume={() => { setWall(false); retry(); }}
+        onExit={onExit}
+        onUpgrade={canUpsell ? onUpgrade : undefined}
+      />
     );
   }
 
@@ -373,9 +412,19 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
         >
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
-        <div className="flex shrink-0 items-center gap-1">
-          <Heart className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
-          <span className="text-base font-black tabular-nums">{hearts}</span>
+        <div
+          className="flex shrink-0 items-center gap-1"
+          aria-label={unlimitedHearts ? 'Unlimited hearts' : `${heartPool.hearts ?? 0} hearts left`}
+        >
+          <Heart
+            className={heartPool.empty && !unlimitedHearts ? 'h-5 w-5 text-ohmlet-ink-mute' : 'h-5 w-5 text-ohmlet-red'}
+            fill={heartPool.empty && !unlimitedHearts ? 'none' : 'currentColor'}
+          />
+          {unlimitedHearts ? (
+            <InfinityIcon className="h-5 w-5 text-ohmlet-gold-text" strokeWidth={2.4} />
+          ) : (
+            <span className="text-base font-black tabular-nums">{heartPool.hearts ?? 0}</span>
+          )}
         </div>
       </div>
 

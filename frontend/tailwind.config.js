@@ -11,8 +11,13 @@ export default {
           gold: '#facc2e',
           'gold-deep': '#f5b800',
           'gold-soft': '#fff6d6',
+          // The plate under a gold surface, and readable text on one. Ink on
+          // gold is a hazard stripe; gold-text is not.
+          'gold-plate': '#c99a00',
+          'gold-text': '#8f6d00',
           ink: '#14181f',
           'ink-soft': '#474d57',
+          'ink-mute': '#a8adb6',
           red: '#ff6f5e',
           blue: '#549cf0',
           'blue-deep': '#3e86e8',

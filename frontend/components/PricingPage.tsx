@@ -35,6 +35,7 @@ const tiers: Tier[] = [
     cta: 'Get started',
     features: [
       'Your first build path',
+      '3 hearts, back on their own in 90 minutes',
       'Voice tutor, 60 minutes a month',
       'Core lessons & circuit diagrams',
       'Community feed access',
@@ -50,6 +51,7 @@ const tiers: Tier[] = [
     badge: 'Most popular',
     features: [
       'Everything in Free',
+      'Unlimited hearts, so a wrong answer never stops you',
       'Live tutor sessions, up to 10 hours a month',
       'All build paths & advanced lessons',
       '3D digital twin of every build',

@@ -11,23 +11,28 @@ import { canRender, isTeach, type Lesson, type LessonStep } from './types';
  * requeued step holds the bar rather than letting it march on.
  */
 
-const MAX_HEARTS = 5;
-
 export interface RunState {
   step: LessonStep | null;
   position: number;          // 1-based, for display
   total: number;             // distinct steps to master
   progress: number;          // 0..1, mastered / total
-  hearts: number;
   checked: boolean;
   correct: boolean | null;
   done: boolean;
-  failed: boolean;           // ran out of hearts
   earnedXp: number;
   anyWrong: boolean;         // drives the "perfect" achievement metric
 }
 
-export function useRun(lesson: Lesson | null) {
+/**
+ * Hearts are NOT owned here.
+ *
+ * They used to be: five per run, reset on every retry, which made them a
+ * decoration rather than a constraint. They are now an account-level resource
+ * the server owns (services/hearts.ts), so the run reports a miss and the
+ * caller decides what it costs. `onWrong` is handed the miss's ordinal within
+ * this run, which is what makes the charge idempotent across a retried request.
+ */
+export function useRun(lesson: Lesson | null, onWrong?: (missOrdinal: number) => void) {
   // Only present steps this client can actually render. An unsupported type is
   // dropped rather than shown broken; the count reflects what the learner sees.
   const steps = useMemo(
@@ -38,11 +43,19 @@ export function useRun(lesson: Lesson | null) {
   const [queue, setQueue] = useState<number[]>(() => steps.map((_, i) => i));
   const [pos, setPos] = useState(0);
   const [mastered, setMastered] = useState<Set<number>>(new Set());
-  const [hearts, setHearts] = useState(MAX_HEARTS);
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [done, setDone] = useState(false);
   const anyWrong = useRef(false);
+  // Counts misses within the run, so each one gets a distinct idempotency key
+  // while a retry of the SAME miss reuses it. A requeued step missed twice is
+  // two charges, which is correct: it was wrong twice.
+  const misses = useRef(0);
+  // Kept in a ref so `submit` does not need it as a dependency and go stale.
+  // Written in an effect, not during render: a render React discards must
+  // not leave a mutated ref behind.
+  const onWrongRef = useRef(onWrong);
+  useEffect(() => { onWrongRef.current = onWrong; }, [onWrong]);
 
   // Re-seed when the lesson changes. In an effect, never during render:
   // setState while rendering is a React error and made this hook order-dependent.
@@ -50,16 +63,15 @@ export function useRun(lesson: Lesson | null) {
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(MAX_HEARTS);
     setChecked(false);
     setCorrect(null);
     setDone(false);
     anyWrong.current = false;
+    misses.current = 0;
   }, [steps]);
 
   const currentIndex = queue[pos] ?? -1;
   const step = currentIndex >= 0 ? steps[currentIndex] ?? null : null;
-  const failed = hearts <= 0;
 
   /** Grade the current step. Teach steps are acknowledged, never graded. */
   const submit = useCallback((isCorrect: boolean) => {
@@ -67,7 +79,8 @@ export function useRun(lesson: Lesson | null) {
     setCorrect(isCorrect);
     if (!isCorrect) {
       anyWrong.current = true;
-      setHearts((h) => Math.max(0, h - 1));
+      misses.current += 1;
+      onWrongRef.current?.(misses.current);
     }
   }, []);
 
@@ -94,11 +107,11 @@ export function useRun(lesson: Lesson | null) {
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(MAX_HEARTS);
     setChecked(false);
     setCorrect(null);
     setDone(false);
     anyWrong.current = false;
+    misses.current = 0;
   }, [steps]);
 
   const total = steps.length;
@@ -107,14 +120,12 @@ export function useRun(lesson: Lesson | null) {
     position: Math.min(mastered.size + 1, Math.max(total, 1)),
     total,
     progress: total ? mastered.size / total : 0,
-    hearts,
     checked,
     correct,
     done,
-    failed,
     earnedXp: lesson?.xpReward ?? 0,
     anyWrong: anyWrong.current,
   };
 
-  return { ...state, submit, advance, retry, MAX_HEARTS };
+  return { ...state, submit, advance, retry };
 }

@@ -27,6 +27,18 @@ export const Heart: React.FC<Props> = ({ size = 20, color = colors.red, filled =
   </Svg>
 );
 
+export const InfinityMark: React.FC<Props> = ({ size = 20, color = colors.goldText }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path
+      d="M12 12c-2-2.7-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.3 6-4Zm0 0c2 2.7 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.3-6 4Z"
+      fill="none"
+      stroke={color}
+      strokeWidth={2.2}
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 export const Lock: React.FC<Props> = ({ size = 18, color = colors.inkSoft }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />

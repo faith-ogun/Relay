@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Close, Heart } from '../../components/icons';
+import { Close } from '../../components/icons';
 import { goBack } from '../../services/nav';
 import { LessonComplete } from '../../components/LessonComplete';
+import { HeartsMeter } from '../../components/HeartsMeter';
+import { OutOfHearts } from '../../components/OutOfHearts';
+import { useHearts } from '../../hooks/useHearts';
 import { track } from '../../services/analytics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Button } from '../../components/Button';
@@ -22,9 +25,41 @@ export default function LessonScreen() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
-  const run = useRun(lesson);
+  const hearts = useHearts();
+
+  // Distinguishes the two ways this screen shows the wall: refused entry
+  // (already empty when they arrived) versus ran out mid-run. They need
+  // different copy and a different way forward.
+  const ranOut = useRef(false);
+  // Bumped on every retry so a fresh run cannot reuse a spent idempotency key
+  // and get its first miss refunded.
+  const [runId, setRunId] = useState(() => Date.now());
+
+  const onWrong = useCallback(async (missOrdinal: number) => {
+    track('heart_lost', { lessonId: String(id) });
+    const next = await hearts.spend(`${id}:${runId}:${missOrdinal}`);
+    if (next && !next.unlimited && (next.hearts ?? 1) <= 0) ranOut.current = true;
+  }, [hearts, id, runId]);
+
+  const run = useRun(lesson, onWrong);
   const [canCheck, setCanCheck] = useState(false);
   const graderRef = useRef<(() => void) | null>(null);
+
+  // Latched, so the screen survives the heart it is waiting for arriving. Left
+  // unlatched it would vanish the instant the balance ticked up, and the moment
+  // the learner is waiting for would be the one moment they never see.
+  const [wall, setWall] = useState(false);
+  useEffect(() => { if (hearts.empty) setWall(true); }, [hearts.empty]);
+
+  const leaveWall = useCallback(() => goBack('/path'), []);
+  const resumeFromWall = useCallback(() => {
+    setWall(false);
+    if (ranOut.current) {
+      ranOut.current = false;
+      setRunId(Date.now());
+      run.retry();
+    }
+  }, [run]);
 
   const registerGrader = useCallback((g: (() => void) | null) => { graderRef.current = g; }, []);
 
@@ -101,16 +136,16 @@ export default function LessonScreen() {
     );
   }
 
-  if (run.failed) {
+  // Held back until the feedback banner has been acknowledged, so the last
+  // wrong answer is explained before the wall replaces the screen.
+  if (wall && !run.checked) {
     return (
-      <Center>
-        <Text style={s.bigTitle}>Out of hearts.</Text>
-        <Text style={s.body}>
-          No harm done. Run it again — the questions you missed come back first.
-        </Text>
-        <Button label="Try again" onPress={run.retry} style={{ marginTop: space.lg }} />
-        <Pressable onPress={() => goBack('/path')} style={s.quiet}><Text style={s.quietText}>Leave lesson</Text></Pressable>
-      </Center>
+      <OutOfHearts
+        onResume={resumeFromWall}
+        resumeLabel={ranOut.current ? 'Try again' : 'Start lesson'}
+        onLeave={leaveWall}
+        leaveLabel={ranOut.current ? 'Leave lesson' : 'Back to the path'}
+      />
     );
   }
 
@@ -144,12 +179,7 @@ export default function LessonScreen() {
         >
           <Animated.View style={[s.fill, barStyle]} />
         </View>
-        <View style={s.hearts} accessibilityLabel={`${run.hearts} hearts left`}>
-          <View style={s.heartRow}>
-            <Heart size={17} color={colors.red} filled />
-            <Text style={s.heartText}>{run.hearts}</Text>
-          </View>
-        </View>
+        <HeartsMeter onPress={() => { track('hearts_paywall_view'); router.push('/plans'); }} />
       </View>
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
@@ -207,12 +237,6 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   fill: { height: '100%', width: '100%', backgroundColor: colors.gold },
-  hearts: {
-    borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
-  },
-  heartRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  heartText: { fontFamily: font.black, fontSize: type.small, color: colors.red },
   content: { padding: space.lg, paddingBottom: space.xxl * 2 },
   banner: {
     position: 'absolute', left: 0, right: 0, bottom: 96,

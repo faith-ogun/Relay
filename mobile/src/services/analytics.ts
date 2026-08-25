@@ -31,6 +31,7 @@ export type AnalyticsEvent =
   | 'simulator_open' | 'sketch_compile' | 'twin_generated'
   | 'twin_shared' | 'shared_twin_view' | 'shared_twin_cta'
   | 'interview_start' | 'interview_complete'
+  | 'heart_lost' | 'hearts_depleted' | 'hearts_paywall_view'
   | 'paywall_view' | 'checkout_start' | 'purchase_complete' | 'restore_purchases'
   | 'account_delete_start' | 'account_deleted';
 

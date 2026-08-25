@@ -54,6 +54,11 @@ KNOWN_EVENTS = {
     "simulator_open", "sketch_compile", "twin_generated",
     "twin_shared", "shared_twin_view", "shared_twin_cta",
     "interview_start", "interview_complete",
+    # Hearts: the free tier's attempt budget, and the funnel it feeds.
+    # "hearts_depleted" is the moment the constraint bites; the ratio of it to
+    # "hearts_paywall_view" and then "checkout_start" is what says whether the
+    # perk converts or just annoys.
+    "heart_lost", "hearts_depleted", "hearts_paywall_view",
     # Commercial
     "paywall_view", "checkout_start", "purchase_complete", "restore_purchases",
     # The one that answers "why did they go". Fired from the deletion flow
