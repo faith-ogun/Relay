@@ -3,6 +3,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { flush, track } from '../services/analytics';
@@ -197,7 +198,22 @@ export default function LiveTutor() {
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.stage}>
         {live.camOn ? (
-          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+          <>
+            <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+            {/* A scrim, not decoration: controls sit over a live camera feed
+                whose brightness is whatever the learner's bench happens to be,
+                so without it white text is legible over a dark board and
+                invisible over a lit one. This is the one gradient in the app
+                that is doing real work. */}
+            <LinearGradient
+              colors={['rgba(20,24,31,0.55)', 'transparent', 'rgba(20,24,31,0.75)'] as const}
+              locations={[0, 0.35, 1] as const}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          </>
         ) : (
           <View style={[StyleSheet.absoluteFill, s.camOff]}>
             <Text style={s.camOffText}>Camera off</Text>

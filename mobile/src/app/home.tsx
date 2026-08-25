@@ -6,6 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { AppTabs } from '../components/AppTabs';
 import { StatStrip } from '../components/StatStrip';
+import { PathSkeleton } from '../components/Skeleton';
 import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
@@ -60,7 +61,8 @@ export default function Home() {
   if (loading) {
     return (
       <AppTabs active="learn">
-        <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>
+        <StatStrip xp={0} streak={0} doneToday={0} dailyGoal={dailyGoal} />
+        <PathSkeleton />
       </AppTabs>
     );
   }
