@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Path as SvgPath, Rect } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -30,8 +30,20 @@ import { stagger } from '../../theme/motion';
  * than one the curriculum actually makes.
  */
 
+// Units whose path has already made its entrance this session. Reanimated's
+// `entering` fires on MOUNT, and expo-router unmounts Home when a lesson is
+// pushed — so every return from a lesson replayed the whole staggered reveal.
+// Charming once, a tic by the fourth time. The set is module-level rather than
+// state because it has to outlive the component that is being remounted.
+const entered = new Set<string>();
+
+// Mirrors backend/live-bridge/app/checkpoints.py. Display only — the server
+// computes the grant and owns the claim, so a client that got this wrong would
+// show the wrong number, not pay the wrong amount.
+const XP_PER_LESSON = 8;
+
 const CARD_H = 76;
-const CHECK_H = 84;
+const CHECK_H = 96;
 const GAP = 44;
 const TILE = 52;
 
@@ -51,9 +63,17 @@ export const UnitPath: React.FC<{
   unit: CurriculumUnit;
   completed: ReadonlySet<string>;
   onStart: (lessonId: string) => void;
-}> = ({ unit, completed, onStart }) => {
+  /** Overrides the unit's authored accent. Home colours units by position so
+   *  that "the green one" is how a learner remembers where they got to, and the
+   *  path has to carry the same colour or the wayfinding breaks at the banner. */
+  accent?: string;
+  /** A unit whose predecessor is unfinished: every node reads as locked. */
+  locked?: boolean;
+  /** Width to lay out in. Defaults to the window minus the screen gutter. */
+  width?: number;
+}> = ({ unit, completed, onStart, accent: accentProp, locked = false, width: widthProp }) => {
   const { width } = useWindowDimensions();
-  const W = Math.max(280, width - space.lg * 2);
+  const W = Math.max(240, widthProp ?? width - space.lg * 2);
   const CARD_W = Math.round(W * 0.68);
 
   const items = useMemo<Item[]>(() => {
@@ -72,8 +92,13 @@ export const UnitPath: React.FC<{
         });
       });
       // The boundary is the point of the whole layout: it is where one idea
-      // finishes and the next begins.
-      out.push({ kind: 'checkpoint', id: `check:${skill.id}`, skillId: skill.id, title: skill.title, icon: skill.icon });
+      // finishes and the next begins. A single-lesson skill gets none —
+      // 15 of the 57 skills hold exactly one lesson, and a celebration every
+      // other screen is how a reward stops being one. The server applies the
+      // same rule, so nothing is drawn that could never pay out.
+      if (skill.lessons.length >= 2) {
+        out.push({ kind: 'checkpoint', id: `check:${skill.id}`, skillId: skill.id, title: skill.title, icon: skill.icon });
+      }
     });
     return out;
   }, [unit]);
@@ -83,7 +108,9 @@ export const UnitPath: React.FC<{
     let side = 0;
     return items.map((item) => {
       if (item.kind === 'checkpoint') {
-        const p: Placed = { item, x: (W - Math.round(W * 0.82)) / 2, y, w: Math.round(W * 0.82), h: CHECK_H };
+        // Full width, unlike every lesson node. Spanning the whole column is the
+        // cheapest possible signal that this is not another lesson.
+        const p: Placed = { item, x: 0, y, w: W, h: CHECK_H };
         y += CHECK_H + GAP;
         // A checkpoint spans the middle, so the side alternation restarts after
         // it rather than carrying a half-step through.
@@ -99,10 +126,16 @@ export const UnitPath: React.FC<{
 
   const totalH = placed.length ? placed[placed.length - 1].y + placed[placed.length - 1].h : 0;
 
+  // Read once per mount, before the effect below marks it seen, so the first
+  // render of a first visit still animates.
+  const animate = useRef(!entered.has(unit.id)).current;
+  useEffect(() => { entered.add(unit.id); }, [unit.id]);
+
   // Unlocking is sequential: the next thing is open, everything past it is not.
   // A checkpoint opens only when its whole skill is cleared.
   const unlocked = useMemo(() => {
     const set = new Set<string>();
+    if (locked) return set;
     let openNext = true;
     for (const it of items) {
       if (it.kind === 'lesson') {
@@ -113,7 +146,7 @@ export const UnitPath: React.FC<{
       }
     }
     return set;
-  }, [items, completed]);
+  }, [items, completed, locked]);
 
   // Matched on skill id, not on title: two skills can be titled the same and a
   // checkpoint that lit up because of another skill's lessons would be a lie
@@ -126,7 +159,10 @@ export const UnitPath: React.FC<{
           .filter((x) => x.kind === 'lesson' && x.skillId === it.skillId)
           .every((x) => completed.has(x.id));
 
-  const accent = ACCENT[unit.accent] ?? colors.gold;
+  const accent = accentProp ?? ACCENT[unit.accent] ?? colors.gold;
+
+  const xpFor = (skillId: string) =>
+    (unit.skills.find((sk) => sk.id === skillId)?.lessons.length ?? 0) * XP_PER_LESSON;
 
   return (
     <View style={{ width: W, height: totalH, alignSelf: 'center' }}>
@@ -172,11 +208,11 @@ export const UnitPath: React.FC<{
         return (
           <Animated.View
             key={p.item.id}
-            entering={FadeInDown.delay(stagger(i, 34, 10)).springify().damping(18)}
+            entering={animate ? FadeInDown.delay(stagger(i, 34, 10)).springify().damping(18) : undefined}
             style={{ position: 'absolute', left: p.x, top: p.y, width: p.w, height: p.h }}
           >
             {p.item.kind === 'checkpoint' ? (
-              <Checkpoint title={p.item.title} icon={p.item.icon} done={done} accent={accent} />
+              <Checkpoint title={p.item.title} done={done} xp={xpFor(p.item.skillId)} />
             ) : (
               <LessonNode
                 item={p.item}
@@ -199,6 +235,24 @@ const ACCENT: Record<string, string> = {
   green: colors.green,
   red: colors.red,
 };
+
+/** A reward chest. Drawn rather than borrowed: a checkpoint that wears the same
+ *  glyph as the lessons around it reads as one more lesson, which is precisely
+ *  the complaint. */
+const Chest: React.FC<{ size?: number; color?: string; lid?: string }> = ({
+  size = 30, color = colors.ink, lid = colors.gold,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 32 32">
+    {/* body */}
+    <Rect x={3.5} y={14} width={25} height={13} rx={2.5} fill={lid} stroke={color} strokeWidth={2.2} />
+    {/* lid */}
+    <SvgPath d="M3.5 14.5a12.5 8 0 0 1 25 0z" fill={lid} stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+    {/* band + lock */}
+    <Rect x={13} y={12.5} width={6} height={9} rx={1.4} fill={colors.white} stroke={color} strokeWidth={2.2} />
+    <Circle cx={16} cy={17.5} r={1.5} fill={color} />
+    <SvgPath d="M3.5 20.5h25" stroke={color} strokeWidth={2} strokeLinecap="round" />
+  </Svg>
+);
 
 const Tick: React.FC<{ size?: number }> = ({ size = 13 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -240,21 +294,28 @@ const LessonNode: React.FC<{
   );
 };
 
-const Checkpoint: React.FC<{ title: string; icon?: string; done: boolean; accent: string }> = ({
-  title, icon, done, accent,
-}) => (
+const Checkpoint: React.FC<{ title: string; done: boolean; xp: number }> = ({ title, done, xp }) => (
   <View
-    style={[c.card, done && { borderColor: colors.goldPlate, backgroundColor: colors.goldSoft }]}
-    accessibilityLabel={`Checkpoint: ${title} ${done ? 'cleared' : 'not yet reached'}`}
+    style={[cp.card, done && cp.cardDone]}
+    accessibilityLabel={`Checkpoint: ${title}. ${done ? `Cleared, ${xp} XP` : `Worth ${xp} XP`}`}
   >
-    <View style={[c.ring, done && { backgroundColor: accent, borderColor: colors.ink }]}>
-      <SkillGlyph name={icon} size={22} color={done ? colors.ink : colors.inkMute} />
+    <View style={[cp.chest, done && cp.chestDone]}>
+      <Chest
+        size={34}
+        color={colors.ink}
+        lid={done ? colors.gold : colors.inkFaint}
+      />
     </View>
-    <View style={c.body}>
-      <Text style={c.kicker}>{done ? 'CHECKPOINT CLEARED' : 'CHECKPOINT'}</Text>
-      <Text style={c.title} numberOfLines={1}>{title}</Text>
+    <View style={cp.body}>
+      <Text style={cp.kicker}>{done ? 'CHECKPOINT CLEARED' : 'CHECKPOINT'}</Text>
+      <Text style={cp.title} numberOfLines={1}>{title}</Text>
+      <Text style={[cp.xp, done && cp.xpDone]}>+{xp} XP</Text>
     </View>
-    {done && <View style={c.tick}><Tick size={15} /></View>}
+    {done ? (
+      <View style={cp.tick}><Tick size={16} /></View>
+    ) : (
+      <View style={cp.pending}><Lock size={14} /></View>
+    )}
   </View>
 );
 
@@ -285,22 +346,41 @@ const n = StyleSheet.create({
   badgeLocked: { backgroundColor: colors.inkFaint, borderColor: colors.cream },
 });
 
-const c = StyleSheet.create({
+const cp = StyleSheet.create({
   card: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.inkFaint,
-    borderRadius: 999, ...curve, paddingHorizontal: 12, ...elevation.card,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.goldSoft,
+    borderWidth: 3, borderColor: colors.inkMute,
+    borderRadius: radius.lg, ...curve, paddingHorizontal: space.md,
+    borderStyle: 'dashed',
+    ...elevation.card,
   },
-  ring: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: colors.inkFaint, borderWidth: 2, borderColor: colors.inkMute,
+  // Cleared: solid border, full gold, no longer provisional.
+  cardDone: {
+    backgroundColor: colors.gold, borderColor: colors.ink, borderStyle: 'solid',
+    ...elevation.lifted,
+  },
+  chest: {
+    width: 56, height: 56, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.inkMute,
     alignItems: 'center', justifyContent: 'center',
   },
+  chestDone: { borderColor: colors.ink },
   body: { flex: 1, minWidth: 0 },
-  kicker: { fontFamily: font.black, fontSize: 9, letterSpacing: 2, color: colors.inkSoft },
-  title: { fontFamily: font.black, fontSize: type.small, color: colors.ink, marginTop: 1 },
+  kicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 2.2, color: colors.goldText },
+  title: {
+    fontFamily: font.black, fontSize: type.bodyLg, color: colors.ink,
+    letterSpacing: -0.3, marginTop: 1,
+  },
+  xp: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft, marginTop: 2 },
+  xpDone: { color: colors.ink },
   tick: {
-    width: 26, height: 26, borderRadius: 13, backgroundColor: colors.greenDeep,
+    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.greenDeep,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pending: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.inkMute,
     alignItems: 'center', justifyContent: 'center',
   },
 });

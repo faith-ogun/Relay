@@ -3,15 +3,15 @@ import {
   ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { AppTabs } from '../components/AppTabs';
 import { StatStrip } from '../components/StatStrip';
 import { PathSkeleton } from '../components/Skeleton';
+import { UnitPath } from '../components/path/UnitPath';
 import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import { GOAL_FRAMING, loadProfile, type LearnerProfile } from '../services/learnerProfile';
-import { colors, font, radius, space, type, unitColor, curve } from '../theme/tokens';
+import { colors, font, radius, space, type, unitColor, curve, tabular } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 
 /**
@@ -111,37 +111,40 @@ export default function Home() {
                 <View style={[s.banner, { backgroundColor: tint }]}>
                   <Text style={s.bannerKicker}>
                     UNIT {ui + 1}
-                    {complete ? ' · COMPLETE' : unlocked ? ` · ${unitDone} OF ${lessons.length}` : ' · LOCKED'}
+                    {complete ? ' · COMPLETE' : unlocked ? '' : ' · LOCKED'}
                   </Text>
                   <Text style={s.bannerTitle}>{unit.title}</Text>
+                  <Text style={s.bannerSub} numberOfLines={1}>{unit.subtitle}</Text>
+                  {/* Progress as a bar rather than a count in the kicker. "6 of 12"
+                      is a fact; a filled bar is a position, and position is what
+                      someone scanning a unit header is looking for. */}
+                  {unlocked && (
+                    <View style={s.bannerProgress}>
+                      <View style={s.bannerTrack}>
+                        <View
+                          style={[
+                            s.bannerFill,
+                            { width: `${lessons.length ? (unitDone / lessons.length) * 100 : 0}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={s.bannerCount}>{unitDone}/{lessons.length}</Text>
+                    </View>
+                  )}
                 </View>
 
+                {/* The unit's lessons as a path with a checkpoint at every skill
+                    boundary. It replaced a column of identical circles: eleven to
+                    fourteen of those is a list, and the skill grouping the
+                    curriculum already authors was invisible in it. */}
                 <View style={s.trail}>
-                  {lessons.map((lesson, li) => {
-                    const isDone = done.has(lesson.id);
-                    const isNext = next?.id === lesson.id;
-                    // The trail staggers left and right so it reads as a route,
-                    // not a column of buttons.
-                    const offset = [0, 44, 74, 44, 0, -44, -74, -44][li % 8];
-                    return (
-                      <Pressable
-                        key={lesson.id}
-                        disabled={!unlocked}
-                        onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
-                        style={[
-                          s.node,
-                          { marginLeft: offset },
-                          isDone && { backgroundColor: tint, borderColor: colors.ink },
-                          isNext && s.nodeNext,
-                          !unlocked && s.nodeLocked,
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${lesson.title}${isDone ? ', done' : isNext ? ', next up' : ''}`}
-                      >
-                        {isDone ? <Tick /> : !unlocked ? <Lock /> : <Play tint={isNext ? colors.ink : colors.inkSoft} />}
-                      </Pressable>
-                    );
-                  })}
+                  <UnitPath
+                    unit={unit}
+                    completed={done}
+                    accent={tint}
+                    locked={!unlocked}
+                    onStart={(lessonId) => router.push({ pathname: '/lesson/[id]', params: { id: lessonId } })}
+                  />
                 </View>
 
                 {isNextUnit(next, lessons) && (
@@ -174,27 +177,6 @@ function isNextUnit(next: { id: string } | null, lessons: Array<{ id: string }>)
   return !!next && lessons.some((l) => l.id === next.id);
 }
 
-const Tick: React.FC = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24">
-    <Path d="m5.5 12.5 4.2 4.2L18.5 8" fill="none" stroke={colors.ink}
-          strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const Play: React.FC<{ tint: string }> = ({ tint }) => (
-  <Svg width={22} height={22} viewBox="0 0 24 24">
-    <Path d="M8 5.5 18 12 8 18.5z" fill={tint} />
-  </Svg>
-);
-
-const Lock: React.FC = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24">
-    <Path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" fill="none" stroke={colors.inkSoft} strokeWidth={2.2} />
-    <Circle cx={12} cy={15.5} r={1.8} fill={colors.inkSoft} />
-    <Path d="M5.5 10.5h13v9h-13z" fill="none" stroke={colors.inkSoft} strokeWidth={2.2} strokeLinejoin="round" />
-  </Svg>
-);
-
 const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: space.lg, paddingBottom: space.xxl },
@@ -205,17 +187,17 @@ const s = StyleSheet.create({
     paddingVertical: space.md, paddingHorizontal: space.md, ...elevation.card,
   },
   bannerKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6, color: 'rgba(255,255,255,0.85)' },
-  bannerTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.white, marginTop: 2 },
-
-  trail: { alignItems: 'center', marginTop: space.lg, gap: 14 },
-  node: {
-    width: 64, height: 64, borderRadius: 32, ...curve,
-    borderWidth: 3, borderColor: colors.line, backgroundColor: colors.white,
-    alignItems: 'center', justifyContent: 'center', ...elevation.card,
+  bannerTitle: { fontFamily: font.black, fontSize: type.title, color: colors.white, marginTop: 1, letterSpacing: -0.6 },
+  bannerSub: { fontFamily: font.bold, fontSize: type.small, color: 'rgba(255,255,255,0.88)', marginTop: 2 },
+  bannerProgress: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.md },
+  bannerTrack: {
+    flex: 1, height: 12, borderRadius: 6, ...curve,
+    backgroundColor: 'rgba(20,24,31,0.22)', overflow: 'hidden',
   },
-  nodeNext: { borderColor: colors.ink, borderWidth: 4, backgroundColor: colors.goldSoft },
-  nodeLocked: { opacity: 0.45 },
+  bannerFill: { height: '100%', backgroundColor: colors.white, borderRadius: 6, ...curve },
+  bannerCount: { fontFamily: font.black, fontSize: type.small, color: colors.white, ...tabular },
 
+  trail: { marginTop: space.lg },
   nextCard: {
     marginTop: space.lg, borderWidth: 2.5, borderRadius: radius.lg, ...curve,
     backgroundColor: colors.white, padding: space.md, ...elevation.card,

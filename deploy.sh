@@ -40,6 +40,14 @@ LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOO
 # a gitignored file because the IDs differ between test and live mode. Each line
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
 LIVE_BRIDGE_ENV_FILE="${LIVE_BRIDGE_ENV_FILE:-backend/live-bridge/.deploy.env}"
+# Keep one instance warm. live-bridge was at 0, so it scaled to zero after a
+# quiet period and the NEXT thing anyone did paid a full container boot —
+# ADK, google-genai and a 700KB lesson store loading before a byte came back.
+# Warm requests are 30-450ms, so every 'community is slow' report was a cold
+# start, and the same tax landed on the live tutor, where a learner is waiting
+# to speak. One instance at 1 CPU / 512Mi is roughly $10-15 a month; set
+# OHMLET_LIVE_BRIDGE_MIN_INSTANCES=0 to trade it back for the latency.
+LIVE_BRIDGE_MIN_INSTANCES="${OHMLET_LIVE_BRIDGE_MIN_INSTANCES:-1}"
 
 QUIZ_ENGINE_SERVICE="ohmlet-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"
@@ -165,7 +173,7 @@ deploy_live_bridge() {
   else
     info "No ${LIVE_BRIDGE_ENV_FILE} found; deploying without Stripe price IDs (billing inert)."
   fi
-  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$env_vars" "$LIVE_BRIDGE_SA" 0 "$LIVE_BRIDGE_SECRETS"
+  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$env_vars" "$LIVE_BRIDGE_SA" "$LIVE_BRIDGE_MIN_INSTANCES" "$LIVE_BRIDGE_SECRETS"
 }
 
 deploy_quiz_engine() {

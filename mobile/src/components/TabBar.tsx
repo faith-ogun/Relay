@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, curve, font, tabular, tracking, type } from '../theme/tokens';
+import { colors, curve, font, type } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 import * as Haptics from 'expo-haptics';
 
@@ -90,7 +90,7 @@ export interface TabItem {
 export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, active }) => {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {items.map((item) => {
         const Icon = TAB_ICONS[item.key];
         const on = item.key === active;
@@ -106,8 +106,14 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
             accessibilityState={{ selected: on }}
             accessibilityLabel={item.label}
           >
-            <Icon active={on} />
-            <Text style={[s.label, on && s.labelOn]} maxFontSizeMultiplier={1.15}>{item.label}</Text>
+            {/* The active tab gets a filled plate behind its icon. A colour swap
+                on a hairline row is not enough signal to find yourself by. */}
+            <View style={[s.slot, on && s.slotOn]}>
+              <Icon active={on} />
+            </View>
+            <Text style={[s.label, on && s.labelOn]} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+              {item.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -119,15 +125,24 @@ const s = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: colors.white,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(20,24,31,0.12)',
+    // A real edge, not a hairline. The bar is app chrome and should read as a
+    // surface the content sits above, which a 0.5px line does not achieve.
+    borderTopWidth: 2,
+    borderTopColor: colors.line,
     paddingTop: 8,
     ...elevation.overlay,
   },
-  tab: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 2 },
+  tab: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 },
+  slot: {
+    width: 46, height: 30, borderRadius: 15, ...curve,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  slotOn: { backgroundColor: colors.goldSoft },
   label: {
-    fontFamily: font.extrabold, fontSize: type.meta, color: colors.inkSoft,
-    letterSpacing: tracking.meta, textTransform: 'uppercase',
+    // Sentence case at 11px, not uppercase at 11px with wide tracking: the old
+    // treatment made five short words into five grey smears.
+    fontFamily: font.extrabold, fontSize: type.meta, color: colors.inkMute,
+    letterSpacing: 0,
   },
   labelOn: { fontFamily: font.black, color: colors.ink },
 });

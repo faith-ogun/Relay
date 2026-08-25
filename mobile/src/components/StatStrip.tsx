@@ -6,7 +6,8 @@ import { InfinityMark } from './icons';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { track } from '../services/analytics';
-import { colors, font, curve, tabular } from '../theme/tokens';
+import { colors, font, curve, radius, tabular } from '../theme/tokens';
+import { elevation } from '../theme/elevation';
 
 /**
  * The three numbers that say how you are doing, in a strip across the top.
@@ -65,7 +66,10 @@ const HeartsPill: React.FC = () => {
     return (
       <View style={[s.pill, s.pillGold]} accessibilityLabel="Unlimited hearts">
         <HeartGlyph full />
-        <InfinityMark size={16} color={colors.goldText} />
+        <View style={s.stack}>
+          <InfinityMark size={17} color={colors.goldText} />
+          <Text style={s.caption} maxFontSizeMultiplier={1.1}>HEARTS</Text>
+        </View>
       </View>
     );
   }
@@ -74,6 +78,7 @@ const HeartsPill: React.FC = () => {
   const body = (
     <>
       <HeartGlyph full={!empty} />
+      <View style={s.stack}>
       <Text
         style={[s.value, empty ? s.valueWait : { color: colors.red }]}
         maxFontSizeMultiplier={1.2}
@@ -81,6 +86,8 @@ const HeartsPill: React.FC = () => {
       >
         {empty ? formatWait(nextIn) || '--' : hearts ?? 0}
       </Text>
+      <Text style={s.caption} maxFontSizeMultiplier={1.1}>{empty ? 'BACK IN' : 'HEARTS'}</Text>
+      </View>
     </>
   );
 
@@ -111,28 +118,46 @@ export const StatStrip: React.FC<{
   const met = doneToday >= dailyGoal;
   return (
     <View style={s.strip}>
-      <View style={s.pill}><Bolt /><Text style={s.value} maxFontSizeMultiplier={1.2}>{xp}</Text></View>
+      <View style={s.pill}>
+        <Bolt />
+        <View style={s.stack}>
+          <Text style={s.value} maxFontSizeMultiplier={1.15}>{xp}</Text>
+          <Text style={s.caption} maxFontSizeMultiplier={1.1}>XP</Text>
+        </View>
+      </View>
       <View style={s.pill}>
         <Flame lit={streak > 0} />
-        <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.2}>{streak}</Text>
+        <View style={s.stack}>
+          <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.15}>{streak}</Text>
+          <Text style={s.caption} maxFontSizeMultiplier={1.1}>{streak === 1 ? 'DAY' : 'DAYS'}</Text>
+        </View>
       </View>
       <HeartsPill />
       <View style={[s.pill, met && s.pillDone]}>
         <Target done={met} />
-        <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.2}>
-          {Math.min(doneToday, dailyGoal)}/{dailyGoal}
-        </Text>
+        <View style={s.stack}>
+          <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.15}>
+            {Math.min(doneToday, dailyGoal)}/{dailyGoal}
+          </Text>
+          <Text style={s.caption} maxFontSizeMultiplier={1.1}>GOAL</Text>
+        </View>
       </View>
     </View>
   );
 };
 
 const s = StyleSheet.create({
-  strip: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 10 },
+  strip: { flexDirection: 'row', gap: 7, paddingHorizontal: 16, paddingBottom: 12 },
   pill: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 2, borderColor: colors.line, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingVertical: 7,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.white, paddingVertical: 8, paddingHorizontal: 4,
+    ...elevation.card,
+  },
+  stack: { minWidth: 0 },
+  caption: {
+    fontFamily: font.extrabold, fontSize: 9, letterSpacing: 0.6,
+    color: colors.inkMute, textTransform: 'uppercase', marginTop: -1,
   },
   pillDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
   pillGold: { borderColor: colors.goldPlate, backgroundColor: colors.goldSoft },

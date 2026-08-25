@@ -82,16 +82,19 @@ export default function Community() {
     }
     setPosts(feed.data.posts ?? []);
     if (chal.ok) setChallenges(chal.data.challenges ?? []);
-    if (board.ok) {
-      setLeague(board.data);
-      // A top-three finish is worth an achievement, credited once per week.
-      if (user?.uid && board.data.me.rank) {
-        const p = await loadProgress(user.uid);
-        const next = creditLeagueWin(p, board.data.week, board.data.me.rank);
-        if (next !== p) await saveProgress(user.uid, next);
-      }
-    }
+    if (board.ok) setLeague(board.data);
+    // Render as soon as the feed is in. The league-win credit below is a
+    // write-behind: it used to sit between the data arriving and the screen
+    // appearing, so every visit waited on a progress read and sometimes a write
+    // before showing a feed that was already in hand.
     setState('ready');
+
+    // A top-three finish is worth an achievement, credited once per week.
+    if (board.ok && user?.uid && board.data.me.rank && board.data.me.rank <= 3) {
+      const p = await loadProgress(user.uid);
+      const next = creditLeagueWin(p, board.data.week, board.data.me.rank);
+      if (next !== p) await saveProgress(user.uid, next);
+    }
   }, [user?.uid]);
 
   useEffect(() => { void load(); }, [load]);
