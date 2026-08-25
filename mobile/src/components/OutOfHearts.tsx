@@ -39,7 +39,7 @@ export const OutOfHearts: React.FC<{
   onLeave: () => void;
   leaveLabel?: string;
 }> = ({ onResume, resumeLabel = 'Try again', onLeave, leaveLabel = 'Leave lesson' }) => {
-  const { nextIn, regenProgress, empty, hearts } = useHeartsCountdown();
+  const { nextIn, remainingFraction, empty, hearts } = useHeartsCountdown();
   const { childSafe } = useChildSafe();
   const { plan } = usePlan();
 
@@ -69,7 +69,9 @@ export const OutOfHearts: React.FC<{
   }));
 
   const refilled = !empty && (hearts ?? 0) > 0;
-  const progress = regenProgress ?? 0;
+  // The arc IS the time left, so it shrinks with the clock rather than
+  // growing behind it.
+  const remaining = remainingFraction ?? 0;
 
   return (
     <View style={s.screen}>
@@ -86,7 +88,7 @@ export const OutOfHearts: React.FC<{
             strokeLinecap="round"
             fill="none"
             strokeDasharray={`${C} ${C}`}
-            strokeDashoffset={C * (1 - (refilled ? 1 : progress))}
+            strokeDashoffset={C * (1 - (refilled ? 1 : remaining))}
             // Start the arc at twelve o'clock rather than three.
             transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />

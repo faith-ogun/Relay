@@ -23,9 +23,21 @@ export interface Me {
   hearts: Hearts;
 }
 
-export const PLAN_META: Record<Plan, { label: string; blurb: string; perks: string[] }> = {
+export const PLAN_META: Record<Plan, {
+  label: string;
+  blurb: string;
+  perks: string[];
+  /** The published monthly price. Null for Free. This is what the PRICING PAGE
+   *  promises; the real charge always comes from the store package, so a card
+   *  shows this only until a package is loaded. */
+  priceMonthly: number | null;
+  /** One line on why this tier exists, for the card header. */
+  tagline: string;
+}> = {
   free: {
     label: 'Free',
+    priceMonthly: null,
+    tagline: 'Start building today',
     blurb: 'Learn the fundamentals and try a live session.',
     perks: [
       'All 142 lessons',
@@ -36,6 +48,8 @@ export const PLAN_META: Record<Plan, { label: string; blurb: string; perks: stri
   },
   pro: {
     label: 'Pro',
+    priceMonthly: 15.99,
+    tagline: 'The full bench tutor',
     blurb: 'Real bench time, every week.',
     perks: [
       'Everything in Free',
@@ -47,6 +61,8 @@ export const PLAN_META: Record<Plan, { label: string; blurb: string; perks: stri
   },
   max: {
     label: 'Max',
+    priceMonthly: 34.99,
+    tagline: 'Learn it, then land the job',
     blurb: 'Everything, plus Interview Mode.',
     perks: [
       'Everything in Pro',

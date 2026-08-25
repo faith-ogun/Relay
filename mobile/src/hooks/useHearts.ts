@@ -73,6 +73,18 @@ export function useHeartsCountdown() {
       nextIn == null || !base.regenSeconds
         ? null
         : Math.min(1, Math.max(0, 1 - nextIn / base.regenSeconds)),
+    /**
+     * 0..1 of the wait still to go — the fraction a countdown ring should show.
+     *
+     * The ring used to draw the elapsed fraction, so a learner who had already
+     * banked most of the wait saw a third-full arc the moment they ran out and
+     * read it as stuck. A countdown empties: full when the wait starts, gone
+     * when the heart lands, and unambiguous at every point between.
+     */
+    remainingFraction:
+      nextIn == null || !base.regenSeconds
+        ? null
+        : Math.min(1, Math.max(0, nextIn / base.regenSeconds)),
   };
 }
 

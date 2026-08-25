@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import Svg, { Path } from 'react-native-svg';
 import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { useAuth } from '../hooks/useAuth';
@@ -29,6 +30,65 @@ function periodLabel(period: string): string {
     case 'TWO_MONTH': return 'two months';
     default: return '';   // lifetime and one-off packages do not renew
   }
+}
+
+
+/**
+ * Per-tier visual identity.
+ *
+ * Free is quiet, Pro is the hero on gold, Max is ink. Structural difference, not
+ * a colour swap: swapping one card for another has to be obvious at a glance, or
+ * the screen is three identical rectangles with different words in them — which
+ * is what it was.
+ */
+const TONE: Record<Plan, {
+  card: object; strip: object; stripText: object;
+  text: object; muted: object; tick: string;
+}> = {
+  free: {
+    card: { backgroundColor: colors.white, borderColor: colors.line },
+    strip: { backgroundColor: colors.inkFaint },
+    stripText: { color: colors.inkSoft },
+    text: { color: colors.ink },
+    muted: { color: colors.inkSoft },
+    tick: colors.inkMute,
+  },
+  pro: {
+    card: { backgroundColor: colors.goldSoft, borderColor: colors.ink },
+    strip: { backgroundColor: colors.gold },
+    stripText: { color: colors.ink },
+    text: { color: colors.ink },
+    muted: { color: colors.goldText },
+    tick: colors.goldDeep,
+  },
+  max: {
+    card: { backgroundColor: colors.ink, borderColor: colors.ink },
+    strip: { backgroundColor: colors.inkSoft },
+    stripText: { color: colors.white },
+    text: { color: colors.white },
+    muted: { color: colors.inkMute },
+    tick: colors.gold,
+  },
+};
+
+const Tick: React.FC<{ color: string }> = ({ color }) => (
+  <Svg width={16} height={16} viewBox="0 0 24 24">
+    <Path d="M4.5 12.5 9.5 17.5 19.5 6.5" fill="none" stroke={color}
+          strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+/**
+ * The store package that buys a given tier.
+ *
+ * RevenueCat identifiers are configured by us, so matching on the tier name is
+ * the contract. A tier with no package shows why it cannot be bought rather than
+ * a button that does nothing.
+ */
+function packageFor(packages: Package[] | null, plan: Plan): Package | null {
+  if (!packages) return null;
+  return packages.find((pkg) =>
+    `${pkg.id} ${pkg.title}`.toLowerCase().includes(plan)) ?? null;
 }
 
 export default function Plans() {
@@ -95,61 +155,83 @@ export default function Plans() {
           : `You have ${minutesRemaining ?? 0} minutes of live tutoring left this month.`}
       </Text>
 
+      {/* Three cards, three different builds. The old screen used one white
+          rectangle for all of them, so the only thing separating a free tier
+          from a paid one was the words inside it. Pro is the hero (gold, lifted,
+          flagged); Max is ink; Free is quiet. */}
       {ORDER.map((p) => {
         const meta = PLAN_META[p];
         const current = p === plan;
+        const tone = TONE[p];
+        const pkg = packageFor(packages, p);
         return (
-          <View key={p} style={[s.card, current && s.cardCurrent]}>
-            <View style={s.cardTop}>
-              <Text style={s.cardTitle}>{meta.label}</Text>
-              {current && <View style={s.badge}><Text style={s.badgeText}>YOUR PLAN</Text></View>}
+          <View key={p} style={[s.card, tone.card, current && s.cardCurrent]}>
+            <View style={[s.strip, tone.strip]}>
+              <Text style={[s.stripText, tone.stripText]}>
+                {current ? 'YOUR PLAN' : p === 'pro' ? 'MOST POPULAR' : meta.tagline.toUpperCase()}
+              </Text>
             </View>
-            <Text style={s.cardBlurb}>{meta.blurb}</Text>
-            <View style={s.perks}>
-              {meta.perks.map((perk) => (
-                <View key={perk} style={s.perkRow}>
-                  <View style={s.tick} />
-                  <Text style={s.perkText}>{perk}</Text>
+
+            <View style={s.cardBody}>
+              <View style={s.cardTop}>
+                <Text style={[s.cardTitle, tone.text]}>{meta.label}</Text>
+                <View style={s.priceWrap}>
+                  <Text style={[s.price, tone.text]}>
+                    {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `€${meta.priceMonthly}`}
+                  </Text>
+                  {(pkg || meta.priceMonthly !== null) && (
+                    <Text style={[s.pricePer, tone.muted]}>
+                      /{pkg && periodLabel(pkg.period) ? periodLabel(pkg.period) : 'month'}
+                    </Text>
+                  )}
                 </View>
-              ))}
+              </View>
+              <Text style={[s.cardBlurb, tone.muted]}>{meta.blurb}</Text>
+
+              <View style={s.perks}>
+                {meta.perks.map((perk) => (
+                  <View key={perk} style={s.perkRow}>
+                    <Tick color={tone.tick} />
+                    <Text style={[s.perkText, tone.text]}>{perk}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* The action lives ON the tier it buys. It used to sit in a
+                  separate block underneath all three, so a card described
+                  something with no way to act on it. */}
+              {!current && (
+                pkg ? (
+                  <Button
+                    label={busy === pkg.id ? 'One moment…' : `Get ${meta.label}`}
+                    onPress={() => void buy(pkg.id)}
+                    disabled={!!busy}
+                    style={{ marginTop: space.md }}
+                  />
+                ) : (
+                  <Text style={[s.cardNotice, tone.muted]}>
+                    {unavailable ?? 'Not available to buy here yet.'}
+                  </Text>
+                )
+              )}
             </View>
           </View>
         );
       })}
 
       <View style={s.buyBlock}>
-        {packages === null ? (
-          <ActivityIndicator color={colors.goldDeep} />
-        ) : unavailable ? (
-          // Never a dead button: say why, in words a learner understands.
-          <View style={s.notice}>
-            <Text style={s.noticeTitle}>Upgrading isn't available here</Text>
-            <Text style={s.noticeBody}>{unavailable}</Text>
-          </View>
-        ) : packages.length === 0 ? (
-          <View style={s.notice}>
-            <Text style={s.noticeTitle}>No plans to show yet</Text>
-            <Text style={s.noticeBody}>Plans are still being set up. Check back shortly.</Text>
-          </View>
-        ) : (
-          packages.map((pkg) => (
-            <View key={pkg.id} style={{ marginBottom: space.md }}>
-              <Button
-                label={busy === pkg.id ? 'One moment…' : `${pkg.title} — ${pkg.priceString}`}
-                onPress={() => void buy(pkg.id)}
-                disabled={!!busy}
-              />
-              {/* Guideline 3.1.2 wants the length and the renewal terms on the
-                  paywall itself, not only in App Store Connect. */}
-              {!!periodLabel(pkg.period) && (
-                <Text style={s.terms}>
-                  {pkg.priceString} per {periodLabel(pkg.period)}, renews automatically until
-                  cancelled. Cancel any time in your Apple ID settings.
-                </Text>
-              )}
-            </View>
-          ))
-        )}
+        {packages === null && <ActivityIndicator color={colors.goldDeep} />}
+
+        {/* Guideline 3.1.2 wants the length and renewal terms on the paywall
+            itself, not only in App Store Connect. */}
+        {(packages ?? []).map((pkg) => (
+          !!periodLabel(pkg.period) && (
+            <Text key={pkg.id} style={s.terms}>
+              {pkg.title}: {pkg.priceString} per {periodLabel(pkg.period)}, renews automatically
+              until cancelled. Cancel any time in your Apple ID settings.
+            </Text>
+          )
+        ))}
 
         {!!note && <Text style={s.note}>{note}</Text>}
 
@@ -197,25 +279,23 @@ const s = StyleSheet.create({
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
   sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
   card: {
-    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,
-    borderRadius: radius.lg, ...curve, padding: space.lg, marginBottom: space.md,
+    borderWidth: 2.5, borderRadius: radius.lg, ...curve,
+    marginBottom: space.lg, overflow: 'hidden', ...elevation.card,
   },
-  cardCurrent: { borderColor: colors.ink, borderWidth: 2.5, ...elevation.card },
-  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
-  badge: {
-    backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink,
-    borderRadius: 999, ...curve, paddingHorizontal: 10, paddingVertical: 3,
-  },
-  badgeText: { fontFamily: font.black, fontSize: type.meta, color: colors.ink, letterSpacing: 1 },
-  cardBlurb: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4 },
-  perks: { marginTop: space.md, gap: 8 },
-  perkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tick: {
-    width: 10, height: 10, borderRadius: 3, ...curve, backgroundColor: colors.gold,
-    borderWidth: 1.5, borderColor: colors.ink, transform: [{ rotate: '45deg' }],
-  },
-  perkText: { fontFamily: font.semibold, fontSize: type.small, color: colors.ink, flex: 1 },
+  cardCurrent: { ...elevation.lifted },
+  strip: { paddingHorizontal: space.md, paddingVertical: 7 },
+  stripText: { fontFamily: font.black, fontSize: 10, letterSpacing: 2 },
+  cardBody: { padding: space.md },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  cardTitle: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.6 },
+  priceWrap: { flexDirection: 'row', alignItems: 'flex-end' },
+  price: { fontFamily: font.black, fontSize: type.heading, letterSpacing: -0.4 },
+  pricePer: { fontFamily: font.bold, fontSize: type.small, marginBottom: 2 },
+  cardBlurb: { fontFamily: font.bold, fontSize: type.small, marginTop: 2 },
+  cardNotice: { fontFamily: font.semibold, fontSize: type.small, marginTop: space.md, lineHeight: 18 },
+  perks: { marginTop: space.md, gap: 9 },
+  perkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
+  perkText: { fontFamily: font.bold, fontSize: type.small, flex: 1, lineHeight: 19 },
   buyBlock: { marginTop: space.md },
   notice: {
     backgroundColor: colors.blueSoft, borderWidth: 2, borderColor: colors.blueDeep,
