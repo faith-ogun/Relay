@@ -37,7 +37,10 @@ export default function Home() {
 
   const load = useCallback(async () => {
     const [m, p, prof] = await Promise.all([
-      getManifest(),
+      // The callback matters: without it a refreshed manifest was written to
+      // cache and not shown until the next cold start, so content changes
+      // appeared to take a relaunch.
+      getManifest((fresh) => setManifest(fresh)),
       user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
       loadProfile(),
     ]);

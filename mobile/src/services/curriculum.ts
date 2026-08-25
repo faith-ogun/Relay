@@ -121,14 +121,28 @@ export interface LessonContent {
   lesson: { steps: unknown[]; xpReward: number; [k: string]: unknown };
 }
 
+/** The content version this device last saw, from the cached manifest. */
+async function knownVersion(): Promise<string | undefined> {
+  const m = await readCache<Manifest>(MANIFEST_KEY);
+  return m?.version;
+}
+
 /**
  * One lesson's steps. Cached per lesson and invalidated by version, so a
  * previously-opened lesson replays offline.
+ *
+ * The version defaults to the cached manifest's, which is the fix for a cache
+ * that could never expire: the only caller passed nothing, and `!currentVersion`
+ * then short-circuited the comparison, so ANY cached lesson was returned forever.
+ * Splitting the curriculum into shorter sessions changed every lesson on the
+ * server and not one of them on a device that had already opened it.
  */
 export async function getLesson(id: string, currentVersion?: string): Promise<LessonContent | null> {
   const key = LESSON_KEY(id);
   const cached = await readCache<LessonContent>(key);
-  if (cached && (!currentVersion || cached.version === currentVersion)) return cached;
+  const version = currentVersion ?? (await knownVersion());
+  if (cached && version && cached.version === version) return cached;
+  if (cached && !version) return cached;   // no manifest yet: stale beats nothing
 
   // Ids are authored strings that contain spaces, so they must be encoded.
   const fresh = await authedGet<LessonContent>(`/v1/curriculum/lessons/${encodeURIComponent(id)}`);

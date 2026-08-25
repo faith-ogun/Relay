@@ -44,6 +44,9 @@ export default function LessonScreen() {
 
   const run = useRun(lesson, onWrong);
   const [canCheck, setCanCheck] = useState(false);
+  // A drawing step and a scroll view both want vertical drags. While a stroke
+  // is live the scroller stands down, so an upward line stays a line.
+  const [drawing, setDrawing] = useState(false);
   const graderRef = useRef<(() => void) | null>(null);
 
   // Latched, so the screen survives the heart it is waiting for arriving. Left
@@ -191,7 +194,11 @@ export default function LessonScreen() {
         <HeartsMeter onPress={() => { track('hearts_paywall_view'); router.push('/plans'); }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={!drawing}
+      >
         {run.step && (
           <StepView
             step={run.step}
@@ -200,6 +207,7 @@ export default function LessonScreen() {
             onSubmit={run.submit}
             onCanCheck={setCanCheck}
             registerGrader={registerGrader}
+            onDrawingChange={setDrawing}
           />
         )}
       </ScrollView>

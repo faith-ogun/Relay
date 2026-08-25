@@ -12,6 +12,8 @@ export interface DrawCanvasHandle {
 interface Props {
   /** Fires whenever the stroke count changes, so the shell can enable Check. */
   onInkChange?: (hasInk: boolean) => void;
+  /** True while a stroke is in progress, so the screen can lock its scroller. */
+  onDrawingChange?: (drawing: boolean) => void;
   height?: number;
 }
 
@@ -25,7 +27,7 @@ interface Props {
  * PanResponder is used directly rather than a gesture library: this needs raw
  * move events at full rate, and nothing here competes for the gesture.
  */
-export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, height = 300 }, ref) => {
+export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, onDrawingChange, height = 300 }, ref) => {
   const [paths, setPaths] = useState<string[]>([]);
   const current = useRef<string>('');
   const [live, setLive] = useState<string>('');
@@ -37,7 +39,24 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, he
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      // Claim the touch in the CAPTURE phase, before any ancestor sees it.
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      /**
+       * The line that makes drawing possible inside a ScrollView.
+       *
+       * The default is to GRANT a termination request, and a scroll view asks
+       * for the responder the moment a drag turns vertical. So every upward
+       * stroke was handed straight to the scroller mid-line: the canvas was
+       * usable for horizontal marks and nothing else. Refusing keeps the stroke
+       * here until the finger lifts.
+       */
+      onPanResponderTerminationRequest: () => false,
+      /** Same negotiation on the Android side, where the native scroll
+       *  recogniser competes rather than asking. */
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (e) => {
+        onDrawingChange?.(true);
         const { locationX, locationY } = e.nativeEvent;
         current.current = `M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`;
         setLive(current.current);
@@ -48,6 +67,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, he
         setLive(current.current);
       },
       onPanResponderRelease: () => {
+        onDrawingChange?.(false);
         const done = current.current;
         current.current = '';
         setLive('');
@@ -61,6 +81,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, he
           });
         }
       },
+      onPanResponderTerminate: () => { onDrawingChange?.(false); },
     }),
   ).current;
 

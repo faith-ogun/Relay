@@ -23,6 +23,9 @@ interface Props {
   onCanCheck: (can: boolean) => void;
   /** Set by the shell: pressing Check calls this step's grader. */
   registerGrader: (grade: (() => void) | null) => void;
+  /** Raised while a finger is drawing, so the shell can stop its ScrollView
+   *  competing for the same vertical gesture. */
+  onDrawingChange?: (drawing: boolean) => void;
 }
 
 export const StepView: React.FC<Props> = (props) => {
@@ -800,7 +803,7 @@ const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
 
 // ── Draw the circuit (freeform, graded by vision) ──────────────────────────
 const DrawStep: React.FC<Props & { step: StepDraw }> = ({
-  step, checked, onSubmit, onCanCheck, registerGrader,
+  step, checked, onSubmit, onCanCheck, registerGrader, onDrawingChange,
 }) => {
   const canvasRef = useRef<DrawCanvasHandle>(null);
   const shotRef = useRef<View>(null);
@@ -844,7 +847,7 @@ const DrawStep: React.FC<Props & { step: StepDraw }> = ({
       <CircuitDiagram circuit={step.circuitDiagram} />
 
       <View ref={shotRef} collapsable={false} style={{ marginTop: space.md }}>
-        <DrawCanvas ref={canvasRef} onInkChange={setHasInk} height={280} />
+        <DrawCanvas ref={canvasRef} onInkChange={setHasInk} onDrawingChange={onDrawingChange} height={280} />
       </View>
 
       <View style={s.drawTools}>
