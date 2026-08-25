@@ -45,13 +45,28 @@ export const Resistor: React.FC<{ x: number; y: number; w?: number; vertical?: b
 };
 
 /** Battery / DC source: long plate is +, short is −. */
+/**
+ * A cell, drawn ACROSS the wire it sits on.
+ *
+ * The plates used to be vertical lines offset 8px apart, which is the symbol for
+ * a battery on a HORIZONTAL run — and every one of them is placed on the left
+ * vertical run. Parallel to the current path, the two plates read as a pair of
+ * floating ticks with a gap between the wires, so the whole loop looked broken.
+ *
+ * Draws its own stubs (y ± 18) so the wires either side always meet metal and no
+ * call site can leave a hairline gap.
+ */
 export const Battery: React.FC<{ x: number; y: number; label?: string }> = ({ x, y, label }) => (
   <G>
-    <Line x1={x} y1={y - 13} x2={x} y2={y + 13} stroke={colors.ink} strokeWidth={STROKE} />
-    <Line x1={x + 8} y1={y - 7} x2={x + 8} y2={y + 7} stroke={colors.ink} strokeWidth={STROKE * 1.6} />
-    <Label x={x - 8} y={y - 16} text="+" />
-    <Label x={x + 16} y={y - 16} text="−" />
-    {!!label && <Label x={x + 22} y={y + 22} text={label} anchor="start" />}
+    <Line x1={x} y1={y - 18} x2={x} y2={y - 6} stroke={colors.ink} strokeWidth={STROKE} />
+    {/* Long thin plate is positive, short thick plate is negative: the
+        convention that lets you read polarity off the symbol alone. */}
+    <Line x1={x - 12} y1={y - 6} x2={x + 12} y2={y - 6} stroke={colors.ink} strokeWidth={STROKE} />
+    <Line x1={x - 6} y1={y + 3} x2={x + 6} y2={y + 3} stroke={colors.ink} strokeWidth={STROKE * 1.7} />
+    <Line x1={x} y1={y + 3} x2={x} y2={y + 18} stroke={colors.ink} strokeWidth={STROKE} />
+    <Label x={x - 19} y={y - 9} text="+" />
+    <Label x={x - 19} y={y + 8} text="−" />
+    {!!label && <Label x={x + 17} y={y + 4} text={label} anchor="start" />}
   </G>
 );
 

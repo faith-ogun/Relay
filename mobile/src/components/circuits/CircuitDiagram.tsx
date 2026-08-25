@@ -30,12 +30,12 @@ export const CIRCUITS: Record<string, React.FC> = {
   series_circuit: () => (
     <Frame>
       <Battery x={40} y={85} label="9V" />
-      <Wire x1={48} y1={72} x2={48} y2={40} /><Wire x1={48} y1={40} x2={110} y2={40} />
+      <Wire x1={40} y1={68} x2={40} y2={40} /><Wire x1={40} y1={40} x2={110} y2={40} />
       <Resistor x={110} y={40} w={50} label="220Ω" />
       <Wire x1={160} y1={40} x2={230} y2={40} />
       <Led x={240} y={40} label="LED" />
       <Wire x1={258} y1={40} x2={280} y2={40} /><Wire x1={280} y1={40} x2={280} y2={130} />
-      <Wire x1={280} y1={130} x2={40} y2={130} /><Wire x1={40} y1={130} x2={40} y2={98} />
+      <Wire x1={280} y1={130} x2={40} y2={130} /><Wire x1={40} y1={130} x2={40} y2={100} />
       <Label x={160} y={152} text="One path, same current everywhere" />
     </Frame>
   ),
@@ -44,7 +44,7 @@ export const CIRCUITS: Record<string, React.FC> = {
   parallel_circuit: () => (
     <Frame>
       <Battery x={40} y={85} label="9V" />
-      <Wire x1={48} y1={72} x2={48} y2={35} /><Wire x1={48} y1={35} x2={120} y2={35} />
+      <Wire x1={40} y1={68} x2={40} y2={35} /><Wire x1={40} y1={35} x2={120} y2={35} />
       <Node x={120} y={35} />
       <Wire x1={120} y1={35} x2={120} y2={60} />
       <Resistor x={140} y={60} w={50} label="R1" /><Wire x1={120} y1={60} x2={140} y2={60} />
@@ -54,7 +54,7 @@ export const CIRCUITS: Record<string, React.FC> = {
       <Wire x1={190} y1={110} x2={250} y2={110} />
       <Node x={250} y={60} /><Node x={250} y={110} />
       <Wire x1={250} y1={60} x2={250} y2={140} /><Wire x1={250} y1={140} x2={40} y2={140} />
-      <Wire x1={40} y1={140} x2={40} y2={98} />
+      <Wire x1={40} y1={140} x2={40} y2={100} />
       <Label x={160} y={158} text="Same voltage across both branches" />
     </Frame>
   ),
@@ -79,11 +79,11 @@ export const CIRCUITS: Record<string, React.FC> = {
   led_no_resistor: () => (
     <Frame>
       <Battery x={45} y={85} label="9V" />
-      <Wire x1={53} y1={72} x2={53} y2={45} /><Wire x1={53} y1={45} x2={200} y2={45} />
+      <Wire x1={45} y1={68} x2={45} y2={45} /><Wire x1={45} y1={45} x2={200} y2={45} />
       <Spark x={130} y={45} />
       <Led x={215} y={45} label="LED" />
       <Wire x1={233} y1={45} x2={272} y2={45} /><Wire x1={272} y1={45} x2={272} y2={132} />
-      <Wire x1={272} y1={132} x2={45} y2={132} /><Wire x1={45} y1={132} x2={45} y2={98} />
+      <Wire x1={272} y1={132} x2={45} y2={132} /><Wire x1={45} y1={132} x2={45} y2={100} />
       <Label x={160} y={158} text="No current limiting — the LED will not survive" />
     </Frame>
   ),
@@ -91,12 +91,12 @@ export const CIRCUITS: Record<string, React.FC> = {
   reversed_led: () => (
     <Frame>
       <Battery x={45} y={85} label="9V" />
-      <Wire x1={53} y1={72} x2={53} y2={45} /><Wire x1={53} y1={45} x2={120} y2={45} />
+      <Wire x1={45} y1={68} x2={45} y2={45} /><Wire x1={45} y1={45} x2={120} y2={45} />
       <Resistor x={120} y={45} w={50} label="220Ω" />
       <Wire x1={170} y1={45} x2={215} y2={45} />
       <Led x={230} y={45} reversed label="LED (backwards)" />
       <Wire x1={248} y1={45} x2={272} y2={45} /><Wire x1={272} y1={45} x2={272} y2={132} />
-      <Wire x1={272} y1={132} x2={45} y2={132} /><Wire x1={45} y1={132} x2={45} y2={98} />
+      <Wire x1={272} y1={132} x2={45} y2={132} /><Wire x1={45} y1={132} x2={45} y2={100} />
       <Label x={160} y={158} text="Reversed: a diode blocks current this way" />
     </Frame>
   ),
@@ -104,11 +104,11 @@ export const CIRCUITS: Record<string, React.FC> = {
   short_circuit: () => (
     <Frame>
       <Battery x={45} y={85} label="9V" />
-      <Wire x1={53} y1={72} x2={53} y2={45} /><Wire x1={53} y1={45} x2={266} y2={45} />
+      <Wire x1={45} y1={68} x2={45} y2={45} /><Wire x1={45} y1={45} x2={266} y2={45} />
       <Resistor x={184} y={45} w={44} label="220Ω" />
       <Led x={246} y={45} label="LED" />
       <Wire x1={266} y1={45} x2={266} y2={132} /><Wire x1={266} y1={132} x2={45} y2={132} />
-      <Wire x1={45} y1={132} x2={45} y2={98} />
+      <Wire x1={45} y1={132} x2={45} y2={100} />
       <Wire x1={150} y1={45} x2={150} y2={132} />
       <Node x={150} y={45} /><Node x={150} y={132} />
       <Spark x={150} y={94} />

@@ -37,10 +37,12 @@ import { stagger } from '../../theme/motion';
 // state because it has to outlive the component that is being remounted.
 const entered = new Set<string>();
 
-// Mirrors backend/live-bridge/app/checkpoints.py. Display only — the server
-// computes the grant and owns the claim, so a client that got this wrong would
-// show the wrong number, not pay the wrong amount.
-const XP_PER_LESSON = 8;
+// Mirrors backend/live-bridge/app/checkpoints.py, which pays per STEP rather
+// than per lesson so that splitting a lesson into shorter sessions cannot
+// change what the work is worth. Display only — the server computes the grant
+// and owns the claim, so a client that got this wrong would show the wrong
+// number, not pay the wrong amount.
+const XP_PER_STEP = 0.5;
 
 const CARD_H = 76;
 const CHECK_H = 96;
@@ -161,8 +163,13 @@ export const UnitPath: React.FC<{
 
   const accent = accentProp ?? ACCENT[unit.accent] ?? colors.gold;
 
-  const xpFor = (skillId: string) =>
-    (unit.skills.find((sk) => sk.id === skillId)?.lessons.length ?? 0) * XP_PER_LESSON;
+  // The manifest carries no step counts, so a session's steps are approximated
+  // from the authored median (8). Only the label uses this; the server sends the
+  // real figure with the grant.
+  const xpFor = (skillId: string) => {
+    const sessions = unit.skills.find((sk) => sk.id === skillId)?.lessons.length ?? 0;
+    return Math.max(5, Math.round((sessions * 8 * XP_PER_STEP) / 5) * 5);
+  };
 
   return (
     <View style={{ width: W, height: totalH, alignSelf: 'center' }}>

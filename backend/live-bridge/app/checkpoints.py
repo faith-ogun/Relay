@@ -43,15 +43,17 @@ logger = logging.getLogger("ohmlet.checkpoints")
 CHECKPOINTS_COLLECTION = os.getenv("OHMLET_CHECKPOINTS_COLLECTION", "ohmlet_checkpoints")
 STATE_COLLECTION = os.getenv("OHMLET_STATE_COLLECTION", "ohmlet_state")
 
-# Per lesson in the skill.
+# Per STEP in the skill, not per lesson.
 #
-# Tuned against the whole curriculum rather than picked: at 15 the checkpoints
-# would have paid 2,130 XP against the lessons' 4,550, so nearly a third of all
-# XP came from crossing boundaries rather than from learning, which devalues the
-# lessons themselves. At 8 they pay ~1,016, about 22% on top — a three-lesson
-# skill earns roughly one bonus lesson's worth. The ceremony is the reward; the
-# XP is the signal.
-XP_PER_LESSON = int(os.getenv("OHMLET_CHECKPOINT_XP_PER_LESSON", "8"))
+# Per-lesson was packaging-dependent, and the packaging changed: splitting the
+# authored lessons into shorter sessions doubled every skill's lesson count
+# without adding a single question, and checkpoint payouts doubled with it —
+# from 22% of total lesson XP to 48%, purely from a delivery decision. Steps are
+# the invariant: the same work pays the same bonus however it is sliced.
+#
+# At 0.5 the checkpoints pay ~1,180 against the lessons' ~4,700, about 25% on
+# top. The ceremony is the reward; the XP is the signal.
+XP_PER_STEP = float(os.getenv("OHMLET_CHECKPOINT_XP_PER_STEP", "0.5"))
 
 # A skill with a single lesson gets no checkpoint. Fifteen of the 57 skills hold
 # exactly one lesson, and a boundary marked after every one of them would fire a
@@ -69,6 +71,7 @@ def _skill_index() -> dict[str, dict[str, Any]]:
     being re-decided at each call site."""
     index: dict[str, dict[str, Any]] = {}
     data = curriculum._curriculum()
+    store = curriculum._lessons().get("lessons", {})
     for unit in data.get("units", []):
         for skill in unit.get("skills", []):
             sid = skill.get("id")
@@ -81,13 +84,18 @@ def _skill_index() -> dict[str, dict[str, Any]]:
                 "unitId": unit.get("id"),
                 "title": skill.get("title", ""),
                 "lessonIds": lesson_ids,
+                "steps": sum(len(store.get(lid, {}).get("steps", [])) for lid in lesson_ids),
             }
     return index
 
 
 def xp_for(skill_id: str) -> int:
     entry = _skill_index().get(skill_id)
-    return len(entry["lessonIds"]) * XP_PER_LESSON if entry else 0
+    if not entry:
+        return 0
+    # Rounded to a multiple of 5 so the number on the card reads as a reward
+    # rather than as arithmetic.
+    return max(5, round(entry["steps"] * XP_PER_STEP / 5) * 5)
 
 
 def _completed_lessons(client: firestore.Client, uid: str) -> set[str]:
