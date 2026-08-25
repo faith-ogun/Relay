@@ -134,7 +134,7 @@ export default function Onboarding() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.xxl * 1.3 },
+  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   flex: { flex: 1 },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,

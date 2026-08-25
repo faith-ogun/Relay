@@ -1,24 +1,37 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Button } from '../components/Button';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { AppTabs } from '../components/AppTabs';
+import { StatStrip } from '../components/StatStrip';
 import { useAuth } from '../hooks/useAuth';
-import { useChildSafe } from '../hooks/useChildSafe';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
-import {
-  BENCH_NOTE, GOAL_FRAMING, loadProfile, type LearnerProfile,
-} from '../services/learnerProfile';
-import { colors, font, pressSmall, radius, space, type } from '../theme/tokens';
+import { GOAL_FRAMING, loadProfile, type LearnerProfile } from '../services/learnerProfile';
+import { colors, font, pressSmall, radius, space, type, unitColor } from '../theme/tokens';
 
+/**
+ * Learn: the path, and nothing else.
+ *
+ * This screen used to carry a greeting, three stat cards, a hero, and eight
+ * navigation rows. Everything competed and nothing was ranked, which is a menu
+ * rather than a product. Achievements, twins, plan and account have moved to
+ * Profile; the simulator, live tutor and community are tabs. What is left is the
+ * thing the app is for: where you are, and what is next.
+ *
+ * Units are colour-coded and each one is its own banner, because on a path the
+ * colour IS the wayfinding: "the green one" is how a learner remembers where
+ * they got to.
+ */
 export default function Home() {
-  const { displayName, user } = useAuth();
-  const { childSafe } = useChildSafe();
+  const { user } = useAuth();
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [progress, setProgress] = useState<Progress>(EMPTY);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [profile, setProfile] = useState<LearnerProfile | null>(null);
 
   const load = useCallback(async () => {
     const [m, p, prof] = await Promise.all([
@@ -32,211 +45,191 @@ export default function Home() {
   }, [user?.uid]);
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
-
-  // Progress changes when a lesson is finished, so refresh on return to this tab.
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  const { next, completedCount, totalCount } = useMemo(() => {
-    if (!manifest) return { next: null, completedCount: 0, totalCount: 0 };
-    const lessons = allLessons(manifest);
-    const doneIds = new Set(Object.keys(progress.lessonLevels));
-    return {
-      next: lessons.find((l) => !doneIds.has(l.id)) ?? null,
-      completedCount: lessons.filter((l) => doneIds.has(l.id)).length,
-      totalCount: lessons.length,
-    };
-  }, [manifest, progress]);
+  const done = useMemo(() => new Set(Object.keys(progress.lessonLevels)), [progress]);
 
-  const pct = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+  const next = useMemo(() => {
+    if (!manifest) return null;
+    return allLessons(manifest).find((l) => !done.has(l.id)) ?? null;
+  }, [manifest, done]);
 
-  // The daily target the learner set during setup. Their streak counts against
-  // it, so it is shown rather than kept private, and it is the reason the setup
-  // question was worth asking.
   const dailyGoal = profile?.dailyGoal ?? 1;
-  const doneToday = Math.min(progress.completedToday, dailyGoal);
-  const goalMet = progress.completedToday >= dailyGoal;
-
 
   if (loading) {
-    return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
+    return (
+      <AppTabs active="learn">
+        <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>
+      </AppTabs>
+    );
   }
 
   return (
-    <ScrollView
-      style={s.flex}
-      contentContainerStyle={s.scroll}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
-          tintColor={colors.goldDeep}
-        />
-      }
-    >
-      <Text style={s.eyebrow}>TODAY</Text>
-      <Text style={s.title}>Welcome back, {displayName}.</Text>
+    <AppTabs active="learn">
+      <StatStrip
+        xp={progress.xp}
+        streak={progress.streak}
+        doneToday={progress.completedToday}
+        dailyGoal={dailyGoal}
+      />
 
-      {/* Real counters, straight from persisted progress. */}
-      <View style={s.stats}>
-        <Stat value={String(progress.xp)} label="XP" tint={colors.goldDeep} />
-        <Stat value={String(progress.streak)} label="day streak" tint={colors.red} />
-        <Stat value={`${completedCount}`} label={`of ${totalCount} lessons`} tint={colors.blueDeep} />
-      </View>
-
-      {/* Today's target, against the goal they chose. */}
-      <View style={[s.daily, goalMet && s.dailyDone]}>
-        <View style={s.dailyPips}>
-          {Array.from({ length: dailyGoal }).map((_, i) => (
-            <View key={i} style={[s.pip, i < doneToday && s.pipOn]} />
-          ))}
-        </View>
-        <Text style={s.dailyText}>
-          {goalMet
-            ? `Daily goal done: ${progress.completedToday} today.`
-            : `${doneToday} of ${dailyGoal} today`}
-        </Text>
-      </View>
-
-      {next ? (
-        <View style={s.hero}>
-          <Text style={s.heroKicker}>
-            {completedCount === 0
-              ? 'START HERE'
-              : profile
-                ? GOAL_FRAMING[profile.goal]
-                : 'PICK UP WHERE YOU LEFT OFF'}
-          </Text>
-          <Text style={s.heroTitle}>{next.title}</Text>
-          {!!next.summary && <Text style={s.heroBody}>{next.summary}</Text>}
-
-          <View style={s.track}>
-            <View style={[s.fill, { width: `${pct}%` }]} />
-          </View>
-          <Text style={s.trackLabel}>{pct}% of the path complete</Text>
-
-          <Button
-            label={completedCount === 0 ? 'Start your first lesson' : 'Continue'}
-            onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: next.id } })}
-            style={{ marginTop: space.md }}
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+            tintColor={colors.goldDeep}
           />
-        </View>
-      ) : manifest ? (
-        <View style={s.hero}>
-          <Text style={s.heroKicker}>PATH COMPLETE</Text>
-          <Text style={s.heroTitle}>You've finished every lesson.</Text>
-          <Text style={s.heroBody}>
-            {totalCount} lessons done. Take it to the bench: start a live session and build something real.
-          </Text>
-        </View>
-      ) : (
-        <View style={s.hero}>
-          <Text style={s.heroKicker}>OFFLINE</Text>
-          <Text style={s.heroTitle}>Can't reach your lessons</Text>
-          <Text style={s.heroBody}>
-            Pull down to retry. Lessons you've already opened still work without a connection.
-          </Text>
-        </View>
-      )}
-
-      <Row
-        title="Live tutor"
-        sub={profile ? BENCH_NOTE[profile.bench] : 'Camera + voice on your real bench'}
-        onPress={() => router.push('/live')}
-      />
-      <Row
-        title="Simulator"
-        sub={
-          profile?.bench === 'none'
-            ? 'No board yet? Run real Arduino code here.'
-            : 'Run a sketch without wiring anything up'
         }
-        onPress={() => router.push('/simulator')}
-      />
-      <Row
-        title="Learning path"
-        sub={
-          profile?.experience === 'lots' && completedCount === 0
-            ? 'Know some of this already? Jump in further along.'
-            : `${manifest?.units.length ?? 12} units, in the order they unlock`
-        }
-        onPress={() => router.push('/path')}
-      />
-      <Row title="Achievements" sub="Your trophy case" onPress={() => router.push('/achievements')} />
-      {/* Child mode (#94): a minor sees no public social surface and no way to
-          spend money. The server enforces both; this keeps them off the screen. */}
-      {!childSafe && (
-        <Row title="Community" sub="Builds, challenges and the weekly league" onPress={() => router.push('/community')} />
-      )}
-      <Row title="3D twins" sub="Models of everything you've built" onPress={() => router.push('/twins')} />
-      {!childSafe && (
-        <Row title="Plans" sub="More live tutoring time" onPress={() => router.push('/plans')} />
-      )}
+      >
+        {!manifest ? (
+          <View style={s.offline}>
+            <Text style={s.offlineTitle}>Can't reach your lessons</Text>
+            <Text style={s.offlineBody}>
+              Pull down to retry. Lessons you have already opened still work without a connection.
+            </Text>
+          </View>
+        ) : (
+          manifest.units.map((unit, ui) => {
+            const lessons = unit.skills.flatMap((sk) => sk.lessons);
+            const unitDone = lessons.filter((l) => done.has(l.id)).length;
+            const complete = unitDone === lessons.length && lessons.length > 0;
+            const tint = unitColor(ui);
+            // A unit is open once the one before it is finished, so the path
+            // reads as a path rather than a list of everything at once.
+            const prev = ui === 0 ? null : manifest.units[ui - 1];
+            const unlocked = ui === 0 || (prev
+              ? prev.skills.flatMap((sk) => sk.lessons).every((l) => done.has(l.id))
+              : false);
 
-      <Row title="Account" sub="Your plan, your data, and privacy" onPress={() => router.push('/account')} />
-    </ScrollView>
+            return (
+              <View key={unit.id} style={s.unitBlock}>
+                <View style={[s.banner, { backgroundColor: tint }]}>
+                  <Text style={s.bannerKicker}>
+                    UNIT {ui + 1}
+                    {complete ? ' · COMPLETE' : unlocked ? ` · ${unitDone} OF ${lessons.length}` : ' · LOCKED'}
+                  </Text>
+                  <Text style={s.bannerTitle}>{unit.title}</Text>
+                </View>
+
+                <View style={s.trail}>
+                  {lessons.map((lesson, li) => {
+                    const isDone = done.has(lesson.id);
+                    const isNext = next?.id === lesson.id;
+                    // The trail staggers left and right so it reads as a route,
+                    // not a column of buttons.
+                    const offset = [0, 44, 74, 44, 0, -44, -74, -44][li % 8];
+                    return (
+                      <Pressable
+                        key={lesson.id}
+                        disabled={!unlocked}
+                        onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
+                        style={[
+                          s.node,
+                          { marginLeft: offset },
+                          isDone && { backgroundColor: tint, borderColor: colors.ink },
+                          isNext && s.nodeNext,
+                          !unlocked && s.nodeLocked,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${lesson.title}${isDone ? ', done' : isNext ? ', next up' : ''}`}
+                      >
+                        {isDone ? <Tick /> : !unlocked ? <Lock /> : <Play tint={isNext ? colors.ink : colors.inkSoft} />}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {isNextUnit(next, lessons) && (
+                  <View style={[s.nextCard, { borderColor: tint }]}>
+                    <Text style={[s.nextKicker, { color: tint }]}>
+                      {profile ? GOAL_FRAMING[profile.goal] : 'NEXT UP'}
+                    </Text>
+                    <Text style={s.nextTitle}>{next?.title}</Text>
+                    {!!next?.summary && <Text style={s.nextBody}>{next.summary}</Text>}
+                    <Pressable
+                      onPress={() => next && router.push({ pathname: '/lesson/[id]', params: { id: next.id } })}
+                      style={[s.nextButton, { backgroundColor: tint }]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={s.nextButtonText}>Start</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </AppTabs>
   );
 }
 
-const Stat: React.FC<{ value: string; label: string; tint: string }> = ({ value, label, tint }) => (
-  <View style={s.stat}>
-    <Text style={[s.statValue, { color: tint }]}>{value}</Text>
-    <Text style={s.statLabel}>{label}</Text>
-  </View>
+/** True when the next lesson overall lives in this unit. */
+function isNextUnit(next: { id: string } | null, lessons: Array<{ id: string }>): boolean {
+  return !!next && lessons.some((l) => l.id === next.id);
+}
+
+const Tick: React.FC = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24">
+    <Path d="m5.5 12.5 4.2 4.2L18.5 8" fill="none" stroke={colors.ink}
+          strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
 );
 
-const Row: React.FC<{ title: string; sub: string; onPress: () => void }> = ({ title, sub, onPress }) => (
-  <Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={title}>
-    <View style={{ flex: 1 }}>
-      <Text style={s.rowTitle}>{title}</Text>
-      <Text style={s.rowSub}>{sub}</Text>
-    </View>
-    <Text style={s.chevron}>›</Text>
-  </Pressable>
+const Play: React.FC<{ tint: string }> = ({ tint }) => (
+  <Svg width={22} height={22} viewBox="0 0 24 24">
+    <Path d="M8 5.5 18 12 8 18.5z" fill={tint} />
+  </Svg>
+);
+
+const Lock: React.FC = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24">
+    <Path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" fill="none" stroke={colors.inkSoft} strokeWidth={2.2} />
+    <Circle cx={12} cy={15.5} r={1.8} fill={colors.inkSoft} />
+    <Path d="M5.5 10.5h13v9h-13z" fill="none" stroke={colors.inkSoft} strokeWidth={2.2} strokeLinejoin="round" />
+  </Svg>
 );
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.cream },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.3, paddingBottom: space.xxl },
-  daily: {
-    flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md,
-    backgroundColor: colors.white, paddingVertical: 10, paddingHorizontal: space.md,
-    marginBottom: space.md,
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scroll: { paddingHorizontal: space.lg, paddingBottom: space.xxl },
+
+  unitBlock: { marginBottom: space.xl },
+  banner: {
+    borderRadius: radius.lg, borderWidth: 2.5, borderColor: colors.ink,
+    paddingVertical: space.md, paddingHorizontal: space.md, ...pressSmall,
   },
-  dailyDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  dailyPips: { flexDirection: 'row', gap: 5 },
-  pip: { width: 14, height: 8, borderRadius: 4, backgroundColor: colors.line },
-  pipOn: { backgroundColor: colors.goldDeep },
-  dailyText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
-  eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
-  title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, letterSpacing: -0.6, marginTop: 4 },
-  stats: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
-  stat: {
-    flex: 1, backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,
-    borderRadius: radius.md, paddingVertical: space.md, alignItems: 'center',
+  bannerKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6, color: 'rgba(255,255,255,0.85)' },
+  bannerTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.white, marginTop: 2 },
+
+  trail: { alignItems: 'center', marginTop: space.lg, gap: 14 },
+  node: {
+    width: 64, height: 64, borderRadius: 32,
+    borderWidth: 3, borderColor: colors.line, backgroundColor: colors.white,
+    alignItems: 'center', justifyContent: 'center', ...pressSmall,
   },
-  statValue: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.5 },
-  statLabel: { fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2, textAlign: 'center' },
-  hero: {
-    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, padding: space.lg, ...pressSmall,
+  nodeNext: { borderColor: colors.ink, borderWidth: 4, backgroundColor: colors.goldSoft },
+  nodeLocked: { opacity: 0.45 },
+
+  nextCard: {
+    marginTop: space.lg, borderWidth: 2.5, borderRadius: radius.lg,
+    backgroundColor: colors.white, padding: space.md, ...pressSmall,
   },
-  heroKicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2, color: colors.inkSoft },
-  heroTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 6, lineHeight: type.heading * 1.25 },
-  heroBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 6, lineHeight: 20 },
-  track: {
-    height: 10, borderRadius: 5, backgroundColor: colors.cream, borderWidth: 2,
-    borderColor: colors.ink, marginTop: space.md, overflow: 'hidden',
+  nextKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6 },
+  nextTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 4 },
+  nextBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 6, lineHeight: 20 },
+  nextButton: {
+    marginTop: space.md, borderRadius: radius.md, borderWidth: 2.5, borderColor: colors.ink,
+    paddingVertical: 12, alignItems: 'center',
   },
-  fill: { height: '100%', backgroundColor: colors.gold },
-  trackLabel: { fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft, marginTop: 6 },
-  row: {
-    marginTop: space.md, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, padding: space.md, ...pressSmall,
+  nextButtonText: { fontFamily: font.black, fontSize: type.body, color: colors.white },
+
+  offline: {
+    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.lg,
+    backgroundColor: colors.white, padding: space.lg, marginTop: space.lg,
   },
-  rowTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
-  rowSub: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkSoft, marginTop: 2 },
-  chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
+  offlineTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
+  offlineBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 6, lineHeight: 20 },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -7,9 +8,33 @@ import {
   Nunito_800ExtraBold, Nunito_900Black, useFonts,
 } from '@expo-google-fonts/nunito';
 import { AuthProvider } from '../hooks/useAuth';
-import { colors } from '../theme/tokens';
+import { colors, space } from '../theme/tokens';
+import { View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * Everything below the hardware.
+ *
+ * The inset is applied once here rather than in every screen. Each screen used
+ * to guess with a fixed `paddingTop`, and on a phone with a Dynamic Island the
+ * guess was too small: the back button sat under the clock and could not be
+ * tapped, leaving a swipe as the only way out.
+ */
+function Shell() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.cream }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.cream },
+          animation: 'fade',
+        }}
+      />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -26,15 +51,11 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <AuthProvider>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.cream },
-          animation: 'fade',
-        }}
-      />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <Shell />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

@@ -87,7 +87,7 @@ export default function Welcome() {
 const s = StyleSheet.create({
   screen: {
     flex: 1, backgroundColor: colors.cream,
-    paddingHorizontal: space.lg, paddingTop: space.xxl * 1.5, paddingBottom: space.xl,
+    paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl,
     justifyContent: 'space-between',
   },
   top: { alignItems: 'center' },

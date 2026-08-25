@@ -249,7 +249,7 @@ function Question<T extends string | number>({
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.xxl * 1.3 },
+  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     paddingHorizontal: space.lg, paddingBottom: space.md,

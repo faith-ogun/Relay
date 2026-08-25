@@ -3,7 +3,7 @@ import {
   ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { goBack } from '../services/nav';
+import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
 import { UnoBoard } from '../components/UnoBoard';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
@@ -125,80 +125,78 @@ export default function Simulator() {
   const factor = speed ? speed / 16_000_000 : null;
 
   return (
-    <ScrollView style={s.flex} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-      <Pressable onPress={() => goBack('/home')} style={s.backLink} accessibilityRole="button">
-        <Text style={s.backText}>‹ Back</Text>
-      </Pressable>
-
-      <Text style={s.kicker}>SIMULATOR</Text>
-      <Text style={s.title}>Run it without the hardware.</Text>
-      <Text style={s.body}>
-        Your sketch is compiled by the same toolchain a real Uno uses, then executed here
-        instruction by instruction. No board required.
-      </Text>
-
-      <UnoBoard duty={duty} running={running} />
-
-      {factor !== null && (
-        <Text style={s.speed}>
-          {factor >= 0.95
-            ? 'Running at full speed on this device.'
-            : `Running at about ${Math.round(factor * 100)}% of a real Uno on this device.`}
+    <AppTabs active="practice">
+      <ScrollView style={s.flex} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={s.kicker}>SIMULATOR</Text>
+        <Text style={s.title}>Run it without the hardware.</Text>
+        <Text style={s.body}>
+          Your sketch is compiled by the same toolchain a real Uno uses, then executed here
+          instruction by instruction. No board required.
         </Text>
-      )}
 
-      <View style={s.actions}>
-        <Button
-          label={busy ? 'Compiling…' : running ? 'Restart' : 'Compile and run'}
-          onPress={() => void run()}
-          disabled={busy || !compilerConfigured()}
-        />
-        {running && (
-          <Pressable onPress={stop} style={s.stop} accessibilityRole="button">
-            <Text style={s.stopText}>Stop</Text>
-          </Pressable>
+        <UnoBoard duty={duty} running={running} />
+
+        {factor !== null && (
+          <Text style={s.speed}>
+            {factor >= 0.95
+              ? 'Running at full speed on this device.'
+              : `Running at about ${Math.round(factor * 100)}% of a real Uno on this device.`}
+          </Text>
         )}
-      </View>
 
-      {busy && <ActivityIndicator color={colors.goldDeep} style={{ marginTop: space.sm }} />}
-      {!!note && <Text style={s.note}>{note}</Text>}
-
-      {errors.length > 0 && (
-        <View style={s.errors}>
-          <Text style={s.errorsTitle}>The compiler said:</Text>
-          {errors.slice(0, 6).map((e, i) => (
-            <Text key={i} style={s.errorLine}>
-              {e.line ? `Line ${e.line}: ` : ''}{e.message}
-            </Text>
-          ))}
+        <View style={s.actions}>
+          <Button
+            label={busy ? 'Compiling…' : running ? 'Restart' : 'Compile and run'}
+            onPress={() => void run()}
+            disabled={busy || !compilerConfigured()}
+          />
+          {running && (
+            <Pressable onPress={stop} style={s.stop} accessibilityRole="button">
+              <Text style={s.stopText}>Stop</Text>
+            </Pressable>
+          )}
         </View>
-      )}
 
-      <Text style={s.section}>YOUR SKETCH</Text>
-      <TextInput
-        value={source}
-        onChangeText={setSource}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        spellCheck={false}
-        style={s.editor}
-        accessibilityLabel="Arduino sketch"
-      />
+        {busy && <ActivityIndicator color={colors.goldDeep} style={{ marginTop: space.sm }} />}
+        {!!note && <Text style={s.note}>{note}</Text>}
 
-      {!!serial && (
-        <>
-          <Text style={s.section}>SERIAL MONITOR</Text>
-          <View style={s.serial}>
-            <Text style={s.serialText}>{serial}</Text>
+        {errors.length > 0 && (
+          <View style={s.errors}>
+            <Text style={s.errorsTitle}>The compiler said:</Text>
+            {errors.slice(0, 6).map((e, i) => (
+              <Text key={i} style={s.errorLine}>
+                {e.line ? `Line ${e.line}: ` : ''}{e.message}
+              </Text>
+            ))}
           </View>
-        </>
-      )}
+        )}
 
-      {!compilerConfigured() && (
-        <Text style={s.note}>The compile service is not reachable from this build.</Text>
-      )}
-    </ScrollView>
+        <Text style={s.section}>YOUR SKETCH</Text>
+        <TextInput
+          value={source}
+          onChangeText={setSource}
+          multiline
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          style={s.editor}
+          accessibilityLabel="Arduino sketch"
+        />
+
+        {!!serial && (
+          <>
+            <Text style={s.section}>SERIAL MONITOR</Text>
+            <View style={s.serial}>
+              <Text style={s.serialText}>{serial}</Text>
+            </View>
+          </>
+        )}
+
+        {!compilerConfigured() && (
+          <Text style={s.note}>The compile service is not reachable from this build.</Text>
+        )}
+      </ScrollView>
+    </AppTabs>
   );
 }
 

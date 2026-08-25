@@ -140,7 +140,7 @@ export default function AgeGate() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.xxl * 1.4 },
+  screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   head: { paddingHorizontal: space.lg },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
   title: {

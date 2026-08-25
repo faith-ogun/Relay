@@ -79,7 +79,7 @@ export default function UnitDetail() {
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream, padding: space.xl },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.2, paddingBottom: space.xxl },
+  scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
   backLink: { paddingVertical: space.sm, marginBottom: space.xs },
   backLinkText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },

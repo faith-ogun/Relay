@@ -290,7 +290,7 @@ export default function LiveTutor() {
 
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.ink },
-  preflight: { flex: 1, backgroundColor: colors.cream, padding: space.lg, paddingTop: space.xxl * 1.2 },
+  preflight: { flex: 1, backgroundColor: colors.cream, padding: space.lg, paddingTop: space.sm },
   backLink: { paddingVertical: space.sm, alignSelf: 'flex-start' },
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },

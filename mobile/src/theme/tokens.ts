@@ -59,3 +59,34 @@ export const type = {
   small: 13,
   meta: 11,
 } as const;
+
+
+/**
+ * One colour per unit, in curriculum order.
+ *
+ * The authored curriculum carries an `accent` of gold, blue, green or red, which
+ * means twelve units share four colours and three of them look identical on the
+ * path. Duolingo gives every unit its own identity for a reason: the colour IS
+ * the wayfinding, and "the purple one" is how a learner remembers where they
+ * are.
+ *
+ * Ordered so no two adjacent units are close in hue, and every one of them holds
+ * white text at the weight the headers use.
+ */
+export const UNIT_COLORS: string[] = [
+  '#f5b800', // Foundations, brand gold deepened for contrast
+  '#3e86e8', // On the Breadboard
+  '#4aa96c', // Sensors & Signals
+  '#e8734a', // Meet the Arduino
+  '#8c5bd8', // Inputs, Outputs & Code
+  '#2fa8a0', // Capacitors, RC & Timing
+  '#d4457f', // Transistors & Switching
+  '#5b7fd8', // Op-Amps & Signal Conditioning
+  '#c9902b', // Filters, Oscillators & Signals
+  '#3f9d5c', // Power Supplies & Regulation
+  '#6b5bd8', // Digital Logic & Embedded
+  '#d8603f', // Comms, Motors & Robotics
+];
+
+/** The colour for unit `i`, wrapping if the curriculum ever grows past twelve. */
+export const unitColor = (i: number): string => UNIT_COLORS[i % UNIT_COLORS.length];

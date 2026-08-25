@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '../services/nav';
+import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useChildSafe } from '../hooks/useChildSafe';
@@ -90,43 +91,45 @@ export default function Community() {
   }
 
   return (
-    <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} tintColor={colors.goldDeep}
-            onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />
-        }
-      >
-        <Pressable onPress={() => goBack('/home')} style={s.backLink}><Text style={s.backText}>‹ Back</Text></Pressable>
-        <Text style={s.eyebrow}>COMMUNITY</Text>
-        <Text style={s.title}>Builders like you.</Text>
+    <AppTabs active="community">
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} tintColor={colors.goldDeep}
+              onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />
+          }
+        >
+          <Pressable onPress={() => goBack('/home')} style={s.backLink}><Text style={s.backText}>‹ Back</Text></Pressable>
+          <Text style={s.eyebrow}>COMMUNITY</Text>
+          <Text style={s.title}>Builders like you.</Text>
 
-        <View style={s.tabs}>
-          {(['feed', 'challenges', 'league'] as Tab[]).map((t) => (
-            <Pressable key={t} onPress={() => setTab(t)} style={[s.tab, tab === t && s.tabActive]}
-              accessibilityRole="tab" accessibilityState={{ selected: tab === t }}>
-              <Text style={[s.tabText, tab === t && s.tabTextActive]}>
-                {t === 'feed' ? 'Feed' : t === 'challenges' ? 'Challenges' : 'League'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+          <View style={s.tabs}>
+            {(['feed', 'challenges', 'league'] as Tab[]).map((t) => (
+              <Pressable key={t} onPress={() => setTab(t)} style={[s.tab, tab === t && s.tabActive]}
+                accessibilityRole="tab" accessibilityState={{ selected: tab === t }}>
+                <Text style={[s.tabText, tab === t && s.tabTextActive]}>
+                  {t === 'feed' ? 'Feed' : t === 'challenges' ? 'Challenges' : 'League'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-        {tab === 'feed' && (
-          <Feed
-            posts={posts}
-            onChanged={load}
-            onCompose={() => setComposing(true)}
-            uid={user?.uid}
-          />
-        )}
-        {tab === 'challenges' && <Challenges items={challenges} onChanged={load} uid={user?.uid} />}
-        {tab === 'league' && <League board={league} />}
-      </ScrollView>
+          {tab === 'feed' && (
+            <Feed
+              posts={posts}
+              onChanged={load}
+              onCompose={() => setComposing(true)}
+              uid={user?.uid}
+            />
+          )}
+          {tab === 'challenges' && <Challenges items={challenges} onChanged={load} uid={user?.uid} />}
+          {tab === 'league' && <League board={league} />}
+        </ScrollView>
 
-      {composing && <Composer onClose={() => setComposing(false)} onPosted={load} uid={user?.uid} />}
-    </KeyboardAvoidingView>
+        {composing && <Composer onClose={() => setComposing(false)} onPosted={load} uid={user?.uid} />}
+      </KeyboardAvoidingView>
+    </AppTabs>
   );
 }
 
@@ -373,7 +376,7 @@ const Composer: React.FC<{ onClose: () => void; onPosted: () => Promise<void>; u
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream, padding: space.xl },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.2, paddingBottom: space.xxl },
+  scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
   backLink: { paddingVertical: space.sm, alignSelf: 'flex-start' },
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },

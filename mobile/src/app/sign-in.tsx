@@ -173,7 +173,7 @@ const Field: React.FC<{ label: string } & React.ComponentProps<typeof TextInput>
 
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.2, flexGrow: 1 },
+  scroll: { padding: space.lg, paddingTop: space.sm, flexGrow: 1 },
   back: { paddingVertical: space.sm, alignSelf: 'flex-start' },
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },

@@ -95,7 +95,7 @@ const s = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.cream, padding: space.xl,
   },
-  scroll: { padding: space.lg, paddingTop: space.xxl * 1.4, paddingBottom: space.xxl },
+  scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
   title: {
     fontFamily: font.black, fontSize: type.display, color: colors.ink,

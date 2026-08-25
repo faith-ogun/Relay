@@ -178,7 +178,7 @@ const s = StyleSheet.create({
   },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
-    paddingHorizontal: space.lg, paddingTop: space.xxl * 1.1, paddingBottom: space.md,
+    paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.md,
   },
   close: { fontFamily: font.black, fontSize: type.heading, color: colors.inkSoft },
   track: {
