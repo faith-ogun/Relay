@@ -757,9 +757,13 @@ export function nextId(parts: Part[], kind: PartKind): string {
 
 export function addPart(snap: CircuitSnapshot, kind: PartKind, w: number, h: number): { snap: CircuitSnapshot; id: string } {
   const spec = SPECS[kind];
-  // Vertical by default: a phone canvas is taller than it is wide, and upright
-  // parts pack into three columns where flat ones manage two.
-  const vertical = spec.rotatable;
+  // Horizontal by default, matching the circuit the builder opens on.
+  //
+  // Vertical packs into three columns rather than two, which is the better use
+  // of a tall canvas, but it meant deleting a part and adding it back gave you
+  // something that did not look like what you removed. Least surprise beats
+  // tighter packing, and rotation is one tap away for anyone who wants it.
+  const vertical = false;
   const at = freeSlot(snap.parts, kind, vertical, w, h);
   const id = nextId(snap.parts, kind);
   const part: Part = {
@@ -809,7 +813,24 @@ export function movePart(
     ? { x: Math.round(x / SNAP) * SNAP, y: Math.round(y / SNAP) * SNAP }
     : { x: Math.round(x), y: Math.round(y) };
   return {
-    parts: snap.parts.map((p) => (p.id === id ? clampToCanvas({ ...p, ...at }, w, h) : p)),
+    parts: snap.parts.map((p) => {
+      if (p.id !== id) return p;
+      const clamped = clampToCanvas({ ...p, ...at }, w, h);
+      if (!snapToGrid) return clamped;
+      // Snap AFTER clamping, then clamp again.
+      //
+      // Clamping moves a part by whatever it takes to get its whole footprint
+      // back on the canvas, which is almost never a multiple of the grid. So a
+      // part dragged off an edge landed between grid lines and no longer aligned
+      // with anything else on the board. Re-snapping can push it back off by at
+      // most half a step, hence the second clamp.
+      const snapped = {
+        ...clamped,
+        x: Math.round(clamped.x / SNAP) * SNAP,
+        y: Math.round(clamped.y / SNAP) * SNAP,
+      };
+      return clampToCanvas(snapped, w, h);
+    }),
     connections: snap.connections,
   };
 }

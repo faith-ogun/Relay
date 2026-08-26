@@ -95,28 +95,18 @@ export const OutOfHearts: React.FC<{
           />
         </Svg>
         <View style={s.ringCore}>
-          {refilled ? (
-            // The reward at the end of a wait that can run to ninety minutes.
-            // Swapping the muted outline for real artwork is what makes the
-            // arrival an event rather than a colour change.
-            <Image
-              source={require('../../assets/brand/heart-refilled.png')}
-              style={s.refilledArt}
-              contentFit="contain"
-              transition={220}
-              accessible={false}
-            />
-          ) : (
-            <Svg width={44} height={44} viewBox="0 0 24 24">
-              <Path
-                d="M12 20.5S3.5 15.4 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.8-8.5 10.9-8.5 10.9z"
-                fill="none"
-                stroke={colors.inkMute}
-                strokeWidth={2.2}
-                strokeLinejoin="round"
-              />
-            </Svg>
-          )}
+          {/* The artwork is present in BOTH states, drained while waiting and full
+              colour on arrival. It used to appear only once a heart landed, so the
+              screen a learner actually sits on showed a grey outline that read as a
+              missing asset rather than as a waiting state. The change in the art is
+              the reward; its absence was just an empty box. */}
+          <Image
+            source={require('../../assets/brand/heart-refilled.png')}
+            style={[s.refilledArt, !refilled && s.refilledArtWaiting]}
+            contentFit="contain"
+            transition={260}
+            accessible={false}
+          />
         </View>
       </Animated.View>
 
@@ -174,6 +164,9 @@ const s = StyleSheet.create({
   // each side), checked by rendering it inside the real ring rather than
   // guessing from the numbers.
   refilledArt: { width: 96, height: 88 },
+  // Drained rather than hidden. Enough colour left to read as a heart, little
+  // enough that the moment it fills is unmistakable.
+  refilledArtWaiting: { opacity: 0.3 },
   copy: { alignItems: 'center', marginTop: space.lg },
   title: {
     fontFamily: font.black, fontSize: type.title, color: colors.ink,

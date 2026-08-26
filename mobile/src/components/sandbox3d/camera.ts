@@ -48,7 +48,13 @@ export interface CameraPose {
 const VIEWS: Record<CameraView, Omit<CameraPose, 'target'> & { target: [number, number, number] }> = {
   // The default: both boards in frame, seen from the learner's own side of the
   // bench at the angle a person actually leans in at.
-  fit: { theta: Math.PI / 2, phi: 0.72, radius: 7.4, target: [0, 0, -0.6] },
+  // Opens closer to overhead than a hero shot would.
+  //
+  // At phi 0.72 the board is seen at a steep angle and the hole grid vanishes
+  // into foreshortening, so there is no way to tell where a part would land.
+  // Nearer the top the rows and columns read as a grid, which is the whole
+  // point of a breadboard, and closer in because a phone is not a monitor.
+  fit: { theta: Math.PI / 2, phi: 0.42, radius: 6.4, target: [0, 0, -0.4] },
   // Straight down, for reading row and column labels and following a wire.
   top: { theta: Math.PI / 2, phi: MIN_PHI, radius: 6.2, target: [0, 0, -0.5] },
   // Along the board, for seeing how tall the parts are and whether a leg is

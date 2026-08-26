@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PanResponder } from 'react-native';
 import { LIVE_CIRCUITS, type LiveCircuitDef } from '../../sim/circuits';
 import { initTransient, solve, stepTransient, type SolveResult, type TransientState } from '../../sim/engine';
@@ -32,12 +32,29 @@ const Knob: React.FC<{
   // responder system, so the page scrolled while the knob also moved.
   const { setLocked } = useScrollLock();
   const width = useRef(0);
+  // The track's absolute left edge on screen.
+  //
+  // locationX is relative to WHICHEVER VIEW received the touch, and the thumb is
+  // a child of the track. Grabbing the thumb therefore reported 0 to 28 instead
+  // of a position along the track, so the value snapped to the minimum: exactly
+  // the "lift my finger and it jumps back to the start" symptom, and why the far
+  // end was unreachable, since that is where the thumb sits under the finger.
+  // pageX is absolute and does not care which view was hit.
+  const originX = useRef(0);
+  const trackRef = useRef<View>(null);
   const latest = useRef(value);
   latest.current = value;
 
-  const setFromX = (x: number) => {
+  const measure = () => {
+    trackRef.current?.measureInWindow((x, _y, w) => {
+      originX.current = x;
+      if (w > 0) width.current = w;
+    });
+  };
+
+  const setFromX = (pageX: number) => {
     if (width.current <= 0) return;
-    const frac = Math.min(1, Math.max(0, x / width.current));
+    const frac = Math.min(1, Math.max(0, (pageX - originX.current) / width.current));
     const raw = min + frac * (max - min);
     const snapped = Math.round(raw / step) * step;
     const clamped = Math.min(max, Math.max(min, snapped));
@@ -52,8 +69,10 @@ const Knob: React.FC<{
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: (e) => { setLocked(true); setFromX(e.nativeEvent.locationX); },
-      onPanResponderMove: (e) => setFromX(e.nativeEvent.locationX),
+      // Re-measure on every grant: the track moves when the page scrolls, and a
+      // stale origin would offset every reading by the scroll distance.
+      onPanResponderGrant: (e) => { setLocked(true); measure(); setFromX(e.nativeEvent.pageX); },
+      onPanResponderMove: (e) => setFromX(e.nativeEvent.pageX),
       // Released AND terminated, or a cancelled gesture leaves the page stuck.
       onPanResponderRelease: () => setLocked(false),
       onPanResponderTerminate: () => setLocked(false),
@@ -63,14 +82,17 @@ const Knob: React.FC<{
   const frac = (value - min) / (max - min);
   return (
     <View
+      ref={trackRef}
       style={k.track}
-      onLayout={(e: LayoutChangeEvent) => { width.current = e.nativeEvent.layout.width; }}
+      onLayout={measure}
       {...responder.panHandlers}
       accessibilityRole="adjustable"
       accessibilityValue={{ min, max, now: value }}
     >
-      <View style={[k.fill, { width: `${frac * 100}%` }]} />
-      <View style={[k.thumb, { left: `${frac * 100}%` }]} />
+      {/* Neither child may take the touch: the responder belongs to the track,
+          so the finger position always means the same thing. */}
+      <View pointerEvents="none" style={[k.fill, { width: `${frac * 100}%` }]} />
+      <View pointerEvents="none" style={[k.thumb, { left: `${frac * 100}%` }]} />
     </View>
   );
 };

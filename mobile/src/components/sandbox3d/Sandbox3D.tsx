@@ -259,10 +259,13 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
       const s = scene.current;
       if (!s) return;
       s.rig.arrest();
-      const { locationX, locationY } = e.nativeEvent;
+      const { locationX, locationY, pageX, pageY } = e.nativeEvent;
       const t = touch.current;
       t.count = e.nativeEvent.touches.length;
-      t.x = locationX; t.y = locationY;
+      // Seeded in page space to match the deltas taken in onPanResponderMove.
+      // Seeding in one frame and differencing in another is a jump on the very
+      // first move of every gesture.
+      t.x = pageX; t.y = pageY;
       t.startX = locationX; t.startY = locationY;
       t.startedAt = Date.now();
       t.moved = 0;
@@ -316,11 +319,18 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
         return;
       }
 
-      const { locationX, locationY } = e.nativeEvent;
-      if (t.count !== 1) { t.count = 1; t.x = locationX; t.y = locationY; return; }
-      const dx = locationX - t.x;
-      const dy = locationY - t.y;
-      t.x = locationX; t.y = locationY;
+      const { locationX, locationY, pageX, pageY } = e.nativeEvent;
+      // Camera deltas come from PAGE coordinates, hit tests from LOCATION.
+      //
+      // locationX is relative to whichever view received the event, so it
+      // changes reference frame when the finger crosses a child and on every
+      // multi-touch transition. Differencing it across that boundary produces a
+      // delta of hundreds of pixels in one frame, which is the camera jumping to
+      // a completely new position. pageX is absolute and never re-bases.
+      if (t.count !== 1) { t.count = 1; t.x = pageX; t.y = pageY; return; }
+      const dx = pageX - t.x;
+      const dy = pageY - t.y;
+      t.x = pageX; t.y = pageY;
       t.moved += Math.abs(dx) + Math.abs(dy);
       if (t.moved > TAP_SLOP) clearHold();
 
