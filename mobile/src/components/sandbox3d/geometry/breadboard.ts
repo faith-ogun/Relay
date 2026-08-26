@@ -42,7 +42,12 @@ const GROOVE_DARK: Rgba = rgb(0xc9c6bd);
 // would land.
 const HOLE_RING: Rgba = rgb(0x6f6d66);
 const HOLE_DARK: Rgba = rgb(0x25272b);
-const PRINT: Rgba = rgb(0x5c6068);
+// Near-black, and the labels below are half again larger than a real board's.
+// A physical breadboard prints its row letters at about 2mm and you read them
+// from 30cm with both eyes. Here they are a handful of texels on a surface seen
+// at an angle on a phone, and at 0x5c6068 they were not legible at all: there
+// was no way to tell which lane you were placing into.
+const PRINT: Rgba = rgb(0x2b2f36);
 const RED_LINE: Rgba = rgb(0xd6402f);
 const BLUE_LINE: Rgba = rgb(0x2f6fd0);
 
@@ -77,7 +82,7 @@ export function paintBreadboard(): THREE.DataTexture {
     const z = railStripeZ(rail.id);
     p.rect(0, z, TOP_W - 0.34, 0.012, colour);
     for (const end of [-1, 1]) {
-      p.text(rail.polarity, end * (TOP_W / 2 - 0.09), rail.z, 0.075, colour);
+      p.text(rail.polarity, end * (TOP_W / 2 - 0.095), rail.z, 0.105, colour);
     }
   }
 
@@ -103,8 +108,8 @@ export function paintBreadboard(): THREE.DataTexture {
     const label = String(printed);
     // Between row a and the rail's printed line, which is where a real board
     // puts them. Any further out and they collide with the rail stripe.
-    p.text(label, columnX(col), rowZ(0) - 0.062, 0.055, PRINT);
-    p.text(label, columnX(col), rowZ(ROWS - 1) + 0.062, 0.055, PRINT);
+    p.text(label, columnX(col), rowZ(0) - 0.068, 0.078, PRINT);
+    p.text(label, columnX(col), rowZ(ROWS - 1) + 0.068, 0.078, PRINT);
   }
 
   // Row letters at both ends.
@@ -112,8 +117,8 @@ export function paintBreadboard(): THREE.DataTexture {
     const letter = ROW_LETTERS[row];
     // Hard against the edge, because the 63 columns leave only 0.15 inch of
     // margin and that is exactly how tight it is on the real board too.
-    p.text(letter, -TOP_W / 2 + 0.045, rowZ(row), 0.046, PRINT);
-    p.text(letter, TOP_W / 2 - 0.045, rowZ(row), 0.046, PRINT);
+    p.text(letter, -TOP_W / 2 + 0.050, rowZ(row), 0.068, PRINT);
+    p.text(letter, TOP_W / 2 - 0.050, rowZ(row), 0.068, PRINT);
   }
 
   return p.texture();

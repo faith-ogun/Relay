@@ -27,8 +27,8 @@ import { motion } from '../theme/motion';
  * be worth an animation loop running for an hour and a half.
  */
 
-const RING = 132;
-const STROKE = 10;
+const RING = 168;
+const STROKE = 12;
 const R = (RING - STROKE) / 2;
 const C = 2 * Math.PI * R;
 
@@ -163,7 +163,10 @@ const s = StyleSheet.create({
   // Sized against the ring's 112pt interior (132 outer minus the 10pt stroke
   // each side), checked by rendering it inside the real ring rather than
   // guessing from the numbers.
-  refilledArt: { width: 96, height: 88 },
+  // Sized to the ring's interior (RING minus the stroke on each side), and
+  // centred on the heart's SOLID mass rather than its bounding box, which the
+  // sparks skewed upward.
+  refilledArt: { width: 130, height: 113 },
   // Drained rather than hidden. Enough colour left to read as a heart, little
   // enough that the moment it fills is unmistakable.
   refilledArtWaiting: { opacity: 0.3 },
