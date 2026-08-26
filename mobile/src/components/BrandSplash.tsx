@@ -1,103 +1,50 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { colors, font, type } from '../theme/tokens';
+import React from 'react';
+import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+// The exact ground the launch artwork is painted on, sampled from the file
+// rather than taken from the brand tokens. `colors.cream` is a yellower cream
+// and the two sit 2.7 dE apart, which is far enough that butting them against
+// each other shows as a band across the screen.
+const GROUND = '#fcf8f5';
 
 /**
- * The brand moment before the app resolves where you belong.
+ * The launch image, held while the app works out where you belong.
  *
- * Duolingo and Mimo both hold a full-bleed brand screen for a beat on launch,
- * and it is most of why they read as established rather than assembled. Ohmlet
- * had a spinner on a cream field, which reads as a page still loading.
- *
- * One motion: the mascot rises and settles while a ring charges around it, then
- * the wordmark fades up. Nothing loops, because this screen is meant to end.
+ * This is the same artwork the iOS launch storyboard shows, fitted the same way
+ * and positioned the same way, so the moment the JS bundle takes over there is
+ * nothing to see: no jump, no fade, no second wordmark. That continuity is the
+ * point, and it is also why nothing here animates. The screen before it is a
+ * still image, so motion would announce the seam rather than cover it.
  */
 export const BrandSplash: React.FC = () => {
-  const rise = useRef(new Animated.Value(0)).current;
-  const charge = useRef(new Animated.Value(0)).current;
-  const word = useRef(new Animated.Value(0)).current;
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(rise, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
-        // NOT useNativeDriver: the legacy native driver animates transform and
-        // opacity only, so a stroke property driven through it silently never
-        // moves. This ring is the first animation in the app and it was dead.
-        Animated.timing(charge, {
-          toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false,
-        }),
-      ]),
-      Animated.timing(word, {
-        toValue: 1, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true,
-      }),
-    ]).start();
-  }, [rise, charge, word]);
-
-  const R = 92;
-  const CIRC = 2 * Math.PI * R;
-
+  // The root layout insets every screen from the top so back buttons clear the
+  // Dynamic Island. The splash has no controls and is deliberately full bleed,
+  // so it steps back out of that inset and covers the window edge to edge, the
+  // way the launch storyboard does. Without this the artwork would start a
+  // status bar lower than it did a frame earlier, and the strip above it would
+  // be the shell's cream rather than the artwork's.
   return (
-    <View style={s.screen}>
-      <View style={s.centre}>
-        {/* The ring charges once, like a capacitor filling. */}
-        <Svg width={R * 2 + 16} height={R * 2 + 16} style={StyleSheet.absoluteFill}>
-          <Circle
-            cx={R + 8} cy={R + 8} r={R}
-            stroke="rgba(10,10,10,0.10)" strokeWidth={5} fill="none"
-          />
-          <AnimatedCircle
-            cx={R + 8} cy={R + 8} r={R}
-            stroke={colors.ink} strokeWidth={5} fill="none" strokeLinecap="round"
-            strokeDasharray={`${CIRC} ${CIRC}`}
-            strokeDashoffset={charge.interpolate({ inputRange: [0, 1], outputRange: [CIRC, 0] })}
-            transform={`rotate(-90 ${R + 8} ${R + 8})`}
-          />
-        </Svg>
-
-        <Animated.View
-          style={{
-            opacity: rise,
-            transform: [
-              { translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) },
-              { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] }) },
-            ],
-          }}
-        >
-          <Image
-            source={require('../../assets/brand/mascot-wave.png')}
-            style={s.mascot}
-            resizeMode="contain"
-            accessibilityRole="image"
-            accessibilityLabel="Ohmlet"
-          />
-        </Animated.View>
-      </View>
-
-      <Animated.Text
-        style={[
-          s.wordmark,
-          {
-            opacity: word,
-            transform: [{ translateY: word.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
-          },
-        ]}
-      >
-        OHMLET
-      </Animated.Text>
+    <View style={[s.screen, { top: -insets.top, width, height }]}>
+      <Image
+        source={require('../../assets/brand/splash-screen.png')}
+        style={s.art}
+        // scaleAspectFit, matching the storyboard. The artwork's own ground runs
+        // to all four edges and GROUND matches it exactly, so the fitted bands
+        // read as more of the same cream rather than as letterboxing, and the
+        // face and the wordmark survive every screen shape uncropped.
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel="Ohmlet"
+      />
     </View>
   );
 };
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
-  centre: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center' },
-  mascot: { width: 132, height: 132 },
-  wordmark: {
-    position: 'absolute', bottom: 72,
-    fontFamily: font.black, fontSize: type.heading, letterSpacing: 8, color: colors.ink,
-  },
+  screen: { position: 'absolute', left: 0, backgroundColor: GROUND },
+  art: { width: '100%', height: '100%' },
 });

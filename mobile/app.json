@@ -112,10 +112,19 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#facc2e",
-          "image": "./assets/brand/mascot-wave.png",
-          "imageWidth": 132,
-          "resizeMode": "contain"
+          "backgroundColor": "#fcf8f5",
+          "ios": {
+            "backgroundColor": "#fcf8f5",
+            "image": "./assets/brand/splash-screen.png",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
+          },
+          "android": {
+            "backgroundColor": "#facc2e",
+            "image": "./assets/brand/mascot-wave.png",
+            "imageWidth": 132,
+            "resizeMode": "contain"
+          }
         }
       ],
       "expo-font",
