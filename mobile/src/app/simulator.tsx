@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
 import { UnoBoard } from '../components/UnoBoard';
+import { CircuitTab } from '../components/sim/CircuitTab';
+import { SimTabs, type SimTab } from '../components/sim/SimTabs';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
 import { track } from '../services/analytics';
@@ -45,6 +47,10 @@ const SAMPLE: Array<[Port, number]> = PINS.map((p) => UNO_PIN[p]).filter(Boolean
  * know why.
  */
 export default function Simulator() {
+  // Three ways into the same idea: write the code, turn the circuit, build it
+  // on a board. They were one screen showing a single Arduino, which made the
+  // simulator look like a code runner rather than a bench.
+  const [tab, setTab] = useState<SimTab>('code');
   const [source, setSource] = useState(STARTER);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Diagnostic[]>([]);
@@ -125,8 +131,18 @@ export default function Simulator() {
 
   const factor = speed ? speed / 16_000_000 : null;
 
+  if (tab === 'circuit') {
+    return (
+      <AppTabs active="practice">
+        <SimTabs value={tab} onChange={setTab} />
+        <CircuitTab />
+      </AppTabs>
+    );
+  }
+
   return (
     <AppTabs active="practice">
+      <SimTabs value={tab} onChange={setTab} />
       <ScrollView style={s.flex} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <Text style={s.kicker}>SIMULATOR</Text>
         <Text style={s.title}>Run it without the hardware.</Text>
