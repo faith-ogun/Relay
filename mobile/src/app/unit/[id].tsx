@@ -18,11 +18,13 @@ export default function UnitDetail() {
 
   useEffect(() => {
     let alive = true;
-    getManifest()
-      .then((m) => {
-        if (!alive) return;
-        setUnit(m?.units.find((u) => u.id === id) ?? null);
-      })
+    const pick = (m: { units: CurriculumUnit[] } | null) =>
+      m?.units.find((u) => u.id === id) ?? null;
+    // Without the callback this screen showed whatever the cache held when it
+    // mounted, for as long as it stayed open: the background refresh wrote the
+    // new path to storage and nothing on screen asked for it again.
+    getManifest((fresh) => { if (alive) setUnit(pick(fresh)); })
+      .then((m) => { if (alive) setUnit(pick(m)); })
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [id]);

@@ -36,15 +36,21 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
+    // getManifest returns the cached path first and refreshes behind it, so the
+    // two can arrive in either order: loadProgress below also hits the network,
+    // and when it is the slower of the two the refreshed path lands BEFORE this
+    // Promise.all settles. Applying the returned copy unconditionally then put
+    // the stale path straight back on screen.
+    let refreshed = false;
     const [m, p, prof] = await Promise.all([
       // The callback matters: without it a refreshed manifest was written to
       // cache and not shown until the next cold start, so content changes
       // appeared to take a relaunch.
-      getManifest((fresh) => setManifest(fresh)),
+      getManifest((fresh) => { refreshed = true; setManifest(fresh); }),
       user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
       loadProfile(),
     ]);
-    setManifest(m);
+    if (!refreshed) setManifest(m);
     setProgress(p);
     setProfile(prof);
   }, [user?.uid]);
