@@ -32,6 +32,10 @@ const milliamps = (a: number) => {
  * standard 5mm LED is designed to sit. Below about 1mA the eye sees nothing, so
  * the glow is clamped rather than fading to an invisible smear that suggests the
  * circuit is doing something it is not.
+ *
+ * The warning threshold is 25mA, the absolute maximum for a standard red LED,
+ * not a round 30. 9V through 220 ohms is 29.8mA, so the difference decides
+ * whether the most common beginner circuit in the world is reported as fine.
  */
 export const LiveLed: React.FC<{ current: number; size?: number }> = ({ current, size = 56 }) => {
   const mA = Math.max(0, current * 1000);
@@ -79,8 +83,8 @@ export const LiveReadout: React.FC<{
             <Text style={s.ledLabel}>
               {ledCurrent * 1000 < 1
                 ? 'The LED is dark'
-                : ledCurrent * 1000 > 30
-                  ? 'Brighter than the LED is rated for'
+                : ledCurrent * 1000 > 25
+                  ? 'Past what the LED is rated for'
                   : 'The LED is lit'}
             </Text>
             <Text style={s.ledValue}>{milliamps(ledCurrent)}</Text>

@@ -7,6 +7,7 @@ import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
 import { UnoBoard } from '../components/UnoBoard';
 import { CircuitTab } from '../components/sim/CircuitTab';
+import { CircuitBuilder } from '../components/sim/CircuitBuilder';
 import { SimTabs, type SimTab } from '../components/sim/SimTabs';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
@@ -136,6 +137,26 @@ export default function Simulator() {
       <AppTabs active="practice">
         <SimTabs value={tab} onChange={setTab} />
         <CircuitTab />
+      </AppTabs>
+    );
+  }
+
+  if (tab === 'build') {
+    return (
+      <AppTabs active="practice">
+        <SimTabs value={tab} onChange={setTab} />
+        {/* The builder renders a plain View with no scroller of its own, and its
+            drag gestures refuse termination, so it sits inside this one without
+            the two fighting over a vertical drag. */}
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+          <Text style={s.kicker}>BUILD</Text>
+          <Text style={s.title}>Wire it yourself.</Text>
+          <Text style={s.body}>
+            Tap a pin, then tap another to join them. Everything you build is solved as you
+            go, including the mistakes, which are the useful part.
+          </Text>
+          <CircuitBuilder style={{ marginTop: space.md }} />
+        </ScrollView>
       </AppTabs>
     );
   }

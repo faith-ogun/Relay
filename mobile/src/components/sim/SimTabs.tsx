@@ -11,12 +11,13 @@ import { colors, curve, font, radius, space, type } from '../../theme/tokens';
  * bottom bar would say they are peers of Learn and Community, which they are not.
  */
 
-export type SimTab = 'code' | 'circuit' | 'sandbox';
+export type SimTab = 'code' | 'circuit' | 'build' | 'sandbox';
 
 const LABELS: { key: SimTab; label: string; hint: string }[] = [
   { key: 'code', label: 'Code', hint: 'Write and run a sketch' },
-  { key: 'circuit', label: 'Circuit', hint: 'Solve a circuit live' },
-  { key: 'sandbox', label: 'Sandbox', hint: 'Build on a breadboard' },
+  { key: 'circuit', label: 'Circuit', hint: 'Turn a solved circuit and watch it respond' },
+  { key: 'build', label: 'Build', hint: 'Wire your own circuit and solve it' },
+  { key: 'sandbox', label: 'Sandbox', hint: 'Build on a 3D breadboard' },
 ];
 
 export const SimTabs: React.FC<{ value: SimTab; onChange: (t: SimTab) => void }> = ({ value, onChange }) => (
@@ -55,6 +56,8 @@ const s = StyleSheet.create({
   },
   segOn: { backgroundColor: colors.white },
   segPressed: { backgroundColor: 'rgba(255,255,255,0.5)' },
+  // Four segments on a 393pt screen leaves about 85pt each. At type.small the
+  // longest label still fits without truncating.
   label: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
   labelOn: { color: colors.ink },
 });
