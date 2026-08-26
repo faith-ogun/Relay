@@ -148,6 +148,31 @@ const PageSpinner: React.FC = () => (
   </div>
 );
 
+/**
+ * The site answers on ohmlet.org, ohmlet-app.web.app and
+ * ohmlet-app.firebaseapp.com, all serving identical content. Firebase's two
+ * default domains cannot be removed, so without a canonical a crawler sees three
+ * copies of every page and splits the ranking between them.
+ *
+ * Per PATH, not a fixed homepage URL: routing is pushState, so a static tag in
+ * index.html would tell search engines that every page IS the homepage, which is
+ * worse than having none at all.
+ */
+const CANONICAL_ORIGIN = 'https://ohmlet.org';
+
+function setCanonical(path: string): void {
+  let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'canonical';
+    document.head.appendChild(link);
+  }
+  // Trailing slash only at the root, so /blog/x and /blog/x/ do not become two
+  // canonicals for one page.
+  const clean = path === '/' ? '/' : path.replace(/\/+$/, '');
+  link.href = `${CANONICAL_ORIGIN}${clean}`;
+}
+
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(() => resolveRoute(window.location.pathname));
   const [blogSlug, setBlogSlug] = useState<string | null>(() => resolveBlogSlug(window.location.pathname));
@@ -181,6 +206,12 @@ const App: React.FC = () => {
     await signOut();
     navigate('landing');
   }, [signOut, navigate]);
+
+  // Every route change rewrites the canonical, including back/forward, which
+  // popstate below feeds into `route` and the slug state.
+  useEffect(() => {
+    setCanonical(normalizePath(window.location.pathname));
+  }, [route, blogSlug, shareId]);
 
   useEffect(() => {
     const onPopState = () => {
