@@ -209,6 +209,12 @@ const PinPad: React.FC<{
 };
 
 const p = StyleSheet.create({
+  unwired: {
+    position: 'absolute', top: -9, alignSelf: 'center',
+    backgroundColor: colors.red, borderRadius: 999, ...curve,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  unwiredText: { fontFamily: font.black, fontSize: 8, letterSpacing: 1, color: colors.white },
   target: { position: 'absolute', width: PIN_HIT, height: PIN_HIT, alignItems: 'center', justifyContent: 'center' },
   dot: {
     width: 19, height: 19, borderRadius: 10,
@@ -325,6 +331,15 @@ const PartLayer: React.FC<PartLayerProps> = ({
       accessibilityHint="Drag to move it. Tap to open its settings."
       accessibilityState={{ selected }}
     >
+      {/* Nothing wired to it yet. A new part arrives unconnected, which is
+          correct and completely invisible: the learner adds a second LED, it
+          does not light, and nothing on the canvas says why. The ring is the
+          missing sentence. */}
+      {spec.pins.every((_, i) => !isWired(pinRef(part.id, i))) && (
+        <View style={p.unwired} pointerEvents="none">
+          <Text style={p.unwiredText}>NOT WIRED</Text>
+        </View>
+      )}
       {spec.pins.map((name, i) => {
         const ref = pinRef(part.id, i);
         return (
