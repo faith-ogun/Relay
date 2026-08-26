@@ -1,0 +1,32 @@
+# Ohmlet — https://ohmlet.org
+#
+# The marketing site is open. The app surfaces are not: every one of them is
+# behind auth, so a crawler that follows them indexes a login screen under a URL
+# that promises a product. Shared build pages under /t/ stay open on purpose,
+# because being findable is the point of sharing one.
+
+User-agent: *
+
+# Signed-in product. Nothing here renders without an account.
+Disallow: /ohmlet-app
+Disallow: /app
+Disallow: /ohmlet
+Disallow: /lab
+Disallow: /workspace
+Disallow: /account
+Disallow: /welcome
+
+# Authoring and internal tools.
+Disallow: /author
+Disallow: /cards
+Disallow: /parts
+
+# Auth flows and post-checkout. A search result landing someone mid-purchase is
+# a support ticket, not a visit.
+Disallow: /login
+Disallow: /signup
+Disallow: /upgrade-success
+
+Allow: /
+
+Sitemap: https://ohmlet.org/sitemap.xml
