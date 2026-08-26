@@ -13,6 +13,7 @@ import {
 import { achievementStats, EMPTY, loadProgress, type Progress, type ServerStats } from '../services/progress';
 import { fetchCommunityStats } from '../services/community';
 import { getManifest } from '../services/curriculum';
+import { AchievementCard } from '../components/AchievementCard';
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 
@@ -90,6 +91,10 @@ export default function Achievements() {
           backdrop covered everything. Tapping a card dimmed the screen and showed
           nothing. A Modal renders above the whole app and handles the Android back
           button as well. */}
+      {/* Tapping a card opens it big. Tapping the card turns it over; tapping
+          anywhere outside goes back to the case. The story on the back is the
+          reward for earning it, so it costs a gesture rather than arriving with
+          the panel. */}
       <Modal
         visible={!!open}
         transparent
@@ -97,28 +102,27 @@ export default function Achievements() {
         onRequestClose={() => setOpen(null)}
       >
         {open && (
-        <Pressable style={s.sheetBackdrop} onPress={() => setOpen(null)}>
-          <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
-            <View style={[s.sheetTier, { backgroundColor: TIER_COLOR[open.tier as Tier] }]}>
-              <Text style={s.sheetTierText}>{TIER_LABEL[open.tier as Tier]?.toUpperCase()}</Text>
-            </View>
-            <Text style={s.sheetTitle}>{open.title}</Text>
-            <Text style={s.sheetDesc}>{open.desc}</Text>
-            {isEarned(open, stats) ? (
-              <Text style={s.sheetBack}>{open.backText}</Text>
-            ) : (
-              <Text style={s.sheetLocked}>
-                {UNTRACKED.has(open.metric)
-                  ? 'Progress on this one is tracked on the community side and is not shown here yet.'
-                  : `${stats[open.metric] ?? 0} of ${open.threshold}`}
-              </Text>
-            )}
-            <Text style={s.sheetRarity}>About {open.rarity}% of learners hold this.</Text>
-            <Pressable onPress={() => setOpen(null)} style={s.sheetClose}>
-              <Text style={s.sheetCloseText}>Close</Text>
+          <Pressable
+            style={s.sheetBackdrop}
+            onPress={() => setOpen(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Back to all achievements"
+          >
+            {/* Swallows taps so a press on the card or its blurb does not close
+                the inspector, while a press anywhere else does. */}
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <AchievementCard
+                achievement={open}
+                earned={isEarned(open, stats)}
+                progress={progressOf(open, stats)}
+                progressLabel={
+                  UNTRACKED.has(open.metric)
+                    ? 'Tracked on the community side, not shown here yet'
+                    : `${stats[open.metric] ?? 0} of ${open.threshold}`
+                }
+              />
             </Pressable>
           </Pressable>
-        </Pressable>
         )}
       </Modal>
     </ScrollView>
@@ -207,20 +211,4 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(20,24,31,0.5)', alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
-  sheet: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%', ...elevation.card,
-  },
-  sheetTier: { alignSelf: 'flex-start', borderRadius: 999, ...curve, paddingHorizontal: 10, paddingVertical: 3 },
-  sheetTierText: { fontFamily: font.black, fontSize: 9, color: colors.ink, letterSpacing: 1 },
-  sheetTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: space.sm },
-  sheetDesc: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4 },
-  sheetBack: {
-    fontFamily: font.semibold, fontSize: type.small, color: colors.ink,
-    marginTop: space.md, lineHeight: 20, fontStyle: 'italic',
-  },
-  sheetLocked: { fontFamily: font.black, fontSize: type.body, color: colors.goldDeep, marginTop: space.md },
-  sheetRarity: { fontFamily: font.regular, fontSize: type.meta, color: colors.inkSoft, marginTop: space.sm },
-  sheetClose: { marginTop: space.md, alignSelf: 'center', paddingVertical: space.sm },
-  sheetCloseText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
 });

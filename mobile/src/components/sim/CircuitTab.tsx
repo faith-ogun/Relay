@@ -4,6 +4,7 @@ import { PanResponder } from 'react-native';
 import { LIVE_CIRCUITS, type LiveCircuitDef } from '../../sim/circuits';
 import { initTransient, solve, stepTransient, type SolveResult, type TransientState } from '../../sim/engine';
 import { LiveReadout } from './LiveReadout';
+import { useScrollLock, LockableScrollView } from '../ScrollLock';
 import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
 import { elevation } from '../../theme/elevation';
 
@@ -27,6 +28,9 @@ const Knob: React.FC<{
   min: number; max: number; step: number; value: number;
   onChange: (v: number) => void;
 }> = ({ min, max, step, value, onChange }) => {
+  // Refusing the responder is not enough: UIScrollView competes below the JS
+  // responder system, so the page scrolled while the knob also moved.
+  const { setLocked } = useScrollLock();
   const width = useRef(0);
   const latest = useRef(value);
   latest.current = value;
@@ -48,8 +52,11 @@ const Knob: React.FC<{
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: (e) => setFromX(e.nativeEvent.locationX),
+      onPanResponderGrant: (e) => { setLocked(true); setFromX(e.nativeEvent.locationX); },
       onPanResponderMove: (e) => setFromX(e.nativeEvent.locationX),
+      // Released AND terminated, or a cancelled gesture leaves the page stuck.
+      onPanResponderRelease: () => setLocked(false),
+      onPanResponderTerminate: () => setLocked(false),
     }),
   ).current;
 
@@ -120,7 +127,7 @@ export const CircuitTab: React.FC = () => {
   const fmt = picked.control.format ?? ((v: number) => String(v));
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+    <LockableScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
       <Text style={s.kicker}>CIRCUIT</Text>
       <Text style={s.title}>Turn it and watch.</Text>
       <Text style={s.body}>
@@ -164,7 +171,7 @@ export const CircuitTab: React.FC = () => {
       <LiveReadout circuit={picked} result={result} fault={fault} />
 
       <Text style={s.prompt}>{picked.prompt}</Text>
-    </ScrollView>
+    </LockableScrollView>
   );
 };
 

@@ -9,6 +9,7 @@ import { UnoBoard } from '../components/UnoBoard';
 import { CircuitTab } from '../components/sim/CircuitTab';
 import { CircuitBuilder } from '../components/sim/CircuitBuilder';
 import { SandboxTab } from '../components/sim/SandboxTab';
+import { LockableScrollView } from '../components/ScrollLock';
 import { SimTabs, type SimTab } from '../components/sim/SimTabs';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
@@ -158,7 +159,7 @@ export default function Simulator() {
         {/* The builder renders a plain View with no scroller of its own, and its
             drag gestures refuse termination, so it sits inside this one without
             the two fighting over a vertical drag. */}
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <LockableScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <Text style={s.kicker}>BUILD</Text>
           <Text style={s.title}>Wire it yourself.</Text>
           <Text style={s.body}>
@@ -166,7 +167,7 @@ export default function Simulator() {
             go, including the mistakes, which are the useful part.
           </Text>
           <CircuitBuilder style={{ marginTop: space.md }} />
-        </ScrollView>
+        </LockableScrollView>
       </AppTabs>
     );
   }

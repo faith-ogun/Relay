@@ -4,6 +4,7 @@ import {
   Sandbox3D, pinDriveFromDuty, starterBuild,
   type PartKind, type PlacedPart, type SandboxTool, type Wire,
 } from '../sandbox3d';
+import { LockableScrollView } from '../ScrollLock';
 import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
 import { elevation } from '../../theme/elevation';
 
@@ -70,7 +71,7 @@ export const SandboxTab: React.FC = () => {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={s.scroll}>
+    <LockableScrollView contentContainerStyle={s.scroll}>
       <Text style={s.kicker}>SANDBOX</Text>
       <Text style={s.title}>Build it on a board.</Text>
       <Text style={s.body}>
@@ -147,7 +148,7 @@ export const SandboxTab: React.FC = () => {
       <Pressable onPress={reset} style={s.reset} accessibilityRole="button">
         <Text style={s.resetText}>Reset the board</Text>
       </Pressable>
-    </ScrollView>
+    </LockableScrollView>
   );
 };
 

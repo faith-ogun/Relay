@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { useScrollLock } from '../ScrollLock';
 import { colors, curve, font, radius, space, tabular, tracking, type } from '../../theme/tokens';
 import { elevation, innerLight } from '../../theme/elevation';
 import { motion, stagger } from '../../theme/motion';
@@ -612,11 +613,18 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [commit]);
 
+  // Refusing the responder is not enough on iOS: UIScrollView's pan recogniser
+  // competes below the JS responder system, so dragging a part scrolled the
+  // page AND moved the part at the same time. The scroller stands down for the
+  // duration of a drag instead.
+  const { setLocked } = useScrollLock();
+
   const onDragStart = useCallback((id: string) => {
+    setLocked(true);
     push();
     setSelected(id);
     setArmed(null);
-  }, [push]);
+  }, [push, setLocked]);
 
   const onDrag = useCallback((id: string, x: number, y: number) => {
     const s = sizeRef.current;
@@ -628,13 +636,14 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
   }, []);
 
   const onDragEnd = useCallback((id: string) => {
+    setLocked(false);
     const s = sizeRef.current;
     if (!s) return;
     setSnap((cur) => {
       const part = cur.parts.find((q) => q.id === id);
       return part ? movePart(cur, id, part.x, part.y, s.w, s.h, true) : cur;
     });
-  }, []);
+  }, [setLocked]);
 
   useImperativeHandle(ref, () => ({
     undo,

@@ -35,7 +35,12 @@ const TEX_H = 512;
 const PLASTIC: Rgba = rgb(0xf0eee7);
 const PLASTIC_SHADE: Rgba = rgb(0xdedbd2);
 const GROOVE_DARK: Rgba = rgb(0xc9c6bd);
-const HOLE_RING: Rgba = rgb(0xb9b6ac);
+// Darker and thicker than a real board's moulding, on purpose. A physical
+// breadboard is read at arm's length with both eyes and a shadow to help; this
+// one is read on a phone at a fitted camera distance, where 0xb9b6ac on white
+// left the grid almost invisible and there was no way to see where a part
+// would land.
+const HOLE_RING: Rgba = rgb(0x8b8880);
 const HOLE_DARK: Rgba = rgb(0x25272b);
 const PRINT: Rgba = rgb(0x5c6068);
 const RED_LINE: Rgba = rgb(0xd6402f);
@@ -80,7 +85,7 @@ export function paintBreadboard(): THREE.DataTexture {
   // and it is a few hundred thousand pixel writes at load rather than 1,660
   // meshes for the rest of the session.
   const ring = (x: number, z: number) => {
-    p.ring(x, z, HOLE_RADIUS * 0.72, HOLE_RADIUS * 1.5, HOLE_RING);
+    p.ring(x, z, HOLE_RADIUS * 0.70, HOLE_RADIUS * 1.62, HOLE_RING);
     p.disc(x, z, HOLE_RADIUS * 0.78, HOLE_DARK);
   };
   for (let col = 0; col < COLS; col++) {

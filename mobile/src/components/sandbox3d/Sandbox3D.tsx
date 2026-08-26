@@ -31,6 +31,7 @@ import {
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import * as Haptics from 'expo-haptics';
 import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
+import { useScrollLock } from '../ScrollLock';
 import { describeHole, SandboxScene, type PickResult } from './scene';
 import type {
   CameraView, HoleId, HoleTap, PartKind, PerfSample, PlacedPart, Quality,
@@ -240,12 +241,21 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
     setReadout(null);
   }, [pickAt]);
 
+  // Orbiting is a vertical drag, which is exactly what a ScrollView claims.
+  // Refusing the responder does not stop it: UIScrollView competes below the
+  // JS responder system, so the page scrolled while the camera also moved.
+  const { setLocked } = useScrollLock();
+
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
     onPanResponderTerminationRequest: () => false,
+    onShouldBlockNativeResponder: () => true,
 
     onPanResponderGrant: (e: GestureResponderEvent) => {
+      setLocked(true);
       const s = scene.current;
       if (!s) return;
       s.rig.arrest();
@@ -351,6 +361,7 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
     },
 
     onPanResponderRelease: (e: GestureResponderEvent) => {
+      setLocked(false);
       const s = scene.current;
       clearHold();
       if (!s) return;
@@ -388,6 +399,8 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
     },
 
     onPanResponderTerminate: () => {
+      // Released AND terminated, or a cancelled gesture leaves the page frozen.
+      setLocked(false);
       clearHold();
       const t = touch.current;
       t.dragging = null;
