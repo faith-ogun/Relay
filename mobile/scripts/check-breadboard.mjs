@@ -189,6 +189,43 @@ check('Arduino pins are addressable and GND is one net', () => {
   return `${pins.length} header positions`;
 });
 
+check('the digital header reads the way the board is printed', () => {
+  // With the USB socket on the left, a real Uno reads AREF, GND, 13 down to 8,
+  // a gap, then 7 down to 0. Mirroring it is invisible in a screenshot and
+  // makes every wiring instruction in the curriculum point at the wrong pin,
+  // which is a lesson that fails on the learner's desk and not on the phone.
+  const far = spec.UNO_PINS.filter((p) => p.z < 0).sort((a, b) => a.x - b.x);
+  const order = far.map((p) => p.name).join(' ');
+  assert.equal(
+    order,
+    'AREF GND D13 D12 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0',
+    'the digital header is in the wrong order',
+  );
+  // And the 0.16 inch jog between D7 and D8 that keeps a shield the right way up.
+  const d8 = far.find((p) => p.name === 'D8');
+  const d7 = far.find((p) => p.name === 'D7');
+  assert.ok(Math.abs((d7.x - d8.x) - 0.16) < 1e-9, `the D7 to D8 gap is ${(d7.x - d8.x).toFixed(3)} inch`);
+
+  const near = spec.UNO_PINS.filter((p) => p.z > 0).sort((a, b) => a.x - b.x);
+  assert.equal(
+    near.map((p) => p.name).join(' '),
+    'IOREF RESET 3V3 5V GND GND VIN A0 A1 A2 A3 A4 A5',
+    'the power and analog headers are in the wrong order',
+  );
+  return order;
+});
+
+check('no two header labels overlap', () => {
+  // Silkscreen labels are sized to fit the 0.1 inch pitch. Without that, "3V3"
+  // and "GND" run into each other until the whole header reads as one word,
+  // and a learner cannot find 5V at all.
+  const glyphs = readFileSync(join(SANDBOX, 'geometry/uno.ts'), 'utf8');
+  assert.ok(/textWidth\(pin\.label\)/.test(glyphs),
+    'the pin labels are no longer sized to fit the pitch');
+  const worst = spec.UNO_PINS.reduce((m, p) => Math.max(m, p.label.length), 0);
+  return `longest label ${worst} characters`;
+});
+
 // ── 2. Electrical ──────────────────────────────────────────────────────────
 
 check('part footprints land in the strips the catalogue promises', () => {
@@ -475,6 +512,43 @@ check('parts share geometry between instances', () => {
   assert.ok(c.geometries <= kinds.length + total * 3,
     `${c.geometries} geometries for ${total} parts`);
   return `${total} parts: ${c.draws} draws, ${(c.draws / total).toFixed(1)} per part`;
+});
+
+check('every part is its datasheet size and sits ON the board', () => {
+  // Two failures this catches, both of which look fine in a still and wrong the
+  // moment the camera tilts:
+  //   a body centred at y = 0, which buries half the part in the plastic
+  //     (the resistor's colour code did exactly this),
+  //   and PART_SPECS.height drifting away from the mesh it describes.
+  const library = mats.createMaterials();
+  const rows = [];
+  for (const [kind, spec] of Object.entries(parts.PART_SPECS)) {
+    const placed = { id: 'm', kind, anchor: topo.holeId.bb(20, 5), color: 'red' };
+    const obj = partGeo.createPart(placed, library);
+    obj.place(parts.partHoles(placed).map((h) => {
+      const info = h && topo.holeInfo(h);
+      return info ? new THREE.Vector3(...info.world) : null;
+    }));
+    obj.root.updateMatrixWorld(true);
+
+    const bounds = new THREE.Box3();
+    obj.root.traverse((o) => {
+      if (!o.isMesh || !o.visible || !o.geometry) return;
+      o.geometry.computeBoundingBox();
+      bounds.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+    });
+
+    // Nothing may hang more than a lead's thickness below the board surface.
+    assert.ok(bounds.min.y > -0.03,
+      `${kind} reaches ${(bounds.min.y * 25.4).toFixed(1)} mm INTO the board`);
+    assert.ok(Math.abs(bounds.max.y - spec.height) < 0.03,
+      `${kind} is ${bounds.max.y.toFixed(3)} inch tall but PART_SPECS says ${spec.height}`);
+    // Sanity on the outline: nothing in a starter kit is bigger than a servo.
+    const size = bounds.getSize(new THREE.Vector3());
+    assert.ok(size.x < 1.4 && size.z < 0.7, `${kind} is ${size.x.toFixed(2)} by ${size.z.toFixed(2)} inch`);
+    rows.push(`${kind} ${(bounds.max.y * 25.4).toFixed(1)}mm`);
+  }
+  return `${rows.length} parts measured`;
 });
 
 check('a full scene stays inside a phone frame budget', () => {

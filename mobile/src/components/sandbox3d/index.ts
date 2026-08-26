@@ -26,6 +26,11 @@ export {
 export type { PartSpec, PinSpec } from './parts';
 
 export { bandColors } from './materials';
+export { suggestWireColor } from './geometry/wire';
+
+// Turn a hole into something a learner can be shown: its printed label, the
+// strip it belongs to, and what the last solve found there.
+export { describeHole } from './scene';
 
 // The circuit engine seam. `solveBoard` takes the same board the component
 // takes and returns real node voltages and branch currents, so a shell can

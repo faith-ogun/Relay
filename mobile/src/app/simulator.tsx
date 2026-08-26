@@ -8,6 +8,7 @@ import { Button } from '../components/Button';
 import { UnoBoard } from '../components/UnoBoard';
 import { CircuitTab } from '../components/sim/CircuitTab';
 import { CircuitBuilder } from '../components/sim/CircuitBuilder';
+import { SandboxTab } from '../components/sim/SandboxTab';
 import { SimTabs, type SimTab } from '../components/sim/SimTabs';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
@@ -137,6 +138,15 @@ export default function Simulator() {
       <AppTabs active="practice">
         <SimTabs value={tab} onChange={setTab} />
         <CircuitTab />
+      </AppTabs>
+    );
+  }
+
+  if (tab === 'sandbox') {
+    return (
+      <AppTabs active="practice">
+        <SimTabs value={tab} onChange={setTab} />
+        <SandboxTab />
       </AppTabs>
     );
   }

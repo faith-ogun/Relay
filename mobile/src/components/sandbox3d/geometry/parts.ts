@@ -56,7 +56,14 @@ export function partBodyGeometry(
   return built;
 }
 
-/** Drop every cached body. Only for a full teardown; bodies are shared. */
+/**
+ * Drop every cached body.
+ *
+ * Must be called when the material library it was built against is disposed. A
+ * cached body holds direct references to that library's materials, so a second
+ * mount reusing the cache would be drawing with materials whose GPU programs
+ * have already been freed.
+ */
 export function clearPartCache(): void {
   for (const body of bodyCache.values()) body.geometry.dispose();
   bodyCache.clear();
@@ -112,17 +119,20 @@ const buildResistor: BodyBuilder = (m, variant) => {
   const material = m.resistor(ohms);
   const b = new MeshBuilder();
   const R = 0.047;              // 2.4 mm body
+  // Bent leads hold the body about 1.5 mm clear of the board. Sitting it at
+  // y = 0 would bury half the colour code in the plastic, which is both wrong
+  // and unreadable, and reading the bands is a lesson.
+  const LIFT = 0.06;
   // Body lies along x. The colour code is a stripe texture running down the
   // cylinder's own axis, which is one draw call instead of four little bands.
-  b.add(cyl(R, R, 0.25, 20, true), material, { rot: [0, 0, Math.PI / 2] });
-  b.add(flattenUV(sph(R, 14), 0.5, 0.06), material, { pos: [-0.125, 0, 0] });
-  b.add(flattenUV(sph(R, 14), 0.5, 0.06), material, { pos: [0.125, 0, 0] });
+  b.add(cyl(R, R, 0.25, 20, true), material, { pos: [0, LIFT, 0], rot: [0, 0, Math.PI / 2] });
+  b.add(flattenUV(sph(R, 14), 0.5, 0.06), material, { pos: [-0.125, LIFT, 0] });
+  b.add(flattenUV(sph(R, 14), 0.5, 0.06), material, { pos: [0.125, LIFT, 0] });
   const built = b.build();
   return {
     geometry: built.geometry,
     materials: built.materials,
-    // Bent leads hold the body about 1.5 mm off the board.
-    legAnchors: [[-0.128, 0, 0], [0.128, 0, 0]],
+    legAnchors: [[-0.128, LIFT, 0], [0.128, LIFT, 0]],
     legRadius: 0.008,
   };
 };
@@ -132,26 +142,28 @@ const buildResistor: BodyBuilder = (m, variant) => {
 const buildLdr: BodyBuilder = (m) => {
   const b = new MeshBuilder();
   const R = 0.1;                // 5.1 mm disc
-  b.add(cyl(R, R * 0.96, 0.055, 20), m.epoxyBrown, { pos: [0, 0.03, 0] });
-  b.add(cyl(R * 0.88, R * 0.88, 0.014, 20), m.ceramic, { pos: [0, 0.063, 0] });
+  // Its legs hold it a little clear of the board, the same as the resistor.
+  const LIFT = 0.03;
+  b.add(cyl(R, R * 0.96, 0.055, 20), m.epoxyBrown, { pos: [0, 0.03 + LIFT, 0] });
+  b.add(cyl(R * 0.88, R * 0.88, 0.014, 20), m.ceramic, { pos: [0, 0.063 + LIFT, 0] });
   // The serpentine track. It is the thing that makes a photocell recognisable
   // at a glance, and four straight bars with three returns is exactly its
   // shape from above.
   const track = m.plasticDark;
   for (let i = 0; i < 4; i++) {
     const z = -0.048 + i * 0.032;
-    b.add(box(0.13, 0.008, 0.011), track, { pos: [0, 0.071, z] });
+    b.add(box(0.13, 0.008, 0.011), track, { pos: [0, 0.071 + LIFT, z] });
   }
   for (let i = 0; i < 3; i++) {
     const z = -0.032 + i * 0.032;
     const x = i % 2 === 0 ? 0.06 : -0.06;
-    b.add(box(0.011, 0.008, 0.032), track, { pos: [x, 0.071, z] });
+    b.add(box(0.011, 0.008, 0.032), track, { pos: [x, 0.071 + LIFT, z] });
   }
   const built = b.build();
   return {
     geometry: built.geometry,
     materials: built.materials,
-    legAnchors: [[-0.045, 0.005, 0], [0.045, 0.005, 0]],
+    legAnchors: [[-0.045, 0.005 + LIFT, 0], [0.045, 0.005 + LIFT, 0]],
     legRadius: 0.008,
   };
 };

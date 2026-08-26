@@ -31,7 +31,15 @@ export interface PartSpec {
   pins: PinSpec[];
   /** Catalogue default for `PlacedPart.value`. */
   value?: number;
-  /** How far the body reaches above the board. Used for framing and shadows. */
+  /**
+   * How far the tallest point of the assembled part reaches above the board,
+   * in inches, animated pieces included.
+   *
+   * Kept honest by check-breadboard.mjs, which measures the real geometry and
+   * fails if this drifts. A number that quietly disagrees with the mesh is
+   * worse than no number, because a shell laying out a parts gallery or
+   * framing a camera would trust it.
+   */
   height: number;
   /** Polarity matters, so the scene marks the first pin. */
   polarised?: boolean;
@@ -40,34 +48,34 @@ export interface PartSpec {
 export const PART_SPECS: Record<PartKind, PartSpec> = {
   // A 5 mm through hole LED. Legs on the native 2.54 mm pitch, anode long.
   led: {
-    kind: 'led', label: 'LED', height: 0.28, polarised: true,
+    kind: 'led', label: 'LED', height: 0.32, polarised: true,
     pins: [{ name: 'A', dcol: 0, drow: 0 }, { name: 'K', dcol: 1, drow: 0 }],
   },
   // Quarter watt carbon film, leads bent to 0.4 inch.
   resistor: {
-    kind: 'resistor', label: 'Resistor', height: 0.075, value: 220,
+    kind: 'resistor', label: 'Resistor', height: 0.11, value: 220,
     pins: [{ name: '1', dcol: 0, drow: 0 }, { name: '2', dcol: 4, drow: 0 }],
   },
   // GL5528 photocell. Datasheet pitch is 3.4 mm, and it is always spread to
   // 0.2 inch on a board because it will not stay put otherwise.
   ldr: {
-    kind: 'ldr', label: 'Light sensor', height: 0.14,
+    kind: 'ldr', label: 'Light sensor', height: 0.11,
     pins: [{ name: '1', dcol: 0, drow: 0 }, { name: '2', dcol: 2, drow: 0 }],
   },
   thermistor: {
-    kind: 'thermistor', label: 'Thermistor', height: 0.14, value: 10_000,
+    kind: 'thermistor', label: 'Thermistor', height: 0.16, value: 10_000,
     pins: [{ name: '1', dcol: 0, drow: 0 }, { name: '2', dcol: 2, drow: 0 }],
   },
   // Radial electrolytic, 100 uF, 2.5 mm lead pitch rounds to one column.
   capacitor: {
-    kind: 'capacitor', label: 'Capacitor', height: 0.42, value: 100e-6, polarised: true,
+    kind: 'capacitor', label: 'Capacitor', height: 0.44, value: 100e-6, polarised: true,
     pins: [{ name: '+', dcol: 0, drow: 0 }, { name: '-', dcol: 1, drow: 0 }],
   },
   // 6 mm tactile switch. Its four legs straddle the ravine, which is the whole
   // reason it is usable: the pair on each side of the gap is internally joined,
   // and pressing bridges the two pairs.
   pushbutton: {
-    kind: 'pushbutton', label: 'Button', height: 0.2,
+    kind: 'pushbutton', label: 'Button', height: 0.18,
     pins: [
       { name: 'A1', dcol: 0, drow: 0 }, { name: 'A2', dcol: 2, drow: 0 },
       { name: 'B1', dcol: 0, drow: 1 }, { name: 'B2', dcol: 2, drow: 1 },
@@ -75,14 +83,14 @@ export const PART_SPECS: Record<PartKind, PartSpec> = {
   },
   // 10k trimmer, three legs on the 0.1 inch pitch, wiper in the middle.
   potentiometer: {
-    kind: 'potentiometer', label: 'Potentiometer', height: 0.3, value: 10_000,
+    kind: 'potentiometer', label: 'Potentiometer', height: 0.32, value: 10_000,
     pins: [
       { name: '1', dcol: 0, drow: 0 }, { name: 'W', dcol: 1, drow: 0 }, { name: '3', dcol: 2, drow: 0 },
     ],
   },
   // Active piezo buzzer, 12 mm, 0.2 inch pins, polarised.
   buzzer: {
-    kind: 'buzzer', label: 'Buzzer', height: 0.36, polarised: true,
+    kind: 'buzzer', label: 'Buzzer', height: 0.35, polarised: true,
     pins: [{ name: '+', dcol: 0, drow: 0 }, { name: '-', dcol: 2, drow: 0 }],
   },
   // P2N2222A in a TO-92. Flat face towards you the order reads E, B, C, which
@@ -94,12 +102,12 @@ export const PART_SPECS: Record<PartKind, PartSpec> = {
     ],
   },
   motor: {
-    kind: 'motor', label: 'DC motor', height: 0.55, polarised: false,
+    kind: 'motor', label: 'DC motor', height: 0.79, polarised: false,
     pins: [{ name: '1', dcol: 0, drow: 0 }, { name: '2', dcol: 2, drow: 0 }],
   },
   // A hobby servo's pigtail: brown ground, red power, orange signal.
   servo: {
-    kind: 'servo', label: 'Servo', height: 0.5,
+    kind: 'servo', label: 'Servo', height: 0.77,
     pins: [
       { name: 'GND', dcol: 0, drow: 0 }, { name: 'V+', dcol: 1, drow: 0 }, { name: 'SIG', dcol: 2, drow: 0 },
     ],

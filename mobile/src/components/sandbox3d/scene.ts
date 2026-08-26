@@ -27,7 +27,7 @@ import { BOARD, BOARD_TOP, TABLE_Y, UNO, UNO_TOP } from './boardSpec';
 import { OrbitRig } from './camera';
 import { createEnvironment, KEY_DIR } from './env';
 import { applyBreadboardTexture, buildBreadboard, type BreadboardMesh } from './geometry/breadboard';
-import { createPart, partBodyGeometry, partVariant, type PartObject } from './geometry/parts';
+import { clearPartCache, createPart, partBodyGeometry, partVariant, type PartObject } from './geometry/parts';
 import { applyUnoTexture, buildUno, buildUnoIndicators } from './geometry/uno';
 import { createWire, type WireObject } from './geometry/wire';
 import { createMaterials, type MaterialLibrary } from './materials';
@@ -251,6 +251,15 @@ export class SandboxScene {
       seen.add(part.id);
       let obj = this.parts.get(part.id);
       const previous = this.partData.get(part.id);
+      // A part whose KIND changed is a different object: its body, its legs and
+      // its animated pieces all differ. Reusing the old one would leave, say, a
+      // motor's rotor spinning above a resistor.
+      if (obj && previous && previous.kind !== part.kind) {
+        this.partLayer.remove(obj.root);
+        obj.dispose();
+        this.parts.delete(part.id);
+        obj = undefined;
+      }
       if (!obj) {
         obj = createPart(part, this.materials);
         this.parts.set(part.id, obj);
@@ -412,11 +421,14 @@ export class SandboxScene {
    * learner is in while they are wiring: nothing is lit, nothing is wrong.
    */
   setSimulation(input: NetlistInput, running: boolean): void {
+    // Charge and elapsed time survive the rebuild. See BoardTransient.
+    const carry = this.transient?.capVoltages;
+    const elapsed = this.transient?.elapsed ?? 0;
     this.input = input;
     this.simulating = running;
     this.built = buildNetlist(input);
     this.transient = running && BoardTransient.needed(this.built)
-      ? new BoardTransient(this.built, input)
+      ? new BoardTransient(this.built, input, carry, elapsed)
       : null;
     if (running && !this.transient) {
       this.solution = readSolution(input, this.built, solve(this.built.netlist));
@@ -533,8 +545,14 @@ export class SandboxScene {
       // a straight line between two frames.
       const slices = Math.min(8, Math.max(1, Math.round(dt / 0.002)));
       const step = dt / slices;
-      for (let i = 0; i < slices; i++) this.solution = this.transient.step(step);
-      if (this.solution) this.opts.onSolve?.(this.solution);
+      let raw = null;
+      for (let i = 0; i < slices; i++) raw = this.transient.stepRaw(step);
+      // Read once at the end of the frame, not once per slice: the readings
+      // are for the eye, and the eye only sees the last one.
+      if (raw) {
+        this.solution = this.transient.read(raw);
+        this.opts.onSolve?.(this.solution);
+      }
       busy = true;
     }
 
@@ -608,20 +626,36 @@ export class SandboxScene {
   dispose(): void {
     this.stop();
     this.disposed = true;
+
+    // Parts, wires and the ghost first, and the layers they live in are pulled
+    // out of the scene BEFORE the sweep below. They hold shared geometry: the
+    // cached part bodies and the module level selection ring are used by every
+    // instance of every part, and a blanket traverse-and-dispose would free
+    // buffers that a second mount is still counting on.
     for (const obj of this.parts.values()) obj.dispose();
     for (const obj of this.wires.values()) obj.dispose();
     this.parts.clear();
     this.wires.clear();
+    this.preview?.dispose();
+    this.preview = null;
+    this.ghost = null;
+    this.scene.remove(this.partLayer, this.wireLayer, this.overlay);
+    this.targetRing.geometry.dispose();
+
     this.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh || (mesh as unknown as THREE.InstancedMesh).isInstancedMesh) mesh.geometry?.dispose();
     });
-    // The ghost borrows a cached part geometry and must not dispose it.
-    this.ghost = null;
-    this.preview?.dispose();
-    this.preview = null;
+
+    // Materials do not dispose their own textures, and the two silkscreens are
+    // four megabytes between them.
+    this.materials.boardTop.map?.dispose();
+    this.materials.pcb.map?.dispose();
+    this.indicators.materials.forEach((m) => m.dispose());
     this.scene.environment?.dispose();
     this.materials.dispose();
+    // The body cache references this library's materials, so it dies with it.
+    clearPartCache();
     this.renderer.dispose();
   }
 }

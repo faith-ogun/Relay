@@ -407,8 +407,24 @@ export function solveBoard(input: NetlistInput): { built: NetlistResult; solutio
 export class BoardTransient {
   private state: TransientState;
 
-  constructor(private built: NetlistResult, private input: NetlistInput) {
-    this.state = initTransient(built.netlist);
+  constructor(
+    private built: NetlistResult,
+    private input: NetlistInput,
+    /**
+     * Charge to start from.
+     *
+     * This is not an optimisation, it is the difference between a working RC
+     * lesson and a broken one. The board is rebuilt whenever anything changes,
+     * and while a sketch runs the pin drive changes twenty times a second, so
+     * a transient that started from zero every time would hold every capacitor
+     * at zero volts forever and the learner would watch a curve that never
+     * moves.
+     */
+    carry?: Record<string, number>,
+    elapsed = 0,
+  ) {
+    this.state = initTransient(built.netlist, carry);
+    this.state.t = elapsed;
   }
 
   /** True when stepping is worth the cost. */
@@ -416,10 +432,28 @@ export class BoardTransient {
     return built.netlist.some((c) => c.kind === 'C' || c.kind === 'NE555');
   }
 
-  step(dt: number): SandboxSolution {
-    const result = stepTransient(this.built.netlist, this.state, dt);
+  /**
+   * Advance the raw solver one slice.
+   *
+   * Separate from `read` because a frame is stepped in several small slices to
+   * keep the curve a curve, and turning every slice into per part readings
+   * nobody looks at would be most of the cost of running the simulation.
+   */
+  stepRaw(dt: number): SolveResult {
+    return stepTransient(this.built.netlist, this.state, dt);
+  }
+
+  /** Turn a raw frame into the readings the scene animates. */
+  read(result: SolveResult): SandboxSolution {
     return readSolution(this.input, this.built, result);
   }
+
+  step(dt: number): SandboxSolution {
+    return this.read(this.stepRaw(dt));
+  }
+
+  /** Capacitor voltages, to be carried into the next rebuild. */
+  get capVoltages(): Record<string, number> { return { ...this.state.capV }; }
 
   get elapsed(): number { return this.state.t; }
 }

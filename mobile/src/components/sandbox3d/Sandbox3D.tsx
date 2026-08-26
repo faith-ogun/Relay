@@ -67,8 +67,13 @@ export interface Sandbox3DProps {
   temperature?: number;
   /**
    * Uno pin drive levels, 0 to 1, keyed by pin name: { D9: 0.25, D13: 1 }.
+   *
    * A pin present at 0 is driven LOW; a pin absent is an input and floats.
    * Use `pinDriveFromDuty` to convert the AVR runner's duty array.
+   *
+   * The board is re-solved whenever this object's identity changes, so build
+   * it from the runner's real output rather than inline in render if the
+   * shell re-renders for unrelated reasons.
    */
   pinDrive?: Record<string, number>;
   supplyVolts?: number;
@@ -124,6 +129,9 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
     supplyVolts = 5, powered = true, view = 'fit', viewNonce = 0, quality = 'auto',
     style, height = 340, showHoleReadout = true,
   } = props;
+
+  // Read once: changing it later would mean tearing down the GL surface.
+  const [msaa] = useState(() => (quality === 'low' ? 0 : quality === 'balanced' ? 2 : 4));
 
   const scene = useRef<SandboxScene | null>(null);
   const gl = useRef<ExpoWebGLRenderingContext | null>(null);
@@ -475,7 +483,11 @@ export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sa
 
   return (
     <View style={[s.frame, { height }, style]} onLayout={onLayout} {...responder.panHandlers}>
-      <GLView style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} msaaSamples={4} />
+      {/* Multisampling is a property of the GL surface, so it is fixed when the
+          surface is created and the automatic governor cannot touch it. Four
+          samples is the right default: the board is full of thin printed lines
+          and long metal legs, which is exactly what aliases without it. */}
+      <GLView style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} msaaSamples={msaa} />
 
       {!ready && (
         <View style={[StyleSheet.absoluteFill, s.centre, s.veil]}>
