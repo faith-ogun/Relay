@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Lock } from '../components/icons';
 import { goBack } from '../services/nav';
@@ -81,8 +81,22 @@ export default function Achievements() {
       </View>
 
       {/* Detail sheet: the back-text is the reward for earning it, so it stays
-          hidden until the card is unlocked. */}
-      {open && (
+          hidden until the card is unlocked.
+
+          In a Modal, not an absolutely-positioned View. It used to sit inside the
+          ScrollView, where `position: absolute` is relative to the CONTENT rather
+          than the screen: with fifty cards the content runs several screens tall,
+          so `justifyContent: center` put the sheet halfway down the page while the
+          backdrop covered everything. Tapping a card dimmed the screen and showed
+          nothing. A Modal renders above the whole app and handles the Android back
+          button as well. */}
+      <Modal
+        visible={!!open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(null)}
+      >
+        {open && (
         <Pressable style={s.sheetBackdrop} onPress={() => setOpen(null)}>
           <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={[s.sheetTier, { backgroundColor: TIER_COLOR[open.tier as Tier] }]}>
@@ -105,7 +119,8 @@ export default function Achievements() {
             </Pressable>
           </Pressable>
         </Pressable>
-      )}
+        )}
+      </Modal>
     </ScrollView>
   );
 }
@@ -189,7 +204,7 @@ const s = StyleSheet.create({
   cardTitleLocked: { color: colors.inkSoft },
   cardTier: { fontFamily: font.bold, fontSize: 9, color: colors.inkSoft, marginTop: 2, letterSpacing: 0.5 },
   sheetBackdrop: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    flex: 1,
     backgroundColor: 'rgba(20,24,31,0.5)', alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
   sheet: {
