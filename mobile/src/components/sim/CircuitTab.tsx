@@ -26,9 +26,8 @@ import { elevation } from '../../theme/elevation';
  */
 const Knob: React.FC<{
   min: number; max: number; step: number; value: number;
-  scale: 'linear' | 'log';
   onChange: (v: number) => void;
-}> = ({ min, max, step, value, scale, onChange }) => {
+}> = ({ min, max, step, value, onChange }) => {
   // Refusing the responder is not enough: UIScrollView competes below the JS
   // responder system, so the page scrolled while the knob also moved.
   const { setLocked } = useScrollLock();
@@ -56,9 +55,7 @@ const Knob: React.FC<{
   const setFromX = (pageX: number) => {
     if (width.current <= 0) return;
     const frac = Math.min(1, Math.max(0, (pageX - originX.current) / width.current));
-    const raw = scale === 'log'
-      ? Math.exp(Math.log(min) + frac * (Math.log(max) - Math.log(min)))
-      : min + frac * (max - min);
+    const raw = min + frac * (max - min);
     const snapped = Math.round(raw / step) * step;
     const clamped = Math.min(max, Math.max(min, snapped));
     if (clamped !== latest.current) onChange(clamped);
@@ -82,11 +79,7 @@ const Knob: React.FC<{
     }),
   ).current;
 
-  // The thumb has to sit where the same maths would put it, or it drifts away
-  // from the finger on a log track.
-  const frac = scale === 'log'
-    ? (Math.log(value) - Math.log(min)) / (Math.log(max) - Math.log(min))
-    : (value - min) / (max - min);
+  const frac = (value - min) / (max - min);
   return (
     <View
       ref={trackRef}
@@ -192,7 +185,6 @@ export const CircuitTab: React.FC = () => {
           min={picked.control.min}
           max={picked.control.max}
           step={picked.control.step}
-          scale={picked.control.scale ?? 'linear'}
           value={value}
           onChange={setValue}
         />
