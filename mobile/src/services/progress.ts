@@ -1,14 +1,24 @@
 // Learner progress, shared with the web app.
 //
-// Uses the SAME /v1/state envelope the web workspace persists, so XP, streak and
-// completed lessons follow a person between surfaces rather than forking. The
-// backend derives the uid from the verified token and refuses cross-user access,
-// so the path segment is advisory.
+// Uses the SAME /v1/state records the web workspace persists, so XP, streak,
+// completed lessons and achievement counters follow a person between surfaces
+// rather than forking. The backend derives the uid from the verified token and
+// refuses cross-user access, so the path segment is advisory.
+//
+// State is KEYED: 'progress' and 'metrics' are separate server documents, which
+// is what stops this app and the web workspace from overwriting each other. The
+// unkeyed path this file used to call wrote the whole document, so a save from
+// the phone replaced whatever the browser had stored and the other way round.
+//
+// The nested `metrics` object stays inside the progress record as well as being
+// written to its own. Builds already installed in the field read the unkeyed
+// path and take their counters from there, and dropping it would break them.
 //
 // Cache-first, like the curriculum: a local copy makes the app usable offline
 // and the remote copy is the source of truth once reachable.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { CompletionRecord } from './completion';
 import { API_BASE } from './config';
 import { getIdToken } from './firebase';
 
@@ -26,13 +36,30 @@ export interface Metrics {
   lastLeagueWeek: string;
 }
 
-export interface Progress {
+export interface Progress extends CompletionRecord {
   /** lesson id -> level (1 bronze, 2 silver, 3 gold). Present means completed. */
   lessonLevels: Record<string, number>;
   xp: number;
   streak: number;
   completedToday: number;
+  /**
+   * Which lessons have counted toward today's goal. Reset when the day turns.
+   *
+   * The goal used to be a raw tally, so replaying one easy lesson five times
+   * filled a five-lesson daily goal without learning anything. Distinct lessons
+   * is what the goal was always claiming to measure.
+   */
+  todayLessonIds?: string[];
   lastActiveDate: string;
+  /**
+   * How much of `xp` came from claimed checkpoints. The ledger that makes the
+   * payout exactly-once: the server records the grant (checkpoints.py), this
+   * records how much of it has been counted here, and reconciliation is the
+   * difference between the two. See services/checkpoints.ts. Optional because
+   * records written before checkpoints paid out do not carry it, and zero is
+   * the correct reading of its absence.
+   */
+  checkpointXp?: number;
   metrics: Metrics;
 }
 
@@ -42,14 +69,64 @@ export const EMPTY_METRICS: Metrics = {
 };
 
 export const EMPTY: Progress = {
-  lessonLevels: {}, xp: 0, streak: 0, completedToday: 0, lastActiveDate: '',
+  lessonLevels: {}, xp: 0, streak: 0, completedToday: 0, todayLessonIds: [], lastActiveDate: '',
   metrics: EMPTY_METRICS,
 };
 
 const CACHE_KEY = (uid: string) => `ohmlet.progress.v1:${uid}`;
 const ENVELOPE_VERSION = 1;
 
+/** Server record keys. Each one is its own document; see the note at the top. */
+const PROGRESS_KEY = 'progress';
+const METRICS_KEY = 'metrics';
+
+const statePath = (uid: string, key: string) =>
+  `/v1/state/${encodeURIComponent(uid)}/${encodeURIComponent(key)}`;
+
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** Fill in anything a stored record predates or a partial response omits. */
+const withDefaults = (p: Partial<Progress> | null | undefined): Progress => ({
+  ...EMPTY,
+  ...(p ?? {}),
+  metrics: { ...EMPTY_METRICS, ...(p?.metrics ?? {}) },
+});
+
+/**
+ * Reconcile the counters the phone kept with the shared record.
+ *
+ * Every counter is monotonic, so the higher number is the one that saw more of
+ * the learner's actual activity and taking the max can never erase work. The
+ * league week is an ISO `YYYY-Www` string, zero padded, so the later week sorts
+ * later and the comparison is chronological.
+ */
+function mergeMetrics(...sources: (Partial<Metrics> | null | undefined)[]): Metrics {
+  const out: Metrics = { ...EMPTY_METRICS };
+  for (const source of sources) {
+    if (!source) continue;
+    for (const [name, value] of Object.entries(source)) {
+      if (name === 'lastLeagueWeek') {
+        if (typeof value === 'string' && value > out.lastLeagueWeek) out.lastLeagueWeek = value;
+      } else if (typeof value === 'number' && Number.isFinite(value)) {
+        const key = name as keyof Omit<Metrics, 'lastLeagueWeek'>;
+        out[key] = Math.max(out[key] ?? 0, value);
+      }
+    }
+  }
+  return out;
+}
+
+/** The `data` object of a state envelope, or null if the response is unusable. */
+async function readRecord<T>(res: Response | null): Promise<T | null> {
+  if (!res) return null;
+  try {
+    const envelope = await res.json();
+    const data = envelope?.data;
+    return data && typeof data === 'object' ? (data as T) : null;
+  } catch {
+    return null;
+  }
+}
 
 async function authed(path: string, init?: RequestInit) {
   if (!API_BASE) return null;
@@ -91,67 +168,53 @@ export async function loadProgress(uid: string): Promise<Progress> {
     if (raw) local = JSON.parse(raw) as Progress;
   } catch { /* ignore */ }
 
-  const res = await authed(`/v1/state/${encodeURIComponent(uid)}`);
-  if (!res) return local ?? EMPTY;
+  // Both records in parallel. A missing metrics record is normal (a learner who
+  // has never triggered a counter) and must not stop progress from loading.
+  const [progressRes, metricsRes] = await Promise.all([
+    authed(statePath(uid, PROGRESS_KEY)),
+    authed(statePath(uid, METRICS_KEY)),
+  ]);
+  if (!progressRes) return withDefaults(local);
 
+  const remote = await readRecord<Progress>(progressRes);
+  if (!remote) return withDefaults(local);
+
+  const shared = await readRecord<Partial<Metrics>>(metricsRes);
+  const merged = withDefaults({ ...remote, metrics: mergeMetrics(remote.metrics, shared) });
   try {
-    const envelope = await res.json();
-    const remote = (envelope?.data ?? null) as Progress | null;
-    if (remote && typeof remote === 'object') {
-      await AsyncStorage.setItem(CACHE_KEY(uid), JSON.stringify(remote)).catch(() => {});
-      return { ...EMPTY, ...remote, metrics: { ...EMPTY_METRICS, ...(remote.metrics ?? {}) } };
-    }
-  } catch { /* fall through */ }
-  return local ? { ...EMPTY, ...local, metrics: { ...EMPTY_METRICS, ...(local.metrics ?? {}) } } : EMPTY;
+    await AsyncStorage.setItem(CACHE_KEY(uid), JSON.stringify(merged));
+  } catch { /* offline copy is best-effort */ }
+  return merged;
 }
 
 export async function saveProgress(uid: string, next: Progress): Promise<void> {
   try {
     await AsyncStorage.setItem(CACHE_KEY(uid), JSON.stringify(next));
   } catch { /* offline copy is best-effort */ }
-  await authed(`/v1/state/${encodeURIComponent(uid)}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      version: ENVELOPE_VERSION,
-      data: next,
-      updatedAt: new Date().toISOString(),
+
+  const updatedAt = new Date().toISOString();
+  const envelope = (data: unknown) =>
+    JSON.stringify({ version: ENVELOPE_VERSION, data, updatedAt });
+
+  // Two records, two writes. The counters go to the shared metrics record so
+  // the web achievements page sees them, and stay nested in the progress record
+  // for builds already installed in the field.
+  await Promise.all([
+    authed(statePath(uid, PROGRESS_KEY), { method: 'PUT', body: envelope(next) }),
+    authed(statePath(uid, METRICS_KEY), {
+      method: 'PUT',
+      body: envelope({ ...EMPTY_METRICS, ...next.metrics }),
     }),
-  });
+  ]);
 }
 
 /**
- * Record a finished lesson. Keeps the higher level if it was already completed
- * better before, so replaying a lesson can never demote a learner's result.
- * Streak advances once per calendar day.
+ * Record a finished lesson.
+ *
+ * Re-exported from the shared rule so the phone and the browser cannot drift:
+ * see services/completion.ts for the whole table of what a completion does.
  */
-export function applyCompletion(
-  current: Progress,
-  lessonId: string,
-  xpGained: number,
-  level = 1,
-): Progress {
-  const day = today();
-  const already = current.lessonLevels[lessonId] ?? 0;
-  const sameDay = current.lastActiveDate === day;
-
-  // A day's gap of exactly one keeps the streak; anything longer restarts it.
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-  const streak = sameDay
-    ? current.streak
-    : current.lastActiveDate === yesterday
-      ? current.streak + 1
-      : 1;
-
-  return {
-    ...current,
-    lessonLevels: { ...current.lessonLevels, [lessonId]: Math.max(already, level) },
-    // Re-completing a lesson does not re-award XP.
-    xp: current.xp + (already ? 0 : xpGained),
-    streak,
-    completedToday: sameDay ? current.completedToday + 1 : 1,
-    lastActiveDate: day,
-  };
-}
+export { applyCompletion } from './completion';
 
 
 /** Increment a counter. Returns a new Progress; the caller persists it. */

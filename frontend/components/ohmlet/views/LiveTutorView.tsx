@@ -127,6 +127,16 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   } = useLiveBridge({ wsUrl, userId, sessionId, childSafe });
 
   const live = state === 'connected';
+
+  // Once per connection, on the transition. The ref is what makes it once: a
+  // re-render while connected must not credit a second session.
+  const creditedRef = useRef(false);
+  useEffect(() => {
+    if (!live) { creditedRef.current = false; return; }
+    if (creditedRef.current) return;
+    creditedRef.current = true;
+    recordMetric('liveSessions');
+  }, [live, recordMetric]);
   const connecting = state === 'connecting';
   const unlimited = liveCapMinutes === Infinity;
   // Warn as the monthly budget runs low so running out is never a surprise.
@@ -163,7 +173,11 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   const sessionStartRef = useRef<number | null>(null);
   const startSession = () => {
     track('live_session_start');
-    recordMetric('liveSessions');
+    // liveSessions is credited on the `connected` transition below, NOT here.
+    // Pressing Start and then having the socket fail, or the learner change
+    // their mind before the tutor wakes, is not a live session, and counting it
+    // here made "Bench Regular, 10 live sessions" earnable without the tutor
+    // ever speaking. Mobile already credits on connect; this is the parity fix.
     sessionStartRef.current = Date.now();
     connect();
     // Child safety: never auto-open a minor's camera or mic. They (with a grown-up)

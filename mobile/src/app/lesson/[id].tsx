@@ -14,17 +14,51 @@ import { StepView } from '../../lesson/StepView';
 import { useRun } from '../../lesson/useRun';
 import type { Lesson } from '../../lesson/types';
 import { getLesson } from '../../services/curriculum';
-import { applyCompletion, bumpMetric, loadProgress, saveProgress } from '../../services/progress';
+import { applyCompletion, bumpMetric, loadProgress, saveProgress, type Progress } from '../../services/progress';
+import { LEVEL_META, nextAttemptLevel } from '../../lesson/levels';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, font, pressSmall, radius, space, type, curve } from '../../theme/tokens';
 import { duration } from '../../theme/motion';
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+
+  /**
+   * Which level this run is played at, and the level already on record.
+   *
+   * Read BEFORE the run, because afterwards every lesson looks completed, and
+   * because the level decides which steps the run is even made of. Held at null
+   * until it is known: a run that started at Bronze and then learned it was a
+   * Silver attempt would rebuild itself and throw away the learner's answers.
+   *
+   * `held` is what tells the completion screen whether this run pays anything.
+   * A learner replaying Gold earns no XP, and the screen used to promise some.
+   */
+  const [attempt, setAttempt] = useState<{ level: number; held: number } | null>(null);
+  // The record this run opened against. Kept so the completion screen can show
+  // the streak the moment the run ends rather than after two round trips; see
+  // the save effect below.
+  const openedAgainst = useRef<Progress | null>(null);
+  useEffect(() => {
+    if (authLoading) return;
+    let alive = true;
+    if (!user?.uid) {
+      // Signed out: nothing is on record, so the run is a Bronze pass.
+      setAttempt({ level: 1, held: 0 });
+      return;
+    }
+    void loadProgress(user.uid).then((p) => {
+      if (!alive) return;
+      openedAgainst.current = p;
+      const held = p.lessonLevels[String(id)] ?? 0;
+      setAttempt({ level: nextAttemptLevel(held), held });
+    });
+    return () => { alive = false; };
+  }, [authLoading, user?.uid, id]);
 
   const hearts = useHearts();
 
@@ -42,7 +76,7 @@ export default function LessonScreen() {
     if (next && !next.unlimited && (next.hearts ?? 1) <= 0) ranOut.current = true;
   }, [hearts, id, runId]);
 
-  const run = useRun(lesson, onWrong);
+  const run = useRun(lesson, attempt?.level ?? 1, onWrong);
   const [canCheck, setCanCheck] = useState(false);
   // A drawing step and a scroll view both want vertical drags. While a stroke
   // is live the scroller stands down, so an upward line stays a line.
@@ -91,29 +125,64 @@ export default function LessonScreen() {
 
   // Persist once, when the run completes. Guarded so a re-render cannot
   // double-award XP.
-  // What the completion screen reports back. Read from the SAVED progress
-  // rather than recomputed, so the streak shown is the streak that was written.
+  //
+  // What the completion screen reports back. Set twice: once from the shared
+  // rule the instant the run ends, so the reward lands on a real number, and
+  // again from the SAVED record once it is written, which is what the learner
+  // keeps. Both readings come from the same rule, so the second only ever
+  // corrects for something that changed on another device mid-run.
   const [outcome, setOutcome] = useState<{ streak: number; extended: boolean } | null>(null);
 
   useEffect(() => {
     if (!run.done || saved || !user?.uid || !lesson) return;
     setSaved(true);
+    // What the streak WILL be, from the record this run opened against and the
+    // same shared rule the save is about to apply. The authoritative value
+    // replaces it below; without it the reward screen renders a streak of 0 for
+    // as long as two round trips take, which on a slow connection is seconds of
+    // the celebration showing a number that is never true.
+    const opened = openedAgainst.current;
+    if (opened) {
+      const projected = applyCompletion(opened, String(id), run.earnedXp, run.level);
+      setOutcome({ streak: projected.streak, extended: projected.streak > opened.streak });
+    }
     void (async () => {
       const current = await loadProgress(user.uid);
-      let next = applyCompletion(current, String(id), run.earnedXp);
-      // A run cleared with no wrong answer is what the "perfect" achievements count.
-      if (!run.anyWrong) next = bumpMetric(next, 'perfect');
-      if (drawingsRight.current > 0) next = bumpMetric(next, 'drawings', drawingsRight.current);
+      // Read BEFORE the completion is applied: afterwards every lesson looks
+      // completed. This is the gate on the once-per-lesson counters.
+      //
+      // `perfect` and `drawings` used to be bumped on EVERY clean run, replays
+      // included, while `builds` counts distinct lesson ids. So "Flawless, 25
+      // flawless builds" was earned by replaying one easy lesson twenty five
+      // times. A replay is real practice and still counts toward the streak and
+      // its level, but it is not a twenty sixth build. The web LessonRunner
+      // gates on exactly the same condition, so the two surfaces stay in step.
+      const alreadyCompleted = (current.lessonLevels[String(id)] ?? 0) >= 1;
+      // The level reached is recorded, not assumed. This call used to leave the
+      // argument off and take the default of 1, so a Gold round on the phone was
+      // written down as Bronze, and a Gold earned in the browser was overwritten
+      // by the next save from here.
+      let next = applyCompletion(current, String(id), run.earnedXp, run.level);
+      if (!alreadyCompleted) {
+        // A run cleared with no wrong answer is what the "perfect" achievements count.
+        if (!run.anyWrong) next = bumpMetric(next, 'perfect');
+        if (drawingsRight.current > 0) next = bumpMetric(next, 'drawings', drawingsRight.current);
+      }
       await saveProgress(user.uid, next);
       setOutcome({ streak: next.streak, extended: next.streak > current.streak });
       track('lesson_complete', {
         lessonId: String(id),
         xp: run.earnedXp,
+        // What actually went on the ledger. A replay at or below the level held
+        // pays nothing, and reporting the level's price as earned XP would put
+        // XP in the funnel that no learner ever received.
+        awarded: next.xp - current.xp,
+        level: run.level,
         perfect: !run.anyWrong,
         streak: next.streak,
       });
     })();
-  }, [run.done, run.earnedXp, saved, user?.uid, lesson, id]);
+  }, [run.done, run.earnedXp, run.level, run.anyWrong, saved, user?.uid, lesson, id]);
 
   const progress = useSharedValue(0);
   useEffect(() => { progress.value = withTiming(run.progress, { duration: 340 }); }, [run.progress, progress]);
@@ -136,7 +205,21 @@ export default function LessonScreen() {
     opacity: 1 - bannerY.value / 40,
   }));
 
-  if (loading) return <Center><ActivityIndicator color={colors.goldDeep} /></Center>;
+  // The level has to be settled before a single step is shown: it decides which
+  // steps the round is made of, so resolving it late would rebuild the round
+  // under the learner.
+  if (loading || !attempt) {
+    return (
+      <Center>
+        <ActivityIndicator color={colors.goldDeep} accessibilityLabel="Loading lesson" />
+      </Center>
+    );
+  }
+
+  const levelMeta = LEVEL_META[Math.min(3, Math.max(1, run.level)) as 1 | 2 | 3];
+  // A run pays only when it reaches a level above the one on record, which is
+  // the same condition services/completion.ts applies to the record itself.
+  const paysXp = run.level > attempt.held;
 
   if (!lesson || run.total === 0) {
     return (
@@ -165,6 +248,8 @@ export default function LessonScreen() {
     return (
       <LessonComplete
         earnedXp={run.earnedXp}
+        paysXp={paysXp}
+        level={run.level}
         perfect={!run.anyWrong}
         streak={outcome?.streak ?? 0}
         streakExtended={outcome?.extended ?? false}
@@ -178,7 +263,7 @@ export default function LessonScreen() {
 
   return (
     <View style={s.screen}>
-      {/* Top bar: leave, progress, hearts */}
+      {/* Top bar: leave, progress, the medal being played for, hearts */}
       <View style={s.topBar}>
         <Pressable onPress={() => goBack('/path')} hitSlop={12} accessibilityLabel="Leave lesson" accessibilityRole="button">
           <Close size={22} />
@@ -191,6 +276,15 @@ export default function LessonScreen() {
         >
           <Animated.View style={[s.fill, barStyle]} />
         </View>
+        {run.level > 1 && (
+          <View
+            style={[s.levelChip, { backgroundColor: levelMeta.soft, borderColor: levelMeta.color }]}
+            accessibilityRole="text"
+            accessibilityLabel={`${levelMeta.name} round`}
+          >
+            <Text style={s.levelChipText} maxFontSizeMultiplier={1.2}>{levelMeta.name.toUpperCase()}</Text>
+          </View>
+        )}
         <HeartsMeter onPress={() => { track('hearts_paywall_view'); router.push('/plans'); }} />
       </View>
 
@@ -260,6 +354,12 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   fill: { height: '100%', width: '100%', backgroundColor: colors.gold },
+  // Only shown above Bronze, so it never competes with the progress track on a
+  // first pass. Border in the medal's colour, fill in its pale tint.
+  levelChip: { borderWidth: 2, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  levelChipText: {
+    fontFamily: font.black, fontSize: type.meta, letterSpacing: 1, color: colors.ink,
+  },
   content: { padding: space.lg, paddingBottom: space.xxl * 2 },
   bottom: { backgroundColor: colors.cream },
   banner: {
