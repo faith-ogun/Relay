@@ -72,12 +72,23 @@ export const SandboxTab: React.FC = () => {
 
   return (
     <LockableScrollView contentContainerStyle={s.scroll}>
-      <Text style={s.kicker}>SANDBOX</Text>
+      <View style={s.kickerRow}>
+        <Text style={s.kicker}>SANDBOX</Text>
+        {/* The web sandbox carries a Beta mark next to its kicker and its
+            heading, because the simulation is still growing and a learner is
+            owed that before they trust a result. The phone said nothing at
+            all. Same meaning, mobile shapes: a bordered blue plate rather
+            than the web's soft pill, since every chip in this app is plated. */}
+        <View style={s.beta}>
+          <Text style={s.betaText}>BETA</Text>
+        </View>
+      </View>
       <Text style={s.title}>Build it on a board.</Text>
       <Text style={s.body}>
         A real breadboard, with the strips and rails wired the way a real one is. Drag to
-        orbit, pinch to zoom. Everything you place is solved, so the LED lights because
-        current is reaching it.
+        orbit, pinch to zoom. Hold a finger on the board and it names the hole you are
+        over, so you can slide onto the right one before you let go. Everything you place
+        is solved, so the LED lights because current is reaching it.
       </Text>
 
       <View style={s.stage}>
@@ -154,7 +165,17 @@ export const SandboxTab: React.FC = () => {
 
 const s = StyleSheet.create({
   scroll: { padding: space.lg, paddingBottom: space.xxl },
+  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
+  beta: {
+    backgroundColor: colors.blueSoft,
+    borderWidth: 2, borderColor: colors.blue,
+    borderRadius: 999, ...curve,
+    paddingHorizontal: 8, paddingVertical: 1,
+  },
+  betaText: {
+    fontFamily: font.black, fontSize: type.meta, color: colors.blueDeep, letterSpacing: 1.4,
+  },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -1, marginTop: 4 },
   body: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm, lineHeight: 20 },
   stage: {

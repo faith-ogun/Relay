@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Gift, Target, Users, X } from 'lucide-react';
 import type { Challenge } from '../../../services/community';
 import { ChallengeArt, themeFor } from './ChallengeArt';
 import { useDialog } from '../../../hooks/useDialog';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 // ── Join / leave dialogs for live challenges (#63) ──
 //
@@ -16,33 +18,69 @@ const Backdrop: React.FC<{ onClose: () => void; children: React.ReactNode; label
   children,
   labelledBy,
 }) => {
-  // Focus trap + Escape + focus restoration on the dialog panel.
-  const panelRef = useDialog<HTMLDivElement>(onClose);
+  // Pin the page BEFORE focus moves, so nothing can scroll underneath us.
+  useBodyScrollLock();
 
+  // Callers pass an inline arrow (`onClose={() => setJoinTarget(null)}`), so the
+  // prop is a new function on every parent render. useDialog keys its effect on
+  // that identity, and re-running it tears the focus trap down: focus is handed
+  // back to the button behind the dialog and then dragged into the panel again,
+  // which scrolls the page. Latch the latest callback in a ref and give useDialog
+  // one stable function, so it sets up exactly once per open.
+  const closeRef = useRef(onClose);
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+    closeRef.current = onClose;
+  });
+  const stableClose = useCallback(() => closeRef.current(), []);
 
-  return (
+  // Focus trap + Escape + focus restoration on the dialog panel.
+  const panelRef = useDialog<HTMLDivElement>(stableClose);
+
+  // Only a press that both starts AND ends on the scrim dismisses, so dragging a
+  // text selection out of the panel never closes the dialog by accident.
+  const pressedScrim = useRef(false);
+  const onScrimDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    pressedScrim.current = e.target === e.currentTarget;
+  }, []);
+  const onScrimClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const dismiss = pressedScrim.current && e.target === e.currentTarget;
+      pressedScrim.current = false;
+      if (dismiss) onClose();
+    },
+    [onClose],
+  );
+
+  // Rendered into <body>. Views mount inside `.ohmlet-rise`, whose entrance
+  // animation uses fill-mode `both` and so leaves a transform on the element
+  // forever, and a transformed ancestor becomes the containing block for
+  // `position: fixed` descendants. Inline, this dialog would be pinned to the
+  // whole (very tall) page instead of the viewport: it lands somewhere down the
+  // document while the body is locked, which reads as a frozen page.
+  return createPortal(
     <div
       ref={panelRef}
-      className="fixed inset-0 z-[80] overflow-y-auto"
+      className="fixed inset-0 z-[80] overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
     >
       <div
         className="fixed inset-0 bg-ohmlet-ink/45 backdrop-blur-sm motion-safe:animate-[ohmlet-fade-in_180ms_ease-out]"
-        onClick={onClose}
         aria-hidden
       />
-      {/* min-h-full + items-center: centers when it fits, scrolls when the dialog
-          is taller than the viewport so the buttons are always reachable. */}
-      <div className="relative flex min-h-full items-center justify-center p-4 sm:p-6">{children}</div>
-    </div>
+      {/* min-h-full + items-center: centers when it fits, and this container is
+          what scrolls when the dialog is taller than a short laptop viewport, so
+          the buttons are always reachable. */}
+      <div
+        className="relative flex min-h-full items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 sm:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        onMouseDown={onScrimDown}
+        onClick={onScrimClick}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   );
 };
 

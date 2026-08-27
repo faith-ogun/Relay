@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PanResponder } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LIVE_CIRCUITS, type LiveCircuitDef } from '../../sim/circuits';
 import { initTransient, solve, stepTransient, type SolveResult, type TransientState } from '../../sim/engine';
-import { LiveReadout } from './LiveReadout';
+import { LiveReadout, type ChargeCycle } from './LiveReadout';
+import { fracFromPageX, thumbLeft, tickCentre, valueFor } from './knobGeometry';
 import { useScrollLock, LockableScrollView } from '../ScrollLock';
 import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
 import { elevation } from '../../theme/elevation';
@@ -17,25 +18,42 @@ import { elevation } from '../../theme/elevation';
  * found. Turn the resistor and the current changes because Ohm's law says so.
  */
 
+/** The knob's diameter. The track reserves exactly this much so it cannot escape. */
+const THUMB = 32;
+/** The groove the fill runs in. */
+const GROOVE = 14;
+
 /**
  * A slider built on PanResponder rather than a component library.
+ *
+ * Two things it has to get right, both of which it got wrong before.
  *
  * It has to refuse termination the way the drawing canvas does, or a vertical
  * drift mid-gesture hands the touch to the surrounding ScrollView and the value
  * sticks. Same negotiation, same fix.
+ *
+ * And the thumb's TRAVEL is not the track's width. Positioning a 32pt knob at
+ * `left: frac%` puts its centre on the track's edge at both ends, so half of it
+ * hangs outside the control at 0 and again at 1, which is what "it goes behind
+ * the box and then after the box" was describing. The travel is the width less
+ * one thumb, the thumb is positioned by its LEFT edge inside that travel, and
+ * the touch is mapped through the same inset so the point under the finger and
+ * the point the knob is drawn at are the same point.
  */
 const Knob: React.FC<{
   min: number; max: number; step: number; value: number;
+  ticks?: { at: number; label: string; key?: boolean }[];
   onChange: (v: number) => void;
-}> = ({ min, max, step, value, onChange }) => {
+}> = ({ min, max, step, value, ticks, onChange }) => {
   // Refusing the responder is not enough: UIScrollView competes below the JS
   // responder system, so the page scrolled while the knob also moved.
   const { setLocked } = useScrollLock();
-  const width = useRef(0);
+  const [width, setWidth] = useState(0);
+  const widthRef = useRef(0);
   // The track's absolute left edge on screen.
   //
   // locationX is relative to WHICHEVER VIEW received the touch, and the thumb is
-  // a child of the track. Grabbing the thumb therefore reported 0 to 28 instead
+  // a child of the track. Grabbing the thumb therefore reported 0 to 32 instead
   // of a position along the track, so the value snapped to the minimum: exactly
   // the "lift my finger and it jumps back to the start" symptom, and why the far
   // end was unreachable, since that is where the thumb sits under the finger.
@@ -44,22 +62,33 @@ const Knob: React.FC<{
   const trackRef = useRef<View>(null);
   const latest = useRef(value);
   latest.current = value;
+  const lastTick = useRef(0);
 
-  const measure = () => {
+  const measure = useCallback(() => {
     trackRef.current?.measureInWindow((x, _y, w) => {
       originX.current = x;
-      if (w > 0) width.current = w;
+      if (w > 0) { widthRef.current = w; setWidth(w); }
     });
-  };
+  }, []);
 
-  const setFromX = (pageX: number) => {
-    if (width.current <= 0) return;
-    const frac = Math.min(1, Math.max(0, (pageX - originX.current) / width.current));
-    const raw = min + frac * (max - min);
-    const snapped = Math.round(raw / step) * step;
-    const clamped = Math.min(max, Math.max(min, snapped));
-    if (clamped !== latest.current) onChange(clamped);
-  };
+  const setFromX = useCallback((pageX: number) => {
+    const w = widthRef.current;
+    if (w <= 0) return;
+    // Read through the same inset the thumb is drawn with, so the value under
+    // the finger and the value on screen are the same value.
+    const clamped = valueFor(fracFromPageX(pageX, originX.current, w, THUMB), min, max, step);
+    if (clamped !== latest.current) {
+      latest.current = clamped;
+      onChange(clamped);
+      // A detent under the finger, throttled so a fast sweep does not queue a
+      // hundred of them and lag behind the gesture.
+      const now = Date.now();
+      if (now - lastTick.current > 45) {
+        lastTick.current = now;
+        Haptics.selectionAsync().catch(() => {});
+      }
+    }
+  }, [min, max, step, onChange]);
 
   const responder = useRef(
     PanResponder.create({
@@ -79,20 +108,48 @@ const Knob: React.FC<{
     }),
   ).current;
 
-  const frac = (value - min) / (max - min);
+  const frac = max > min ? (value - min) / (max - min) : 0;
+  const left = thumbLeft(frac, width, THUMB);
+
   return (
-    <View
-      ref={trackRef}
-      style={k.track}
-      onLayout={measure}
-      {...responder.panHandlers}
-      accessibilityRole="adjustable"
-      accessibilityValue={{ min, max, now: value }}
-    >
-      {/* Neither child may take the touch: the responder belongs to the track,
-          so the finger position always means the same thing. */}
-      <View pointerEvents="none" style={[k.fill, { width: `${frac * 100}%` }]} />
-      <View pointerEvents="none" style={[k.thumb, { left: `${frac * 100}%` }]} />
+    <View style={k.wrap}>
+      <View
+        ref={trackRef}
+        style={k.track}
+        onLayout={measure}
+        {...responder.panHandlers}
+        accessibilityRole="adjustable"
+        accessibilityValue={{ min, max, now: value }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(e) => {
+          const d = e.nativeEvent.actionName === 'increment' ? step : -step;
+          onChange(Math.min(max, Math.max(min, value + d)));
+        }}
+      >
+        {/* Neither child may take the touch: the responder belongs to the track,
+            so the finger position always means the same thing. */}
+        <View pointerEvents="none" style={k.groove} />
+        {width > 0 && (
+          <>
+            <View pointerEvents="none" style={[k.fill, { width: left + THUMB / 2 }]} />
+            <View pointerEvents="none" style={[k.thumb, { left }]}>
+              <View style={k.thumbCore} />
+            </View>
+          </>
+        )}
+      </View>
+      {!!ticks?.length && width > 0 && (
+        <View pointerEvents="none" style={k.ticks}>
+          {ticks.map((t) => {
+            return (
+              <View key={t.at} style={[k.tick, { left: tickCentre(t.at, min, max, width, THUMB) }]}>
+                <View style={[k.tickMark, t.key && k.tickMarkKey]} />
+                <Text style={[k.tickLabel, t.key && k.tickLabelKey]} numberOfLines={1}>{t.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 };
@@ -109,11 +166,13 @@ export const CircuitTab: React.FC = () => {
 
   const [result, setResult] = useState<SolveResult | null>(null);
   const [fault, setFault] = useState<string | null>(null);
+  const [charge, setCharge] = useState<ChargeCycle | null>(null);
 
   // Steady state for everything without a capacitor. Solving in an effect rather
   // than during render keeps a slow solve off the gesture's critical path.
   useEffect(() => {
     if (picked.transient) return;
+    setCharge(null);
     try {
       setResult(solve(netlist));
       setFault(null);
@@ -125,28 +184,67 @@ export const CircuitTab: React.FC = () => {
 
   // Transient circuits advance real time, so RC charging is genuinely a curve
   // rather than a scripted animation.
+  //
+  // And it REFILLS. A capacitor that charges once and sits at 5V makes the
+  // resistor look inert, because the settled voltage is 5V at every position on
+  // the slider; only the time taken to get there answers to the knob. Cycling
+  // means the thing the control changes is the thing on screen, continuously.
   const transient = useRef<TransientState | null>(null);
   useEffect(() => {
     if (!picked.transient) { transient.current = null; return; }
+    const supply = netlist.find((c) => c.kind === 'V')?.value ?? 5;
+    let elapsed = 0;
+    let holdUntil = 0;
+    let lastFull: number | null = null;
     transient.current = initTransient(netlist);
     setFault(null);
+    setCharge({ fraction: 0, elapsed: 0, lastFullSeconds: null, holding: false });
+
+    const STEP = 0.005;   // seconds of circuit time per sub-step
+    const SUBS = 4;       // sub-steps per frame, so 20ms of circuit time
+    const FRAME = 20;     // milliseconds of wall clock per frame
+
     const id = setInterval(() => {
       const st = transient.current;
       if (!st) return;
       try {
-        // 20ms of circuit time per frame, in four sub-steps, so the curve stays
-        // accurate at large RC values without the interval running faster.
+        if (holdUntil > 0) {
+          // Hold the full reading briefly so the time it took is readable
+          // before the next fill starts.
+          holdUntil -= FRAME;
+          if (holdUntil <= 0) {
+            holdUntil = 0;
+            elapsed = 0;
+            transient.current = initTransient(netlist);
+            setCharge({ fraction: 0, elapsed: 0, lastFullSeconds: lastFull, holding: false });
+          }
+          return;
+        }
         let r: SolveResult | null = null;
-        for (let i = 0; i < 4; i += 1) r = stepTransient(netlist, st, 0.005);
-        if (r) setResult(r);
+        for (let i = 0; i < SUBS; i += 1) r = stepTransient(netlist, st, STEP);
+        elapsed += STEP * SUBS;
+        if (r) {
+          setResult(r);
+          const v = r.V[2] ?? 0;
+          const fraction = supply > 0 ? Math.min(1, Math.max(0, v / supply)) : 0;
+          if (fraction >= 0.99) {
+            lastFull = elapsed;
+            holdUntil = 700;
+            setCharge({ fraction: 1, elapsed, lastFullSeconds: elapsed, holding: true });
+          } else {
+            setCharge({ fraction, elapsed, lastFullSeconds: lastFull, holding: false });
+          }
+        }
       } catch (err) {
         setFault(describe(err));
       }
-    }, 20);
+    }, FRAME);
     return () => clearInterval(id);
   }, [netlist, picked.transient]);
 
   const fmt = picked.control.format ?? ((v: number) => String(v));
+  const derived = picked.derive?.(value, result) ?? [];
+  const state = picked.state?.(value, result) ?? null;
 
   return (
     <LockableScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
@@ -179,18 +277,31 @@ export const CircuitTab: React.FC = () => {
       <View style={s.controlCard}>
         <View style={s.controlHead}>
           <Text style={s.controlLabel}>{picked.control.label}</Text>
-          <Text style={s.controlValue}>{fmt(value)}{picked.control.unit}</Text>
+          <Text style={s.controlValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            {fmt(value)}{picked.control.unit}
+          </Text>
         </View>
+        {/* Keyed by circuit so the knob remeasures rather than carrying the
+            previous circuit's width through the switch. */}
         <Knob
+          key={picked.id}
           min={picked.control.min}
           max={picked.control.max}
           step={picked.control.step}
+          ticks={picked.control.ticks}
           value={value}
           onChange={setValue}
         />
       </View>
 
-      <LiveReadout circuit={picked} result={result} fault={fault} />
+      <LiveReadout
+        circuit={picked}
+        result={result}
+        fault={fault}
+        derived={derived}
+        state={state}
+        charge={charge}
+      />
 
       <Text style={s.prompt}>{picked.prompt}</Text>
     </LockableScrollView>
@@ -207,18 +318,28 @@ function describe(err: unknown): string {
 }
 
 const k = StyleSheet.create({
-  track: {
-    height: 40, justifyContent: 'center', marginTop: space.sm,
+  wrap: { marginTop: space.sm },
+  track: { height: 44, justifyContent: 'center' },
+  groove: {
+    position: 'absolute', left: 0, right: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
+    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.ink,
   },
   fill: {
-    position: 'absolute', height: 12, borderRadius: 6, ...curve,
+    position: 'absolute', left: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink,
   },
   thumb: {
-    position: 'absolute', width: 28, height: 28, borderRadius: 14, marginLeft: -14,
+    position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2,
     backgroundColor: colors.white, borderWidth: 3, borderColor: colors.ink,
-    ...elevation.card,
+    alignItems: 'center', justifyContent: 'center', ...elevation.card,
   },
+  thumbCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.goldDeep },
+  ticks: { height: 26, marginTop: 2 },
+  tick: { position: 'absolute', alignItems: 'center', width: 44, marginLeft: -22 },
+  tickMark: { width: 2, height: 5, borderRadius: 1, backgroundColor: colors.inkMute },
+  tickMarkKey: { width: 3, height: 8, backgroundColor: colors.ink },
+  tickLabel: { fontFamily: font.bold, fontSize: 10, color: colors.inkMute, marginTop: 2, ...tabular },
+  tickLabelKey: { fontFamily: font.black, color: colors.ink },
 });
 
 const s = StyleSheet.create({
@@ -243,8 +364,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.goldSoft, borderWidth: 2.5, borderColor: colors.goldPlate,
     borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md,
   },
-  controlHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  controlLabel: { fontFamily: font.black, fontSize: type.small, color: colors.goldText, letterSpacing: 0.4 },
+  controlHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },
+  controlLabel: { fontFamily: font.black, fontSize: type.small, color: colors.goldText, letterSpacing: 0.4, flexShrink: 1 },
   controlValue: { fontFamily: font.black, fontSize: type.title, color: colors.ink, ...tabular, letterSpacing: -0.6 },
   prompt: {
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,

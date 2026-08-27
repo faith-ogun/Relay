@@ -91,6 +91,18 @@ export class OrbitRig {
   private dRadius = 1;
   private readonly dPan = new THREE.Vector3();
 
+  /**
+   * Bumped every time the camera is actually moved.
+   *
+   * Anything drawn in screen space over this scene has to be recomputed when
+   * the camera moves and must not be recomputed when it does not: the ruler
+   * naming the rows and columns is laid out from this camera, and a phone that
+   * rebuilds that layout sixty times a second at a board nobody is touching is
+   * a phone with a warm back. A counter is enough, and it costs one addition
+   * in the one place the camera can change.
+   */
+  private stamp = 0;
+
   /** Set while a preset is playing, so a finger can interrupt it. */
   private flight: {
     t: number;
@@ -239,7 +251,11 @@ export class OrbitRig {
   /** How far the camera is from its target, for scaling hit radii and lifts. */
   get distance(): number { return this.radius; }
 
+  /** Changes whenever the camera has moved. See `stamp`. */
+  get version(): number { return this.stamp; }
+
   private apply(): void {
+    this.stamp += 1;
     _offset.setFromSphericalCoords(this.radius, this.phi, this.theta);
     this.camera.position.copy(this.target).add(_offset);
     this.camera.lookAt(this.target);

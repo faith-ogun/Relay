@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import {
   ArrowRight,
   Battery,
@@ -14,7 +14,9 @@ import {
   Zap,
 } from 'lucide-react';
 
-import { CURRICULUM, allLessons, type CurriculumAccent } from './ohmlet/data/curriculum';
+import {
+  allLessons, getCurriculumSnapshot, subscribeCurriculum, type CurriculumAccent,
+} from './ohmlet/data/curriculum';
 
 type IconType = React.ComponentType<{ className?: string }>;
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
@@ -26,7 +28,14 @@ interface LearnPageProps {
 // The path below is rendered from the SHIPPED curriculum, so the unit names,
 // order and counts on this public page can never drift from what a learner
 // actually gets after paying.
-const TOTAL_LESSONS = allLessons().length;
+//
+// Read through the store, not as a module constant. The curriculum used to be a
+// frozen array and a top-level `const TOTAL_LESSONS = allLessons().length` was
+// correct; it is now swapped at runtime when a newer corpus arrives from the
+// server, so a constant captured at import time would quietly advertise the
+// bundled count to every visitor while the app taught something else. A public
+// marketing page claiming the wrong number of lessons is exactly the drift this
+// comment promises cannot happen.
 
 const UNIT_TINT: Record<CurriculumAccent, string> = {
   gold: 'bg-ohmlet-gold-soft',
@@ -69,6 +78,9 @@ const topics: Array<{ title: string; icon: IconType; skills: string[] }> = [
 ];
 
 export const LearnPage: React.FC<LearnPageProps> = ({ onNavigate }) => {
+  const { units } = useSyncExternalStore(subscribeCurriculum, getCurriculumSnapshot, getCurriculumSnapshot);
+  const totalLessons = allLessons().length;
+
   return (
     <div className="w-full">
       {/* Hero */}
@@ -104,13 +116,13 @@ export const LearnPage: React.FC<LearnPageProps> = ({ onNavigate }) => {
           <div className="max-w-2xl">
             <h2 className="text-3xl font-black tracking-[-0.02em] text-ohmlet-ink md:text-5xl">The learning path</h2>
             <p className="mt-4 text-lg font-semibold text-ohmlet-ink-soft">
-              {CURRICULUM.length} units, {TOTAL_LESSONS} lessons, in the order they unlock. Each one stacks on the last,
+              {units.length} units, {totalLessons} lessons, in the order they unlock. Each one stacks on the last,
               so skills compound instead of scattering.
             </p>
           </div>
 
           <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {CURRICULUM.map((unit, i) => (
+            {units.map((unit, i) => (
               <article
                 key={unit.id}
                 className={`${UNIT_TINT[unit.accent] ?? 'bg-white'} group rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 shadow-press transition-transform hover:-translate-y-1`}

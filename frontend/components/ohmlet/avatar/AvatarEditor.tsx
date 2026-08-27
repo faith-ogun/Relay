@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Shuffle, X } from 'lucide-react';
 import { OhmletAvatar } from './OhmletAvatar';
-import { defaultAvatar, LABELS, OPTIONS, type OhmletAvatarConfig } from './avatarConfig';
+import { defaultAvatar, LABELS, OPTIONS, type FaceShape, type OhmletAvatarConfig } from './avatarConfig';
 import { useDialog } from '../../../hooks/useDialog';
 
 // ── AvatarEditor ──
@@ -94,7 +94,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, onSave, onC
                 )}
                 {tab === 'face' && (
                   <>
-                    <Choices label="Face shape" options={OPTIONS.sex.map((s) => [s, LABELS.sex[s]])} active={cfg.sex} onPick={(sex) => set({ sex: sex as 'man' | 'woman' })} />
+                    <Choices label="Face shape" options={OPTIONS.faceShape.map((s) => [s, LABELS.faceShape[s]])} active={cfg.faceShape} onPick={(faceShape) => set({ faceShape: faceShape as FaceShape })} />
                     <Choices label="Ears" options={OPTIONS.earSize.map((s) => [s, LABELS.earSize[s]])} active={cfg.earSize} onPick={(earSize) => set({ earSize: earSize as 'small' | 'big' })} />
                   </>
                 )}
@@ -156,13 +156,14 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
 
 const Swatches: React.FC<{ label: string; values: string[]; active?: string; onPick: (v: string) => void }> = ({ label, values, active, onPick }) => (
   <Row label={label}>
-    {values.map((c) => (
+    {values.map((c, i) => (
       <button
         key={c}
         type="button"
-        aria-label={c}
+        aria-label={`${label}, option ${i + 1} of ${values.length}`}
+        aria-pressed={active === c}
         onClick={() => onPick(c)}
-        className={`h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 ${active === c ? 'border-ohmlet-ink ring-2 ring-ohmlet-gold ring-offset-1' : 'border-ohmlet-line'}`}
+        className={`ohmlet-focus-ring h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 active:scale-95 ${active === c ? 'border-ohmlet-ink ring-2 ring-ohmlet-gold ring-offset-1' : 'border-ohmlet-line'}`}
         style={{ background: c }}
       />
     ))}
@@ -175,8 +176,9 @@ const Choices: React.FC<{ label: string; options: (readonly [string, string])[] 
       <button
         key={v}
         type="button"
+        aria-pressed={active === v}
         onClick={() => onPick(v)}
-        className={`rounded-xl border-2 px-3 py-1.5 text-xs font-black transition-all ${active === v ? 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink' : 'border-ohmlet-line text-ohmlet-ink hover:border-ohmlet-ink'}`}
+        className={`ohmlet-focus-ring rounded-xl border-2 px-3 py-1.5 text-xs font-black transition-all hover:-translate-y-0.5 active:translate-y-0 ${active === v ? 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink' : 'border-ohmlet-line text-ohmlet-ink hover:border-ohmlet-ink'}`}
       >
         {l}
       </button>

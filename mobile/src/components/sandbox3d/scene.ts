@@ -23,7 +23,7 @@
 
 import * as THREE from 'three';
 import { Renderer } from 'expo-three';
-import { BOARD, BOARD_TOP, TABLE_Y, UNO, UNO_TOP } from './boardSpec';
+import { BOARD, BOARD_TOP, SOCKET_LIP_RADIUS, TABLE_Y, UNO, UNO_TOP } from './boardSpec';
 import { OrbitRig } from './camera';
 import { createEnvironment, KEY_DIR } from './env';
 import { applyBreadboardTexture, buildBreadboard, type BreadboardMesh } from './geometry/breadboard';
@@ -35,8 +35,9 @@ import {
   BoardTransient, buildNetlist, readSolution, type NetlistInput, type NetlistResult,
 } from './netlist';
 import { partHoles } from './parts';
+import { measureRuler, type RulerLayout } from './ruler';
 import { solve } from '../../sim/engine';
-import { holeAtPoint, holeInfo, unoPinAtPoint, type HoleId } from './topology';
+import { holeAtPoint, holeInfo, unoPinAtPoint, HOLE_HIGHLIGHT_RADIUS, type HoleId } from './topology';
 import type {
   CameraView, HoleTap, PartKind, PerfSample, PlacedPart, Quality, SandboxSolution, Wire,
 } from './types';
@@ -53,15 +54,37 @@ export interface SceneOptions {
   quality: Quality;
   onPerf?: (sample: PerfSample) => void;
   onSolve?: (solution: SandboxSolution) => void;
+  /**
+   * The camera moved, so anything drawn over the scene in screen space is now
+   * stale.
+   *
+   * Rate limited by the loop, not by the listener: see CAMERA_MS.
+   */
+  onCamera?: () => void;
 }
 
 type Tier = Exclude<Quality, 'auto'>;
 
+// Anisotropy is a ceiling, not a request: the renderer's own limit is applied
+// on top of it. 16 is what an A series GPU reports, and the board is the exact
+// case the feature exists for, a large flat texture seen at a grazing angle,
+// so the top tier asks for everything the device has.
 const TIERS: Record<Tier, { shadows: boolean; shadowSize: number; anisotropy: number }> = {
-  high: { shadows: true, shadowSize: 1024, anisotropy: 8 },
-  balanced: { shadows: true, shadowSize: 512, anisotropy: 4 },
+  high: { shadows: true, shadowSize: 1024, anisotropy: 16 },
+  balanced: { shadows: true, shadowSize: 512, anisotropy: 8 },
   low: { shadows: false, shadowSize: 0, anisotropy: 2 },
 };
+
+/**
+ * How often a moving camera is reported to the shell, in milliseconds.
+ *
+ * Thirty times a second, which is fast enough that the ruler over the board
+ * does not visibly trail a finger and half the React work of reporting every
+ * frame. The moment the camera settles it is reported once more regardless, so
+ * what is left on screen is always the exact layout for where the camera
+ * actually stopped.
+ */
+const CAMERA_MS = 33;
 
 /** Frame time above which the scene is not keeping up with a 60 Hz display. */
 const SLOW_MS = 21;
@@ -74,6 +97,7 @@ const _ndc = new THREE.Vector2();
 const _plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -BOARD_TOP);
 const _unoPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -UNO_TOP);
 const _hit = new THREE.Vector3();
+const _proj = new THREE.Vector3();
 const _pins: Array<THREE.Vector3 | null> = [];
 const _pool = [
   new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(),
@@ -114,6 +138,10 @@ export class SandboxScene {
   private frameMs = 16.6;
   private slowRun = 0;
   private disposed = false;
+  /** Camera stamps: the last one reported, and the one seen last frame. */
+  private cameraSent = -1;
+  private cameraLast = -1;
+  private cameraAt = 0;
 
   private input: NetlistInput = { parts: [], wires: [] };
   private built: NetlistResult | null = null;
@@ -192,9 +220,12 @@ export class SandboxScene {
 
     this.scene.add(this.partLayer, this.wireLayer, this.overlay);
 
-    // The ring under the hole a tap would land on.
+    // The ring around the hole a finger is over. Sized to one pitch across, so
+    // it names a single hole instead of covering its neighbours: the whole
+    // point of it is that a learner aiming for g29 can see they are on g30
+    // while their finger is still down.
     this.targetRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.05, 0.078, 24).rotateX(-Math.PI / 2),
+      new THREE.RingGeometry(SOCKET_LIP_RADIUS + 0.004, HOLE_HIGHLIGHT_RADIUS, 32).rotateX(-Math.PI / 2),
       this.materials.highlight,
     );
     this.targetRing.visible = false;
@@ -412,6 +443,37 @@ export class SandboxScene {
     this.dirty = true;
   }
 
+  /**
+   * Where every row, rail and column line meets the edge of the frame.
+   *
+   * The board's own printed row letters and column numbers live at its two
+   * ends, six and a half inches apart, and no camera a phone can hold has both
+   * ends in frame at a scale anyone can read. This is the same information,
+   * projected into the view, so it is always on screen wherever the camera is
+   * pointed. See ruler.ts.
+   *
+   * `width` and `height` are the view's size in POINTS, the same units
+   * `projectHole` works in.
+   */
+  measureRuler(width: number, height: number): RulerLayout {
+    return measureRuler(this.rig.camera, width, height);
+  }
+
+  /**
+   * Where a hole sits on screen, in the same points the gesture reports.
+   *
+   * The label naming the hole under a finger is anchored to the HOLE, not to
+   * the finger, because the finger is the one place on the screen the learner
+   * cannot see. Returns null when the hole is behind the camera.
+   */
+  projectHole(hole: HoleId, width: number, height: number): { x: number; y: number } | null {
+    const info = holeInfo(hole);
+    if (!info) return null;
+    _proj.set(info.world[0], info.world[1], info.world[2]).project(this.rig.camera);
+    if (!Number.isFinite(_proj.x) || !Number.isFinite(_proj.y) || _proj.z > 1) return null;
+    return { x: (_proj.x * 0.5 + 0.5) * width, y: (-_proj.y * 0.5 + 0.5) * height };
+  }
+
   // ── Simulation ────────────────────────────────────────────────────────────
 
   /**
@@ -539,6 +601,22 @@ export class SandboxScene {
     this.elapsed += dt;
 
     let busy = this.rig.update(dt);
+
+    // Whatever is drawn over the scene in screen space is stale the moment the
+    // camera moves, and is recomputed from a callback rather than from a React
+    // subscription to the pose. Reported at CAMERA_MS while the camera is
+    // moving and once more the frame after it stops, which is the frame the
+    // stamp stops changing.
+    const stamp = this.rig.version;
+    if (stamp !== this.cameraSent) {
+      const settled = stamp === this.cameraLast;
+      this.cameraLast = stamp;
+      if (settled || now - this.cameraAt >= CAMERA_MS) {
+        this.cameraSent = stamp;
+        this.cameraAt = now;
+        this.opts.onCamera?.();
+      }
+    }
 
     if (this.simulating && this.transient && this.built) {
       // Real time, stepped in small slices so an RC curve is the curve and not

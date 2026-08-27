@@ -195,7 +195,18 @@ export function createMaterials(): MaterialLibrary {
     // pure white. Pure white on a cream background reads as a hole in the page.
     boardPlastic: lambert('boardPlastic', 0xeceae3),
     boardTop: lambert('boardTop', 0xffffff),
-    socket: lambert('socket', 0x15171b),
+    // The 830 socket faces. White, because the lip and the mouth are two
+    // different colours carried on the geometry's own vertices so that both
+    // draw in one instanced call, and a tinted base would multiply them both.
+    // The polygon offset is what keeps a face that sits five hundredths of a
+    // millimetre above the printed top from flickering against it on a device
+    // whose depth buffer is only 16 bits.
+    socket: lambert('socket', 0xffffff, {
+      vertexColors: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
 
     legMetal: standard('legMetal', { color: 0xc4c9d0, metalness: 0.62, roughness: 0.3, envMapIntensity: 1.1 }),
     pinGold: standard('pinGold', { color: 0xc9a227, metalness: 0.7, roughness: 0.32, envMapIntensity: 1.2 }),

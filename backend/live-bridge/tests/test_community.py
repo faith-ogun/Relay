@@ -29,7 +29,7 @@ def test_kinds_and_caps_are_sane():
 
 
 # Art keys the client knows how to render (keep in sync with ChallengeArt.tsx).
-_KNOWN_ART = {"streak", "nokit", "teachback", "sensors", "debug", "firstlight"}
+_KNOWN_ART = {"streak", "streak30", "nokit", "teachback", "sensors", "debug", "firstlight"}
 _KNOWN_THEMES = {"red", "blue", "green", "gold", "violet", "indigo"}
 
 

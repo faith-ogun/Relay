@@ -106,12 +106,26 @@ export const RAILS = [
   { id: 3, z: 0.85, polarity: '+' as const, side: 'near' as const },
 ];
 
-/** z of the coloured stripe printed alongside rail `rail`. */
+/**
+ * z of the coloured stripe printed alongside rail `rail`.
+ *
+ * 0.06 inch out from the rail's holes, not 0.1. The two rails sit 0.2 inch
+ * apart from the numbered grid, and a stripe parked halfway across that gap
+ * leaves the column numbers nowhere to go: they end up printed straight
+ * through the blue line, which is exactly where they were. A real MB-102 runs
+ * its lines close against the rail holes and gives the numbers the rest of the
+ * band, and so does this.
+ */
+const STRIPE_OFFSET = 0.06;
+
 export function railStripeZ(rail: number): number {
   const r = RAILS[rail];
-  const outward = r.polarity === '+' ? 0.1 : -0.1;
+  const outward = r.polarity === '+' ? STRIPE_OFFSET : -STRIPE_OFFSET;
   return r.side === 'far' ? r.z - outward : r.z + outward;
 }
+
+/** Width of the printed rail line. Half a millimetre, as it is on the board. */
+export const STRIPE_WIDTH = 0.02;
 
 /** x of hole `i` (0 to 49) on any rail. */
 export function railHoleX(i: number): number {
@@ -120,10 +134,33 @@ export function railHoleX(i: number): number {
   return columnX(RAIL_INSET + group * RAIL_GROUP_STRIDE + within);
 }
 
-/** Hole diameter. Real sockets are about 1.2 mm across at the surface. */
-export const HOLE_RADIUS = 0.026;
-/** How far the socket recess goes into the board before the contact. */
-export const HOLE_DEPTH = 0.05;
+/**
+ * Socket radius. A real MB-102 socket is 1.2 mm across at the surface, which
+ * is 0.024 inch across the radius: a little under a quarter of the pitch.
+ *
+ * The ratio is the whole point. Draw the socket much fatter than this and
+ * neighbouring holes stop having clear plastic between them, at which point
+ * the grid reads as one grey field and there is no way to tell g29 from g30 by
+ * eye. That is not a hypothetical: it is what the board did.
+ */
+export const HOLE_RADIUS = 0.024;
+
+/**
+ * The moulded lip around each socket.
+ *
+ * 0.064 inch across, so two neighbouring lips leave 0.036 inch of clear
+ * plastic between them: better than a third of the pitch, which is what keeps
+ * the holes reading as separate holes at a fitted camera on a phone.
+ */
+export const SOCKET_LIP_RADIUS = 0.032;
+
+// There is deliberately no socket DEPTH here any more. The board's printed top
+// is an opaque quad with no aperture in it, so anything modelled below that
+// quad is occluded by it and draws nothing: 830 socket tubes used to be built
+// that way and not one pixel of them was ever seen. The socket is drawn as a
+// face sitting just above the printing instead, which is what the web scene
+// does per hole. Reinstating real depth means punching 830 apertures in the
+// top surface first, not lowering geometry back under it.
 
 /** Every tie point on the board: 630 numbered plus 200 on the rails. */
 export const TIE_POINTS = COLS * ROWS + RAILS.length * RAIL_HOLES;

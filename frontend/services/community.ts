@@ -134,7 +134,9 @@ export async function fetchChallenges(): Promise<Challenge[]> {
   return data?.challenges ?? [];
 }
 
-export async function joinChallenge(id: string): Promise<{ joined: boolean; participantCount: number } | null> {
+export async function joinChallenge(
+  id: string,
+): Promise<{ joined: boolean; firstJoin: boolean; participantCount: number } | null> {
   return api(`/v1/community/challenges/${id}/join`, { method: 'POST' });
 }
 

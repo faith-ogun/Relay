@@ -12,6 +12,8 @@
 
 import type { AuthoredStep, LessonStep } from './lessons';
 
+// ── The rule (identical on both surfaces; guarded by mobile/scripts/check-lesson-levels.mjs) ──
+
 export type LessonLevel = 0 | 1 | 2 | 3; // 0 = not started
 export const MAX_LEVEL = 3 as const;
 
@@ -56,7 +58,7 @@ const CHOICE_TYPES = new Set(['multiple_choice', 'predict_reading', 'predict_beh
 function shuffleStepOptions(step: LessonStep): LessonStep {
   if (!CHOICE_TYPES.has(step.type)) return step;
   const s = step as LessonStep & { options: string[]; correct: number; optionImages?: string[] };
-  // meter/bands steps are graded by their widget, not the option list — never shuffle them.
+  // meter/bands steps are graded by their widget, not the option list, so never shuffle them.
   if ((s as { meter?: unknown }).meter || (s as { bands?: unknown }).bands) return step;
   const order = shuffle(s.options.map((_, i) => i));
   const options = order.map((i) => s.options[i]);
@@ -94,7 +96,7 @@ const difficultyOf = (s: AuthoredStep): Difficulty => (s.difficulty === 2 || s.d
  * strip teach steps and shuffle the practice + options for a harder recall run.
  *
  * Deep, tiered lessons (a real question pool): each level draws a DIFFERENT,
- * harder slice — Bronze favours easy questions, Gold the hardest — so replays
+ * harder slice: Bronze favours easy questions, Gold the hardest, so replays
  * feel like new, escalating challenges rather than the same set reshuffled.
  */
 export function buildLeveledSteps(steps: AuthoredStep[], level: number): LessonStep[] {

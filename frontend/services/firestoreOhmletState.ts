@@ -2,13 +2,17 @@
  * Ohmlet user-state persistence client.
  *
  * The browser no longer touches Firestore directly. It calls our backend
- * (`GET`/`PUT /v1/state/{userId}`), which reads/writes Firestore with the
+ * (`GET`/`PUT /v1/state/{userId}/{key}`), which reads/writes Firestore with the
  * service account. That lets Firestore client rules deny all direct browser
  * access while persistence keeps working through the trusted server path.
  *
- * The exported surface (`loadOhmletState`, `saveOhmletState`,
- * `isFirestoreConfigured`) is unchanged so `useOhmletUserState` stays as-is —
- * only the transport underneath moved.
+ * `key` names the record being read or written and is part of the URL, so every
+ * caller gets its own server document. It used to namespace localStorage only,
+ * with every caller PUTting the unkeyed path, and because that write is a full
+ * replace the last surface to save owned the document: opening the achievements
+ * page could wipe a learner's XP, streak and lesson levels, and so could
+ * picking up their phone. The key has to reach the server for the isolation to
+ * be real.
  */
 
 import { getIdToken } from './firebase';
@@ -26,13 +30,14 @@ const resolveConfig = (override?: OhmletStateConfig) => {
   return { apiBaseUrl, enabled: Boolean(apiBaseUrl) };
 };
 
-const makeUrl = (userId: string, cfg: ReturnType<typeof resolveConfig>) =>
-  `${cfg.apiBaseUrl}/v1/state/${encodeURIComponent(userId)}`;
+const makeUrl = (userId: string, key: string, cfg: ReturnType<typeof resolveConfig>) =>
+  `${cfg.apiBaseUrl}/v1/state/${encodeURIComponent(userId)}/${encodeURIComponent(key)}`;
 
 export const isFirestoreConfigured = (override?: OhmletStateConfig) => resolveConfig(override).enabled;
 
 export async function loadOhmletState<T extends Record<string, unknown>>(
   userId: string,
+  key: string,
   override?: OhmletStateConfig
 ): Promise<T | null> {
   const cfg = resolveConfig(override);
@@ -43,7 +48,7 @@ export async function loadOhmletState<T extends Record<string, unknown>>(
   const token = await getIdToken();
   if (!token) return null;
 
-  const response = await fetch(makeUrl(userId, cfg), {
+  const response = await fetch(makeUrl(userId, key, cfg), {
     method: 'GET',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -60,6 +65,7 @@ export async function loadOhmletState<T extends Record<string, unknown>>(
 
 export async function saveOhmletState<T extends Record<string, unknown>>(
   userId: string,
+  key: string,
   state: T,
   override?: OhmletStateConfig
 ): Promise<void> {
@@ -70,7 +76,7 @@ export async function saveOhmletState<T extends Record<string, unknown>>(
   const token = await getIdToken();
   if (!token) return;
 
-  const response = await fetch(makeUrl(userId, cfg), {
+  const response = await fetch(makeUrl(userId, key, cfg), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(state),

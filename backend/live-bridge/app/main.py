@@ -41,6 +41,8 @@ from interview_router import router as interview_router
 import consent
 from consent import router as consent_router
 from curriculum import router as curriculum_router
+from achievements import router as achievements_router
+from builds import router as builds_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
 import entitlements
@@ -139,6 +141,14 @@ app.include_router(consent_router)
 # Curriculum served from the backend so a lesson fix reaches mobile without an
 # App Store review, and the authored lessons stay out of client bundles (#70).
 app.include_router(curriculum_router)
+# Achievements: the DURABLE record of what a learner has earned. Earning is an
+# event, so it is stamped once and never recomputed away by a later correction
+# to how a counter is derived.
+app.include_router(achievements_router)
+# The build library, served for the same reason: a parts list is what the kit
+# check measures a learner's bench against, so a correction must not wait on
+# an App Store review.
+app.include_router(builds_router)
 
 session_service = InMemorySessionService()
 runner = Runner(
@@ -592,66 +602,6 @@ async def websocket_endpoint(
             logger.warning("ADK session cleanup failed for %s: %s", session_id, exc)
 
         logger.info("WS session closed: %s", session_id)
-
-
-# ── REST fallback for text-only usage ──────────────────────────────────────────
-
-@app.post("/v1/live/text")
-async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> dict:
-    """Simple REST endpoint for text-only interaction (non-streaming).
-
-    Useful for testing without WebSocket or when audio is unavailable. The user
-    is the verified token holder; any user_id in the payload is ignored (#44).
-    """
-    session_id = str(payload.get("session_id", ""))[:128]
-    text = validation.validate_ws_text(payload.get("text", ""))  # capped (#45)
-    stage = validation.normalize_stage(payload.get("stage"), "inventory")
-
-    if not text:
-        return {"error": "text is required"}
-
-    # Create session if needed
-    session = await session_service.get_session(
-        app_name=APP_NAME, user_id=user_id, session_id=session_id,
-    )
-    if not session:
-        await session_service.create_session(
-            app_name=APP_NAME, user_id=user_id, session_id=session_id,
-        )
-
-    # The live agent uses a native-audio model that only works with run_live().
-    # For text-only chat, call Gemini directly via google-genai SDK.
-    from google import genai
-    from ohmlet_live_agent.agent import OHMLET_INSTRUCTION
-
-    client = _text_client()
-
-    text_model = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
-
-    if not _TEXT_CB.allow():
-        reply = "The tutor is very busy right now. Please try again in a moment."
-    else:
-        try:
-            response = await client.aio.models.generate_content(
-                model=text_model,
-                contents=f"[stage={stage}] {text}",
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=OHMLET_INSTRUCTION,
-                ),
-            )
-            reply = response.text.strip() if response.text else "No response generated."
-            _TEXT_CB.record_success()
-        except Exception as e:
-            _TEXT_CB.record_failure()
-            logger.error("Text fallback failed: %s", e)
-            reply = "Sorry, the tutor hit a snag. Please try again in a moment."
-
-    return {
-        "session_id": session_id,
-        "stage": stage,
-        "reply": reply,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
 
 
 # ── Observability + audit trail (#35) ──────────────────────────────────────────

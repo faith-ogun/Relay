@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,7 @@ import {
   PenTool,
   Play,
   Radio,
+  RotateCw,
   Settings,
   Sparkles,
   Trophy,
@@ -22,7 +23,11 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { CURRICULUM, allLessons, nextLesson, type CurriculumAccent } from './ohmlet/data/curriculum';
+import {
+  allLessons, getCurriculumSnapshot, nextLesson, subscribeCurriculum,
+  type CurriculumAccent, type CurriculumUnit,
+} from './ohmlet/data/curriculum';
+import { refreshCurriculum, type SyncState } from '../services/curriculum';
 import { LearnPath } from './LearnPath';
 import { LessonRunner } from './ohmlet/views/LessonRunner';
 import { LiveTutorView } from './ohmlet/views/LiveTutorView';
@@ -36,7 +41,13 @@ import {
 } from '../services/community';
 import { track } from '../services/analytics';
 import { AchievementsView } from './ohmlet/views/AchievementsView';
-import { ACHIEVEMENTS, isEarned } from './ohmlet/data/achievements';
+import { ACHIEVEMENTS } from './ohmlet/data/achievements';
+import { readCachedEarned } from '../services/achievements';
+import {
+  authoredLessonsCompleted,
+  authoredUnitsCompleted,
+  isEarnedWith,
+} from '../services/achievementRules';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
 import { useAvatar } from '../hooks/useAvatar';
@@ -48,16 +59,45 @@ import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { useAchievementMetrics } from '../hooks/useAchievementMetrics';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
 import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
+import { applyCompletion, isoDay } from '../services/completion';
+import {
+  claimCheckpoints, fetchCheckpoints, foldCheckpointXp, foldClaim,
+  type CheckpointGrant, type CheckpointStatus, type FailReason,
+} from '../services/checkpoints';
 
 interface ProgressState {
   /** Per-lesson level: 1 Bronze, 2 Silver, 3 Gold. Present at >=1 means completed. */
   lessonLevels: Record<string, number>;
   xp: number;
   streak: number;
+  /** Distinct lessons completed today. Derived from todayLessonIds. */
   completedToday: number;
+  /**
+   * Which lessons have counted toward today's goal, cleared when the day turns.
+   *
+   * The goal used to be a tally on both surfaces, and the two counted it
+   * differently against ONE record: the phone added one per attempt, so five
+   * replays of one easy lesson filled a five-lesson goal, while the browser
+   * added one only on a first-ever completion. Distinct lesson ids is what the
+   * goal was always claiming to measure, and both surfaces now write them.
+   *
+   * Optional because records written before this field existed do not carry it.
+   * A learner who completed lessons earlier TODAY under an older build has a
+   * count with no ids behind it, so their first completion after the upgrade
+   * restarts the day's list at one. It costs one day's goal ring, once.
+   */
+  todayLessonIds?: string[];
   lastActiveDate: string;
   /** Legacy field (pre-leveling); migrated into lessonLevels on load. */
   completedLessonIds?: string[];
+  /**
+   * How much of `xp` came from claimed checkpoints. The ledger that makes the
+   * payout exactly-once: the server records the grant, this records how much of
+   * it has been counted here, and reconciliation is the difference between the
+   * two. Without it, a learner who claimed on their phone and then opened the
+   * web would be paid twice by their own counter.
+   */
+  checkpointXp?: number;
   [k: string]: unknown; // satisfies useOhmletUserState's Record<string, unknown> constraint
 }
 
@@ -66,13 +106,26 @@ const PROGRESS_DEFAULTS: ProgressState = {
   xp: 0,
   streak: 0,
   completedToday: 0,
+  todayLessonIds: [],
   lastActiveDate: '',
+  checkpointXp: 0,
 };
 
-const dayStr = (offsetDays = 0) => {
-  const d = new Date();
-  d.setDate(d.getDate() - offsetDays);
-  return d.toISOString().slice(0, 10);
+/**
+ * Per-lesson levels, with the legacy pre-levelling record folded in.
+ *
+ * Records written before levels existed stored completed ids in a flat array.
+ * Reading only `lessonLevels` treats those lessons as never completed, which
+ * shows a finished path as empty and pays a lesson's XP a second time when it
+ * is replayed, so every reader goes through here.
+ */
+const migratedLevels = (
+  p: Pick<ProgressState, 'lessonLevels' | 'completedLessonIds'>,
+): Record<string, number> => {
+  const held = p.lessonLevels ?? {};
+  if (Object.keys(held).length > 0) return held;
+  if (p.completedLessonIds?.length) return Object.fromEntries(p.completedLessonIds.map((id) => [id, 1]));
+  return held;
 };
 
 /**
@@ -101,9 +154,10 @@ const ACCENT_HEX: Record<CurriculumAccent, string> = {
   red: '#ff6f5e',
 };
 
-/** Accent hex for the unit that owns a lesson (defaults to gold). */
-const lessonAccentHex = (lessonId: string): string => {
-  for (const unit of CURRICULUM) {
+/** Accent hex for the unit that owns a lesson (defaults to gold). Takes the
+ *  corpus explicitly: which units exist depends on what the backend is serving. */
+const lessonAccentHex = (units: CurriculumUnit[], lessonId: string): string => {
+  for (const unit of units) {
     for (const skill of unit.skills) {
       if (skill.lessons.some((l) => l.id === lessonId)) return ACCENT_HEX[unit.accent];
     }
@@ -124,13 +178,48 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'achievements', label: 'Achievements', icon: Award },
 ];
 
-const WAYS: Array<{ id: ViewId; title: string; sub: string; icon: React.ComponentType<{ className?: string }>; accent: string; beta?: boolean }> = [
-  { id: 'path', title: 'Continue the path', sub: 'Guided lessons', icon: MapIcon, accent: 'bg-ohmlet-gold-soft' },
-  { id: 'live', title: 'Live bench session', sub: 'Voice + camera tutor', icon: Radio, accent: 'bg-ohmlet-blue-soft' },
-  { id: 'simulator', title: 'Open the simulator', sub: 'See current flow live', icon: CircuitBoard, accent: 'bg-ohmlet-gold-soft' },
-  { id: 'sandbox', title: 'Open the sandbox', sub: '3D breadboard', icon: Boxes, accent: 'bg-[#eef7e0]', beta: true },
-  { id: 'community', title: 'See the community', sub: 'Builds + challenges', icon: Users, accent: 'bg-[#fdece8]' },
+/**
+ * Visual weight of a way-in tile. `gold` is the guided route, `ink` the live
+ * differentiator (it echoes the hero pair above it), `quiet` the open-ended
+ * surfaces, which separate from each other by icon tint rather than by card.
+ */
+type WayTone = 'gold' | 'ink' | 'quiet';
+
+interface Way {
+  id: ViewId;
+  title: string;
+  sub: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: WayTone;
+  /** Icon-chip classes: the colour rhythm across the row. */
+  chip: string;
+  beta?: boolean;
+}
+
+const WAYS: Way[] = [
+  { id: 'path', title: 'Continue the path', sub: 'Guided lessons', icon: MapIcon, tone: 'gold', chip: 'border-2 border-ohmlet-ink bg-white text-ohmlet-ink' },
+  { id: 'live', title: 'Go live', sub: 'Voice + camera', icon: Radio, tone: 'ink', chip: 'bg-ohmlet-gold text-ohmlet-ink' },
+  { id: 'simulator', title: 'Open simulator', sub: 'See current flow', icon: CircuitBoard, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-ohmlet-blue-soft text-ohmlet-blue-deep' },
+  { id: 'sandbox', title: 'Open sandbox', sub: '3D breadboard', icon: Boxes, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-[#eef7e0] text-ohmlet-green-deep', beta: true },
+  { id: 'community', title: 'See community', sub: 'Builds + challenges', icon: Users, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-[#fdece8] text-ohmlet-red' },
 ];
+
+/**
+ * Surface + resting/hover depth per tone. Three depths, so no two adjacent
+ * tiles carry the same shadow: 5px press for the two lead tiles, a soft ambient
+ * shadow for the quiet ones, each lifting one level on hover.
+ */
+const WAY_SURFACE: Record<WayTone, string> = {
+  gold: 'border-[2.5px] border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink shadow-press hover:shadow-[0_8px_0_#14181f]',
+  ink: 'border-[2.5px] border-ohmlet-ink bg-ohmlet-ink text-white shadow-press hover:shadow-[0_8px_0_#14181f]',
+  quiet: 'border-2 border-ohmlet-line bg-white text-ohmlet-ink shadow-soft hover:border-ohmlet-ink hover:shadow-press-sm',
+};
+
+const WAY_SUB: Record<WayTone, string> = {
+  gold: 'text-ohmlet-ink/70',
+  ink: 'text-white/70',
+  quiet: 'text-ohmlet-ink-soft',
+};
 
 
 /**
@@ -197,6 +286,231 @@ const PortalReturnNote: React.FC<{ plan: Plan; onSeePlans?: () => void }> = ({ p
   );
 };
 
+// ── Checkpoints ───────────────────────────────────────────────────────────────
+//
+// A checkpoint is the reward for clearing a whole skill, and until now it was
+// only ever drawn: the chest, the XP figure and the ceremony all rendered, and
+// no client called POST /v1/me/checkpoints/claim, so nothing was ever granted.
+//
+// Everything below takes its numbers from the server. `xp` on the button is the
+// server's own figure from GET /v1/me/checkpoints, the ceremony shows only what
+// a claim actually granted, and a claim that fails shows the failure rather than
+// a celebration.
+
+/** How long the ceremony's XP figure takes to count up, in milliseconds. */
+const XP_COUNT_MS = 900;
+
+const CHEST_CLOSED = '/path/checkpoint-chest.png';
+const CHEST_OPEN = '/path/checkpoint-chest-open.png';
+
+const FAIL_COPY: Record<FailReason, string> = {
+  offline: "Can't reach your checkpoints. Check your connection.",
+  timeout: 'That took too long. Your checkpoints are safe, try again.',
+  unauthenticated: 'Sign in again to collect your checkpoints.',
+  rate_limited: 'Slow down a moment, then collect them.',
+  server: "Something went wrong on our side. Your checkpoints are safe, try again.",
+};
+
+type CheckpointsView =
+  | { phase: 'loading' }
+  | { phase: 'ready'; status: CheckpointStatus }
+  | { phase: 'error'; reason: FailReason };
+
+/**
+ * The strip above the path: what is waiting to be collected, or what has been.
+ *
+ * The two states are deliberately different objects rather than one card with a
+ * changed colour. Something claimable is a full gold panel with a button; a
+ * history of cleared checkpoints is a single quiet line, because it is a fact
+ * rather than an action.
+ */
+const CheckpointBand: React.FC<{
+  view: CheckpointsView;
+  claiming: boolean;
+  claimError: FailReason | null;
+  onClaim: () => void;
+  onRetry: () => void;
+}> = ({ view, claiming, claimError, onClaim, onRetry }) => {
+  if (view.phase === 'loading') {
+    return (
+      <div className="flex h-6 items-center gap-2" aria-hidden>
+        <span className="h-5 w-5 rounded-md bg-ohmlet-line" />
+        <span className="ohmlet-shimmer h-3 w-52 rounded-full bg-ohmlet-line" />
+      </div>
+    );
+  }
+
+  if (view.phase === 'error') {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="status">
+        <span className="text-sm font-bold text-ohmlet-ink-soft">{FAIL_COPY[view.reason]}</span>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <RotateCw className="h-3 w-3" strokeWidth={3} />
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const { available, claimed } = view.status;
+  const clearedCount = Object.keys(claimed).length;
+
+  if (available.length > 0) {
+    const total = available.reduce((sum, c) => sum + c.xp, 0);
+    return (
+      <div className="ohmlet-rise flex flex-wrap items-center gap-x-5 gap-y-4 rounded-3xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-5 py-4 shadow-press">
+        <img
+          src={CHEST_CLOSED}
+          alt=""
+          className="ohmlet-float h-16 w-16 shrink-0 object-contain drop-shadow-[0_6px_10px_rgba(20,24,31,0.25)]"
+          draggable={false}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-ohmlet-gold-text">
+            {available.length === 1 ? 'Checkpoint reached' : 'Checkpoints reached'}
+          </p>
+          <h2 className="mt-0.5 text-2xl font-black leading-tight tracking-[-0.02em] text-ohmlet-ink">
+            {available.length === 1
+              ? available[0].title
+              : `${available.length} skills cleared`}
+          </h2>
+          {available.length > 1 && (
+            <p className="mt-1 truncate text-xs font-bold text-ohmlet-ink/70">
+              {available.map((c) => c.title).join(' · ')}
+            </p>
+          )}
+          {claimError && (
+            <p className="mt-1.5 text-xs font-black text-ohmlet-ink" role="alert">
+              {FAIL_COPY[claimError]}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClaim}
+          disabled={claiming}
+          className="shrink-0 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-ink px-6 py-3 text-base font-black text-ohmlet-gold shadow-[0_5px_0_#8f6d00] transition-transform hover:-translate-y-0.5 active:translate-y-[3px] active:shadow-[0_2px_0_#8f6d00] disabled:cursor-wait disabled:opacity-70"
+        >
+          {claiming ? 'Collecting…' : `Collect ${total} XP`}
+        </button>
+      </div>
+    );
+  }
+
+  if (clearedCount > 0) {
+    return (
+      <p className="flex items-center gap-2 text-xs font-bold text-ohmlet-ink-soft">
+        <img src={CHEST_OPEN} alt="" className="h-6 w-6 object-contain" draggable={false} />
+        {clearedCount} checkpoint{clearedCount === 1 ? '' : 's'} cleared
+        <span className="text-ohmlet-ink-mute">·</span>
+        <span className="font-black text-ohmlet-gold-text">{view.status.totalClaimedXp} XP collected</span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="flex items-center gap-2 text-xs font-bold text-ohmlet-ink-soft">
+      <img src={CHEST_CLOSED} alt="" className="h-6 w-6 object-contain opacity-40" draggable={false} />
+      Finish every lesson in a skill to open its checkpoint.
+    </p>
+  );
+};
+
+/**
+ * The payout, shown only for XP the server actually granted.
+ *
+ * Mounted from the claim response, never from local state, which is what keeps
+ * the promise in point 6 of the brief: on a second device the checkpoints come
+ * back as already claimed, the grant is empty, and this never mounts.
+ */
+const CheckpointCeremony: React.FC<{ grant: CheckpointGrant; onClose: () => void }> = ({ grant, onClose }) => {
+  const [shown, setShown] = useState(0);
+  const closeRef = React.useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Counts to the real figure. Reduced motion lands on it immediately rather
+  // than animating, which is the point of the setting.
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShown(grant.xp); return; }
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / XP_COUNT_MS);
+      // Ease out, so it decelerates onto the number instead of stopping dead.
+      setShown(Math.round(grant.xp * (1 - (1 - t) ** 3)));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [grant.xp]);
+
+  return (
+    <div
+      className="ohmlet-fade-in fixed inset-0 z-50 flex items-center justify-center bg-ohmlet-ink/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkpoint-ceremony-title"
+      onClick={onClose}
+    >
+      <div
+        className="ohmlet-scale-in relative w-full max-w-sm overflow-hidden rounded-[28px] border-[3px] border-ohmlet-ink bg-white p-7 text-center shadow-press"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* The glow behind the chest, not a border on it. */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-0 h-56 w-56 -translate-x-1/2 -translate-y-1/3 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(250,204,46,0.55) 0%, rgba(250,204,46,0) 70%)' }}
+          aria-hidden
+        />
+        <img
+          src={CHEST_OPEN}
+          alt=""
+          className="ohmlet-float relative mx-auto h-28 w-28 object-contain drop-shadow-[0_10px_16px_rgba(20,24,31,0.22)]"
+          draggable={false}
+        />
+        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.24em] text-ohmlet-gold-text">
+          {grant.granted.length === 1 ? 'Checkpoint cleared' : `${grant.granted.length} checkpoints cleared`}
+        </p>
+        <h2 id="checkpoint-ceremony-title" className="mt-1 text-4xl font-black tracking-[-0.03em] text-ohmlet-ink">
+          <span aria-live="polite">+{shown}</span> XP
+        </h2>
+
+        <ul className="ohmlet-stagger mt-5 flex flex-col gap-1.5">
+          {grant.granted.map((c) => (
+            <li
+              key={c.skillId}
+              className="ohmlet-rise flex items-center justify-between gap-3 rounded-xl bg-ohmlet-gold-soft px-3 py-2 text-left"
+            >
+              <span className="truncate text-sm font-black text-ohmlet-ink">{c.title}</span>
+              <span className="shrink-0 text-sm font-black text-ohmlet-gold-text">+{c.xp}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold py-3 text-base font-black text-ohmlet-ink shadow-press-sm transition-transform hover:-translate-y-0.5 active:translate-y-[3px] active:shadow-none"
+        >
+          Keep going
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade, onAccount }) => {
   const [active, setActive] = useState<ViewId>('today');
   // Collapsible left rail — gives space-hungry views (Sandbox/Simulator) room.
@@ -221,6 +535,34 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   }, []);
   const { userId, isAdmin } = useIdentity();
   const { user } = useAuth();
+
+  // ── The curriculum on screen ──
+  //
+  // The path is the first thing a learner sees, so it must never wait on the
+  // network. The corpus starts as the copy bundled with this build (or a newer
+  // one this browser already cached) and is REPLACED IN PLACE the moment the
+  // backend answers with something different, which is what keeps this surface
+  // and the phone showing the same path off the same progress record.
+  //
+  // `corpus` appears in the dependency list of several memos below that never
+  // mention it in their bodies. That is deliberate, not an oversight:
+  // allLessons(), nextLesson() and lessonRigor() read the installed corpus out
+  // of module state, so this snapshot is what tells React they can change.
+  // Dropping it from those lists leaves the path frozen on the bundled copy.
+  const corpus = useSyncExternalStore(subscribeCurriculum, getCurriculumSnapshot, getCurriculumSnapshot);
+  const [sync, setSync] = useState<SyncState>({ phase: 'checking', serverVersion: null });
+  const [syncAttempt, setSyncAttempt] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    setSync((prev) => (prev.phase === 'checking' ? prev : { ...prev, phase: 'checking' }));
+    void refreshCurriculum().then((state) => {
+      if (alive) setSync(state);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [syncAttempt]);
+  const retrySync = useCallback(() => setSyncAttempt((n) => n + 1), []);
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
   // Child-safe (#94): a verified minor gets no community/social surfaces (no feed,
   // no posting, and they never appear on the public leaderboard).
@@ -230,18 +572,16 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
   // Progress persists per-user: instantly to localStorage (refresh-safe) and,
   // when the backend is reachable, to the Firestore state store (cross-device).
-  const { state: progress, setState: setProgress } = useOhmletUserState<ProgressState>({
+  const { state: progress, setState: setProgress, ready: progressReady } = useOhmletUserState<ProgressState>({
     userId,
     key: 'progress',
     defaults: PROGRESS_DEFAULTS,
   });
 
-  // Per-lesson levels, with one-time migration from the legacy completedLessonIds.
-  const lessonLevels = useMemo<Record<string, number>>(() => {
-    if (progress.lessonLevels && Object.keys(progress.lessonLevels).length > 0) return progress.lessonLevels;
-    if (progress.completedLessonIds?.length) return Object.fromEntries(progress.completedLessonIds.map((id) => [id, 1]));
-    return progress.lessonLevels ?? {};
-  }, [progress.lessonLevels, progress.completedLessonIds]);
+  const lessonLevels = useMemo<Record<string, number>>(
+    () => migratedLevels(progress),
+    [progress.lessonLevels, progress.completedLessonIds],
+  );
 
   const completed = useMemo(
     () => new Set(Object.entries(lessonLevels).filter(([, lvl]) => lvl >= 1).map(([id]) => id)),
@@ -249,15 +589,25 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   );
   const xp = progress.xp;
   const streak = progress.streak;
-  // Units fully completed (every lesson in every skill done) — drives the
-  // unit-tier achievements.
+  // Units and lessons completed, counted in AUTHORED lessons rather than in the
+  // sessions they were packaged into. Both drive achievement families, and both
+  // used to move when the packaging did: cutting the 142 authored lessons into
+  // 284 sessions left a learner who had finished everything with every part one
+  // done and every part two untouched, which took up to four unit medals off
+  // people who had earned them. See services/achievementRules.ts.
   const unitsCompleted = useMemo(
-    () => CURRICULUM.filter((u) => u.skills.every((s) => s.lessons.every((l) => completed.has(l.id)))).length,
-    [completed],
+    () => authoredUnitsCompleted(corpus.units, completed),
+    [corpus, completed],
   );
-  const [running, setRunning] = useState<{ id: string; accent: string; level: number } | null>(null);
+  const buildsCompleted = useMemo(
+    () => authoredLessonsCompleted(corpus.units, completed),
+    [corpus, completed],
+  );
+  const [running, setRunning] = useState<{
+    id: string; accent: string; level: number; heldLevel: number;
+  } | null>(null);
 
-  const next = nextLesson(completed) ?? allLessons()[0];
+  const next = useMemo(() => nextLesson(completed) ?? allLessons()[0], [corpus, completed]);
   // Real weekly standing (never a hardcoded rank). Null until it loads, and it
   // stays null if the service is unreachable, so the card simply does not show
   // rather than inventing a position.
@@ -298,20 +648,53 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
   // Real progress through the curriculum, not a decorative fraction.
   const pathProgressPct = useMemo(() => {
-    const total = allLessons().length;
-    return total ? Math.round((completed.size / total) * 100) : 0;
-  }, [completed]);
+    const path = allLessons();
+    // Only lessons ON the path count toward it. A learner may hold progress
+    // recorded against a corpus this client is not rendering (finished on a
+    // phone running a newer curriculum), and counting those against this path's
+    // length reported more than 100% complete.
+    const done = path.reduce((n, lesson) => n + (completed.has(lesson.id) ? 1 : 0), 0);
+    return path.length ? Math.round((done / path.length) * 100) : 0;
+  }, [corpus, completed]);
   // The two most recent achievements the learner has ACTUALLY earned. Empty for a
   // new account, which is the honest state; never a sample of what they might get.
+  //
+  // Reads this device's mirror of the server's earned record first, so a medal
+  // stays on the shelf even if the counter behind it is later derived
+  // differently. The live comparison is the fallback for a threshold crossed
+  // since the last sync.
+  const earnedRecord = useMemo(() => readCachedEarned(userId), [userId]);
   const earnedPreview = useMemo(
     () =>
       ACHIEVEMENTS.filter((a) =>
-        isEarned(a, { xp, streak, builds: completed.size, units: unitsCompleted }),
+        isEarnedWith(a, { xp, streak, builds: buildsCompleted, units: unitsCompleted }, earnedRecord),
       ).slice(0, 2),
-    [xp, streak, completed, unitsCompleted],
+    [xp, streak, buildsCompleted, unitsCompleted, earnedRecord],
   );
-  const pathPreview = allLessons().slice(0, 4);
-  const goalDone = Math.min(GOAL_TARGET, progress.lastActiveDate === dayStr(0) ? progress.completedToday : 0);
+  const pathPreview = useMemo(() => allLessons().slice(0, 4), [corpus]);
+  // The ways-in shelf. Five tiles normally, four for a child-safe account (no
+  // community). Widths are picked so a row never ends in a half-width stub:
+  // five lay out 1 / 2 / 3 / 3 / 5 across (xs / sm / md / lg / xl), four lay
+  // out 1 / 2 / 2 / 2 / 4. Each basis sits a hair under the exact fraction so
+  // sub-pixel rounding cannot wrap a tile early, and `grow` hands that slack
+  // straight back, so a row that does not divide evenly (five at two or three
+  // across) still fills edge to edge. The all-in-one-row layout waits for xl:
+  // below 1280px the 256px rail leaves a fifth of the measure too narrow for a
+  // chip and a title side by side, and the title collided with the Beta pill.
+  // The single column is reserved for phones under 390px, where two-up would
+  // cramp the title.
+  const ways = useMemo(() => WAYS.filter((w) => !childSafe || w.id !== 'community'), [childSafe]);
+  const wayBasis =
+    ways.length === 5
+      ? 'basis-[calc(50%-0.5rem)] max-[389px]:basis-full md:basis-[calc(33.333%-0.6rem)] xl:basis-[calc(20%-0.75rem)]'
+      : 'basis-[calc(50%-0.5rem)] max-[389px]:basis-full xl:basis-[calc(25%-0.7rem)]';
+  // Today's goal, from the same UTC day the completion rule stamps the record
+  // with. The local-time helper this used to call disagreed with it across a
+  // clock change, which showed a goal as unstarted on a day it had been met.
+  const goalDone = Math.min(
+    GOAL_TARGET,
+    progress.lastActiveDate === isoDay(new Date()) ? progress.completedToday : 0,
+  );
   const goalPct = Math.round((goalDone / GOAL_TARGET) * 100);
   const week = useMemo(() => {
     const lit = Math.min(streak, 7);
@@ -323,40 +706,137 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
     (id: string) => {
       const level = nextAttemptLevel(lessonLevels[id] ?? 0);
       track('lesson_start', { lesson_id: id, level });
-      setRunning({ id, accent: lessonAccentHex(id), level });
-    },
-    [lessonLevels],
-  );
-
-  const handleComplete = useCallback(
-    (id: string, gained: number, level: number) => {
-      if (!childSafe) void reportXp(gained); // feed the weekly league (best-effort; not for minors)
-      track('lesson_complete', { lesson_id: id, level, xp: gained });
-      // First completion of a new calendar day extends/refreshes the streak.
-      if (progress.lastActiveDate !== dayStr(0)) {
-        track('streak_extended', { day: progress.lastActiveDate === dayStr(1) ? progress.streak + 1 : 1 });
-      }
-      setProgress((prev) => {
-        const levels = { ...(prev.lessonLevels ?? {}) };
-        const prevLevel = levels[id] ?? 0;
-        if (level <= prevLevel) return prev; // replay at or below current level: no new XP/level
-        levels[id] = level;
-        const firstEver = prevLevel === 0;
-        const today = dayStr(0);
-        const sameDay = prev.lastActiveDate === today;
-        const streak = sameDay ? prev.streak || 1 : prev.lastActiveDate === dayStr(1) ? prev.streak + 1 : 1;
-        return {
-          ...prev,
-          lessonLevels: levels,
-          xp: prev.xp + gained,
-          streak,
-          completedToday: sameDay ? prev.completedToday + (firstEver ? 1 : 0) : 1,
-          lastActiveDate: today,
-        };
+      setRunning({
+        id,
+        accent: lessonAccentHex(corpus.units, id),
+        level,
+        // Read BEFORE the run so a replay cannot be mistaken for a first
+        // completion. It gates the once-per-lesson achievement counters, and it
+        // is what tells the completion card whether this run pays any XP.
+        heldLevel: lessonLevels[id] ?? 0,
       });
     },
-    [setProgress, progress.lastActiveDate, progress.streak],
+    [corpus, lessonLevels],
   );
+
+  // What a finished lesson does to the record is defined in ONE place, shared
+  // with the phone app: services/completion.ts. This handler used to hold a
+  // second, quieter definition that bailed out entirely on a replay at or below
+  // the level already held, so a learner who had finished everything could not
+  // keep a streak alive in the browser at all while their phone advanced it.
+  const handleComplete = useCallback(
+    (id: string, gained: number, level: number) => {
+      const before = { ...progress, lessonLevels: migratedLevels(progress) };
+      const after = applyCompletion(before, id, gained, level);
+      const awarded = after.xp - before.xp;
+      // The weekly league gets the XP that was actually awarded. A replay at or
+      // below the level held awards none, and reporting it anyway put XP on the
+      // leaderboard nobody earned. Best effort, and never for minors.
+      if (!childSafe && awarded > 0) void reportXp(awarded);
+      track('lesson_complete', { lesson_id: id, level, xp: gained, awarded });
+      // First completion of a new calendar day extends/refreshes the streak.
+      if (before.lastActiveDate !== isoDay(new Date())) {
+        track('streak_extended', { day: after.streak });
+      }
+      // The updater form, not `after`, so a checkpoint fold landing in the same
+      // tick is not thrown away.
+      setProgress((prev) =>
+        applyCompletion({ ...prev, lessonLevels: migratedLevels(prev) }, id, gained, level),
+      );
+    },
+    [progress, setProgress, childSafe],
+  );
+
+  // ── Checkpoints ──
+  //
+  // The XP a learner sees has ONE source: the server's record of what it has
+  // granted. Nothing here adds XP optimistically, because the server adds it
+  // too, and a learner who taps twice or claims on a second device would then
+  // be paid once by the server and twice by their own counter.
+
+  const [checkpoints, setCheckpoints] = useState<CheckpointsView>({ phase: 'loading' });
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<FailReason | null>(null);
+  const [ceremony, setCeremony] = useState<CheckpointGrant | null>(null);
+  // Bumped when the learner opens the path, so a checkpoint claimed on their
+  // phone shows as already collected here rather than as still waiting.
+  const [checkpointTick, setCheckpointTick] = useState(0);
+  const onPath = active === 'path';
+  useEffect(() => {
+    if (onPath) setCheckpointTick((n) => n + 1);
+  }, [onPath]);
+
+  // Re-read on a finished lesson too: the lesson that completes a skill is
+  // exactly the moment a checkpoint becomes claimable.
+  const completedCount = completed.size;
+  useEffect(() => {
+    let alive = true;
+    void fetchCheckpoints().then((res) => {
+      if (!alive) return;
+      setCheckpoints(res.ok ? { phase: 'ready', status: res.data } : { phase: 'error', reason: res.reason });
+    });
+    return () => { alive = false; };
+  }, [userId, completedCount, checkpointTick]);
+
+  // Reconcile the ledger against the server's total. Idempotent by
+  // construction: it adds the DIFFERENCE, so running it on every status read,
+  // on two devices, or after a crash between the claim and the save all land on
+  // the same number. Gated on hydration, because folding into the defaults
+  // before the stored envelope arrives would be immediately overwritten.
+  useEffect(() => {
+    if (!progressReady || checkpoints.phase !== 'ready') return;
+    const total = checkpoints.status.totalClaimedXp;
+    setProgress((prev) => {
+      const patch = foldCheckpointXp(prev, total);
+      return patch ? { ...prev, ...patch } : prev;
+    });
+  }, [progressReady, checkpoints, setProgress]);
+
+  const collectCheckpoints = useCallback(async () => {
+    // Read synchronously, BEFORE the await. The fold below has to name an
+    // absolute total rather than a delta, and this is that total's anchor: what
+    // the server had already paid at the moment this button was pressed. Taken
+    // afterwards it could include this very grant, folded by the refresh effect
+    // while the POST was in flight, and the learner would be paid twice.
+    const totalBefore = checkpoints.phase === 'ready' ? checkpoints.status.totalClaimedXp : null;
+    setClaiming(true);
+    setClaimError(null);
+    const res = await claimCheckpoints();
+    setClaiming(false);
+    if (!res.ok) {
+      // No ceremony for a claim that did not happen. The panel stays, with the
+      // reason on it, so the learner can try again.
+      setClaimError(res.reason);
+      return;
+    }
+
+    // Fold what this call granted, without waiting on another round trip. Naming
+    // the total makes this safe to run more than once for one grant: a second
+    // fold finds the ledger already there and does nothing. With no anchor to
+    // name it from, skip it — the refresh below is absolute and pays it instead.
+    if (res.data.xp > 0 && totalBefore !== null) {
+      setProgress((prev) => {
+        const patch = foldClaim(prev, totalBefore, res.data.xp);
+        return patch ? { ...prev, ...patch } : prev;
+      });
+    }
+
+    if (res.data.granted.length > 0) {
+      track('checkpoint_claimed', { count: res.data.granted.length, xp: res.data.xp });
+      setCeremony(res.data);
+    }
+
+    // Refresh the lists so the panel reflects what is left. A failure here is
+    // harmless: the grant is already recorded on both sides, and the reconcile
+    // effect above pays any remainder off the next status read.
+    const after = await fetchCheckpoints();
+    if (after.ok) setCheckpoints({ phase: 'ready', status: after.data });
+  }, [setProgress, checkpoints]);
+
+  const retryCheckpoints = useCallback(() => {
+    setCheckpoints({ phase: 'loading' });
+    setCheckpointTick((n) => n + 1);
+  }, []);
 
   // ── Lesson runner takes over the whole screen ──
   if (running) {
@@ -366,6 +846,18 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
         lessonId={running.id}
         accent={running.accent}
         level={running.level}
+        // `level` is frozen at launch (it decides which steps the round is made
+        // of, so raising it mid-run would rebuild the round under the learner).
+        // The level HELD is not: it is only ever read, and reading a stale copy
+        // is how the two things it gates go wrong. On a device with no local
+        // cache the record arrives over the network, and a learner who taps
+        // Continue before it lands launches against empty defaults. Frozen at
+        // that moment, a replay of a lesson they hold at Gold would credit the
+        // once-per-lesson `perfect` and `drawings` counters again, and the
+        // completion card would promise XP the shared rule then declines to pay.
+        // Levels never fall, so taking the higher of the two can only ever
+        // correct that, never invent a completion.
+        heldLevel={Math.max(running.heldLevel, lessonLevels[running.id] ?? 0)}
         onExit={() => setRunning(null)}
         onComplete={handleComplete}
         onUpgrade={onUpgrade}
@@ -373,11 +865,12 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
     );
   }
 
-  const continueAccent = lessonAccentHex(next.id);
+  const continueAccent = lessonAccentHex(corpus.units, next.id);
 
   return (
     <div className="min-h-screen bg-ohmlet-cream font-display text-ohmlet-ink">
       <PortalReturnNote plan={plan} onSeePlans={onUpgrade} />
+      {ceremony && <CheckpointCeremony grant={ceremony} onClose={() => setCeremony(null)} />}
       {/* Full-bleed, so the rail sits flush against the viewport edge. Capping
           and centring the whole shell left a band of empty cream to the LEFT of
           the sidebar on any wide screen, which reads as a rendering fault rather
@@ -498,6 +991,28 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
             <div>
               <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Learning path</p>
               <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build by build.</h1>
+              <div className="mt-5">
+                <CheckpointBand
+                  view={checkpoints}
+                  claiming={claiming}
+                  claimError={claimError}
+                  onClaim={collectCheckpoints}
+                  onRetry={retryCheckpoints}
+                />
+              </div>
+              {sync.phase === 'stale' && (
+                <p className="ohmlet-rise mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-l-[3px] border-ohmlet-red pl-3 text-sm font-bold text-ohmlet-ink-soft" role="status">
+                  Newer lessons are ready. This is the copy saved on this device.
+                  <button
+                    type="button"
+                    onClick={retrySync}
+                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+                  >
+                    <RotateCw className="h-3 w-3" strokeWidth={3} />
+                    Get them
+                  </button>
+                </p>
+              )}
               <div className="mt-4">
                 <LearnPath completedLessonIds={completed} lessonLevels={lessonLevels} onStartLesson={launchLesson} />
               </div>
@@ -514,7 +1029,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               stats={{
                 xp,
                 streak,
-                builds: completed.size,
+                builds: buildsCompleted,
                 units: unitsCompleted,
                 liveSessions: metrics.liveSessions,
                 drawings: metrics.drawings,
@@ -556,7 +1071,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
               </div>
 
               {/* Hero row: continue + live session */}
-              <div className="mt-6 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+              <div className="mt-5 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
                 <div className="flex flex-col justify-between rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white p-6 shadow-press">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">Pick up where you left off</p>
@@ -592,28 +1107,60 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                 </div>
               </div>
 
-              {/* Ways to learn */}
-              <h3 className="mt-9 text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Ways to learn today</h3>
-              <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {WAYS.filter((w) => !childSafe || w.id !== 'community').map((w) => {
+              {/* Ways to learn: at most two rows, and one row from xl up, so the path,
+                  the streak and the achievements below it stay inside the first screen. */}
+              <div className="mt-7 flex items-center gap-3">
+                <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Ways to learn today</h3>
+                <span aria-hidden className="h-px flex-1 bg-ohmlet-line" />
+              </div>
+              <ul className="ohmlet-stagger mt-3 flex flex-wrap gap-3">
+                {ways.map((w) => {
                   const Icon = w.icon;
                   return (
-                    <button key={w.id} onClick={() => setActive(w.id)} className={`${w.accent} group rounded-2xl border-2 border-ohmlet-ink p-4 text-left shadow-press-sm transition-transform hover:-translate-y-1`}>
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-white text-ohmlet-ink">
-                          <Icon className="h-5 w-5" />
+                    <li key={w.id} className={`ohmlet-rise flex min-w-0 grow ${wayBasis}`}>
+                      <button
+                        type="button"
+                        onClick={() => setActive(w.id)}
+                        className={`group relative flex w-full flex-col rounded-2xl px-3.5 py-3 text-left transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-[3px] active:translate-y-[2px] active:shadow-none motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0 ${WAY_SURFACE[w.tone]}`}
+                      >
+                        {w.tone === 'ink' && (
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 rounded-[0.85rem] bg-[radial-gradient(120%_120%_at_100%_0%,rgba(250,204,46,0.24),transparent_62%)]"
+                          />
+                        )}
+                        <span className="relative flex items-start gap-2.5">
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0 ${w.chip}`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="mt-0.5 min-w-0 text-[13px] font-black leading-[1.15] tracking-tight">{w.title}</span>
                         </span>
-                        {w.beta && <span className="rounded-full border border-ohmlet-ink/30 px-1.5 py-0.5 text-[9px] font-black uppercase text-ohmlet-ink-soft">Beta</span>}
-                      </div>
-                      <p className="mt-3 text-sm font-black leading-tight">{w.title}</p>
-                      <p className="text-xs font-semibold text-ohmlet-ink-soft">{w.sub}</p>
-                    </button>
+                        <span className="relative mt-1.5 flex items-center gap-1.5 pr-7">
+                          <span className={`min-w-0 text-[11px] font-bold leading-snug ${WAY_SUB[w.tone]}`}>{w.sub}</span>
+                          {w.beta && (
+                            <span
+                              className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                                w.tone === 'ink' ? 'border-white/30 text-white/70' : 'border-ohmlet-ink/25 text-ohmlet-ink-soft'
+                              }`}
+                            >
+                              Beta
+                            </span>
+                          )}
+                        </span>
+                        <ArrowRight
+                          aria-hidden
+                          className="absolute bottom-3 right-3 h-3.5 w-3.5 translate-x-1 opacity-0 transition-[transform,opacity] duration-200 group-hover:translate-x-0 group-hover:opacity-70 motion-reduce:transition-none"
+                        />
+                      </button>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
 
               {/* Path preview + right rail */}
-              <div className="mt-9 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+              <div className="mt-7 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
                 <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-black tracking-tight">Your path</h3>

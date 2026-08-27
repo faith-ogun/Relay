@@ -32,6 +32,10 @@ export type AnalyticsEvent =
   | 'first_build_complete'
   // Engagement / retention
   | 'streak_extended'
+  // Fires only when the server actually granted a checkpoint, so a zero count
+  // here against a healthy `lesson_complete` count is the signal that the
+  // payout has stopped reaching people. It went unnoticed once already.
+  | 'checkpoint_claimed'
   | 'challenge_join'
   | 'challenge_leave'
   | 'simulator_open'

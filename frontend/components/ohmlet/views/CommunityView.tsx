@@ -149,7 +149,10 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
       prev.map((c) => (c.id === target.id ? { ...c, joined: true, participantCount: c.participantCount + 1 } : c)),
     );
     const res = await joinChallenge(target.id);
-    if (res?.joined) recordMetric('challenges');
+    // Credit the achievement only on a FIRST-EVER join of this series. The server
+    // answers that durably, because leaving deletes the enrolment and a re-join
+    // would otherwise look brand new: join, leave, join earned the badge twice.
+    if (res?.firstJoin) recordMetric('challenges');
     if (res) {
       setChallenges((prev) =>
         prev.map((c) => (c.id === target.id ? { ...c, joined: res.joined, participantCount: res.participantCount } : c)),

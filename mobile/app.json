@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Ohmlet uses your camera so the tutor can see your breadboard and check your wiring as you build.",
-        "NSMicrophoneUsageDescription": "Ohmlet uses your microphone so you can talk to the tutor while you build.",
+        "NSMicrophoneUsageDescription": "Ohmlet streams your microphone to the live tutor while a session is open, so you can ask questions out loud and it can answer while you build. The microphone is only on while you have turned it on in a session.",
         "CADisableMinimumFrameDurationOnPhone": true
       },
       "usesAppleSignIn": true,
@@ -130,6 +130,15 @@
       "expo-font",
       "expo-web-browser",
       "expo-audio",
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "Ohmlet streams your microphone to the live tutor while a session is open, so you can ask questions out loud and it can answer while you build. The microphone is only on while you have turned it on in a session.",
+          "iosBackgroundMode": false,
+          "androidForegroundService": false,
+          "androidPermissions": ["android.permission.RECORD_AUDIO"]
+        }
+      ],
       "expo-asset",
       "expo-localization"
     ],

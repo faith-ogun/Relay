@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recordMetric } from '../../../services/achievementEvents';
-import { ArrowRight, Check, Eraser, Heart, Infinity as InfinityIcon, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { ArrowRight, Check, CircleAlert, Eraser, Flame, Heart, Infinity as InfinityIcon, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
-import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
-import { findLesson } from '../data/curriculum';
+import { LESSON_CONTENT, type LessonEntry, type LessonStep } from '../data/lessons';
+import { findAuthoredLesson, findLesson } from '../data/curriculum';
+import { getLesson, peekLesson } from '../../../services/curriculum';
 import { LEVEL_META, buildLeveledSteps, xpForLevel } from '../data/levels';
 import { useHearts } from '../../../hooks/useHearts';
 import { HeartsWall } from './HeartsWall';
@@ -33,9 +34,30 @@ interface LessonRunnerProps {
   accent: string;
   /** The level being attempted: 1 Bronze, 2 Silver, 3 Gold. Defaults to 1. */
   level?: number;
+  /**
+   * The level already on record for this lesson before this run started:
+   * 0 never completed, up to 3 Gold. Read before the run, because afterwards
+   * every lesson looks completed.
+   *
+   * Two things depend on it. It gates the once-per-lesson achievement counters:
+   * `perfect` and `drawings` used to be bumped on every clean run, replays
+   * included, while `builds` deduped by lesson id, so "Flawless, 25 flawless
+   * builds" was earned by replaying one easy lesson twenty-five times. And it
+   * decides whether this run pays XP at all, which the completion card has to
+   * state honestly: a learner at Gold replaying Gold earns none.
+   */
+  heldLevel?: number;
   /** Review mode (the /author preview): adds a Skip control so a reviewer can step
    *  through every question without answering. Never set in the learner flow. */
   preview?: boolean;
+  /**
+   * Run the AUTHORED lesson whole rather than the session a learner sits
+   * through. Only the review console sets it: an author writes a 17-step lesson
+   * and needs to review all 17, while the app cuts that into two sessions and
+   * teaches them separately. Reading the authored map also keeps the console
+   * working with no backend, which is what a lesson reviewer has.
+   */
+  authored?: boolean;
   onExit: () => void;
   onComplete: (lessonId: string, xp: number, level: number) => void;
   /** Route to pricing. Absent in the author preview, where hearts are never
@@ -65,9 +87,101 @@ const shuffledOrder = (n: number): number[] => {
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, preview = false, onExit, onComplete, onUpgrade }) => {
-  const lesson = findLesson(lessonId);
-  const content = LESSON_CONTENT[lessonId];
+/**
+ * The runner's dead ends: a lesson this client cannot show, and one it could
+ * not load. Deliberately NOT shaped like the completion card, which is a
+ * centred medal on a celebration disc: this is a left-aligned panel with a
+ * warning badge and its actions in a row, so the two are never mistaken for
+ * each other at a glance.
+ */
+const NoticeScreen: React.FC<{
+  title: string;
+  body: string;
+  onExit: () => void;
+  onRetry?: () => void;
+}> = ({ title, body, onExit, onRetry }) => (
+  <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
+    <div
+      role="alert"
+      className="ohmlet-rise w-full max-w-lg rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-8 shadow-soft"
+    >
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft">
+        <CircleAlert className="h-5 w-5 text-ohmlet-ink" strokeWidth={2.5} />
+      </span>
+      <h2 className="mt-5 text-2xl font-black tracking-[-0.02em] text-ohmlet-ink">{title}</h2>
+      <p className="mt-2 text-sm font-semibold leading-relaxed text-ohmlet-ink-soft">{body}</p>
+      <div className="mt-7 flex flex-wrap gap-3">
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-5 py-3 text-sm font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none motion-reduce:transition-none"
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={2.5} />
+            Try again
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onExit}
+          className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-5 py-3 text-sm font-black transition-colors hover:bg-ohmlet-cream"
+        >
+          Back to the path
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+export const LessonRunner: React.FC<LessonRunnerProps> = ({
+  lessonId, accent, level = 1, preview = false, authored = false, heldLevel = 0,
+  onExit, onComplete, onUpgrade,
+}) => {
+  const alreadyCompleted = heldLevel >= 1;
+  // A run pays only when it reaches a level ABOVE the one on record, which is
+  // the same condition services/completion.ts applies to the record itself.
+  const paysXp = level > heldLevel;
+  const lesson = authored ? findAuthoredLesson(lessonId) : findLesson(lessonId);
+
+  // Lesson bodies come from the curriculum service. It answers straight out of
+  // the bundled corpus, with no network at all, whenever the bundled version
+  // stamp matches what the backend serves: the ordinary case. `peekLesson` is
+  // that synchronous answer, so a lesson normally opens on the first frame with
+  // no loading state whatsoever. Only a client rendering a corpus newer than the
+  // one it shipped with has to wait, and it says so rather than showing nothing.
+  const [content, setContent] = useState<LessonEntry | null>(
+    () => (authored ? LESSON_CONTENT[lessonId] : peekLesson(lessonId)) ?? null,
+  );
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloads, setReloads] = useState(0);
+
+  useEffect(() => {
+    const held = (authored ? LESSON_CONTENT[lessonId] : peekLesson(lessonId)) ?? null;
+    setContent(held);
+    setLoadFailed(false);
+    if (held || authored) {
+      // The authored map is in this bundle: if it does not hold the lesson,
+      // no fetch is going to produce it.
+      setLoadFailed(!held);
+      return;
+    }
+
+    let alive = true;
+    void getLesson(lessonId).then((entry) => {
+      if (!alive) return;
+      setContent(entry);
+      setLoadFailed(!entry);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [lessonId, authored, reloads]);
+
+  const retryLoad = useCallback(() => {
+    setLoadFailed(false);
+    setReloads((n) => n + 1);
+  }, []);
   // Steps are transformed for the attempted level (Bronze = as authored;
   // Silver/Gold = teach dropped + shuffled). Rebuilt only when lesson/level change.
   const steps = useMemo(() => buildLeveledSteps(content?.steps ?? [], level), [content, level]);
@@ -89,6 +203,15 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   // never spend a real person's hearts.
   const unlimitedHearts = preview || heartPool.unlimited;
   const misses = useRef(0);
+  // Tracks whether ANY graded answer came back wrong during this run, which is
+  // what makes a completion "perfect".
+  const anyWrongRef = useRef(false);
+  // Drawings the grader accepted during this run, credited once at completion.
+  const drawingsRef = useRef(0);
+  // Both live up here with the other hooks, ABOVE the loading and error returns.
+  // A lesson body can now arrive after the first render, so this component does
+  // move from an early return to the full run, and a hook declared below one of
+  // those returns would change the hook count between renders.
   const [runId, setRunId] = useState(() => Date.now());
 
   // Payment age gate (#96): under-18s cannot self-purchase, and Max is the top
@@ -149,6 +272,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setPos(0);
     setMastered(new Set());
     misses.current = 0;
+    anyWrongRef.current = false;
+    drawingsRef.current = 0;
     setDone(false);
   }, [steps, level]);
 
@@ -186,13 +311,69 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   // raw position, so a wrong answer holds the bar until the requeued step is cleared.
   const progress = steps.length ? Math.round((mastered.size / steps.length) * 100) : 0;
 
-  if (!lesson || !content) {
+  // ── The lesson is not on this client's path at all ──
+  //
+  // Reachable when progress holds an id from a corpus this client is not
+  // rendering: finished on a phone against a newer curriculum, opened here
+  // before the refresh landed. Says so plainly rather than blaming the lesson.
+  if (!lesson) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ohmlet-cream px-6 text-center">
-        <p className="text-lg font-black text-ohmlet-ink">That lesson is not ready yet.</p>
-        <button onClick={onExit} className="rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3 font-black shadow-press-sm">
-          Back to the path
-        </button>
+      <NoticeScreen
+        title="This lesson is not on your path yet"
+        body="It may have arrived on another device first. Head back to the path and it will appear once this one catches up."
+        onExit={onExit}
+      />
+    );
+  }
+
+  // ── The body could not be fetched ──
+  //
+  // In the review console there is nothing to retry: the authored map ships in
+  // this bundle, so a lesson missing from it is missing content, not a network
+  // problem, and the linter will already be flagging it.
+  if (!content && loadFailed) {
+    return (
+      <NoticeScreen
+        title={authored ? 'This lesson has no authored content' : 'Could not load this lesson'}
+        body={
+          authored
+            ? 'Nothing is written under this id in LESSON_CONTENT, so there are no steps to review.'
+            : 'The steps live on the server and the connection did not hold. Nothing you have finished is affected.'
+        }
+        onExit={onExit}
+        onRetry={authored ? undefined : retryLoad}
+      />
+    );
+  }
+
+  // ── Waiting on the body ──
+  //
+  // Only a client rendering a curriculum newer than the one it shipped with
+  // ever gets here; normally the steps are already in hand and the lesson opens
+  // on the first frame. A skeleton of the real screen rather than a spinner, so
+  // the layout does not jump when the steps arrive.
+  if (!content) {
+    return (
+      <div className="flex min-h-screen flex-col bg-ohmlet-cream" aria-busy="true">
+        <div className="flex items-center gap-3 px-5 py-4" aria-hidden>
+          <span className="h-7 w-7 rounded-lg bg-ohmlet-line" />
+          <span className="h-3.5 flex-1 rounded-full border-2 border-ohmlet-ink/15 bg-white" />
+          <span className="h-7 w-16 rounded-full bg-ohmlet-line" />
+        </div>
+        <div className="flex flex-1 items-start justify-center px-5 pt-6">
+          <div className="w-full max-w-2xl animate-pulse motion-reduce:animate-none">
+            <div className="h-5 w-40 rounded-full bg-ohmlet-line" />
+            <div className="mt-4 h-48 rounded-[1.6rem] border-2 border-ohmlet-line bg-white" />
+            <div className="mt-5 space-y-3">
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
+            </div>
+          </div>
+        </div>
+        <p className="pb-10 text-center text-xs font-bold uppercase tracking-[0.16em] text-ohmlet-ink-soft">
+          Loading {lesson.title}
+        </p>
       </div>
     );
   }
@@ -221,7 +402,13 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       case 'identify_component':
         return region === step.correctComponent;
       case 'drag_order':
-        return order.every((v, i) => v === step.correctOrder[i]);
+        // Graded on the arrangement the learner can SEE, not on which of two
+        // identical rows they happened to grab. Blink's loop() legitimately holds
+        // two `delay(1000);` lines: comparing item indices marks half of the
+        // visually perfect answers wrong, and the learner is shown the same rows
+        // again with nothing to change. Same principle as match below, which
+        // pairs by value rather than by position.
+        return order.length === step.correctOrder.length && order.every((v, i) => step.items[v] === step.items[step.correctOrder[i]]);
       case 'match':
         return matched.size === step.pairs.length;
       case 'draw_connection': {
@@ -286,20 +473,20 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setChecked(true);
     ok ? playCorrect() : playWrong();
     if (!ok) loseHeart();
-    // A drawing the grader accepted. Counted once per correct grade, and never
-    // in preview (the author console renders lessons without a real learner).
-    if (ok && !preview) recordMetric('drawings');
+    // A drawing the grader accepted. TALLIED here and credited once the run
+    // completes (see handleContinue), never at grade time: crediting on the
+    // grade paid for a drawing in a run that was then abandoned, so leaving and
+    // re-entering the same lesson counted the same sketch again and again.
+    if (ok) drawingsRef.current += 1;
   };
-
-  // Tracks whether ANY graded answer came back wrong during this run, which is
-  // what makes a completion "perfect".
-  const anyWrongRef = useRef(false);
 
   // An interactive teach step (with hotspots) gates Continue until every part is explored.
   const teachHotspots = step?.type === 'teach' ? step.hotspots : undefined;
   const teachGated = !!teachHotspots && teachHotspots.length > 0 && revealed.size < teachHotspots.length;
 
-  const earnedXp = content ? xpForLevel(content.xpReward, level) : 0;
+  // What this level is worth. The shared completion rule decides whether it is
+  // actually paid; `paysXp` is what the card shows the learner.
+  const levelXp = content ? xpForLevel(content.xpReward, level) : 0;
 
   // A wrong graded answer will be sent to the back of the queue to retry later.
   const willRequeue = checked && correct === false && !!step && !isTeach(step);
@@ -319,8 +506,16 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     if (pos + 1 >= nextQueue.length) {
       setDone(true);
       playComplete();
-      if (!preview && !anyWrongRef.current) recordMetric('perfect');
-      onComplete(lessonId, earnedXp, level);
+      // The once-per-lesson counters. Never in preview (the author console
+      // renders lessons with no learner behind them) and never on a REPLAY:
+      // `builds` counts distinct lessons, so a per-run `perfect` meant twenty
+      // five replays of one easy lesson earned "Flawless, 25 flawless builds".
+      // A replay still pays its level XP, which is what a replay is for.
+      if (!preview && !alreadyCompleted) {
+        if (!anyWrongRef.current) recordMetric('perfect');
+        if (drawingsRef.current > 0) recordMetric('drawings', drawingsRef.current);
+      }
+      onComplete(lessonId, levelXp, level);
       return;
     }
     if (nextQueue !== queue) setQueue(nextQueue);
@@ -332,6 +527,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setPos(0);
     setMastered(new Set());
     misses.current = 0;
+    anyWrongRef.current = false;
+    drawingsRef.current = 0;
     // A fresh run, so its first miss cannot reuse a spent idempotency key and
     // come back refunded.
     setRunId(Date.now());
@@ -349,19 +546,35 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
             <img src="/mascot/celebrate.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
           </div>
           <p className="mt-5 inline-block rounded-full border-2 border-ohmlet-ink px-3 py-1 text-xs font-black uppercase tracking-wide" style={{ background: levelMeta.soft }}>
-            {levelMeta.name} earned
+            {levelMeta.name} {paysXp ? 'earned' : 'held'}
           </p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight">{level >= 3 ? 'Mastered!' : 'Lesson complete!'}</h2>
+          <h2 className="mt-3 text-3xl font-black tracking-tight">
+            {paysXp ? (level >= 3 ? 'Mastered!' : 'Lesson complete!') : 'Practice logged!'}
+          </h2>
           <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">{lesson.title}</p>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
-            <Zap className="h-5 w-5 text-ohmlet-gold-deep" fill="currentColor" />
-            <span className="text-lg font-black">+{earnedXp} XP</span>
-          </div>
-          {level < 3 && (
-            <p className="mt-4 text-xs font-semibold text-ohmlet-ink-soft">
-              Replay this lesson to reach {LEVEL_META[(level + 1) as 1 | 2 | 3].name}.
-            </p>
+          {/* The reward, stated honestly. A run that reaches a level above the
+              one on record pays XP. A replay at or below it pays none, and used
+              to show the level's XP anyway, which was simply untrue. What a
+              replay DOES do is keep the streak and the daily goal moving, so
+              that is what it says instead. */}
+          {paysXp ? (
+            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
+              <Zap className="h-5 w-5 text-ohmlet-gold-deep" fill="currentColor" />
+              <span className="text-lg font-black">+{levelXp} XP</span>
+            </div>
+          ) : (
+            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-5 py-3 shadow-press-sm">
+              <Flame className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
+              <span className="text-lg font-black">Streak kept</span>
+            </div>
           )}
+          <p className="mt-4 text-xs font-semibold text-ohmlet-ink-soft">
+            {level < 3
+              ? `Replay this lesson to reach ${LEVEL_META[(level + 1) as 1 | 2 | 3].name}.`
+              : paysXp
+                ? 'Every level of this one is yours.'
+                : 'This one is already banked, so it pays no more XP. It still counts toward today.'}
+          </p>
           <button
             onClick={onExit}
             className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none"
@@ -1074,8 +1287,12 @@ const OrderStep: React.FC<{ step: Extract<LessonStep, { type: 'drag_order' }> } 
       <Prompt>{step.instruction}</Prompt>
       <ol className="mt-6 space-y-3">
         {order.map((itemIdx, pos) => {
-          const correctHere = checked && step.correctOrder[pos] === itemIdx;
-          const wrongHere = checked && step.correctOrder[pos] !== itemIdx;
+          // Painted the same way the answer is graded: by what the row SAYS. Comparing
+          // indices here would flag two interchangeable rows (Blink's two `delay(1000);`
+          // lines) red under a "Correct" banner, with nothing on screen to change.
+          const rowRight = checked && step.items[step.correctOrder[pos]] === step.items[itemIdx];
+          const correctHere = rowRight;
+          const wrongHere = checked && !rowRight;
           return (
             <li
               key={itemIdx}

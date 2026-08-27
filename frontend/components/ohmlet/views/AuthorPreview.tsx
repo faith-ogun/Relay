@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, CircleAlert, Eye, Play } from 'lucide-react';
-import { CURRICULUM, type CurriculumAccent } from '../data/curriculum';
+import { AUTHORED_CURRICULUM, type CurriculumAccent } from '../data/curriculum';
 import { LESSON_CONTENT } from '../data/lessons';
 import { summarizeLint, type LintProblem } from '../data/lessonSchema';
 import { LessonRunner } from './LessonRunner';
@@ -29,7 +29,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
   const [preview, setPreview] = useState<{ id: string; accent: string } | null>(null);
 
   const { summary, byLesson } = useMemo(() => {
-    const summary = summarizeLint(LESSON_CONTENT, CURRICULUM);
+    const summary = summarizeLint(LESSON_CONTENT, AUTHORED_CURRICULUM);
     const byLesson = new Map<string, LintProblem[]>();
     for (const p of summary.problems) {
       if (!byLesson.has(p.lessonId)) byLesson.set(p.lessonId, []);
@@ -54,6 +54,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
           lessonId={preview.id}
           accent={preview.accent}
           preview
+          authored
           onExit={() => setPreview(null)}
           onComplete={() => setPreview(null)}
         />
@@ -94,7 +95,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
           </p>
         )}
 
-        {CURRICULUM.map((unit) => (
+        {AUTHORED_CURRICULUM.map((unit) => (
           <section key={unit.id} className="mb-9">
             <div className="mb-3 flex items-center gap-3">
               <h2 className="text-lg font-black tracking-tight">{unit.title}</h2>

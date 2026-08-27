@@ -788,7 +788,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'teach', title: 'The Whole System', body: 'The Light-Activated Alarm has three parts: a SENSE stage (an LDR voltage divider), a DECIDE stage (compare the reading to a threshold), and an ACT stage (turn on an LED or buzzer). Sense, decide, act: the shape of almost every useful circuit.', circuitDiagram: 'ldr_alarm' },
       { type: 'multiple_choice', question: 'What is the job of the sense stage in the alarm?', options: ['To make the alarm noise at the output', 'Turn the light level into a voltage to read', 'To limit the current going to the output LED', 'To store power for later use in the circuit'], correct: 1, explanation: 'The LDR divider senses light and turns it into a readable voltage.' },
       { type: 'drag_order', instruction: 'Order the three stages of the alarm.', items: ['Sense the light (LDR divider)', 'Decide (compare to a threshold)', 'Act (LED or buzzer on)'], correctOrder: [0, 1, 2] },
-      { type: 'identify_component', question: 'Click the part that produces the alarm output.', circuitDiagram: 'ldr_alarm', correctComponent: 'buzzer', explanation: 'The buzzer is the act stage: the alarm output. Swap it for an LED and the circuit works the same way, it just signals with light instead of sound.' },
+      { type: 'identify_component', question: 'Click the part that produces the alarm output.', circuitDiagram: 'ldr_alarm', correctComponent: 'led', explanation: 'The LED is the act stage: the alarm output. Swap it for a buzzer and the circuit works the same way, it just signals with sound instead of light.' },
       { type: 'match', instruction: 'Match each stage to its component.', pairs: [['Sense', 'LDR + resistor divider'], ['Decide', 'Threshold comparison'], ['Act', 'LED or buzzer'], ['Read point', 'Analog pin A0']] },
       { type: 'true_false', statement: 'Sense, decide, act is a pattern you will reuse in many circuits.', correct: true, explanation: 'Yes. Most useful builds sense something, decide based on it, and act.' },
       { type: 'multiple_choice', question: 'In the alarm, which stage compares the reading to a threshold?', options: ['The sense stage out at the LDR', 'The decide stage', 'The act stage at the output LED', 'The power supply feeding the board'], correct: 1, explanation: 'Decide compares the sensed value to the threshold and chooses whether to act.' },
@@ -831,7 +831,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
     steps: [
       { type: 'teach', title: 'Bring It Together', body: 'Time to wire the full alarm: the LDR and a 10kΩ resistor form the divider, the midpoint goes to the analog pin, and the LED (with its own resistor) is the output. This is the capstone of everything so far.', circuitDiagram: 'ldr_alarm' },
       { type: 'draw_connection', instruction: 'Wire the LDR divider: 5V to the LDR, LDR to the junction, junction to the 10kΩ resistor, resistor to ground, and the junction to A0.', terminals: [{ x: 60, y: 40, label: '5V', id: 'vcc' }, { x: 180, y: 40, label: 'LDR', id: 'ldr' }, { x: 300, y: 40, label: 'A0', id: 'a0' }, { x: 180, y: 140, label: '10kΩ', id: 'res' }, { x: 180, y: 240, label: 'GND', id: 'gnd' }], expectedConnections: [['vcc', 'ldr'], ['ldr', 'a0'], ['ldr', 'res'], ['res', 'gnd']], explanation: '5V → LDR → junction → 10kΩ → GND, with the junction also feeding A0. The divider midpoint is what the pin reads.' },
-      { type: 'identify_component', question: 'Click the resistor that sets the bottom half of the sensing divider.', circuitDiagram: 'ldr_alarm', correctComponent: 'r_bias', explanation: 'The 10k sits under the LDR. Together they form the divider, and its midpoint is what the analog pin reads.' },
+      { type: 'identify_component', question: 'Click the resistor that sets the bottom half of the sensing divider.', circuitDiagram: 'ldr_alarm', correctComponent: 'resistor', explanation: 'The 10k sits under the LDR. Together they form the divider, and its midpoint is what the analog pin reads.' },
       { type: 'spot_error', question: 'The alarm LED never lights even when triggered. Click the likely wiring fault.', circuitDiagram: 'reversed_led', correctRegion: 'reversed_led', explanation: 'The output LED is reversed. Flip it so current can flow.' },
       { type: 'predict_behavior', question: 'Everything is wired and the threshold is set. You cover the LDR. What happens?', circuitDiagram: 'ldr_alarm', options: ['Nothing happens at all when you cover it', 'The reading falls below the threshold and the LED turns on', 'The LDR overheats and burns out completely', 'The supply voltage suddenly doubles in value'], correct: 1, explanation: 'Covering the LDR raises its resistance, the reading drops past the threshold, and the act stage lights the LED.' },
       { type: 'identify_component', question: 'Click the light-sensing component in the alarm.', circuitDiagram: 'ldr_alarm', correctComponent: 'ldr', explanation: 'The LDR senses light; its changing resistance moves the divider voltage.' },
@@ -1275,7 +1275,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'drag_order', instruction: 'Order the loop() to make a darkness alarm.', items: ['int reading = analogRead(A0);', 'if (reading < threshold) {', 'digitalWrite(ALARM, HIGH);', '} else {', 'digitalWrite(ALARM, LOW);', '}'], correctOrder: [0, 1, 2, 3, 4, 5] },
       { type: 'fill_blank', prompt: 'Read the sensor into a variable: int reading = analogRead(___);', blank: '___', answer: 'A0', hint: 'The alarm divider feeds this analog pin.' },
       { type: 'predict_behavior', question: 'threshold = 500. The room goes dark and the reading drops to 180. What does the code do?', circuitDiagram: 'ldr_alarm', options: ['Sets ALARM LOW (off)', 'Sets ALARM HIGH (on)', 'Nothing', 'Resets the board'], correct: 1, explanation: '180 < 500 is true, so the if block runs and drives the alarm HIGH (on).' },
-      { type: 'identify_component', question: 'Click the output the code drives HIGH to sound the alarm.', circuitDiagram: 'ldr_alarm', correctComponent: 'buzzer', explanation: 'digitalWrite(ALARM, HIGH) switches the transistor, which lets current through the buzzer.' },
+      { type: 'identify_component', question: 'Click the component that signals the alarm when the code drives the alarm pin HIGH.', circuitDiagram: 'ldr_alarm', correctComponent: 'led', explanation: 'digitalWrite(ALARM, HIGH) puts D9 at 5 V, so current runs through the 220 ohm resistor and lights the LED.' },
       { type: 'true_false', statement: 'This sketch is sense, decide, act expressed in code.', correct: true, explanation: 'Yes: analogRead senses, if decides, digitalWrite acts. The exact pattern you wired in Unit 3.' },
       { type: 'multiple_choice', question: 'In the alarm sketch, which function reads the LDR?', options: ['digitalWrite()', 'analogRead()', 'pinMode()', 'delay()'], correct: 1, explanation: 'analogRead(A0) reads the divider voltage from the LDR.' },
       { type: 'predict_behavior', question: 'threshold = 500. It is bright and the reading is 800. The code...', circuitDiagram: 'ldr_alarm', options: ['Drives the alarm HIGH (turns it on)', 'Drives the alarm LOW (leaves it off)', 'Resets the whole board', 'Does nothing at all this cycle'], correct: 1, explanation: '800 < 500 is false, so the else branch runs and the alarm stays off.' },
@@ -1618,7 +1618,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // Tier 2: apply
       { type: 'predict_behavior', difficulty: 2, question: 'A noisy sensor signal has a slow trend plus high-frequency hash. After an RC low-pass filter, the output shows...', circuitDiagram: 'rc_low_pass', options: ['The slow trend, with the hash smoothed away', 'Only the fast hash, with the trend removed', 'Nothing useful, the whole signal is lost', 'A doubled copy of the original signal'], correct: 0, explanation: 'The filter passes the slow trend and attenuates the fast hash, cleaning the signal.' },
-      { type: 'fill_blank', difficulty: 1, prompt: 'Build the cutoff-frequency formula for an RC filter.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', 'C', ')', '+', '−'], hint: 'One over (two-pi times R times C).' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Build the cutoff-frequency formula for an RC filter.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', '×', 'C', ')', '+', '−'], hint: 'One over (two-pi times R times C).' },
       { type: 'predict_behavior', difficulty: 2, question: 'You raise the capacitor value in a low-pass filter. The cutoff frequency...', options: ['Falls, giving more aggressive smoothing', 'Rises, letting more high frequencies through', 'Stays the same regardless of the value', 'Becomes negative and inverts the signal'], correct: 0, explanation: 'fc = 1/(2πRC); a larger C lowers fc, so it cuts more of the higher frequencies.' },
       { type: 'multiple_choice', difficulty: 2, question: 'Swapping the resistor and capacitor positions (cap in series, R to ground) turns it into a...', options: ['High-pass filter', 'Voltage doubler', 'Rectifier', 'Lower-value low-pass'], correct: 0, explanation: 'Cap in series blocks lows and passes highs, the opposite job: a high-pass filter.' },
 
@@ -2482,7 +2482,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'true_false', difficulty: 1, statement: 'The cutoff is also called the half-power point.', correct: true, explanation: 'Because 0.707² = 0.5, half the power passes there.' },
 
       { type: 'predict_reading', difficulty: 2, question: 'R = 1.6 kΩ, C = 0.1 µF. Dial the cutoff frequency (fc = 1/(2πRC)).', circuitDiagram: 'rc_low_pass', options: ['1000 Hz'], correct: 0, meter: { unit: 'Hz', min: 0, max: 2000, step: 10, target: 1000, tolerance: 150 }, explanation: 'fc = 1/(2π × 1600 × 1e-7) ≈ 1000 Hz.' },
-      { type: 'fill_blank', difficulty: 1, prompt: 'Build the RC cutoff-frequency formula.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', 'C', ')', '+', '−'], hint: 'One over (two-pi R C).' },
+      { type: 'fill_blank', difficulty: 1, prompt: 'Build the RC cutoff-frequency formula.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', '×', 'C', ')', '+', '−'], hint: 'One over (two-pi R C).' },
       { type: 'multiple_choice', difficulty: 2, question: 'An input at exactly the cutoff frequency comes out at roughly what fraction of full amplitude?', options: ['About 0.707', 'About 1.0', 'About 0.5', 'About 0.1'], correct: 0, explanation: 'At fc the output is ~0.707 of the input (the half-power point).' },
 
       { type: 'choose_resistor', difficulty: 3, question: 'You want a low-pass cutoff of about 1.6 kHz with C = 0.1 µF. Set the bands for the resistor (1 kΩ).', options: ['1 kΩ'], correct: 0, bands: { targetOhms: 1000 }, explanation: 'R = 1/(2π·fc·C) ≈ 1000 Ω = 1 kΩ (brown-black-red).' },
@@ -2663,7 +2663,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
       { type: 'predict_reading', question: 'A band-pass has f1 = 300 Hz, f2 = 3000 Hz. Dial the bandwidth.', options: ['2700 Hz'], correct: 0, meter: { unit: 'Hz', min: 0, max: 4000, step: 50, target: 2700, tolerance: 200 }, explanation: 'BW = f2 − f1 = 2700 Hz.' },
       { type: 'true_false', statement: 'An oscillator is an amplifier with positive feedback.', correct: true, explanation: 'Positive feedback sustains the oscillation.' },
       { type: 'match', instruction: 'Match each filter to what it passes.', pairs: [['Low-pass', 'Low frequencies'], ['High-pass', 'High frequencies'], ['Band-pass', 'A middle band'], ['Notch', 'Everything but one band']] },
-      { type: 'fill_blank', prompt: 'Build the cutoff-frequency formula.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', 'C', ')', '+', '−'], hint: 'One over two-pi R C.' },
+      { type: 'fill_blank', prompt: 'Build the cutoff-frequency formula.', blank: '___', answer: 'fc = 1 / ( 2π × R × C )', tiles: ['fc', '=', '1', '/', '(', '2π', '×', 'R', '×', 'C', ')', '+', '−'], hint: 'One over two-pi R C.' },
       { type: 'drag_order', instruction: 'Order these waveform frequencies from lowest to highest.', items: ['DC (0 Hz)', 'Mains (50 Hz)', 'Audio (1 kHz)', 'Radio (1 MHz)'], correctOrder: [0, 1, 2, 3] },
       { type: 'draw_circuit', instruction: 'Draw an RC low-pass filter (resistor in series, capacitor to ground).', expected: ['resistor', 'capacitor'], hint: 'Series resistor, capacitor from that node to ground, output across the capacitor.', explanation: 'The workhorse filter of the unit: it passes lows and rejects highs, with cutoff fc = 1/(2πRC).' },
       { type: 'predict_reading', question: 'A wave is 5 divisions tall at 2 V per division. Dial its peak-to-peak voltage.', options: ['10 V'], correct: 0, meter: { unit: 'V', min: 0, max: 20, step: 0.5, target: 10, tolerance: 1 }, explanation: '5 div × 2 V/div = 10V peak-to-peak.' },
@@ -3162,7 +3162,7 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
 
       // ── Tier 2: apply a law ──
       { type: 'multiple_choice', difficulty: 2, question: "By De Morgan's law, NOT(A AND B) is the same as...", options: ['(NOT A) OR (NOT B)', '(NOT A) AND (NOT B)', 'A OR B', 'A AND B'], correct: 0, explanation: 'Break the bar over the AND and it becomes an OR of the inverted inputs.' },
-      { type: 'fill_blank', difficulty: 2, prompt: "Build De Morgan's law: NOT(A OR B) equals the AND of the inverted inputs.", blank: '___', answer: 'NOT A AND NOT B', tiles: ['NOT', 'A', 'AND', 'B', 'OR', 'NOR'], hint: 'Break the bar, flip OR to AND, invert each input.' },
+      { type: 'fill_blank', difficulty: 2, prompt: "Build De Morgan's law: NOT(A OR B) equals the AND of the inverted inputs.", blank: '___', answer: 'NOT A AND NOT B', tiles: ['NOT', 'A', 'AND', 'NOT', 'B', 'OR', 'NOR'], hint: 'Break the bar, flip OR to AND, invert each input.' },
       { type: 'predict_reading', difficulty: 2, question: 'Simplify A OR A.', options: ['A', '1', '0', 'NOT A'], correct: 0, explanation: 'ORing a signal with itself changes nothing: A OR A = A.' },
       { type: 'fill_blank', difficulty: 2, prompt: "De Morgan in words: break the bar and ___ the operator beneath it.", blank: '___', answer: 'flip', hint: 'AND becomes OR and OR becomes AND, so you change it to the other one.' },
 
@@ -3730,3 +3730,122 @@ export const LESSON_CONTENT: Record<string, { steps: AuthoredStep[]; xpReward: n
     ],
   },
 };
+
+// ── Session splitting: authored lessons → learner-sized sessions ────────────
+//
+// An author thinks in CONCEPTS; a learner sits down for a SESSION. The authored
+// lessons above run 15-20 steps (median 17), which is a long sitting: Duolingo
+// lands nearer 10, and a learner who abandons halfway loses the lot, because
+// progress is only recorded when a lesson ends.
+//
+// So the corpus the app RENDERS is the authored corpus cut into sessions. The
+// cut lives here, in the authored source, for one reason: it used to live in
+// frontend/scripts/export-curriculum.mjs, which meant the backend served 284
+// sessions to mobile while the web bundled and rendered the 142 uncut lessons.
+// Both surfaces share ONE progress record, so the two disagreed about what the
+// curriculum even was. One implementation, consumed by both, cannot drift.
+//
+// Part 1 KEEPS THE ORIGINAL ID. That is the whole migration: anyone who had
+// completed a lesson still has part 1 complete, and only the later parts appear
+// as new work. No progress entry is invalidated and no backfill is needed.
+
+/** Longest session we will ask a learner to sit through in one go. */
+export const MAX_STEPS_PER_SESSION = 12;
+
+/** Roman numerals, for as many parts as a lesson could plausibly need. */
+export const SESSION_NUMERALS = ['I', 'II', 'III', 'IV', 'V'] as const;
+
+/** One authored lesson's content: the shape of a LESSON_CONTENT value. */
+export interface LessonEntry {
+  steps: AuthoredStep[];
+  xpReward: number;
+}
+
+/** One session cut out of an authored lesson. */
+export interface SessionPart {
+  /** Part 1 carries the authored id unchanged; later parts take a numeral. */
+  id: string;
+  /** The part's position ('I', 'II', and so on), used to title it on the path. */
+  numeral: string;
+  entry: LessonEntry;
+}
+
+/** Even-as-possible chunk sizes: 17 into 2 becomes 9 and 8, never 12 and 5. */
+function chunkSizes(total: number, parts: number): number[] {
+  const base = Math.floor(total / parts);
+  const extra = total % parts;
+  return Array.from({ length: parts }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+/** Cut one authored lesson into its sessions. A short lesson yields itself. */
+export function splitLesson(id: string, entry: LessonEntry): SessionPart[] {
+  const steps = entry.steps ?? [];
+  const parts = Math.ceil(steps.length / MAX_STEPS_PER_SESSION);
+  if (parts < 2) return [{ id, numeral: SESSION_NUMERALS[0], entry }];
+
+  const sizes = chunkSizes(steps.length, parts);
+  const out: SessionPart[] = [];
+  let cursor = 0;
+  for (let i = 0; i < parts; i += 1) {
+    const slice = steps.slice(cursor, cursor + sizes[i]);
+    cursor += sizes[i];
+    const numeral = SESSION_NUMERALS[Math.min(i, SESSION_NUMERALS.length - 1)];
+    out.push({
+      id: i === 0 ? id : `${id} ${numeral}`,
+      numeral,
+      entry: {
+        ...entry,
+        steps: slice,
+        // XP follows the work: a half lesson pays half, rounded to a multiple
+        // of 5 so the numbers stay legible.
+        xpReward: Math.max(5, Math.round(((entry.xpReward ?? 0) * slice.length) / steps.length / 5) * 5),
+      },
+    });
+  }
+  return out;
+}
+
+/** Cut a whole authored corpus. Returns the flat session map and the index. */
+export function splitLessonContent(content: Record<string, LessonEntry>): {
+  sessions: Record<string, LessonEntry>;
+  parts: Map<string, SessionPart[]>;
+} {
+  const sessions: Record<string, LessonEntry> = {};
+  const parts = new Map<string, SessionPart[]>();
+  for (const [id, entry] of Object.entries(content)) {
+    const split = splitLesson(id, entry);
+    parts.set(id, split);
+    for (const part of split) sessions[part.id] = part.entry;
+  }
+  return { sessions, parts };
+}
+
+const SPLIT = splitLessonContent(LESSON_CONTENT);
+
+/**
+ * The lesson bodies the app renders and the backend serves, keyed by session id.
+ * This is the bundled OFFLINE COPY: the live corpus comes from the backend (see
+ * services/curriculum.ts), which wins whenever the two version stamps disagree.
+ */
+export const SESSION_CONTENT: Record<string, LessonEntry> = SPLIT.sessions;
+
+/** Authored lesson id → the sessions it was cut into, in order. */
+export const SESSION_PARTS: ReadonlyMap<string, SessionPart[]> = SPLIT.parts;
+
+/**
+ * The authored lesson a session id came from, or undefined if the id is not a
+ * session of any authored lesson. Part 1 maps to itself.
+ *
+ * Used to reason about progress recorded against either shape of the corpus: a
+ * learner may hold entries keyed by an authored id (recorded before the cut, or
+ * on part 1 after it) or by a later part's id.
+ */
+export function originLessonId(sessionId: string): string | undefined {
+  if (sessionId in LESSON_CONTENT) return sessionId;
+  const cut = sessionId.lastIndexOf(' ');
+  if (cut < 0) return undefined;
+  const head = sessionId.slice(0, cut);
+  const tail = sessionId.slice(cut + 1);
+  if (!(SESSION_NUMERALS as readonly string[]).includes(tail)) return undefined;
+  return head in LESSON_CONTENT ? head : undefined;
+}
