@@ -72,9 +72,16 @@ for (const dir of DIRS) {
       .filter((l) => !l.includes('MACHINE_PATH') && !l.includes('WINDOWS_PATH') && !l.includes('MAC_ONLY'))
       .join('\n');
     for (const bin of MAC_ONLY) {
-      // Matched as a command being RUN, not merely mentioned: execFileSync('plutil', ...)
-      // or a string that starts a shell command with it.
-      const run = new RegExp(`(['"\`])${bin}\\1\\s*,|(['"\`])${bin}\\s`, 'g');
+      // Matched only where the binary is actually INVOKED, never where the word
+      // merely appears. `open` and `say` are ordinary English, and a first
+      // attempt at this flagged the string 'open while the tutor was still
+      // talking' in an assertion message. A check that cries wolf gets muted,
+      // which costs more than the rule is worth.
+      const run = new RegExp(
+        `(?:exec|execFile|spawn)(?:Sync)?\\(\\s*(['"\`])${bin}\\1`
+        + `|(?:exec|execFile|spawn)(?:Sync)?\\(\\s*(['"\`])${bin}[\\s]`,
+        'g',
+      );
       if (run.test(body)) {
         fail(`${relative(REPO, full)} runs \`${bin}\`, which does not exist on the Ubuntu runner, so this check cannot run in CI`);
       }

@@ -89,6 +89,7 @@ const {
   micShouldCapture, micIntentAfterBackground, toMicPermission,
   reduceLiveEvent, freshLiveEventState,
   micSupported,
+  ECHO_GATE_TAIL_S, micGatedForEcho,
 } = hook;
 
 const problems = [];
@@ -565,9 +566,45 @@ check('the microphone is not called open until a frame proves it is', () => {
   );
 });
 
+// ── Half duplex, because there is no echo canceller ─────────────────────────
+//
+// react-native-audio-api records through miniaudio, which hardcodes
+// kAudioUnitSubType_RemoteIO. Apple's canceller lives in
+// kAudioUnitSubType_VoiceProcessingIO and no SessionOptions value reaches it,
+// so the loudspeaker goes straight back into the microphone. On a real device
+// that made the model hear itself, cut its own sentence off, and put its own
+// words on the learner's side of the transcript.
+check('the microphone is shut exactly while the tutor can be heard', () => {
+  const T = ECHO_GATE_TAIL_S;
+  assert.ok(T > 0.05 && T < 1, `echo tail of ${T}s is not a plausible room tail`);
+  assert.equal(micGatedForEcho(10, 9.5), true, 'open while the tutor was still talking');
+  assert.equal(micGatedForEcho(10, 10.1), true, 'opened before the speaker had drained');
+  assert.equal(micGatedForEcho(10, 10 + T - 0.01), true, 'opened inside the tail');
+  assert.equal(micGatedForEcho(10, 10 + T + 0.01), false, 'never reopened, so the learner cannot speak');
+  assert.equal(micGatedForEcho(0, 5), false, 'shut with nothing queued to echo');
+});
+
+check('the send path actually consults the gate', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const from = hook.indexOf('onAudioReady(');
+  assert.ok(from > 0, 'onAudioReady is gone, so this check can no longer find the send path');
+  const send = hook.slice(from, hook.indexOf('ws.send(pcm)', from));
+  assert.ok(/micGatedForEcho\(/.test(send),
+    'frames captured while the tutor is speaking are sent again, so it talks into its own microphone');
+});
+
+check('the learner can still interrupt, by pressing rather than talking over it', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  assert.ok(/interrupt[,:]/.test(hook), 'the hook no longer exposes a deliberate interrupt');
+  assert.ok(/live\.interrupt\(\)/.test(screen),
+    'the microphone control no longer interrupts, so with a half-duplex mic a learner cannot cut in at all');
+});
+
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 if (problems.length) {
+
   console.error('Live audio problems:\n');
   problems.forEach((p) => console.error(`  ${p}`));
   process.exit(1);

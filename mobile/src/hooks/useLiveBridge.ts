@@ -307,6 +307,46 @@ export function nextChunkStart(now: number, queuedUntil: number, lead = PLAYBACK
   return queuedUntil > now ? queuedUntil : now + lead;
 }
 
+/**
+ * How long after the tutor stops talking the microphone stays shut.
+ *
+ * Covers the last buffer draining out of the speaker and the room's own tail.
+ * Too short and the closing syllable comes back as the learner's input; too
+ * long and a learner answering promptly gets clipped.
+ */
+export const ECHO_GATE_TAIL_S = 0.25;
+
+/**
+ * Is the microphone shut because the tutor is talking?
+ *
+ * THE PHONE HAS NO ECHO CANCELLATION. react-native-audio-api records through
+ * miniaudio, which hardcodes kAudioUnitSubType_RemoteIO; Apple's canceller
+ * lives in kAudioUnitSubType_VoiceProcessingIO, and nothing in the library's
+ * SessionOptions can reach it. Setting the session to `videoChat` was worth
+ * doing for routing but it cannot switch on a canceller that is not in the
+ * capture path.
+ *
+ * So the loudspeaker's output went straight back into the microphone a few
+ * inches away. Three things followed, and Faith saw all three: the model heard
+ * itself and cut its own sentence off, which reads as the voice breaking up;
+ * its speech was transcribed as the LEARNER's turn, so "I can see you" arrived
+ * on her side of the transcript; and the transcriber kept revising a poor
+ * recording of a loudspeaker, turning "your" into "her".
+ *
+ * Half duplex is the fix that does not depend on a canceller existing: while
+ * the tutor is speaking, the microphone sends nothing. The cost is that
+ * speaking over the tutor no longer interrupts it, so interrupting becomes a
+ * deliberate press instead of an accident. On a bench, next to a loudspeaker,
+ * that is the right trade.
+ */
+export function micGatedForEcho(
+  queuedUntil: number,
+  now: number,
+  tail = ECHO_GATE_TAIL_S,
+): boolean {
+  return queuedUntil + tail > now;
+}
+
 // ── The microphone gate ─────────────────────────────────────────────────────
 
 export type MicPermission = 'granted' | 'denied' | 'undetermined';
@@ -812,6 +852,14 @@ export function useLiveBridge({
         }
         const ws = wsRef.current;
         if (ws?.readyState !== WebSocket.OPEN) return;
+
+        // Half duplex. See micGatedForEcho: there is no echo cancellation on
+        // this path, so anything captured while the tutor is talking is the
+        // tutor, and sending it makes the model interrupt itself and puts its
+        // own words on the learner's side of the transcript.
+        const pctx = playbackCtxRef.current;
+        if (pctx && micGatedForEcho(queuedUntilRef.current, pctx.currentTime)) return;
+
         const buffer = event.buffer;
         const channels: Float32Array[] = [];
         for (let c = 0; c < buffer.numberOfChannels; c += 1) channels.push(buffer.getChannelData(c));
@@ -1257,8 +1305,33 @@ export function useLiveBridge({
     void AudioManager.setAudioSessionActivity(false).catch(() => {});
   }, []);
 
+  // Whether the tutor is talking, for the UI and for the interrupt control.
+  // Polled rather than pushed: playback advances against the audio clock, not
+  // against React, so there is no event to subscribe to. 100ms is well under
+  // the shortest utterance and costs nothing.
+  const [agentSpeaking, setAgentSpeaking] = useState(false);
+  useEffect(() => {
+    if (state !== 'connected') { setAgentSpeaking(false); return; }
+    const id = setInterval(() => {
+      const ctx = playbackCtxRef.current;
+      setAgentSpeaking(!!ctx && queuedUntilRef.current > ctx.currentTime);
+    }, 100);
+    return () => clearInterval(id);
+  }, [state]);
+
+  /**
+   * Interrupt the tutor deliberately.
+   *
+   * Speaking over it stopped working the moment the microphone went half
+   * duplex, and that was the trade for having no echo cancellation. This is
+   * what gives the learner the interruption back, as a press rather than an
+   * accident.
+   */
+  const interrupt = useCallback(() => { stopSpeaking(); }, [stopSpeaking]);
+
   return {
     state, reconnecting, transcripts, error, camOn, setCamOn,
+    agentSpeaking, interrupt,
     connect, disconnect, sendText, sendStage, sendFrame,
     registerFrameGrabber,
     micSupported, micOn, micIntent, micPermission, enableMic, disableMic, toggleMic,

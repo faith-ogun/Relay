@@ -111,13 +111,21 @@ function MicGlyph({ size = 22, color, muted = false }: { size?: number; color: s
  * again.
  */
 function MicControl({
-  listening, armed, permission, onPress,
+  listening, armed, permission, speaking, onPress,
 }: {
   /** Capture is running: the tutor can hear the room right now. */
   listening: boolean;
   /** The learner has turned it on. It may not be capturing yet, mid-connect. */
   armed: boolean;
   permission: MicPermission;
+  /**
+   * The tutor is talking, so the microphone is shut. There is no echo
+   * cancellation on this device path, so anything captured now would be the
+   * loudspeaker: the model would hear itself, cut its own sentence off, and its
+   * words would land on the learner's side of the transcript. Pressing while
+   * this is true interrupts rather than toggling.
+   */
+  speaking: boolean;
   onPress: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -125,7 +133,7 @@ function MicControl({
   const denied = permission === 'denied';
 
   useEffect(() => {
-    if (!listening || reduced) {
+    if (!listening || speaking || reduced) {
       cancelAnimation(pulse);
       pulse.value = 0;
       return;
@@ -137,18 +145,18 @@ function MicControl({
       false,
     );
     return () => cancelAnimation(pulse);
-  }, [listening, reduced, pulse]);
+  }, [listening, speaking, reduced, pulse]);
 
   const ring = useAnimatedStyle(() => ({
     opacity: 0.5 * (1 - pulse.value),
     transform: [{ scale: 1 + pulse.value * 0.6 }],
   }));
 
-  const glyphColor = denied ? colors.red : armed ? colors.goldText : colors.ink;
+  const glyphColor = denied ? colors.red : speaking ? colors.inkMute : armed ? colors.goldText : colors.ink;
 
   return (
     <View style={s.micWrap}>
-      {listening && <Animated.View pointerEvents="none" style={[s.micRing, ring]} />}
+      {listening && !speaking && <Animated.View pointerEvents="none" style={[s.micRing, ring]} />}
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
@@ -163,18 +171,22 @@ function MicControl({
         accessibilityLabel={
           denied
             ? 'Microphone blocked. Open settings'
-            : listening
-              ? 'Stop talking to the tutor'
-              : armed
-                ? 'Microphone on, waiting for the tutor'
-                : 'Talk to the tutor'
+            : speaking
+              ? 'Interrupt the tutor'
+              : listening
+                ? 'Stop talking to the tutor'
+                : armed
+                  ? 'Microphone on, waiting for the tutor'
+                  : 'Talk to the tutor'
         }
         accessibilityHint={
           denied
             ? 'Opens your phone settings so you can allow Ohmlet to use the microphone'
-            : armed
-              ? 'Turns the microphone off. You can still type.'
-              : 'Turns the microphone on so the tutor can hear you'
+            : speaking
+              ? 'Stops the tutor so you can speak. It cannot hear you while it is talking.'
+              : armed
+                ? 'Turns the microphone off. You can still type.'
+                : 'Turns the microphone on so the tutor can hear you'
         }
       >
         <MicGlyph color={glyphColor} muted={denied} />
@@ -706,14 +718,24 @@ export default function LiveTutor() {
       </View>
 
       <View style={s.controls}>
+        {live.micOn && live.agentSpeaking && (
+          <Text style={s.floor} accessibilityLiveRegion="polite">
+            The tutor is speaking. Tap the microphone to cut in.
+          </Text>
+        )}
         <View style={s.askRow}>
           {live.micSupported && (
             <MicControl
               listening={live.micOn}
               armed={live.micIntent}
               permission={live.micPermission}
+              speaking={live.agentSpeaking}
               onPress={() => {
                 if (live.micPermission === 'denied') { void Linking.openSettings(); return; }
+                // While the tutor is talking the microphone is shut, so a press
+                // means "stop, I want to say something" rather than "turn the
+                // microphone off". Speaking over it cannot interrupt any more.
+                if (live.agentSpeaking) { live.interrupt(); return; }
                 void live.toggleMic();
               }}
             />
@@ -903,6 +925,10 @@ const s = StyleSheet.create({
 
   controls: { backgroundColor: colors.cream, padding: space.md, paddingBottom: space.xl, gap: space.sm },
   askRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
+  floor: {
+    fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft,
+    textAlign: 'center', marginBottom: space.sm,
+  },
 
   // The voice control. Circular against the rounded rectangles either side of
   // it, and the ring lives outside the button so the pulse can grow past the
