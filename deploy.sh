@@ -25,11 +25,27 @@ LIVE_BRIDGE_SOURCE="backend/live-bridge"
 # logging.logWriter, secretmanager.secretAccessor — NOT the editor-privileged
 # default compute SA. Override per-env if needed.
 LIVE_BRIDGE_SA="${OHMLET_LIVE_BRIDGE_SA:-ohmlet-live-bridge@${PROJECT_ID}.iam.gserviceaccount.com}"
+# Model pinning, checked against this project on 2026-08-27 rather than assumed.
+#
+#   probed europe-west1 : only gemini-2.5-* answer; every gemini-3.x is a 404
+#   probed global       : 2.5-flash, 3.5, 3.6 and 3.7-flash all answer 200
+#                         no 3.x PRO exists yet, so Pro stays on 2.5-pro
+#
+# OHMLET_TEXT_LOCATION lets the tool and text calls run in `global` and reach a
+# current model, while the live bidi session stays in the service's own region.
+# Sharing one location is what held the tool calls on 2.5.
+#
+# STILL TO DO: OHMLET_LIVE_MODEL is a 2.5 model and 2.5 retires 2026-10-16, which
+# is inside the Shipaton judging window. Its replacement id cannot be verified
+# without opening a bidi session, so it is migrated on a deployed revision and
+# checked, not guessed here. scripts/check-model-currency.mjs fails when this is
+# still unresolved.
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
 OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
-OHMLET_FLASH_MODEL=gemini-2.5-flash,\
+OHMLET_TEXT_LOCATION=global,\
+OHMLET_FLASH_MODEL=gemini-3.7-flash,\
 OHMLET_PRO_MODEL=gemini-2.5-pro,\
 OHMLET_REASONING_MODEL=gemini-2.5-pro"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager

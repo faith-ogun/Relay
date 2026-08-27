@@ -18,7 +18,7 @@ import threading
 from google import genai
 
 # Model routing
-FLASH_MODEL = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
+FLASH_MODEL = os.getenv("OHMLET_FLASH_MODEL", "gemini-3.7-flash")
 PRO_MODEL = os.getenv("OHMLET_PRO_MODEL", "gemini-2.5-pro")
 REASONING_MODEL = os.getenv("OHMLET_REASONING_MODEL", "gemini-2.5-pro")
 
@@ -63,7 +63,10 @@ def _get_client() -> genai.Client:
                     _client = genai.Client(
                         vertexai=True,
                         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-                        location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+                        location=os.getenv(
+                            "OHMLET_TEXT_LOCATION",
+                            os.getenv("GOOGLE_CLOUD_LOCATION", "global"),
+                        ),
                     )
                 else:
                     _client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))

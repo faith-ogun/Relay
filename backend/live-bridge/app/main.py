@@ -57,6 +57,19 @@ TEXT_TIMEOUT_MS = int(os.getenv("OHMLET_TEXT_TIMEOUT_MS", "20000"))
 # One client for the whole process. It used to be constructed per request, which
 # re-resolved credentials and built a new connection pool on every message the
 # learner sent. The client is thread-safe and owns the pooled transport.
+# Text and tool calls do NOT share the live session's location.
+#
+# The live bidi session runs in europe-west1 because that is where the service
+# is and where its native-audio model is served. Only 2.5-era models exist in
+# that region: probed 2026-08-27 against this project, every gemini-3.x id
+# returns 404 there and 200 on `global`. Pinning the tool calls to the same
+# region therefore held them on 2.5 for no reason of their own.
+#
+# So they get their own location, defaulting to `global`, which is what
+# quiz-engine and vision-verifier already use and why those two were on 3.x
+# while this service was not. The live model is migrated separately, because its
+# replacement id cannot be verified without opening a bidi session.
+
 _text_client_instance: "genai.Client | None" = None
 _text_client_lock = threading.Lock()
 
@@ -72,7 +85,11 @@ def _text_client():
                     _text_client_instance = genai.Client(
                         vertexai=True,
                         project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
-                        location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
+                        # See TEXT_LOCATION below: not the live session's region.
+                        location=os.getenv(
+                            "OHMLET_TEXT_LOCATION",
+                            os.getenv("GOOGLE_CLOUD_LOCATION", "global"),
+                        ),
                         http_options=http_opts,
                     )
                 else:
