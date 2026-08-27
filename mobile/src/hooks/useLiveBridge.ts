@@ -745,6 +745,11 @@ export function useLiveBridge({
   const queuedFramesRef = useRef(0);
   // Latched so a failing playback path reports once, not per chunk.
   const playbackFaultRef = useRef(false);
+  const speedProbedRef = useRef(false);
+  const devicePreferredRef = useRef(0);
+  // TEMPORARY: surfaced in the live view so the real numbers can be read off
+  // a device instead of inferred. Removed once the rate is settled.
+  const [audioDiag, setAudioDiag] = useState<string | null>(null);
   const scheduledRef = useRef<ScheduledChunk[]>([]);
 
   const closeSpan = useCallback(() => {
@@ -812,11 +817,14 @@ export function useLiveBridge({
         // out at double speed. Taking whatever the hardware runs at and
         // converting into it (see resampleTo) removes that negotiation from the
         // problem: there is nothing left to disagree about.
+        try { devicePreferredRef.current = AudioManager.getDevicePreferredSampleRate(); }
+        catch { devicePreferredRef.current = 0; }
         ctx = new AudioContext();
         playbackCtxRef.current = ctx;
         queuedUntilRef.current = 0;
         queuedFramesRef.current = 0;
         playbackFaultRef.current = false;
+        speedProbedRef.current = false;
         // The rate we ASKED for is not necessarily the rate we got. iOS hands
         // back whatever the audio session settled on, and everything is then
         // resampled into it, which is audible as graininess rather than as an
@@ -858,6 +866,27 @@ export function useLiveBridge({
       const startFrames = queuedFrames > nowFrames
         ? queuedFrames
         : nowFrames + secondsToFrames(PLAYBACK_LEAD_S, rate);
+      // TEMPORARY MEASUREMENT. Six attempts at this have been reasoning about
+      // what the engine ought to do. A buffer of known duration that finishes
+      // EARLY was read too fast, and the ratio of expected to actual is exactly
+      // how much too fast, whatever the cause. Measured once per session, on the
+      // first chunk only, then never again.
+      if (!speedProbedRef.current) {
+        speedProbedRef.current = true;
+        const expected = buffer.duration;
+        const startedAt = Date.now();
+        const scheduledLead = Math.max(0, framesToSeconds(startFrames, rate) - ctx.currentTime);
+        node.onEnded = () => {
+          const actual = (Date.now() - startedAt) / 1000 - scheduledLead;
+          if (actual > 0.01) {
+            const ratio = expected / actual;
+            setAudioDiag(
+              `out ${Math.round(rate)}Hz, device ${Math.round(devicePreferredRef.current)}Hz, `
+              + `plays ${ratio.toFixed(2)}x`,
+            );
+          }
+        };
+      }
       node.start(framesToSeconds(startFrames, rate));
       queuedFramesRef.current = startFrames + voice.length;
       queuedUntilRef.current = framesToSeconds(queuedFramesRef.current, rate);
@@ -1452,7 +1481,7 @@ export function useLiveBridge({
 
   return {
     state, reconnecting, transcripts, error, camOn, setCamOn,
-    agentSpeaking, interrupt,
+    agentSpeaking, interrupt, audioDiag,
     connect, disconnect, sendText, sendStage, sendFrame,
     registerFrameGrabber,
     micSupported, micOn, micIntent, micPermission, enableMic, disableMic, toggleMic,

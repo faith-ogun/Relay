@@ -718,6 +718,11 @@ export default function LiveTutor() {
       </View>
 
       <View style={s.controls}>
+        {/* TEMPORARY diagnostic. Jargon in a shipped surface is against the
+            house rules, and this is here deliberately and briefly: six builds
+            were spent inferring what the audio engine was doing instead of
+            measuring it. It comes out the moment the rate is settled. */}
+        {!!live.audioDiag && <Text style={s.diag}>{live.audioDiag}</Text>}
         {live.micOn && live.agentSpeaking && (
           <Text style={s.floor} accessibilityLiveRegion="polite">
             The tutor is speaking. Tap the microphone to cut in.
@@ -925,6 +930,10 @@ const s = StyleSheet.create({
 
   controls: { backgroundColor: colors.cream, padding: space.md, paddingBottom: space.xl, gap: space.sm },
   askRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
+  diag: {
+    fontFamily: 'Menlo', fontSize: 11, color: colors.inkMute,
+    textAlign: 'center', marginBottom: 4,
+  },
   floor: {
     fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft,
     textAlign: 'center', marginBottom: space.sm,
