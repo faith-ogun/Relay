@@ -162,9 +162,23 @@ export const micSupported: boolean = Platform.OS === 'ios' || Platform.OS === 'a
 /** Audio routing for a bench: out loud, hands free, and able to hear the room. */
 const LIVE_AUDIO_SESSION: SessionOptions = {
   iosCategory: 'playAndRecord',
-  // videoChat is the closest mode to what a bench session is: a two-way
-  // conversation over the loudspeaker with the device at arm's length.
-  iosMode: 'videoChat',
+  // NOT videoChat, which is what this was and why the tutor sounded like a
+  // phone call.
+  //
+  // videoChat is a TELEPHONY mode: it engages the system's voice processing and
+  // pulls the session to a voice-optimised sample rate, throwing away most of
+  // the band above a few kHz. Faith described the result exactly: "like a very
+  // old telephone", "grainy and sandpapery", every word intelligible and all of
+  // them ugly. The tutor's audio arrives at 24kHz and was being squeezed through
+  // a configuration meant for a handset.
+  //
+  // It was set for the echo cancellation that comes with voice processing. That
+  // cancellation never existed on this path: the recorder is miniaudio, which
+  // hardcodes kAudioUnitSubType_RemoteIO, and Apple's canceller lives in
+  // kAudioUnitSubType_VoiceProcessingIO. So the session was paying a telephony
+  // mode's full price in fidelity and buying nothing at all with it. The echo is
+  // handled in micGatedForEcho instead, by not listening while the tutor talks.
+  iosMode: 'default',
   // defaultToSpeaker is what keeps the tutor off the earpiece. It only chooses
   // between the earpiece and the speaker on the built-in route, so it does not
   // fight a headset: plug one in and the system routes there, unplug it and
@@ -729,6 +743,19 @@ export function useLiveBridge({
         ctx = new AudioContext({ sampleRate: AGENT_SAMPLE_RATE });
         playbackCtxRef.current = ctx;
         queuedUntilRef.current = 0;
+        // The rate we ASKED for is not necessarily the rate we got. iOS hands
+        // back whatever the audio session settled on, and everything is then
+        // resampled into it, which is audible as graininess rather than as an
+        // error. Logged once per session because the alternative is guessing at
+        // audio quality from a description, which has already cost a build.
+        if (ctx.sampleRate !== AGENT_SAMPLE_RATE) {
+          console.warn(
+            `[ohmlet-audio] asked for ${AGENT_SAMPLE_RATE}Hz playback, got ${ctx.sampleRate}Hz. `
+            + 'Everything the tutor says is being resampled into that.',
+          );
+        } else {
+          console.log(`[ohmlet-audio] playback context running at ${ctx.sampleRate}Hz as requested.`);
+        }
         // On the web target this is a `window.AudioContext`, which is born
         // SUSPENDED under every browser's autoplay policy: its clock stays at
         // zero and nothing it schedules is heard. The first chunk arrives from

@@ -601,6 +601,25 @@ check('the learner can still interrupt, by pressing rather than talking over it'
 });
 
 
+check('the audio session is not a telephony mode', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const live = hook.slice(hook.indexOf('LIVE_AUDIO_SESSION'), hook.indexOf('IDLE_AUDIO_SESSION'));
+  const mode = live.match(/iosMode:\s*'([a-zA-Z]+)'/)?.[1];
+  assert.ok(mode, 'LIVE_AUDIO_SESSION no longer names an iosMode');
+  // These engage the system's voice processing and pull the session to a
+  // voice-optimised rate. The tutor arrives at 24kHz and gets squeezed into a
+  // handset's band: intelligible, and unpleasant. videoChat was set here for the
+  // echo cancellation that comes with voice processing, which never existed on
+  // this capture path (miniaudio uses RemoteIO, not VoiceProcessingIO), so it
+  // cost fidelity and bought nothing. Echo is handled by micGatedForEcho.
+  const TELEPHONY = ['voiceChat', 'videoChat', 'gameChat', 'voicePrompt'];
+  assert.ok(
+    !TELEPHONY.includes(mode),
+    `the live session is in '${mode}', a telephony mode: the tutor will sound like a phone call, `
+    + 'and it does not buy echo cancellation on this recorder.',
+  );
+});
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 if (problems.length) {
