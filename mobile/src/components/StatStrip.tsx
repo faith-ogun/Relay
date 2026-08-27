@@ -1,7 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { InfinityMark } from './icons';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
@@ -16,35 +15,41 @@ import { elevation } from '../theme/elevation';
  * greeting and three large stat cards before anything you could act on, which
  * put the least useful thing in the most valuable space.
  */
-const Flame: React.FC<{ lit: boolean }> = ({ lit }) => (
-  <Svg width={17} height={17} viewBox="0 0 24 24">
-    <Path d="M12 2.5c3.4 3 5 5.6 5 8.2a5 5 0 0 1-10 0c0-1.3.5-2.6 1.6-4 .2 1.6.9 2.5 1.9 2.8-.4-2.6.1-5 1.5-7z"
-          fill={lit ? colors.red : 'none'} stroke={lit ? colors.red : colors.inkSoft}
-          strokeWidth={1.8} strokeLinejoin="round" />
-  </Svg>
-);
+/**
+ * The stat icons are painted artwork, not line glyphs.
+ *
+ * They used to be four small SVG paths drawn here: a flame, a bolt, two
+ * circles, a heart. Correct, generic, and indistinguishable from any icon pack
+ * you could install. Faith's words: "they look like the generic, if you got a
+ * package online and you got those icons". The set that replaced them carries
+ * the electronics idea into every one, which is the thing a generic pack cannot
+ * do: the XP coin is a hexagon with a resistor across its base, the streak flame
+ * has a resistor for a mouth, the heart is lit by an LED, and the goal ring is a
+ * circuit node with a check at its centre.
+ *
+ * Drawn at 22pt rather than the 17pt the line glyphs used. Painted art needs the
+ * extra points to read: at 17 the resistor bands on the XP coin turn to mush.
+ */
+const STAT_ART = {
+  xp: require('../../assets/stats/xp.png'),
+  streak: require('../../assets/stats/streak.png'),
+  hearts: require('../../assets/stats/hearts.png'),
+  goal: require('../../assets/stats/goal.png'),
+} as const;
 
-const Bolt: React.FC = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24">
-    <Path d="M13.5 2.5 5.5 13.5h5L9.5 21.5l8.5-11.5h-5.2z"
-          fill={colors.gold} stroke={colors.ink} strokeWidth={1.6} strokeLinejoin="round" />
-  </Svg>
-);
+const ICON = 22;
 
-const Target: React.FC<{ done: boolean }> = ({ done }) => (
-  <Svg width={17} height={17} viewBox="0 0 24 24">
-    <Circle cx={12} cy={12} r={8.5} fill="none" stroke={done ? colors.greenDeep : colors.inkSoft} strokeWidth={1.9} />
-    <Circle cx={12} cy={12} r={3.4} fill={done ? colors.greenDeep : 'none'}
-            stroke={done ? colors.greenDeep : colors.inkSoft} strokeWidth={1.9} />
-  </Svg>
-);
-
-const HeartGlyph: React.FC<{ full: boolean }> = ({ full }) => (
-  <Svg width={17} height={17} viewBox="0 0 24 24">
-    <Path d="M12 20.5S3.5 15.4 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.8-8.5 10.9-8.5 10.9z"
-          fill={full ? colors.red : 'none'} stroke={full ? colors.red : colors.inkMute}
-          strokeWidth={1.9} strokeLinejoin="round" />
-  </Svg>
+const StatIcon: React.FC<{
+  name: keyof typeof STAT_ART;
+  /** Drawn flat when the stat is at zero, so the strip still reads at a glance. */
+  dim?: boolean;
+}> = ({ name, dim }) => (
+  <Image
+    source={STAT_ART[name]}
+    style={[s.icon, dim && s.iconDim]}
+    resizeMode="contain"
+    accessibilityIgnoresInvertColors
+  />
 );
 
 /**
@@ -65,7 +70,7 @@ const HeartsPill: React.FC = () => {
   if (unlimited) {
     return (
       <View style={[s.pill, s.pillGold]} accessibilityLabel="Unlimited hearts">
-        <HeartGlyph full />
+        <StatIcon name="hearts" />
         <View style={s.stack}>
           <InfinityMark size={17} color={colors.goldText} />
           <Text style={s.caption} maxFontSizeMultiplier={1.1}>HEARTS</Text>
@@ -77,7 +82,7 @@ const HeartsPill: React.FC = () => {
   const label = empty ? `Out of hearts, next in ${formatWait(nextIn)}` : `${hearts ?? 0} hearts`;
   const body = (
     <>
-      <HeartGlyph full={!empty} />
+      <StatIcon name="hearts" dim={empty} />
       <View style={s.stack}>
       <Text
         style={[s.value, empty ? s.valueWait : { color: colors.red }]}
@@ -119,14 +124,14 @@ export const StatStrip: React.FC<{
   return (
     <View style={s.strip}>
       <View style={s.pill}>
-        <Bolt />
+        <StatIcon name="xp" />
         <View style={s.stack}>
           <Text style={s.value} maxFontSizeMultiplier={1.15}>{xp}</Text>
           <Text style={s.caption} maxFontSizeMultiplier={1.1}>XP</Text>
         </View>
       </View>
       <View style={s.pill}>
-        <Flame lit={streak > 0} />
+        <StatIcon name="streak" dim={streak === 0} />
         <View style={s.stack}>
           <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.15}>{streak}</Text>
           <Text style={s.caption} maxFontSizeMultiplier={1.1}>{streak === 1 ? 'DAY' : 'DAYS'}</Text>
@@ -134,7 +139,7 @@ export const StatStrip: React.FC<{
       </View>
       <HeartsPill />
       <View style={[s.pill, met && s.pillDone]}>
-        <Target done={met} />
+        <StatIcon name="goal" dim={!met} />
         <View style={s.stack}>
           <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.15}>
             {Math.min(doneToday, dailyGoal)}/{dailyGoal}
@@ -154,6 +159,10 @@ const s = StyleSheet.create({
     backgroundColor: colors.white, paddingVertical: 8, paddingHorizontal: 4,
     ...elevation.card,
   },
+  icon: { width: ICON, height: ICON },
+  // Not greyscale: the art is the brand. Flattened enough that a spent
+  // stat reads as spent without becoming a different picture.
+  iconDim: { opacity: 0.38 },
   stack: { minWidth: 0 },
   caption: {
     fontFamily: font.extrabold, fontSize: 9, letterSpacing: 0.6,
