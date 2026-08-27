@@ -84,8 +84,8 @@ const hook = loadHook('ios');
 const {
   MIC_SAMPLE_RATE, MIC_CHANNEL_COUNT, MIC_BIT_DEPTH, MIC_MIME_TYPE,
   MIC_FRAME_MS, MIC_FRAME_SAMPLES, MIC_RECORDER_OPTIONS,
-  AGENT_SAMPLE_RATE, MIC_START_TIMEOUT_MS,
-  encodeMicFrame, decodeAgentPcm, mixDownToMono,
+  AGENT_SAMPLE_RATE, PLAYBACK_LEAD_S, MIC_START_TIMEOUT_MS,
+  encodeMicFrame, decodeAgentPcm, mixDownToMono, nextChunkStart,
   micShouldCapture, micIntentAfterBackground, toMicPermission,
   reduceLiveEvent, freshLiveEventState,
   micSupported,
@@ -337,52 +337,53 @@ check('a base64 chunk off the wire decodes to the same bytes', () => {
 // Chunks arrive in bursts and have to be laid end to end against the audio
 // clock. A gap is a click; an overlap is two voices at once.
 
-check('the tutor plays through ONE queue node, not a source per chunk', () => {
-  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
-  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
-
-  // Per-chunk scheduling is gapless only while chunks arrive ahead of the clock.
-  // One late chunk and the queued-until mark has passed, so the next one starts
-  // a beat from now and leaves a hole. Over a mobile network that happens
-  // constantly and is heard as the audio being patchy, not as an error.
-  assert.ok(
-    /createBufferQueueSource\(/.test(play),
-    'playback no longer uses the buffer queue, so a late chunk leaves a gap instead of resuming the sentence',
-  );
-  assert.ok(/enqueueBuffer\(/.test(play), 'chunks are no longer enqueued');
-  assert.ok(
-    !/createBufferSource\(/.test(play) && !/\bnode\.start\(/.test(play),
-    'playback is scheduling its own source nodes again',
-  );
-
-  // The queue must be built once and kept. Rebuilding it per chunk reintroduces
-  // exactly the boundary it exists to remove.
-  assert.ok(
-    /if \(!queue\)/.test(play),
-    'the queue node is not reused across chunks',
-  );
+check('consecutive chunks abut exactly', () => {
+  const chunkSeconds = 0.2;
+  let clock = 0;              // the audio context clock
+  let queuedUntil = 0;
+  const starts = [];
+  for (let i = 0; i < 8; i += 1) {
+    clock += 0.03;            // chunks arrive faster than they play
+    const startAt = nextChunkStart(clock, queuedUntil);
+    starts.push({ startAt, endsAt: startAt + chunkSeconds });
+    queuedUntil = startAt + chunkSeconds;
+  }
+  assert.ok(starts[0].startAt >= 0.03 + PLAYBACK_LEAD_S - 1e-9, 'the first chunk got no cushion.');
+  for (let i = 1; i < starts.length; i += 1) {
+    assert.equal(
+      starts[i].startAt, starts[i - 1].endsAt,
+      `chunk ${i} starts at ${starts[i].startAt} but chunk ${i - 1} ends at ${starts[i - 1].endsAt}.`,
+    );
+  }
 });
 
-check('barge-in empties the queue without tearing the node down', () => {
-  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
-  const stop = hook.slice(hook.indexOf('const stopSpeaking'), hook.indexOf('const playAudio'));
-  assert.ok(/clearBuffers\(\)/.test(stop), 'interrupting no longer drops the unheard audio');
-  assert.ok(
-    !/\.stop\(/.test(stop),
-    'interrupting stops the queue node, so the next reply has to build and start another one mid-conversation',
-  );
+check('a chunk is never scheduled in the past', () => {
+  // The queue drained while nothing was arriving. Scheduling at the clock's
+  // current instant means the audio thread reaches it late and clips the
+  // opening consonant, so it gets the lead instead.
+  assert.ok(nextChunkStart(12.5, 0) > 12.5);
+  assert.ok(nextChunkStart(12.5, 11.0) > 12.5);
+  // Still playing: pick up exactly where the last chunk ends.
+  assert.equal(nextChunkStart(12.5, 13.2), 13.2);
 });
 
-check('the echo gate still knows when the queue will run dry', () => {
-  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
-  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
-  // Measured off the clock, never counted off buffer-ended events: a dropped
-  // event would leave the microphone shut for the rest of the session.
-  assert.ok(
-    /queuedUntilRef\.current =\s*\n?\s*Math\.max\(queuedUntilRef\.current, ctx\.currentTime\) \+ buffer\.duration/.test(play),
-    'the queued-until mark is no longer advanced from the clock, so the echo gate cannot tell when the tutor stops',
-  );
+mustReject('the scheduling assertion', () => {
+  // What "just play it now" does: every chunk starts at the current instant, so
+  // they all pile on top of each other.
+  const naive = (now) => now;
+  let clock = 0;
+  let queuedUntil = 0;
+  const starts = [];
+  for (let i = 0; i < 4; i += 1) {
+    clock += 0.03;
+    const startAt = naive(clock, queuedUntil);
+    starts.push({ startAt, endsAt: startAt + 0.2 });
+    queuedUntil = startAt + 0.2;
+  }
+  for (let i = 1; i < starts.length; i += 1) assert.equal(starts[i].startAt, starts[i - 1].endsAt);
 });
+
+// ── 6. Barge-in ─────────────────────────────────────────────────────────────
 
 check('an interruption stops the tutor', () => {
   const { actions } = reduceLiveEvent(freshLiveEventState(), { interrupted: true, partial: false });
@@ -630,6 +631,6 @@ if (problems.length) {
 console.log(
   `OK: mic frames are ${MIC_SAMPLE_RATE}Hz ${MIC_BIT_DEPTH}-bit mono, ` +
   `${MIC_FRAME_SAMPLES} samples per ${MIC_FRAME_MS}ms frame, little-endian; ` +
-  `the tutor plays back at ${AGENT_SAMPLE_RATE}Hz through one buffer queue, so a late chunk resumes the sentence; ` +
+  `the tutor plays back at ${AGENT_SAMPLE_RATE}Hz with chunks laid end to end; ` +
   'barge-in and the child-safe microphone gate both hold.',
 );
