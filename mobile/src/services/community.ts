@@ -30,13 +30,170 @@ export interface Comment {
   createdAt: string;
 }
 
+// ── Challenges ──
+//
+// A challenge is a SERIES. What a learner joins is an INSTANCE of it, with a
+// real start, a real end, and standings that freeze when it closes. The shapes
+// below mirror `_challenge_card`, `/challenges/mine`, `/challenges/claim`,
+// `/challenges/{id}/standings` and `/challenges/{id}/results` in
+// backend/live-bridge/app/community.py field for field. Design:
+// metadata/decisions/2026-08-26_live-challenge-lifecycle.md
+//
+// Note `desc`, not `description`: the card is the template spread whole, and the
+// template's key is `desc`. This client read `description` and therefore drew no
+// blurb at all.
+
+/** How often a fresh instance opens. */
+export type ChallengeCadence = 'weekly' | 'season' | 'rolling';
+
+/** open -> closing -> closed. `closing` is the brief moment a close is running. */
+export type InstanceStatus = 'open' | 'closing' | 'closed';
+
+/** The run of a series that is on the clock right now. */
+export interface ChallengeInstance {
+  instanceId: string | null;
+  periodKey: string | null;
+  status: InstanceStatus;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** Seconds left when the SERVER answered, not when it is read. */
+  endsInSeconds: number | null;
+  participantCount: number;
+}
+
+/** How this learner has done at this series across every instance so far. */
+export interface ChallengeHistory {
+  instancesPlayed: number;
+  instancesCompleted: number;
+  bestRank: number | null;
+  xpEarned: number;
+}
+
 export interface Challenge {
   id: string;
   title: string;
-  description: string;
+  /** One-line hook under the title. */
+  tagline?: string;
+  /** The blurb on the card. */
+  desc: string;
+  /** The fuller explanation, shown when joining. */
+  longDesc?: string;
+  /** Display string for what completing pays, e.g. "+150 XP". */
+  reward: string;
+  /** What "done" looks like, e.g. "7 days in a row". */
+  goal?: string;
+  durationDays?: number;
+  /** Selects the hero illustration. */
+  art?: string;
+  /** Colour theme key (red/blue/green/gold/violet/indigo). */
+  theme?: string;
+  order?: number;
+  cadence?: ChallengeCadence;
+  /** What counts toward the goal, machine readable. */
+  metric?: string;
+  rewardXp?: number;
+  rewardBadge?: string;
+  /** Everyone enrolled in the SERIES, which is what the card shows. */
   participantCount: number;
   joined: boolean;
-  endsAt?: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  /** Rolling challenges have no shared window, so nothing to rank against. */
+  ranked: boolean;
+  /** False when this instance can no longer be cleared by someone joining now. */
+  joinableNow: boolean;
+  /** "next" means: in the series, but sitting this instance out. */
+  enrolledFor: 'current' | 'next';
+  endsInSeconds: number | null;
+  instance: ChallengeInstance;
+  history: ChallengeHistory;
+}
+
+/** A row of the live standings for an open instance. */
+export interface StandingRow {
+  rank: number;
+  name: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  isMe: boolean;
+}
+
+/** A row of the FROZEN standings on a closed instance. No per-row target: the
+ *  instance carries the one target everybody was racing. */
+export interface ResultRow {
+  rank: number;
+  name: string;
+  progress: number;
+  completed: boolean;
+  isMe: boolean;
+}
+
+export interface ChallengeResults {
+  challengeId: string;
+  title: string;
+  periodKey: string | null;
+  closedAt: string | null;
+  participantCount: number;
+  completedCount: number;
+  target: number;
+  /** Null when nobody cleared the goal. The server refuses to invent one. */
+  winner: { uid: string; name: string } | null;
+  standings: ResultRow[];
+  /** The caller's own frozen row, present even if they missed the top-100 cut. */
+  me: ResultRow | null;
+}
+
+/** What one finished instance pays, deterministic from the frozen entry. */
+export interface ChallengeAward {
+  instanceId: string | null;
+  challengeId: string;
+  title: string;
+  periodKey: string | null;
+  rank: number | null;
+  progress: number;
+  target: number;
+  completed: boolean;
+  /** Completion reward plus podium bonus. */
+  xp: number;
+  podiumBonus: number;
+  badge?: string | null;
+  /** When it was settled. Only on awards already in the record. */
+  at?: string;
+}
+
+/** A run the learner has on the clock right now. */
+export interface RunningChallenge {
+  challengeId: string;
+  title: string;
+  art?: string;
+  theme?: string;
+  cadence?: ChallengeCadence;
+  goal?: string;
+  instanceId: string | null;
+  periodKey: string | null;
+  progress: number;
+  target: number;
+  completed: boolean;
+  ranked: boolean;
+  endsInSeconds: number | null;
+}
+
+export interface MyChallenges {
+  running: RunningChallenge[];
+  /** Finished instances waiting to be claimed. */
+  unclaimed: ChallengeAward[];
+  totalXp: number;
+  completedCount: number;
+  history: ChallengeAward[];
+}
+
+/** What a claim actually granted. Empty when there was nothing outstanding. */
+export interface ClaimResult {
+  granted: ChallengeAward[];
+  xp: number;
+  badges: string[];
 }
 
 export interface LeaderRow { rank: number; name: string; xp: number; isMe: boolean }
@@ -47,8 +204,8 @@ export interface Leaderboard { week: string; leaders: LeaderRow[]; me: { xp: num
  *
  * This used to be three values, and everything that was not a 403 collapsed into
  * "offline". So a rate limit, a 500, an expired session and a genuinely dead
- * connection all rendered the same "check your connection" screen — which is
- * wrong three times out of four, and leaves nobody, including us, able to tell
+ * connection all rendered the same "check your connection" screen, which is
+ * wrong three times out of four and leaves nobody, including us, able to tell
  * what actually happened from a screenshot.
  */
 export type FailReason =
@@ -56,6 +213,7 @@ export type FailReason =
   | 'timeout'          // it reached one and nothing came back in time
   | 'unauthenticated'  // no usable ID token: the session needs refreshing
   | 'forbidden'        // the server refused this account (child mode)
+  | 'not_found'        // there is genuinely nothing there yet, and that is fine
   | 'rate_limited'     // 429
   | 'server';          // 5xx, or any other unexpected status
 
@@ -99,6 +257,10 @@ async function once<T>(path: string, init?: RequestInit): Promise<Result<T>> {
     });
     if (res.status === 403) return { ok: false, reason: 'forbidden' };
     if (res.status === 401) return { ok: false, reason: 'unauthenticated' };
+    // 404 is an answer, not a fault: "this round has not finished yet" is the
+    // normal state of a new series, and reporting it as a server error would
+    // put an outage screen in front of a learner whose week is simply young.
+    if (res.status === 404) return { ok: false, reason: 'not_found' };
     if (res.status === 429) return { ok: false, reason: 'rate_limited' };
     if (!res.ok) return { ok: false, reason: 'server' };
     return { ok: true, data: (await res.json()) as T };
@@ -136,8 +298,47 @@ export const fetchCommunityStats = () => call<CommunityStats>('/stats');
 export const fetchFeed = () => call<{ posts: Post[] }>('/posts');
 export const fetchComments = (postId: string) =>
   call<{ comments: Comment[] }>(`/posts/${encodeURIComponent(postId)}/comments`);
-export const fetchChallenges = () => call<{ challenges: Challenge[] }>('/challenges');
+/** Every series, its live instance, and how many finished rounds are unclaimed. */
+export const fetchChallenges = () =>
+  call<{ challenges: Challenge[]; unclaimedResults: number }>('/challenges');
+
+/** The caller's own view: what is running, and what is waiting to be claimed. */
+export const fetchMyChallenges = () => call<MyChallenges>('/challenges/mine');
+
+/** Live standings for the open instance. `ranked: false` for rolling challenges. */
+export const fetchChallengeStandings = (id: string) =>
+  call<{ ranked: boolean; instance: ChallengeInstance | null; standings: StandingRow[] }>(
+    `/challenges/${encodeURIComponent(id)}/standings`,
+  );
+
+/**
+ * Frozen results for a closed round, most recent by default.
+ *
+ * A 404 here is not a failure: it is "no finished round yet", which is the
+ * normal state of a series in its first week. The caller distinguishes it from a
+ * real outage, so `server` is not the right reason to report. The status is
+ * surfaced as `notFound` rather than collapsed into a network error.
+ */
+export const fetchChallengeResults = (id: string, period?: string) =>
+  call<ChallengeResults>(
+    `/challenges/${encodeURIComponent(id)}/results${period ? `?period=${encodeURIComponent(period)}` : ''}`,
+  );
+
 export const fetchLeaderboard = () => call<Leaderboard>('/leaderboard');
+
+/**
+ * Settle every finished challenge not yet paid for.
+ *
+ * Idempotent server-side: the award is keyed by instance id inside a transaction
+ * on the caller's record, so a second call, or a second device, grants zero. The
+ * server decides IF and HOW MUCH; the client records the XP into the progress
+ * envelope and reports it to the weekly league.
+ */
+export const claimChallenges = () => call<ClaimResult>('/challenges/claim', { method: 'POST' });
+
+/** Report XP into the weekly league. Best effort; the caller does not block on it. */
+export const reportXp = (amount: number) =>
+  call<{ ok: boolean; week: string }>('/xp', { method: 'POST', body: JSON.stringify({ amount }) });
 
 export const createPost = (kind: Post['kind'], title: string, body: string) =>
   call<Post>('/posts', { method: 'POST', body: JSON.stringify({ kind, title, body }) });
@@ -154,9 +355,28 @@ export const reportPost = (postId: string) =>
 export const blockUser = (targetUid: string) =>
   call<{ status: string }>('/block', { method: 'POST', body: JSON.stringify({ targetUid }) });
 
+/**
+ * Enrol in a series and enter the instance that is running.
+ *
+ * `enrolledFor` is the one field worth reading on the way back. A day-counting
+ * goal with fewer days left than the target needs is not merely hard, it is
+ * arithmetically impossible, so the server books the enrolment for the NEXT
+ * instance and says so. Telling the learner is not optional: otherwise they
+ * watch a bar that cannot move and conclude the app is broken.
+ */
 export const joinChallenge = (id: string) =>
-  call<{ joined: boolean; participantCount: number }>(`/challenges/${encodeURIComponent(id)}/join`, { method: 'POST' });
+  call<{
+    joined: boolean;
+    /** True only the first time this learner has ever joined this series. */
+    firstJoin: boolean;
+    participantCount: number;
+    enrolledFor: 'current' | 'next';
+    progress: number;
+    target: number;
+    endsInSeconds: number | null;
+  }>(`/challenges/${encodeURIComponent(id)}/join`, { method: 'POST' });
 
+/** Leave a series. Finished instances are untouched: an unclaimed award stays claimable. */
 export const leaveChallenge = (id: string) =>
   call<{ joined: boolean; participantCount: number }>(`/challenges/${encodeURIComponent(id)}/leave`, { method: 'POST' });
 

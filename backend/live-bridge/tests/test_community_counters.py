@@ -4,10 +4,13 @@ These handlers used to read a counter outside any transaction and write back a
 value derived from it. They now decide inside one.
 
 What these tests cover: the moderation threshold actually hides a post, a
-repeat report or a double join counts once, a counter never goes negative, and
-likes received are summed across the author's own posts including hidden ones.
-None of that had any coverage before, because the community tests were all pure
-functions and never touched a handler.
+repeat report counts once, and likes received are summed across the author's own
+posts including hidden ones. None of that had any coverage before, because the
+community tests were all pure functions and never touched a handler.
+
+Challenge participation moved to test_challenge_lifecycle.py when challenges
+gained instances: a join is now counted on the instance, not on the series, so
+the counter tests belong beside the rollover they have to survive.
 
 What they do NOT cover: the concurrency guarantee itself. Interleaved commits
 are Firestore's job (it retries a transaction whose reads were invalidated), and
@@ -121,10 +124,6 @@ def _post(client, post_id="p1", **fields):
     client.store[f"{community.POSTS}/{post_id}"] = {"id": post_id, "uid": "author", "reports": 0, **fields}
 
 
-def _challenge(client, cid="c1", count=0):
-    client.store[f"{community.CHALLENGES}/{cid}"] = {"id": cid, "participantCount": count}
-
-
 # ── Reporting and auto-hide ─────────────────────────────────────────────────
 
 def test_report_hides_post_once_threshold_is_reached(fake):
@@ -155,36 +154,6 @@ def test_reporting_twice_counts_once(fake):
 def test_report_on_missing_post_is_404(fake):
     with pytest.raises(HTTPException) as exc:
         community.report_post("nope", claims={"uid": "u1"})
-    assert exc.value.status_code == 404
-
-
-# ── Challenge membership ────────────────────────────────────────────────────
-
-def test_joining_twice_counts_once(fake):
-    _challenge(fake)
-    first = community.join_challenge("c1", claims={"uid": "u1"})
-    second = community.join_challenge("c1", claims={"uid": "u1"})
-    assert first["participantCount"] == 1
-    assert second["participantCount"] == 1, "a double join inflated the participant count"
-
-
-def test_leave_decrements_once_and_never_below_zero(fake):
-    _challenge(fake)
-    community.join_challenge("c1", claims={"uid": "u1"})
-    assert community.leave_challenge("c1", claims={"uid": "u1"})["participantCount"] == 0
-    assert community.leave_challenge("c1", claims={"uid": "u1"})["participantCount"] == 0
-
-
-def test_two_members_counted_separately(fake):
-    _challenge(fake)
-    community.join_challenge("c1", claims={"uid": "u1"})
-    result = community.join_challenge("c1", claims={"uid": "u2"})
-    assert result["participantCount"] == 2
-
-
-def test_join_missing_challenge_is_404(fake):
-    with pytest.raises(HTTPException) as exc:
-        community.join_challenge("nope", claims={"uid": "u1"})
     assert exc.value.status_code == 404
 
 

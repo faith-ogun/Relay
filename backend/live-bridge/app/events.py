@@ -17,10 +17,19 @@ Rules:
   - Events are capped and validated. This is an authenticated write path, so it
     is also a way to fill a database if left open.
   - Deleting an account deletes its events, like everything else.
+
+The stream has a second job as of the challenge lifecycle work: it is the only
+forgery-resistant source of challenge progress. The uid is verified, the names
+are validated against a closed catalogue, and the props are already capped, so
+an accepted event is a fact rather than a claim. After the batch is stored it is
+handed to `community.record_events`, which moves the progress of whichever open
+challenge instances count that signal. That step is best effort and never fails
+the ingest: analytics must not break because a leaderboard did.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -29,6 +38,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from google.cloud import firestore
 
+import community
 import obs
 import ratelimit
 from auth import require_claims
@@ -54,6 +64,15 @@ KNOWN_EVENTS = {
     "simulator_open", "sketch_compile", "twin_generated",
     "twin_shared", "shared_twin_view", "shared_twin_cta",
     "interview_start", "interview_complete",
+    # Challenge progress signals. These exist so a challenge counts something
+    # the server observed rather than a number a client sent. Each one is
+    # consumed by community.METRIC_SOURCES:
+    #   freeform_build_complete  a build finished without a starter kit (No-Kit Hero)
+    #   sensor_verified          props.sensor names a sensor type the camera
+    #                            confirmed on the bench (Sensor Safari)
+    #   sim_circuit_fixed        a deliberately broken simulator circuit repaired
+    #                            (Debug Duel)
+    "freeform_build_complete", "sensor_verified", "sim_circuit_fixed",
     # Hearts: the free tier's attempt budget, and the funnel it feeds.
     # "hearts_depleted" is the moment the constraint bites; the ratio of it to
     # "hearts_paywall_view" and then "checkout_start" is what says whether the
@@ -111,6 +130,7 @@ async def ingest(request: Request, claims: dict = Depends(require_claims)) -> di
     writer = client.batch()
     accepted = 0
     unknown: list[str] = []
+    observed: list[tuple[str, dict]] = []
 
     for item in batch_in:
         if not isinstance(item, dict):
@@ -119,21 +139,37 @@ async def ingest(request: Request, claims: dict = Depends(require_claims)) -> di
         if name not in KNOWN_EVENTS:
             unknown.append(name[:40])
             continue
+        props = _clean_props(item.get("props"))
         doc = client.collection(EVENTS_COLLECTION).document()
         writer.set(doc, {
             "uid": uid,
             "name": name,
-            "props": _clean_props(item.get("props")),
+            "props": props,
             # The client clock is recorded but the server's is authoritative: a
             # device with the wrong date would otherwise reorder a funnel.
             "clientAt": str(item.get("at") or "")[:40],
             "at": firestore.SERVER_TIMESTAMP,
             "platform": str(item.get("platform") or "")[:20],
         })
+        observed.append((name, props))
         accepted += 1
 
     if accepted:
         writer.commit()
+        # Only after the events are durable, and only if the batch touched a
+        # signal some challenge actually counts, so an ordinary batch costs no
+        # extra Firestore work at all.
+        if any(name in community.PROGRESS_EVENTS for name, _ in observed):
+            try:
+                # Off the event loop. Crediting a batch is a Firestore query, a
+                # read per enrolment and a transaction per entry it moves; this
+                # process is also streaming live audio, and blocking the loop for
+                # that long is heard as a stutter at the bench.
+                await asyncio.to_thread(
+                    community.record_events, uid, observed, community.display_name(claims)
+                )
+            except Exception as exc:
+                logger.warning("challenge progress from events failed for %s: %s", uid, exc)
 
     if unknown:
         # Loud, because a typo in an event name is invisible in a dashboard: the
