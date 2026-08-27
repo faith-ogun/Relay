@@ -14,10 +14,17 @@
 //   3. every `theme` the server seeds exists in CHALLENGE_THEME
 //   4. every SceneKey has both a SCENES and a PAINTED entry, so the painted
 //      upgrade registry cannot drift out of step with the vector one
+//   5. every asset a PAINTED entry `require`s ACTUALLY EXISTS on disk, with its
+//      @2x and @3x beside it, and every web SceneKey has a PNG in
+//      frontend/public/challenges. Checking the registry alone passed with the
+//      file deleted, which is a card rendering nothing on a surface nobody
+//      looked at.
 //
 //   node scripts/check-challenge-art.mjs
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ART = 'src/components/ChallengeArt.tsx';
 const SERVER = '../backend/live-bridge/app/community.py';
@@ -95,6 +102,41 @@ for (const c of seeded) {
 for (const key of sceneKeys) {
   if (!scenes.has(key)) problems.push(`SceneKey "${key}" has no entry in SCENES`);
   if (!painted.has(key)) problems.push(`SceneKey "${key}" has no entry in PAINTED, so it can never be upgraded to painted art`);
+}
+
+// ── 5. The files themselves ─────────────────────────────────────────────────
+{
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const REPO = resolve(HERE, '../..');
+  const artSrc = readFileSync(resolve(REPO, 'mobile/src/components/ChallengeArt.tsx'), 'utf8');
+
+  // Every require in PAINTED must resolve, and Metro needs the density ladder
+  // beside it or a 3x phone silently falls back to the 1x bitmap.
+  const painted = artSrc.match(/const PAINTED[\s\S]*?\n\};/)?.[0] ?? '';
+  const required = [...painted.matchAll(/require\('(\.\.\/\.\.\/assets\/[^']+)'\)/g)].map((m) => m[1]);
+  if (!required.length && !/:\s*null/.test(painted)) {
+    problems.push('PAINTED has neither a require nor a null in it, so it can no longer be read');
+  }
+  for (const rel of required) {
+    const base = resolve(REPO, 'mobile/src/components', rel);
+    for (const variant of [base, base.replace(/\.png$/, '@2x.png'), base.replace(/\.png$/, '@3x.png')]) {
+      if (!existsSync(variant)) {
+        problems.push(`PAINTED requires ${rel} but ${variant.slice(REPO.length + 1)} is not on disk`);
+      }
+    }
+  }
+
+  // The web resolves /challenges/<scene>.png at runtime, so a missing file is a
+  // silent fallback to the vector scene rather than an error. Same check, other
+  // surface, because the two are meant to show the same picture.
+  const webDir = resolve(REPO, 'frontend/public/challenges');
+  if (existsSync(webDir)) {
+    for (const key of sceneKeys) {
+      if (!existsSync(join(webDir, `${key}.png`))) {
+        problems.push(`the web has no frontend/public/challenges/${key}.png, so that card falls back to vector art while the phone shows the painting`);
+      }
+    }
+  }
 }
 
 if (problems.length) {

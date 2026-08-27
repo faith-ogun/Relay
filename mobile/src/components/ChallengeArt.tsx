@@ -550,24 +550,29 @@ const SCENES: Record<SceneKey, React.FC<ChallengePalette>> = {
 /**
  * The painted layer, keyed by scene.
  *
- * `null` means the vector scene is what renders, which is the state every scene
- * ships in today. To promote one: put the artwork at
+ * `null` means the vector scene renders instead. All seven are painted as of
+ * 2026-08-27. To add an eighth: put the artwork at
  * `mobile/assets/challenges/<scene>.png` (with @2x and @3x beside it, as the
  * mascot and chest sets do) and replace the `null` with
  * `require('../../assets/challenges/<scene>.png')`. Nothing else changes.
+ *
+ * The full-resolution originals live in `frontend/assets-source/challenges/`.
+ * What ships here is resized to what the 116pt card actually renders, so the
+ * app bundle carries 896KB rather than the 5.1MB that came out of the
+ * generator.
  *
  * A static map rather than the web's runtime probe because Metro resolves
  * `require` at build time: there is no way to ask the bundle for a file that
  * might not be there.
  */
 const PAINTED: Record<SceneKey, number | null> = {
-  streak: null,
-  streak30: null,
-  nokit: null,
-  teachback: null,
-  sensors: null,
-  debug: null,
-  firstlight: null,
+  streak: require('../../assets/challenges/streak.png'),
+  streak30: require('../../assets/challenges/streak30.png'),
+  nokit: require('../../assets/challenges/nokit.png'),
+  teachback: require('../../assets/challenges/teachback.png'),
+  sensors: require('../../assets/challenges/sensors.png'),
+  debug: require('../../assets/challenges/debug.png'),
+  firstlight: require('../../assets/challenges/firstlight.png'),
 };
 
 /**
