@@ -1,4 +1,5 @@
 import { hasRegions } from '../components/circuits/CircuitDiagram';
+import type { MeterSpec } from './meterScale';
 
 // Lesson step shapes, mirroring frontend/components/ohmlet/data/lessons.ts.
 // Every authored step type is now represented: the eight core types, the
@@ -24,8 +25,31 @@ export interface StepChoice {
   correct: number;
   explanation: string;
   circuitDiagram?: string;
-  meter?: { unit: string; min: number; max: number; step?: number; target: number; tolerance: number };
+  /** Present on 155 of the 208 predict_reading steps. See StepPredictReading. */
+  meter?: MeterSpec;
+  /** Present on 45 of the 49 choose_resistor steps. See StepChooseResistor. */
+  bands?: BandSpec;
 }
+
+/**
+ * A predict_reading step that carries an instrument.
+ *
+ * These are NOT choice questions, whatever their `options` array says. The
+ * author asks the learner to dial a value, and the single-entry `options` array
+ * on 154 of them holds the answer as plain text, so rendering them as a list
+ * puts the answer on a button. `meter` is what the step is really made of, and
+ * MeterStep is the renderer for it.
+ */
+export type StepPredictReading = StepChoice & { type: 'predict_reading'; meter: MeterSpec };
+
+/**
+ * A choose_resistor step that carries a target value to encode in colour bands.
+ * Same story: 44 of the 45 have a single option holding the answer.
+ */
+export type StepChooseResistor = StepChoice & { type: 'choose_resistor'; bands: BandSpec };
+
+/** The target ohms a resistor's colour bands must encode. */
+export interface BandSpec { targetOhms: number }
 
 export interface StepTrueFalse {
   type: 'true_false';
@@ -141,6 +165,27 @@ export type LessonStep =
   | StepConnect | StepDraw
   | StepSpotError | StepIdentify | StepFixCircuit | StepTraceCurrent | StepBuildToSpec
   | { type: string; [k: string]: unknown };   // authored types not yet on mobile
+
+/**
+ * What every step renderer receives from the run shell.
+ *
+ * Lives here rather than inside StepView so a renderer in its own file can take
+ * the same contract without importing the router that renders it.
+ */
+export interface StepProps {
+  step: LessonStep;
+  checked: boolean;
+  correct: boolean | null;
+  /** Report whether the learner's current answer is correct. */
+  onSubmit: (isCorrect: boolean) => void;
+  /** Lets the shell enable/disable its Check button. */
+  onCanCheck: (can: boolean) => void;
+  /** Set by the shell: pressing Check calls this step's grader. */
+  registerGrader: (grade: (() => void) | null) => void;
+  /** Raised while a finger owns a gesture (a drawn stroke, a dragged dial), so
+   *  the shell can stop its ScrollView competing for the same movement. */
+  onDrawingChange?: (drawing: boolean) => void;
+}
 
 export interface Lesson {
   steps: LessonStep[];

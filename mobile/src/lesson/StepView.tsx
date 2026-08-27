@@ -3,30 +3,27 @@ import { ActivityIndicator } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { DrawCanvas, type DrawCanvasHandle } from './DrawCanvas';
-import { CircuitDiagram, regionLabel } from '../components/circuits/CircuitDiagram';
+import { CircuitDiagram, hasRegions, regionLabel } from '../components/circuits/CircuitDiagram';
 import { drawingGraderConfigured, gradeDrawing } from '../services/drawingGrader';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  buildSlotCorrect, clearSlot, gradeBuild, gradeFillTiles, gradeFillTyped, gradeMatch,
+  gradeOrder, isChipTaken, isTilePlaced, matchChips, orderRowCorrect, placePart,
+  tileAnswer, toggleTile, unlinkRow, type MatchLinks,
+} from './grading';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { ComponentPhoto, isComponentImagePath } from './componentArt';
+import { ImageChoiceStep, hasOptionImages, type StepImageChoice } from './ImageChoiceStep';
+import { MeterStep } from './MeterStep';
+import { OptionList, optionStyles as o } from './optionList';
+import { shuffledOrder } from './optionOrder';
+import { ResistorBandStep } from './ResistorBandStep';
+import { stepText as t } from './stepText';
 import type {
-  LessonStep, StepBuildToSpec, StepChoice, StepConnect, StepDraw, StepDragOrder,
-  StepFill, StepFixCircuit, StepIdentify, StepMatch, StepSpotError, StepTeach,
-  StepTraceCurrent, StepTrueFalse,
+  StepBuildToSpec, StepChoice, StepChooseResistor, StepConnect, StepDraw,
+  StepDragOrder, StepFill, StepFixCircuit, StepIdentify, StepMatch, StepPredictReading,
+  StepProps as Props, StepSpotError, StepTeach, StepTraceCurrent, StepTrueFalse,
 } from './types';
-
-interface Props {
-  step: LessonStep;
-  checked: boolean;
-  correct: boolean | null;
-  /** Report whether the learner's current answer is correct. */
-  onSubmit: (isCorrect: boolean) => void;
-  /** Lets the shell enable/disable its Check button. */
-  onCanCheck: (can: boolean) => void;
-  /** Set by the shell: pressing Check calls this step's grader. */
-  registerGrader: (grade: (() => void) | null) => void;
-  /** Raised while a finger is drawing, so the shell can stop its ScrollView
-   *  competing for the same vertical gesture. */
-  onDrawingChange?: (drawing: boolean) => void;
-}
 
 export const StepView: React.FC<Props> = (props) => {
   const { step } = props;
@@ -61,62 +58,134 @@ export const StepView: React.FC<Props> = (props) => {
       return <TraceCurrentStep {...props} step={step as StepTraceCurrent} />;
     case 'build_to_spec':
       return <BuildToSpecStep {...props} step={step as StepBuildToSpec} />;
+    case 'multiple_choice': {
+      // 26 of the 420 carry `optionImages`: four published photographs of real
+      // parts, one per option. Without them the step is "Tap the LED" over a
+      // button that says LED, so the question hands over its own answer, and
+      // the picture was the whole exercise. ImageChoiceStep is the renderer
+      // that keeps it a question; the other 394 are ordinary word choices.
+      const choice = step as StepChoice;
+      if (hasOptionImages(choice)) return <ImageChoiceStep {...props} step={choice as StepImageChoice} />;
+      return <ChoiceStep {...props} step={choice} />;
+    }
+    case 'predict_reading': {
+      // 155 of the 208 carry a `meter`: a range, a granularity, a target and a
+      // tolerance. Their `options` array holds ONE entry, the answer in words,
+      // so the choice renderer put "2.5 V" on a single button under a question
+      // that says "dial the voltage at the midpoint". The other 53 are ordinary
+      // four-option predictions and stay on the choice renderer.
+      const choice = step as StepChoice;
+      if (choice.meter) return <MeterStep {...props} step={step as StepPredictReading} />;
+      return <ChoiceStep {...props} step={choice} />;
+    }
+    case 'choose_resistor': {
+      // Same shape of failure: 45 of the 49 carry `bands` with a target value to
+      // encode, and 44 of those had a single option printing that value.
+      const choice = step as StepChoice;
+      if (choice.bands) return <ResistorBandStep {...props} step={step as StepChooseResistor} />;
+      return <ChoiceStep {...props} step={choice} />;
+    }
     default:
-      // multiple_choice, predict_reading, predict_behavior and choose_resistor
-      // all present as a choice list.
+      // multiple_choice and predict_behavior present as a choice list, and so do
+      // the predict_reading and choose_resistor steps with no spec attached.
       return <ChoiceStep {...props} step={step as StepChoice} />;
   }
 };
 
 // ── Teach ──────────────────────────────────────────────────────────────────
+// Ordinarily a card to read. When the author attached `hotspots` it stops being
+// one: the body ends with "tap each part of this loop to see the job it does",
+// and mobile used to render that sentence over a diagram that ignored every
+// tap. So a step carrying hotspots becomes an exploration, with Continue held
+// back until every part has been opened, which is what the web does with the
+// same field.
 const TeachStep: React.FC<Props & { step: StepTeach }> = ({ step, onCanCheck, registerGrader, onSubmit }) => {
+  const hotspots = useMemo(() => step.hotspots ?? [], [step]);
+  // Only an exploration if every part it names is actually tappable on the
+  // diagram. Otherwise it reads as a card, rather than as a card with a
+  // Continue button that can never be pressed.
+  const explorable = hotspots.length > 0
+    && hasRegions(step.circuitDiagram, hotspots.map((h) => h.region));
+
+  const [open, setOpen] = useState<string | null>(null);
+  const [seen, setSeen] = useState<string[]>([]);
+
+  useEffect(() => { setOpen(null); setSeen([]); }, [step]);
+
+  const done = !explorable || seen.length === hotspots.length;
   useEffect(() => {
-    onCanCheck(true);
-    registerGrader(() => onSubmit(true));   // acknowledged, never graded
+    onCanCheck(done);
+    registerGrader(done ? () => onSubmit(true) : null);   // acknowledged, never graded
     return () => registerGrader(null);
-  }, [step, onCanCheck, registerGrader, onSubmit]);
+  }, [done, step, onCanCheck, registerGrader, onSubmit]);
+
+  const show = (region: string) => {
+    setOpen(region);
+    setSeen((cur) => (cur.includes(region) ? cur : [...cur, region]));
+  };
+  const current = hotspots.find((h) => h.region === open);
 
   return (
     <View>
-      <Text style={s.kicker}>LEARN</Text>
+      <Text style={t.kicker}>LEARN</Text>
       <Text style={s.title}>{step.title}</Text>
       <Text style={s.body}>{step.body}</Text>
-      <CircuitDiagram circuit={step.circuitDiagram} />
+      <CircuitDiagram
+        circuit={step.circuitDiagram}
+        onRegionPress={explorable ? show : undefined}
+        selected={open ? [open] : []}
+      />
+
+      {explorable && (
+        <>
+          {current ? (
+            <View style={s.spotCard}>
+              <Text style={s.spotLabel}>{current.label}</Text>
+              <Text style={s.spotDetail}>{current.detail}</Text>
+            </View>
+          ) : (
+            <Text style={t.hint}>Tap each labelled part to see what it does.</Text>
+          )}
+          {/* A legend and a way back to any part, so exploring is not one pass.
+              The chip carries the short region name and the card carries the
+              author's full label, so the accessible name matches the words on
+              screen rather than a longer version of them. */}
+          <View style={s.tileWrap}>
+            {hotspots.map((h) => {
+              const name = regionLabel(step.circuitDiagram, h.region);
+              const isOpen = open === h.region;
+              const isSeen = seen.includes(h.region);
+              return (
+                <Pressable
+                  key={h.region}
+                  onPress={() => show(h.region)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOpen }}
+                  accessibilityLabel={`${name}${isSeen ? ', explored' : ''}`}
+                  style={[s.tile, isSeen && s.tileUsed, isOpen && o.optionPicked]}
+                >
+                  <Text style={[s.tileText, isSeen && !isOpen && s.tileTextUsed]}>{name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
     </View>
   );
 };
 
 // ── Choice ─────────────────────────────────────────────────────────────────
-/**
- * A presentation order for a set of options, guaranteed not to be the authored
- * one when there is more than one arrangement available.
- *
- * Authored order is a tell: correct answers cluster where the author put them,
- * and a learner who has seen a question once remembers the POSITION rather than
- * the physics. Shuffling on every presentation means a requeued question has to
- * be answered again rather than recognised.
- */
-function shuffledOrder(n: number): number[] {
-  const order = Array.from({ length: n }, (_, i) => i);
-  if (n < 2) return order;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    for (let i = order.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    if (order.some((v, i) => v !== i)) break;
-  }
-  return order;
-}
-
 const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
-  step, checked, correct, onSubmit, onCanCheck, registerGrader,
+  step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
   const [picked, setPicked] = useState<number | null>(null);
 
   const options = step.options ?? [];
   // Re-rolled whenever the step changes, which includes a requeued step coming
   // back round: the same question never appears in the same arrangement twice.
+  // `picked` and `step.correct` both stay in AUTHORED indices, so only the
+  // render order changes and grading never has to know about the shuffle.
   const order = useMemo(() => shuffledOrder(options.length), [step, options.length]);
 
   useEffect(() => { setPicked(null); }, [step]);
@@ -130,35 +199,17 @@ const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>{predict ? 'PREDICT' : 'QUESTION'}</Text>
-      <Text style={s.question}>{step.question}</Text>
+      <Text style={t.kicker}>{predict ? 'PREDICT' : 'QUESTION'}</Text>
+      <Text style={t.question}>{step.question}</Text>
       <CircuitDiagram circuit={step.circuitDiagram} />
-      <View style={{ gap: space.sm, marginTop: space.md }}>
-        {order.map((originalIndex) => {
-          const opt = options[originalIndex];
-          // `picked` and `step.correct` both stay in AUTHORED indices, so only
-          // the render order changes. Grading never has to know about the shuffle.
-          const isPicked = picked === originalIndex;
-          const reveal = checked && (originalIndex === step.correct || isPicked);
-          const good = checked && originalIndex === step.correct;
-          return (
-            <Pressable
-              key={`${opt}-${originalIndex}`}
-              disabled={checked}
-              onPress={() => setPicked(originalIndex)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: isPicked }}
-              style={[
-                s.option,
-                isPicked && !checked && s.optionPicked,
-                reveal && (good ? s.optionRight : s.optionWrong),
-              ]}
-            >
-              <Text style={[s.optionText, reveal && good && s.optionTextRight]}>{opt}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionList
+        options={options}
+        order={order}
+        picked={picked}
+        correct={step.correct}
+        checked={checked}
+        onPick={setPicked}
+      />
     </View>
   );
 };
@@ -178,8 +229,8 @@ const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>TRUE OR FALSE</Text>
-      <Text style={s.question}>{step.statement}</Text>
+      <Text style={t.kicker}>TRUE OR FALSE</Text>
+      <Text style={t.question}>{step.statement}</Text>
       <CircuitDiagram circuit={step.circuitDiagram} />
       <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.lg }}>
         {[true, false].map((val) => {
@@ -194,12 +245,12 @@ const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
               accessibilityRole="radio"
               accessibilityState={{ selected: isPicked }}
               style={[
-                s.option, { flex: 1, alignItems: 'center' },
-                isPicked && !checked && s.optionPicked,
-                reveal && (good ? s.optionRight : s.optionWrong),
+                o.option, { flex: 1, alignItems: 'center' },
+                isPicked && !checked && o.optionPicked,
+                reveal && (good ? o.optionRight : o.optionWrong),
               ]}
             >
-              <Text style={[s.optionText, reveal && good && s.optionTextRight]}>
+              <Text style={[o.optionText, reveal && good && o.optionTextRight]}>
                 {val ? 'True' : 'False'}
               </Text>
             </Pressable>
@@ -211,23 +262,49 @@ const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
 };
 
 // ── Fill in the blank ──────────────────────────────────────────────────────
-const normalise = (v: string) => v.trim().toLowerCase().replace(/\s+/g, ' ');
-
+//
+// The word bank is held by BANK SLOT, never by the word printed on it. A bank
+// carrying the same token twice offers two independent tiles, so an answer that
+// needs it twice can be built: 14 authored steps need one, among them the
+// multiplication sign in "The RC Low-Pass Filter" and "Boolean Rules and De
+// Morgan". Keying by value made the second copy a no-op and left those steps
+// impossible on the phone while they stayed answerable on the web, which
+// requeues a wrong step forever and burns a heart every lap.
+//
+// The answer assembles into the gap in the sentence, so the sentence reads as
+// the learner builds it, and the bank tile IS the placed tile: tapping a placed
+// one takes back that copy and leaves the rest of the answer in order. The web
+// (LessonRunner.tsx, FillTileStep) assembles into a tray beside the prompt and
+// takes back by tapping there. Different affordance, same rule, and the same
+// grading either way.
 const FillStep: React.FC<Props & { step: StepFill }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
   const [value, setValue] = useState('');
-  const [tiles, setTiles] = useState<string[]>([]);
-  const hasTiles = Array.isArray(step.tiles) && step.tiles.length > 0;
-  const answer = hasTiles ? tiles.join(' ') : value;
+  const [placed, setPlaced] = useState<number[]>([]);
+  const tiles = useMemo(() => step.tiles ?? [], [step]);
+  const hasTiles = tiles.length > 0;
+  const answer = hasTiles ? tileAnswer(tiles, placed) : value;
 
-  useEffect(() => { setValue(''); setTiles([]); }, [step]);
+  // The bank is DRAWN in a shuffled order, and every one of the 199 authored
+  // banks is the reason: each puts the answer's tokens first, in order, with the
+  // distractors after them. Drawn as authored, every tiled fill_blank on the
+  // phone is answered by tapping left to right without reading the question, and
+  // "Vout = Vin × R2 / ( R1 + R2 )" is the first eleven tiles in a row. The web
+  // shuffles it (LessonRunner.tsx, FillTileStep: `shuffle(tiles.map((_, i) => i))`).
+  // Presentation only: `placed` holds authored tile indices either way, so
+  // grading never learns that a shuffle happened.
+  const bank = useMemo(() => shuffledOrder(tiles.length), [step, tiles.length]);
+
+  useEffect(() => { setValue(''); setPlaced([]); }, [step]);
   useEffect(() => {
-    const ready = answer.trim().length > 0;
+    const ready = hasTiles ? placed.length > 0 : value.trim().length > 0;
     onCanCheck(ready);
-    registerGrader(!ready ? null : () => onSubmit(normalise(answer) === normalise(step.answer)));
+    registerGrader(!ready ? null : () => onSubmit(hasTiles
+      ? gradeFillTiles(tiles, step.answer, placed)
+      : gradeFillTyped(step.answer, value)));
     return () => registerGrader(null);
-  }, [answer, step, onCanCheck, registerGrader, onSubmit]);
+  }, [hasTiles, tiles, placed, value, step, onCanCheck, registerGrader, onSubmit]);
 
   const [before, after] = useMemo(() => {
     const parts = step.prompt.split(step.blank);
@@ -236,8 +313,8 @@ const FillStep: React.FC<Props & { step: StepFill }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>FILL THE BLANK</Text>
-      <Text style={s.question}>
+      <Text style={t.kicker}>FILL THE BLANK</Text>
+      <Text style={t.question}>
         {before}
         <Text style={s.blank}>{answer || '_____'}</Text>
         {after}
@@ -245,23 +322,41 @@ const FillStep: React.FC<Props & { step: StepFill }> = ({
       <CircuitDiagram circuit={step.circuitDiagram} />
 
       {hasTiles ? (
-        <View style={s.tileWrap}>
-          {step.tiles!.map((t, i) => {
-            const used = tiles.includes(t);
-            return (
-              <Pressable
-                key={`${t}-${i}`}
-                disabled={checked}
-                onPress={() => setTiles((cur) => (used ? cur.filter((x) => x !== t) : [...cur, t]))}
-                style={[s.tile, used && s.tileUsed]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: used }}
-              >
-                <Text style={[s.tileText, used && s.tileTextUsed]}>{t}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <>
+          <View style={s.tileWrap}>
+            {bank.map((i) => {
+              const tile = tiles[i];
+              const used = isTilePlaced(placed, i);
+              return (
+                <Pressable
+                  key={`${tile}-${i}`}
+                  disabled={checked}
+                  onPress={() => setPlaced((cur) => toggleTile(cur, i))}
+                  style={[s.tile, used && s.tileUsed]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: used, disabled: checked }}
+                  accessibilityLabel={used
+                    ? `${tile}, in your answer. Tap to take it back.`
+                    : `${tile}, tap to add it to your answer.`}
+                >
+                  <Text style={[s.tileText, used && s.tileTextUsed]}>{tile}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {/* Two tiles reading the same word look the same, so tapping "the one
+              I just used" is a guess. This is the sure way back by one. */}
+          {placed.length > 0 && !checked && (
+            <Pressable
+              onPress={() => setPlaced((cur) => cur.slice(0, -1))}
+              style={s.undo}
+              accessibilityRole="button"
+              accessibilityLabel={`Take back ${tiles[placed[placed.length - 1]] ?? 'the last tile'}`}
+            >
+              <Text style={s.undoText}>Take back last tile</Text>
+            </Pressable>
+          )}
+        </>
       ) : (
         <TextInput
           value={value}
@@ -275,7 +370,7 @@ const FillStep: React.FC<Props & { step: StepFill }> = ({
         />
       )}
 
-      {!!step.hint && !checked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!!step.hint && !checked && <Text style={t.hint}>Hint: {step.hint}</Text>}
     </View>
   );
 };
@@ -286,57 +381,101 @@ const MatchStep: React.FC<Props & { step: StepMatch }> = ({
 }) => {
   const lefts = useMemo(() => step.pairs.map((p) => p[0]), [step]);
   // Rotate rather than shuffle: deterministic, so the same question never
-  // renders in an order that accidentally matches the answer key.
-  const rights = useMemo(() => {
-    const r = step.pairs.map((p) => p[1]);
-    return r.length > 1 ? [...r.slice(1), r[0]] : r;
-  }, [step]);
+  // renders in an order that accidentally matches the answer key. The rotation
+  // lives in grading.ts because the chips ARE the bank: a checker that built its
+  // own copy of them would be proving something about its own array.
+  const rights = useMemo(() => matchChips(step.pairs), [step]);
 
+  // 54 of the 186 match steps carry `images`: one published photograph per
+  // left-hand item, aligned to `pairs` by index. It is what makes "match each
+  // real component to its job" a question about parts a learner will hold,
+  // rather than a vocabulary drill on their names. A photograph that will not
+  // load simply leaves its slot empty: the row still carries the name, which is
+  // the thing being matched, so the exercise is intact without it.
+  const photos = (step as StepMatch & { images?: string[] }).images ?? [];
+
+  // Links hold the CHIP INDEX a row is answered with, not the word on the chip.
+  // 11 steps in the corpus are categorisations whose answers repeat ("Series,
+  // Parallel, Series, Parallel, Series"), and each pair contributes its own
+  // chip. Marking a chip spent by its word retired every other chip reading the
+  // same word, so the second row asking for "Series" could never be answered and
+  // Check never enabled: the step could not be finished at all on the phone,
+  // while the web (LessonRunner.tsx, MatchStep.select) consumes chips by index
+  // and pairs by value. Grading stays by value, which is what lets one answer
+  // serve several rows.
   const [activeLeft, setActiveLeft] = useState<number | null>(null);
-  const [links, setLinks] = useState<Record<number, string>>({});
+  const [links, setLinks] = useState<MatchLinks>({});
 
   useEffect(() => { setLinks({}); setActiveLeft(null); }, [step]);
   useEffect(() => {
     const complete = Object.keys(links).length === lefts.length;
     onCanCheck(complete);
-    registerGrader(!complete ? null : () =>
-      onSubmit(step.pairs.every((pair, i) => links[i] === pair[1])));
+    registerGrader(!complete ? null : () => onSubmit(gradeMatch(step.pairs, rights, links)));
     return () => registerGrader(null);
-  }, [links, lefts.length, step, onCanCheck, registerGrader, onSubmit]);
+  }, [links, rights, lefts.length, step, onCanCheck, registerGrader, onSubmit]);
 
   return (
     <View>
-      <Text style={s.kicker}>MATCH</Text>
-      <Text style={s.question}>{step.instruction}</Text>
+      <Text style={t.kicker}>MATCH</Text>
+      <Text style={t.question}>{step.instruction}</Text>
+      {!checked && (
+        <Text style={t.hint}>
+          {`${Object.keys(links).length}/${lefts.length} matched. Tap a term, then its answer. Tap a matched term to change it.`}
+        </Text>
+      )}
       <View style={{ marginTop: space.md, gap: space.sm }}>
-        {lefts.map((left, i) => (
-          <Pressable
-            key={left}
-            disabled={checked}
-            onPress={() => setActiveLeft(activeLeft === i ? null : i)}
-            style={[s.matchRow, activeLeft === i && s.optionPicked, !!links[i] && s.matchDone]}
-            accessibilityRole="button"
-            accessibilityLabel={`${left}${links[i] ? `, matched to ${links[i]}` : ', not matched'}`}
-          >
-            <Text style={s.matchLeft}>{left}</Text>
-            <Text style={s.matchRight} numberOfLines={2}>{links[i] ?? 'tap, then pick'}</Text>
-          </Pressable>
-        ))}
+        {lefts.map((left, i) => {
+          const answered = links[i] === undefined ? null : rights[links[i]];
+          return (
+            <Pressable
+              key={`${left}-${i}`}
+              disabled={checked}
+              // An answered row gives its chip back and stays selected, so the
+              // next tap on the bank re-answers it. There is one chip per row,
+              // so by the time the last row is answered every chip is spent: a
+              // row that could not be un-answered would leave a learner looking
+              // at a mistake with every chip disabled and nothing to do but
+              // press Check and lose a heart.
+              onPress={() => {
+                if (links[i] !== undefined) {
+                  setLinks((cur) => unlinkRow(cur, i));
+                  setActiveLeft(i);
+                  return;
+                }
+                setActiveLeft(activeLeft === i ? null : i);
+              }}
+              style={[s.matchRow, activeLeft === i && o.optionPicked, answered !== null && s.matchDone]}
+              accessibilityRole="button"
+              accessibilityLabel={`${left}${answered !== null ? `, matched to ${answered}. Tap to change it.` : ', not matched'}`}
+            >
+              {isComponentImagePath(photos[i]) && (
+                <ComponentPhoto path={photos[i]} height={THUMB} width={THUMB} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={s.matchLeft}>{left}</Text>
+                <Text style={s.matchRight} numberOfLines={2}>{answered ?? 'tap, then pick'}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={s.tileWrap}>
-        {rights.map((r) => {
-          const taken = Object.values(links).includes(r);
+        {rights.map((r, chip) => {
+          const taken = isChipTaken(links, chip);
           return (
             <Pressable
-              key={r}
+              key={`${r}-${chip}`}
               disabled={checked || activeLeft === null || taken}
               onPress={() => {
                 if (activeLeft === null) return;
-                setLinks((cur) => ({ ...cur, [activeLeft]: r }));
+                setLinks((cur) => ({ ...cur, [activeLeft]: chip }));
                 setActiveLeft(null);
               }}
               style={[s.tile, taken && s.tileUsed]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: checked || activeLeft === null || taken }}
+              accessibilityLabel={taken ? `${r}, already used` : `${r}, tap to answer the chosen term`}
             >
               <Text style={[s.tileText, taken && s.tileTextUsed]} numberOfLines={2}>{r}</Text>
             </Pressable>
@@ -348,6 +487,13 @@ const MatchStep: React.FC<Props & { step: StepMatch }> = ({
 };
 
 // ── Order ──────────────────────────────────────────────────────────────────
+//
+// Graded on the arrangement the learner can SEE, by what each row SAYS, which is
+// the web runner's rule (LessonRunner.tsx, drag_order). Blink's loop() holds two
+// `delay(1000);` lines and three lessons ask for it, so comparing item indices
+// marked a visually perfect answer wrong about half the time depending on which
+// of the two identical rows was tapped first. The learner was then shown the
+// same rows again with nothing on screen to change, every lap of the requeue.
 const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
@@ -358,38 +504,54 @@ const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
     const complete = order.length === step.items.length;
     onCanCheck(complete);
     registerGrader(!complete ? null : () =>
-      onSubmit(order.every((v, i) => v === step.correctOrder[i])));
+      onSubmit(gradeOrder(step.items, step.correctOrder, order)));
     return () => registerGrader(null);
   }, [order, step, onCanCheck, registerGrader, onSubmit]);
 
   return (
     <View>
-      <Text style={s.kicker}>PUT IN ORDER</Text>
-      <Text style={s.question}>{step.instruction}</Text>
-      <Text style={s.hint}>Tap them in order. Tap a chosen one to take it back.</Text>
+      <Text style={t.kicker}>PUT IN ORDER</Text>
+      <Text style={t.question}>{step.instruction}</Text>
+      <Text style={t.hint}>Tap them in order. Tap a chosen one to take it back.</Text>
 
       <View style={{ marginTop: space.md, gap: 6 }}>
-        {order.map((itemIdx, slot) => (
-          <Pressable
-            key={`slot-${slot}`}
-            disabled={checked}
-            onPress={() => setOrder((cur) => cur.filter((_, i) => i !== slot))}
-            style={[s.option, s.optionPicked, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}
-          >
-            <Text style={s.orderNum}>{slot + 1}</Text>
-            <Text style={s.optionText}>{step.items[itemIdx]}</Text>
-          </Pressable>
-        ))}
+        {order.map((itemIdx, slot) => {
+          // Painted by the same rule that grades it, so a row can never be shown
+          // red under a "Correct" banner or green under a wrong one.
+          const rowRight = orderRowCorrect(step.items, step.correctOrder, itemIdx, slot);
+          return (
+            <Pressable
+              key={`slot-${slot}`}
+              disabled={checked}
+              onPress={() => setOrder((cur) => cur.filter((_, i) => i !== slot))}
+              style={[
+                o.option, o.optionPicked, { flexDirection: 'row', alignItems: 'center', gap: 10 },
+                checked && (rowRight ? o.optionRight : o.optionWrong),
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={checked
+                ? `Position ${slot + 1}, ${step.items[itemIdx]}, ${rowRight ? 'right place' : 'wrong place'}`
+                : `Position ${slot + 1}, ${step.items[itemIdx]}. Tap to take it back.`}
+            >
+              <Text style={s.orderNum}>{slot + 1}</Text>
+              <Text style={[o.optionText, checked && rowRight && o.optionTextRight]}>{step.items[itemIdx]}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={s.tileWrap}>
         {step.items.map((item, i) =>
           order.includes(i) ? null : (
+            // Keyed by position, not by text: two rows can read the same, and
+            // duplicate keys leave React reconciling the wrong one.
             <Pressable
-              key={item}
+              key={`item-${i}`}
               disabled={checked}
               onPress={() => setOrder((cur) => [...cur, i])}
               style={s.tile}
+              accessibilityRole="button"
+              accessibilityLabel={`${item}, tap to place it next`}
             >
               <Text style={s.tileText}>{item}</Text>
             </Pressable>
@@ -420,8 +582,8 @@ const IdentifyStep: React.FC<Props & { step: StepIdentify }> = ({
   const right = picked === step.correctComponent;
   return (
     <View>
-      <Text style={s.kicker}>IDENTIFY</Text>
-      <Text style={s.question}>{step.question}</Text>
+      <Text style={t.kicker}>IDENTIFY</Text>
+      <Text style={t.question}>{step.question}</Text>
       <CircuitDiagram
         circuit={step.circuitDiagram}
         onRegionPress={checked ? undefined : setPicked}
@@ -429,7 +591,7 @@ const IdentifyStep: React.FC<Props & { step: StepIdentify }> = ({
         correct={checked ? [step.correctComponent] : []}
         wrong={checked && !right && picked ? [picked] : []}
       />
-      <Text style={s.hint}>
+      <Text style={t.hint}>
         {checked
           ? right
             ? `Right: ${regionLabel(step.circuitDiagram, step.correctComponent)}.`
@@ -457,8 +619,8 @@ const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
   const right = picked === step.correctRegion;
   return (
     <View>
-      <Text style={s.kicker}>SPOT THE ERROR</Text>
-      <Text style={s.question}>{step.question}</Text>
+      <Text style={t.kicker}>SPOT THE ERROR</Text>
+      <Text style={t.question}>{step.question}</Text>
       <CircuitDiagram
         circuit={step.circuitDiagram}
         onRegionPress={checked ? undefined : setPicked}
@@ -466,7 +628,7 @@ const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
         correct={checked ? [step.correctRegion] : []}
         wrong={checked && !right && picked ? [picked] : []}
       />
-      <Text style={s.hint}>
+      <Text style={t.hint}>
         {checked
           ? right
             ? `Right: ${regionLabel(step.circuitDiagram, step.correctRegion)}.`
@@ -475,7 +637,7 @@ const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
             ? `You picked ${regionLabel(step.circuitDiagram, picked)}.`
             : 'Tap the part that is wrong.'}
       </Text>
-      {!!step.hint && !checked && !picked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!!step.hint && !checked && !picked && <Text style={t.hint}>Hint: {step.hint}</Text>}
     </View>
   );
 };
@@ -500,8 +662,8 @@ const FixCircuitStep: React.FC<Props & { step: StepFixCircuit }> = ({
   const regionRight = region === step.faultRegion;
   return (
     <View>
-      <Text style={s.kicker}>FIND IT, THEN FIX IT</Text>
-      <Text style={s.question}>{step.question}</Text>
+      <Text style={t.kicker}>FIND IT, THEN FIX IT</Text>
+      <Text style={t.question}>{step.question}</Text>
       <CircuitDiagram
         circuit={step.circuitDiagram}
         onRegionPress={checked ? undefined : setRegion}
@@ -524,14 +686,14 @@ const FixCircuitStep: React.FC<Props & { step: StepFixCircuit }> = ({
               onPress={() => setFix(i)}
               accessibilityRole="radio"
               accessibilityState={{ selected: isPicked, disabled: !region }}
-              style={[s.option, isPicked && !checked && s.optionPicked, reveal && (good ? s.optionRight : s.optionWrong)]}
+              style={[o.option, isPicked && !checked && o.optionPicked, reveal && (good ? o.optionRight : o.optionWrong)]}
             >
-              <Text style={s.optionText}>{opt}</Text>
+              <Text style={o.optionText}>{opt}</Text>
             </Pressable>
           );
         })}
       </View>
-      {!!step.hint && !checked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!!step.hint && !checked && <Text style={t.hint}>Hint: {step.hint}</Text>}
     </View>
   );
 };
@@ -557,8 +719,8 @@ const TraceCurrentStep: React.FC<Props & { step: StepTraceCurrent }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>TRACE THE CURRENT</Text>
-      <Text style={s.question}>{step.question}</Text>
+      <Text style={t.kicker}>TRACE THE CURRENT</Text>
+      <Text style={t.question}>{step.question}</Text>
       <CircuitDiagram
         circuit={step.circuitDiagram}
         onRegionPress={checked ? undefined : tap}
@@ -578,9 +740,9 @@ const TraceCurrentStep: React.FC<Props & { step: StepTraceCurrent }> = ({
           </React.Fragment>
         ))}
       </View>
-      {!checked && <Text style={s.hint}>Tap each part in order. Tap one again to take it back.</Text>}
+      {!checked && <Text style={t.hint}>Tap each part in order. Tap one again to take it back.</Text>}
       {checked && (
-        <Text style={s.hint}>
+        <Text style={t.hint}>
           The loop runs {step.correctPath.map((id) => regionLabel(step.circuitDiagram, id)).join(' → ')}.
         </Text>
       )}
@@ -599,30 +761,30 @@ const BuildToSpecStep: React.FC<Props & { step: StepBuildToSpec }> = ({
   const full = placed.length === step.slots;
   useEffect(() => {
     onCanCheck(full);
-    registerGrader(!full ? null : () => onSubmit(placed.every((p, i) => p === step.correct[i])));
+    registerGrader(!full ? null : () => onSubmit(gradeBuild(step.correct, step.slots, placed)));
     return () => registerGrader(null);
   }, [full, placed, step, onCanCheck, registerGrader, onSubmit]);
 
   return (
     <View>
-      <Text style={s.kicker}>BUILD IT</Text>
-      <Text style={s.question}>{step.instruction}</Text>
+      <Text style={t.kicker}>BUILD IT</Text>
+      <Text style={t.question}>{step.instruction}</Text>
       <CircuitDiagram circuit={step.circuitDiagram} />
 
       <View style={s.pathRow}>
         {Array.from({ length: step.slots }).map((_, i) => {
           const partIdx = placed[i];
-          const good = checked && partIdx === step.correct[i];
-          const bad = checked && partIdx !== undefined && partIdx !== step.correct[i];
+          const good = checked && buildSlotCorrect(step.correct, placed, i);
+          const bad = checked && partIdx !== undefined && !good;
           return (
             <React.Fragment key={i}>
               {i > 0 && <Text style={s.pathArrow}>→</Text>}
               <Pressable
                 disabled={checked || partIdx === undefined}
-                onPress={() => setPlaced((prev) => prev.filter((_, j) => j !== i))}
+                onPress={() => setPlaced((prev) => clearSlot(prev, i))}
                 style={[
                   s.pathSlot, partIdx !== undefined && s.pathSlotFilled,
-                  good && s.optionRight, bad && s.optionWrong,
+                  good && o.optionRight, bad && o.optionWrong,
                 ]}
               >
                 <Text style={[s.pathSlotText, partIdx !== undefined && s.pathSlotTextFilled]} numberOfLines={1}>
@@ -634,40 +796,44 @@ const BuildToSpecStep: React.FC<Props & { step: StepBuildToSpec }> = ({
         })}
       </View>
 
+      {/* A part is not spent by being used: the same one may fill several slots,
+          which is the web's rule and the only way an answer that needs two of a
+          part can be given. The slots above show what has been placed, so
+          nothing is lost by leaving every part available. */}
       <View style={s.tileWrap}>
-        {step.palette.map((part, i) => {
-          const used = placed.includes(i);
-          return (
-            <Pressable
-              key={`${part}-${i}`}
-              disabled={checked || used || full}
-              onPress={() => setPlaced((prev) => [...prev, i])}
-              style={[s.tile, (used || (full && !used)) && s.tileUsed]}
-            >
-              <Text style={[s.tileText, used && s.tileTextUsed]}>{part}</Text>
-            </Pressable>
-          );
-        })}
+        {step.palette.map((part, i) => (
+          <Pressable
+            key={`${part}-${i}`}
+            disabled={checked || full}
+            onPress={() => setPlaced((prev) => placePart(prev, step.slots, i))}
+            style={[s.tile, full && s.tileUsed]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: checked || full }}
+            accessibilityLabel={full
+              ? `${part}, every slot is filled`
+              : `${part}, tap to put it in slot ${placed.length + 1}`}
+          >
+            <Text style={[s.tileText, full && s.tileTextUsed]}>{part}</Text>
+          </Pressable>
+        ))}
       </View>
-      {!!step.hint && !checked && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!!step.hint && !checked && <Text style={t.hint}>Hint: {step.hint}</Text>}
     </View>
   );
 };
 
+/** A match row's photograph. Square, so rows of mixed parts stay aligned. */
+const THUMB = 52;
+
 const s = StyleSheet.create({
-  kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, marginTop: 6, letterSpacing: -0.5 },
-  question: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 6, lineHeight: type.heading * 1.3 },
-  body: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 24 },
-  option: {
-    borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 14, paddingHorizontal: space.md,
+  spotCard: {
+    marginTop: space.md, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.goldSoft, paddingHorizontal: space.md, paddingVertical: 12,
   },
-  optionPicked: { borderColor: colors.ink, backgroundColor: colors.goldSoft },
-  optionRight: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  optionWrong: { borderColor: colors.red, backgroundColor: '#fdece8' },
-  optionText: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
-  optionTextRight: { color: colors.ink },
+  spotLabel: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
+  spotDetail: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 3, lineHeight: 19 },
+  body: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 24 },
   blank: { color: colors.blueDeep, fontFamily: font.black },
   stepLabel: {
     fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.6,
@@ -688,7 +854,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 14,
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
-  hint: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm },
   tileWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md },
   tile: {
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
@@ -700,6 +865,7 @@ const s = StyleSheet.create({
   matchRow: {
     borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
     backgroundColor: colors.white, padding: space.md,
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
   },
   matchDone: { borderColor: colors.ink },
   matchLeft: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
@@ -759,9 +925,9 @@ const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>WIRE IT UP</Text>
-      <Text style={s.question}>{step.instruction}</Text>
-      <Text style={s.hint}>Tap one terminal, then the one it connects to.</Text>
+      <Text style={t.kicker}>WIRE IT UP</Text>
+      <Text style={t.question}>{step.instruction}</Text>
+      <Text style={t.hint}>Tap one terminal, then the one it connects to.</Text>
 
       <View style={s.board}>
         <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
@@ -842,8 +1008,8 @@ const DrawStep: React.FC<Props & { step: StepDraw }> = ({
 
   return (
     <View>
-      <Text style={s.kicker}>DRAW IT</Text>
-      <Text style={s.question}>{step.instruction}</Text>
+      <Text style={t.kicker}>DRAW IT</Text>
+      <Text style={t.question}>{step.instruction}</Text>
       <CircuitDiagram circuit={step.circuitDiagram} />
 
       <View ref={shotRef} collapsable={false} style={{ marginTop: space.md }}>
@@ -866,14 +1032,14 @@ const DrawStep: React.FC<Props & { step: StepDraw }> = ({
       {grading && (
         <View style={s.grading}>
           <ActivityIndicator color={colors.goldDeep} />
-          <Text style={s.hint}>Looking at your drawing…</Text>
+          <Text style={t.hint}>Looking at your drawing…</Text>
         </View>
       )}
 
-      {!!note && <Text style={s.hint}>{note}</Text>}
-      {!!step.hint && !checked && !grading && <Text style={s.hint}>Hint: {step.hint}</Text>}
+      {!!note && <Text style={t.hint}>{note}</Text>}
+      {!!step.hint && !checked && !grading && <Text style={t.hint}>Hint: {step.hint}</Text>}
       {!drawingGraderConfigured() && (
-        <Text style={s.hint}>Drawing feedback is unavailable right now; your attempt still counts.</Text>
+        <Text style={t.hint}>Drawing feedback is unavailable right now; your attempt still counts.</Text>
       )}
     </View>
   );

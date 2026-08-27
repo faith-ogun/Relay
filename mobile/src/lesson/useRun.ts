@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { canRender, isTeach, type Lesson, type LessonStep } from './types';
+import { buildLeveledSteps, xpForLevel, type AuthoredStep } from './levels';
 
 /**
  * The run loop, mirroring the web LessonRunner.
@@ -19,7 +20,8 @@ export interface RunState {
   checked: boolean;
   correct: boolean | null;
   done: boolean;
-  earnedXp: number;
+  earnedXp: number;          // what this level pays, before the record decides
+  level: number;             // 1 Bronze, 2 Silver, 3 Gold
   anyWrong: boolean;         // drives the "perfect" achievement metric
 }
 
@@ -32,13 +34,24 @@ export interface RunState {
  * caller decides what it costs. `onWrong` is handed the miss's ordinal within
  * this run, which is what makes the charge idempotent across a retried request.
  */
-export function useRun(lesson: Lesson | null, onWrong?: (missOrdinal: number) => void) {
-  // Only present steps this client can actually render. An unsupported type is
-  // dropped rather than shown broken; the count reflects what the learner sees.
-  const steps = useMemo(
-    () => (lesson?.steps ?? []).filter(canRender),
-    [lesson],
-  );
+export function useRun(
+  lesson: Lesson | null,
+  level = 1,
+  onWrong?: (missOrdinal: number) => void,
+) {
+  // The run is built FOR a level: Bronze plays the lesson as authored, Silver
+  // and Gold drop the teaching and shuffle what is left into a recall round.
+  // The phone used to ignore levels entirely and always play Bronze, so nobody
+  // learning here could get past it.
+  //
+  // Only steps this client can actually render take part. An unsupported type is
+  // dropped rather than shown broken, and it is dropped BEFORE the level is
+  // built, or the sampler could fill a round with steps this client then removes
+  // and hand the learner a short one.
+  const steps = useMemo(() => {
+    const renderable = (lesson?.steps ?? []).filter(canRender) as AuthoredStep[];
+    return buildLeveledSteps(renderable, level);
+  }, [lesson, level]);
 
   const [queue, setQueue] = useState<number[]>(() => steps.map((_, i) => i));
   const [pos, setPos] = useState(0);
@@ -123,7 +136,9 @@ export function useRun(lesson: Lesson | null, onWrong?: (missOrdinal: number) =>
     checked,
     correct,
     done,
-    earnedXp: lesson?.xpReward ?? 0,
+    // Full price at Bronze, half at Silver and Gold, exactly as the web pays.
+    earnedXp: lesson ? xpForLevel(lesson.xpReward, level) : 0,
+    level,
     anyWrong: anyWrong.current,
   };
 
