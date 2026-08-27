@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import {
   AudioContext, AudioManager, AudioRecorder,
-  type AudioBufferSourceNode, type PermissionStatus, type SessionOptions,
+  type AudioBufferQueueSourceNode, type PermissionStatus, type SessionOptions,
 } from 'react-native-audio-api';
 import { getIdToken } from '../services/firebase';
 import { base64ToBytes } from '../services/pcm';
@@ -110,14 +110,6 @@ export const MIC_RECORDER_OPTIONS = {
 /** What the model speaks at. Fixed by the Live API, not by us. */
 export const AGENT_SAMPLE_RATE = 24000;
 
-/**
- * The cushion the first chunk of an utterance gets before it is due to play.
- * Chunks arrive over a mobile network in bursts, and scheduling the first one
- * at the current instant means the audio thread reaches it late and clips its
- * opening. Every chunk after it is scheduled flush against the previous one, so
- * this cost is paid once per utterance rather than once per chunk.
- */
-export const PLAYBACK_LEAD_S = 0.08;
 
 /**
  * How long the microphone has to produce its first frame before the session
@@ -308,26 +300,6 @@ export function decodeAgentPcm(bytes: Uint8Array): Float32Array {
   return out;
 }
 
-/**
- * When the next chunk of the tutor's voice should start.
- *
- * While a reply is still playing this is the instant the previous chunk ends,
- * which is what makes consecutive chunks abut: no gap to click across, no
- * overlap to turn two voices into noise. When the queue has drained the chunk
- * starts a beat from now rather than at this instant, so the audio thread has
- * time to pick it up before it is due.
- */
-export function nextChunkStart(now: number, queuedUntil: number, lead = PLAYBACK_LEAD_S): number {
-  return queuedUntil > now ? queuedUntil : now + lead;
-}
-
-/**
- * How long after the tutor stops talking the microphone stays shut.
- *
- * Covers the last buffer draining out of the speaker and the room's own tail.
- * Too short and the closing syllable comes back as the learner's input; too
- * long and a learner answering promptly gets clipped.
- */
 export const ECHO_GATE_TAIL_S = 0.25;
 
 /**
@@ -591,7 +563,6 @@ interface Options {
 }
 
 /** One chunk of the tutor's reply, and when it is done playing. */
-interface ScheduledChunk { node: AudioBufferSourceNode; endsAt: number }
 
 const MIC_DENIED_LINE =
   "Ohmlet can't hear you yet. Turn the microphone on for Ohmlet in your phone's settings, then tap the mic again.";
@@ -680,7 +651,9 @@ export function useLiveBridge({
   const micWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playbackCtxRef = useRef<AudioContext | null>(null);
   const queuedUntilRef = useRef(0);
-  const scheduledRef = useRef<ScheduledChunk[]>([]);
+  // One node for the whole session. See playAudio for why this is not a fresh
+  // source per chunk.
+  const queueNodeRef = useRef<AudioBufferQueueSourceNode | null>(null);
 
   const closeSpan = useCallback(() => {
     if (spanStartRef.current === null) return;
@@ -722,15 +695,13 @@ export function useLiveBridge({
   // buffer whose rate matches its context is played rather than resampled.
 
   const stopSpeaking = useCallback(() => {
-    const ctx = playbackCtxRef.current;
-    const scheduled = scheduledRef.current;
-    scheduledRef.current = [];
     queuedUntilRef.current = 0;
-    if (!ctx) return;
-    for (const chunk of scheduled) {
-      try { chunk.node.stop(ctx.currentTime); } catch { /* already finished */ }
-      try { chunk.node.disconnect(); } catch { /* already detached */ }
-    }
+    const queue = queueNodeRef.current;
+    if (!queue) return;
+    // Drop what has not been heard yet and leave the node running: it renders
+    // silence on an empty queue, so the next reply resumes in the same node
+    // rather than paying to build and start another one mid-conversation.
+    try { queue.clearBuffers(); } catch { /* already torn down */ }
   }, []);
 
   const playAudio = useCallback((b64: string) => {
@@ -769,19 +740,41 @@ export function useLiveBridge({
 
       const buffer = ctx.createBuffer(1, samples.length, AGENT_SAMPLE_RATE);
       buffer.copyToChannel(samples, 0);
-      const node = ctx.createBufferSource();
-      node.buffer = buffer;
-      node.connect(ctx.destination);
 
-      const startAt = nextChunkStart(ctx.currentTime, queuedUntilRef.current);
-      node.start(startAt);
-      queuedUntilRef.current = startAt + buffer.duration;
+      // ONE long-lived queue node, not a fresh source per chunk.
+      //
+      // Every chunk used to get its own AudioBufferSourceNode scheduled at an
+      // absolute time computed from the previous chunk's end. That is gapless
+      // only while chunks keep arriving ahead of the clock. The moment one is
+      // late, the queued-until mark has already passed and the next chunk
+      // restarts a beat from now: a hole in the audio. Over a mobile network
+      // that happens constantly, and it is heard as the audio being patchy and
+      // grainy rather than as an error anywhere.
+      //
+      // createBufferQueueSource is the library's own primitive for exactly this.
+      // Buffers are appended to a queue the native renderer walks; when the
+      // queue is starved it writes SILENCE and keeps running
+      // (AudioBufferQueueSourceNode.cpp, runBufferProcessor: `if
+      // (buffers_.empty()) { processingBuffer->zero(...); return; }`), so a late
+      // chunk resumes the sentence instead of starting a new schedule after a
+      // gap. Chunk boundaries are handled inside one node, so there is no
+      // per-chunk start time to get wrong.
+      let queue = queueNodeRef.current;
+      if (!queue) {
+        queue = ctx.createBufferQueueSource();
+        queue.connect(ctx.destination);
+        queue.start(0);
+        queueNodeRef.current = queue;
+      }
+      queue.enqueueBuffer(buffer);
 
-      // Keep only what is still to play. Barge-in has to be able to silence
-      // every chunk already queued, and nothing else needs the finished ones.
-      const now = ctx.currentTime;
-      scheduledRef.current = scheduledRef.current.filter((c) => c.endsAt > now);
-      scheduledRef.current.push({ node, endsAt: queuedUntilRef.current });
+      // When the queue will run dry, which is what the echo gate reads to know
+      // the tutor is still talking. Measured against the clock rather than
+      // counted off buffer-ended events, so it always expires on its own: a
+      // dropped event could otherwise leave the microphone shut for the rest of
+      // the session.
+      queuedUntilRef.current =
+        Math.max(queuedUntilRef.current, ctx.currentTime) + buffer.duration;
     } catch {
       /* a dropped chunk is better than a crashed session */
     }
@@ -789,6 +782,12 @@ export function useLiveBridge({
 
   const closePlayback = useCallback(() => {
     stopSpeaking();
+    const queue = queueNodeRef.current;
+    queueNodeRef.current = null;
+    if (queue) {
+      try { queue.stop(0); } catch { /* never started */ }
+      try { queue.disconnect(); } catch { /* already detached */ }
+    }
     const ctx = playbackCtxRef.current;
     playbackCtxRef.current = null;
     if (ctx) void ctx.close().catch(() => {});
@@ -1326,7 +1325,6 @@ export function useLiveBridge({
     }
     const ctx = playbackCtxRef.current;
     playbackCtxRef.current = null;
-    scheduledRef.current = [];
     if (ctx) void ctx.close().catch(() => {});
     try { AudioManager.setAudioSessionOptions(IDLE_AUDIO_SESSION); } catch { /* best effort */ }
     void AudioManager.setAudioSessionActivity(false).catch(() => {});
