@@ -22,7 +22,9 @@ export function liveBridgeWsUrl(): string {
   return API_BASE.replace(/^http(s?):\/\//i, (_m, s) => `ws${s}://`);
 }
 
-/** A service is only "configured" if it has a URL; callers hide the feature otherwise. */
-export const reporterConfigured = () => !!REPORTER_BASE;
-export const verifierConfigured = () => !!VERIFIER_BASE;
-export const compilerConfigured = () => !!COMPILER_BASE;
+// Each service module owns its own readiness test, next to the calls that need
+// it: `compilerConfigured` in compiler.ts, `verifierConfigured` in
+// visionVerifier.ts, and `probeTwins` in twins.ts, which asks the reporter
+// rather than trusting the URL. A second set of predicates lived here and
+// nothing imported it, so the two could disagree about the same service and the
+// copy nobody called was the one that looked authoritative.
