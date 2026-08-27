@@ -19,8 +19,8 @@ from google import genai
 
 # Model routing
 FLASH_MODEL = os.getenv("OHMLET_FLASH_MODEL", "gemini-3.7-flash")
-PRO_MODEL = os.getenv("OHMLET_PRO_MODEL", "gemini-2.5-pro")
-REASONING_MODEL = os.getenv("OHMLET_REASONING_MODEL", "gemini-2.5-pro")
+PRO_MODEL = os.getenv("OHMLET_PRO_MODEL", "gemini-3.1-pro-preview")
+REASONING_MODEL = os.getenv("OHMLET_REASONING_MODEL", "gemini-3.1-pro-preview")
 
 # Plan-aware routing: priority plans (Pro/max) get the premium models for the
 # expensive code + reasoning tools; everyone else is routed to Flash so a Free

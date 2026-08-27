@@ -47,6 +47,10 @@ let warned = 0;
 const hits = new Map();
 
 for (const f of FILES) {
+  // The prober NAMES old models on purpose: they are the candidates it tries,
+  // and the current one is the control that proves the probe works. Flagging it
+  // is flagging the tool that exists to clear the flag.
+  if (f.endsWith('probe_models.py')) continue;
   const src = readFileSync(f, 'utf8');
   for (const line of src.split('\n')) {
     // Only DEFAULTS and deploy values matter. A comment naming an old model, or
@@ -71,7 +75,18 @@ for (const [model, info] of hits) {
     console.error(`  FAIL  ${model} retired ${info.retires}, ${-days} days ago, and is still referenced in ${where}. ${info.note}`);
   } else if (days <= WARN_DAYS) {
     warned += 1;
-    console.error(`  WARN  ${model} retires ${info.retires}, in ${days} days, still in ${where}. ${info.note}`);
+    // A live/native-audio model is a different kind of warning: as of
+    // 2026-08-27 Google publishes no 3.x successor that this project can reach,
+    // in any region, verified by opening real bidi sessions
+    // (backend/live-bridge/scripts/probe_models.py). So it is blocked upstream
+    // rather than forgotten, and saying so is the difference between a warning
+    // somebody acts on and one they learn to scroll past.
+    const isLive = /live|native-audio/.test(model);
+    const why = isLive
+      ? 'BLOCKED UPSTREAM: no 3.x live model is reachable yet. '
+        + 'Run backend/live-bridge/scripts/probe_models.py to check again; it exits 0 the day one appears.'
+      : info.note;
+    console.error(`  WARN  ${model} retires ${info.retires}, in ${days} days, still in ${where}. ${why}`);
   }
 }
 

@@ -29,7 +29,8 @@ LIVE_BRIDGE_SA="${OHMLET_LIVE_BRIDGE_SA:-ohmlet-live-bridge@${PROJECT_ID}.iam.gs
 #
 #   probed europe-west1 : only gemini-2.5-* answer; every gemini-3.x is a 404
 #   probed global       : 2.5-flash, 3.5, 3.6 and 3.7-flash all answer 200
-#                         no 3.x PRO exists yet, so Pro stays on 2.5-pro
+#                         Pro: gemini-3.1-pro-preview answers, and it is the ONLY
+#                         3.x Pro that does. Every non-preview 3.x Pro name 404s
 #
 # OHMLET_TEXT_LOCATION lets the tool and text calls run in `global` and reach a
 # current model, while the live bidi session stays in the service's own region.
@@ -46,8 +47,8 @@ GOOGLE_CLOUD_LOCATION=${REGION},\
 OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
 OHMLET_TEXT_LOCATION=global,\
 OHMLET_FLASH_MODEL=gemini-3.7-flash,\
-OHMLET_PRO_MODEL=gemini-2.5-pro,\
-OHMLET_REASONING_MODEL=gemini-2.5-pro"
+OHMLET_PRO_MODEL=gemini-3.1-pro-preview,\
+OHMLET_REASONING_MODEL=gemini-3.1-pro-preview"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
