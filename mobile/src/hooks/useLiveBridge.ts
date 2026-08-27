@@ -314,6 +314,49 @@ export function encodeMicFrame(frames: Float32Array, sourceSampleRate: number): 
  * audio buffer will take. A trailing odd byte is half a sample and is dropped
  * rather than read as a whole one.
  */
+/**
+ * Resample the tutor's voice to whatever rate the output is actually running at.
+ *
+ * THIS IS THE ONE THAT MADE THE VOICE PLAY FAST. The engine reads a buffer using
+ * the CONTEXT's sample rate and ignores the buffer's own
+ * (AudioBufferSourceNode.cpp runBufferProcessor: `const float sampleRate =
+ * getContextSampleRate();`). So a 24kHz buffer sitting in a 48kHz context is
+ * read one sample per output frame and finishes in half the time: the tutor
+ * talking at double speed, with the harshness that comes from every sample
+ * landing at the wrong place.
+ *
+ * Asking for a 24kHz context was supposed to make those equal. It did not
+ * survive the engine's format negotiation on a real device, and the point is
+ * that it does not need to: converting here removes the negotiation from the
+ * problem entirely. The buffer rate equals the context rate by construction,
+ * whatever the hardware decided, so nothing downstream can disagree about how
+ * fast to read it.
+ *
+ * Linear interpolation. For the common 24k to 48k case the ratio is exactly 2:1
+ * and every other output sample is an original one, which is about as clean as
+ * an upsample gets; for an awkward ratio like 44100 it is the usual compromise
+ * between quality and a resampler running on the JS thread every 40ms.
+ */
+export function resampleTo(
+  samples: Float32Array,
+  fromRate: number,
+  toRate: number,
+): Float32Array {
+  if (fromRate === toRate || samples.length === 0) return samples;
+  const ratio = toRate / fromRate;
+  const outLength = Math.max(1, Math.round(samples.length * ratio));
+  const out = new Float32Array(outLength);
+  const last = samples.length - 1;
+  for (let i = 0; i < outLength; i += 1) {
+    const at = i / ratio;
+    const lo = Math.floor(at);
+    if (lo >= last) { out[i] = samples[last]; continue; }
+    const frac = at - lo;
+    out[i] = samples[lo] * (1 - frac) + samples[lo + 1] * frac;
+  }
+  return out;
+}
+
 export function decodeAgentPcm(bytes: Uint8Array): Float32Array {
   const count = bytes.length >> 1;
   const out = new Float32Array(count);
@@ -763,7 +806,13 @@ export function useLiveBridge({
 
       let ctx = playbackCtxRef.current;
       if (!ctx) {
-        ctx = new AudioContext({ sampleRate: AGENT_SAMPLE_RATE });
+        // The device's own rate, not a rate we ask for. Asking for 24000 was
+        // supposed to make the buffer and the context agree; it did not survive
+        // the engine's format negotiation on a real device, and the tutor came
+        // out at double speed. Taking whatever the hardware runs at and
+        // converting into it (see resampleTo) removes that negotiation from the
+        // problem: there is nothing left to disagree about.
+        ctx = new AudioContext();
         playbackCtxRef.current = ctx;
         queuedUntilRef.current = 0;
         queuedFramesRef.current = 0;
@@ -773,14 +822,10 @@ export function useLiveBridge({
         // resampled into it, which is audible as graininess rather than as an
         // error. Logged once per session because the alternative is guessing at
         // audio quality from a description, which has already cost a build.
-        if (ctx.sampleRate !== AGENT_SAMPLE_RATE) {
-          console.warn(
-            `[ohmlet-audio] asked for ${AGENT_SAMPLE_RATE}Hz playback, got ${ctx.sampleRate}Hz. `
-            + 'Everything the tutor says is being resampled into that.',
-          );
-        } else {
-          console.log(`[ohmlet-audio] playback context running at ${ctx.sampleRate}Hz as requested.`);
-        }
+        console.log(
+          `[ohmlet-audio] output running at ${ctx.sampleRate}Hz; `
+          + `converting the tutor's ${AGENT_SAMPLE_RATE}Hz into it.`,
+        );
         // On the web target this is a `window.AudioContext`, which is born
         // SUSPENDED under every browser's autoplay policy: its clock stays at
         // zero and nothing it schedules is heard. The first chunk arrives from
@@ -792,8 +837,12 @@ export function useLiveBridge({
         void ctx.resume().catch(() => {});
       }
 
-      const buffer = ctx.createBuffer(1, samples.length, AGENT_SAMPLE_RATE);
-      buffer.copyToChannel(samples, 0);
+      // Converted to the output's rate BEFORE the buffer is made, so the buffer
+      // and the context can never disagree about how fast to read it.
+      const rate = ctx.sampleRate;
+      const voice = resampleTo(samples, AGENT_SAMPLE_RATE, rate);
+      const buffer = ctx.createBuffer(1, voice.length, rate);
+      buffer.copyToChannel(voice, 0);
       const node = ctx.createBufferSource();
       node.buffer = buffer;
       node.connect(ctx.destination);
@@ -801,7 +850,6 @@ export function useLiveBridge({
       // Scheduled on the sample grid. queuedFramesRef counts WHOLE SAMPLES of
       // the tutor's voice already placed, so chunk N starts exactly where chunk
       // N-1 ended and there is no float to round at the boundary.
-      const rate = AGENT_SAMPLE_RATE;
       const nowFrames = secondsToFrames(ctx.currentTime, rate);
       const queuedFrames = queuedFramesRef.current;
       // Behind the clock means the queue ran dry: rebuild the cushion rather
@@ -811,7 +859,7 @@ export function useLiveBridge({
         ? queuedFrames
         : nowFrames + secondsToFrames(PLAYBACK_LEAD_S, rate);
       node.start(framesToSeconds(startFrames, rate));
-      queuedFramesRef.current = startFrames + samples.length;
+      queuedFramesRef.current = startFrames + voice.length;
       queuedUntilRef.current = framesToSeconds(queuedFramesRef.current, rate);
 
       // Keep only what is still to play. Barge-in has to be able to silence
