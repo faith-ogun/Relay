@@ -23,6 +23,13 @@ export interface RunState {
   earnedXp: number;          // what this level pays, before the record decides
   level: number;             // 1 Bronze, 2 Silver, 3 Gold
   anyWrong: boolean;         // drives the "perfect" achievement metric
+  /**
+   * A step the grader could not be reached for, so it was neither passed nor
+   * failed. Suppresses "perfect": a run holding an unchecked step is not a
+   * proven-flawless run. The browser and the phone used to disagree about this
+   * case, and both were wrong. See markUnassessed.
+   */
+  anyUnassessed: boolean;
 }
 
 /**
@@ -60,6 +67,7 @@ export function useRun(
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [done, setDone] = useState(false);
   const anyWrong = useRef(false);
+  const anyUnassessed = useRef(false);
   // Counts misses within the run, so each one gets a distinct idempotency key
   // while a retry of the SAME miss reuses it. A requeued step missed twice is
   // two charges, which is correct: it was wrong twice.
@@ -80,6 +88,7 @@ export function useRun(
     setCorrect(null);
     setDone(false);
     anyWrong.current = false;
+    anyUnassessed.current = false;
     misses.current = 0;
   }, [steps]);
 
@@ -95,6 +104,22 @@ export function useRun(
       misses.current += 1;
       onWrongRef.current?.(misses.current);
     }
+  }, []);
+
+  /**
+   * The grader was unreachable, so this step goes by without a verdict.
+   *
+   * Not `submit(true)`, which is what the phone used to do: that told the
+   * learner they were right about a drawing nobody looked at, and paid a
+   * flawless run for a network blip. Not an error that blocks them either,
+   * which is what the browser used to do: a quiz-engine outage then made every
+   * drawing lesson unfinishable. No heart, because they were not wrong. No
+   * `drawings` credit, because nothing was assessed. No `perfect` for the run.
+   */
+  const markUnassessed = useCallback(() => {
+    anyUnassessed.current = true;
+    setChecked(true);
+    setCorrect(true);
   }, []);
 
   const advance = useCallback(() => {
@@ -124,6 +149,7 @@ export function useRun(
     setCorrect(null);
     setDone(false);
     anyWrong.current = false;
+    anyUnassessed.current = false;
     misses.current = 0;
   }, [steps]);
 
@@ -140,7 +166,8 @@ export function useRun(
     earnedXp: lesson ? xpForLevel(lesson.xpReward, level) : 0,
     level,
     anyWrong: anyWrong.current,
+    anyUnassessed: anyUnassessed.current,
   };
 
-  return { ...state, submit, advance, retry };
+  return { ...state, submit, advance, retry, markUnassessed };
 }

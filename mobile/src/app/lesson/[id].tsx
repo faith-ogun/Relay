@@ -13,7 +13,8 @@ import { Button } from '../../components/Button';
 import { StepView } from '../../lesson/StepView';
 import { useRun } from '../../lesson/useRun';
 import type { Lesson } from '../../lesson/types';
-import { getLesson } from '../../services/curriculum';
+import { getLesson, getManifest } from '../../services/curriculum';
+import { authoredLessonAlreadyCleared, corpusLessonIds } from '../../services/achievementRules';
 import { applyCompletion, bumpMetric, loadProgress, saveProgress, type Progress } from '../../services/progress';
 import { LEVEL_META, nextAttemptLevel } from '../../lesson/levels';
 import { useAuth } from '../../hooks/useAuth';
@@ -157,7 +158,16 @@ export default function LessonScreen() {
       // times. A replay is real practice and still counts toward the streak and
       // its level, but it is not a twenty sixth build. The web LessonRunner
       // gates on exactly the same condition, so the two surfaces stay in step.
-      const alreadyCompleted = (current.lessonLevels[String(id)] ?? 0) >= 1;
+      // The AUTHORED lesson, not this session. One authored lesson can ship as
+      // two parts, so asking about the session id paid `perfect` and `drawings`
+      // twice for the same work while `builds` counted it once. The manifest is
+      // already cached by the time a lesson is running; if it somehow is not,
+      // fall back to the session question, which is the old behaviour and errs
+      // toward paying rather than withholding.
+      const manifest = await getManifest();
+      const alreadyCompleted = manifest
+        ? authoredLessonAlreadyCleared(String(id), current.lessonLevels, corpusLessonIds(manifest.units))
+        : (current.lessonLevels[String(id)] ?? 0) >= 1;
       // The level reached is recorded, not assumed. This call used to leave the
       // argument off and take the default of 1, so a Gold round on the phone was
       // written down as Bronze, and a Gold earned in the browser was overwritten
@@ -165,7 +175,9 @@ export default function LessonScreen() {
       let next = applyCompletion(current, String(id), run.earnedXp, run.level);
       if (!alreadyCompleted) {
         // A run cleared with no wrong answer is what the "perfect" achievements count.
-        if (!run.anyWrong) next = bumpMetric(next, 'perfect');
+        // A run holding a step the grader could not reach is not a proven
+        // flawless run, so it does not pay `perfect` either.
+        if (!run.anyWrong && !run.anyUnassessed) next = bumpMetric(next, 'perfect');
         if (drawingsRight.current > 0) next = bumpMetric(next, 'drawings', drawingsRight.current);
       }
       await saveProgress(user.uid, next);
@@ -298,6 +310,7 @@ export default function LessonScreen() {
             step={run.step}
             checked={run.checked}
             correct={run.correct}
+            onUnassessed={run.markUnassessed}
             onSubmit={run.submit}
             onCanCheck={setCanCheck}
             registerGrader={registerGrader}

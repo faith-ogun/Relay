@@ -47,6 +47,8 @@ import {
   authoredLessonsCompleted,
   authoredUnitsCompleted,
   isEarnedWith,
+  authoredLessonAlreadyCleared,
+  corpusLessonIds,
 } from '../services/achievementRules';
 import { usePlan } from '../hooks/usePlan';
 import { useIdentity } from '../hooks/useIdentity';
@@ -550,6 +552,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   // of module state, so this snapshot is what tells React they can change.
   // Dropping it from those lists leaves the path frozen on the bundled copy.
   const corpus = useSyncExternalStore(subscribeCurriculum, getCurriculumSnapshot, getCurriculumSnapshot);
+  // Every session id the app is rendering, which is what tells a part two from
+  // a lesson whose title merely ends in a numeral.
+  const corpusIds = useMemo(() => corpusLessonIds(corpus.units), [corpus]);
   const [sync, setSync] = useState<SyncState>({ phase: 'checking', serverVersion: null });
   const [syncAttempt, setSyncAttempt] = useState(0);
   useEffect(() => {
@@ -858,6 +863,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
         // Levels never fall, so taking the higher of the two can only ever
         // correct that, never invent a completion.
         heldLevel={Math.max(running.heldLevel, lessonLevels[running.id] ?? 0)}
+        authoredCleared={authoredLessonAlreadyCleared(running.id, lessonLevels, corpusIds)}
         onExit={() => setRunning(null)}
         onComplete={handleComplete}
         onUpgrade={onUpgrade}

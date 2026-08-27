@@ -15,6 +15,15 @@ import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
 import { assessDrawing } from '../../../services/quizEngineClient';
 import { playCorrect, playWrong, playComplete, isSfxMuted, setSfxMuted } from '../../../services/sfx';
 
+/**
+ * What an asynchronously graded step reports back.
+ *
+ * `true` and `false` are the grader's verdict. `'unassessed'` is the grader
+ * being unreachable, which is neither: see handleAsyncResult for why that has
+ * to be its own outcome rather than being folded into either of the others.
+ */
+type DrawOutcome = boolean | 'unassessed';
+
 const QUIZ_API_ROOT = (import.meta.env.VITE_OHMLET_QUIZ_API_BASE_URL as string) || 'http://localhost:8083';
 
 /**
@@ -47,6 +56,14 @@ interface LessonRunnerProps {
    * state honestly: a learner at Gold replaying Gold earns none.
    */
   heldLevel?: number;
+  /**
+   * Has any session of this lesson's AUTHORED lesson already been cleared?
+   *
+   * Not the same question as heldLevel >= 1, which is about THIS session. One
+   * authored lesson can ship as two parts, and gating the once-per-lesson
+   * counters on the session paid them twice for the same work.
+   */
+  authoredCleared?: boolean;
   /** Review mode (the /author preview): adds a Skip control so a reviewer can step
    *  through every question without answering. Never set in the learner flow. */
   preview?: boolean;
@@ -136,9 +153,10 @@ const NoticeScreen: React.FC<{
 
 export const LessonRunner: React.FC<LessonRunnerProps> = ({
   lessonId, accent, level = 1, preview = false, authored = false, heldLevel = 0,
+  authoredCleared = false,
   onExit, onComplete, onUpgrade,
 }) => {
-  const alreadyCompleted = heldLevel >= 1;
+  const alreadyCompleted = heldLevel >= 1 || authoredCleared;
   // A run pays only when it reaches a level ABOVE the one on record, which is
   // the same condition services/completion.ts applies to the record itself.
   const paysXp = level > heldLevel;
@@ -208,6 +226,8 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
   const anyWrongRef = useRef(false);
   // Drawings the grader accepted during this run, credited once at completion.
   const drawingsRef = useRef(0);
+  // Steps the grader could not reach. Suppresses `perfect` for the run.
+  const unassessedRef = useRef(0);
   // Both live up here with the other hooks, ABOVE the loading and error returns.
   // A lesson body can now arrive after the first render, so this component does
   // move from an early return to the full run, and a hook declared below one of
@@ -274,6 +294,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
     misses.current = 0;
     anyWrongRef.current = false;
     drawingsRef.current = 0;
+    unassessedRef.current = 0;
     setDone(false);
   }, [steps, level]);
 
@@ -467,8 +488,25 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
 
   // draw_circuit grades asynchronously (Vision call inside the step). The step reports
   // its result here so hearts + the Continue rhythm behave exactly like any other step.
-  const handleAsyncResult = (ok: boolean, message: string) => {
+  const handleAsyncResult = (ok: DrawOutcome, message: string) => {
     setAsyncMsg(message);
+    // 'unassessed' is the grader being unreachable, which is not the learner
+    // being wrong and is not the learner being right.
+    //
+    // The two surfaces used to disagree here, and both were wrong. The browser
+    // showed an error and left the step ungraded, so a quiz-engine outage made
+    // every drawing lesson unfinishable. The phone marked the attempt CORRECT,
+    // which let a network blip award a flawless run for a sketch nobody looked
+    // at. So: the learner is never blocked and never told they were right.
+    // No heart, because they were not wrong. No `drawings` credit, because
+    // nothing was assessed. And the run stops being eligible for `perfect`,
+    // because a run holding an unchecked step is not a proven-flawless run.
+    if (ok === 'unassessed') {
+      unassessedRef.current += 1;
+      setCorrect(true);
+      setChecked(true);
+      return;
+    }
     setCorrect(ok);
     setChecked(true);
     ok ? playCorrect() : playWrong();
@@ -512,7 +550,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
       // five replays of one easy lesson earned "Flawless, 25 flawless builds".
       // A replay still pays its level XP, which is what a replay is for.
       if (!preview && !alreadyCompleted) {
-        if (!anyWrongRef.current) recordMetric('perfect');
+        if (!anyWrongRef.current && unassessedRef.current === 0) recordMetric('perfect');
         if (drawingsRef.current > 0) recordMetric('drawings', drawingsRef.current);
       }
       onComplete(lessonId, levelXp, level);
@@ -529,6 +567,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
     misses.current = 0;
     anyWrongRef.current = false;
     drawingsRef.current = 0;
+    unassessedRef.current = 0;
     // A fresh run, so its first miss cannot reuse a spent idempotency key and
     // come back refunded.
     setRunId(Date.now());
@@ -803,7 +842,7 @@ interface StepViewProps {
   revealed: Set<string>;
   setRevealed: (s: Set<string>) => void;
   correct: boolean | null;
-  onAsyncResult: (ok: boolean, message: string) => void;
+  onAsyncResult: (ok: DrawOutcome, message: string) => void;
   tileSeq: number[];
   setTileSeq: (s: number[]) => void;
   meterVal: number | null;
@@ -1617,6 +1656,9 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
   const [eraser, setEraser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The grader could not be reached, so offer a way onward that does not
+  // pretend the drawing was checked.
+  const [unreachable, setUnreachable] = useState(false);
   const [hasInk, setHasInk] = useState(false);
 
   const init = useCallback(() => {
@@ -1702,6 +1744,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
       onAsyncResult(res.correct, `${res.feedback}${found}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Check your connection and try again.');
+      setUnreachable(true);
     } finally {
       setLoading(false);
     }
@@ -1754,6 +1797,15 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
         </div>
       )}
       {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+      {unreachable && !checked && (
+        <button
+          type="button"
+          onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-white px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+        >
+          Carry on without checking this one
+        </button>
+      )}
     </div>
   );
 };
@@ -1770,6 +1822,9 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
   const [eraser, setEraser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The grader could not be reached, so offer a way onward that does not
+  // pretend the drawing was checked.
+  const [unreachable, setUnreachable] = useState(false);
   const [hasInk, setHasInk] = useState(false);
 
   // Size the transparent drawing canvas to overlay the circuit box exactly.
@@ -1862,6 +1917,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
       onAsyncResult(res.correct, `${res.feedback}${found}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Try again.');
+      setUnreachable(true);
     } finally {
       setLoading(false);
     }
@@ -1917,6 +1973,15 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
         </div>
       )}
       {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+      {unreachable && !checked && (
+        <button
+          type="button"
+          onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-white px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+        >
+          Carry on without checking this one
+        </button>
+      )}
     </div>
   );
 };

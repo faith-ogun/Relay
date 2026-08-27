@@ -93,6 +93,32 @@ export function authoredLessonId(lessonId: string, corpusIds: ReadonlySet<string
   return corpusIds.has(head) ? head : lessonId;
 }
 
+/**
+ * Has the learner already cleared the AUTHORED lesson this session belongs to?
+ *
+ * This is the gate on the once-per-lesson counters, `perfect` and `drawings`.
+ * It used to ask whether this SESSION id had been cleared, which was right when
+ * there were 142 sessions for 142 authored lessons and wrong the moment one
+ * authored lesson began shipping as two parts: the same work then paid the
+ * counter twice, so "Flawless, 25 flawless builds" needed 13 lessons rather
+ * than 25.
+ *
+ * `builds` was already counted in authored lessons, so this is what puts the
+ * three of them back on one denominator.
+ */
+export function authoredLessonAlreadyCleared(
+  lessonId: string,
+  lessonLevels: Readonly<Record<string, number>>,
+  corpusIds: ReadonlySet<string>,
+): boolean {
+  const authored = authoredLessonId(lessonId, corpusIds);
+  for (const [id, level] of Object.entries(lessonLevels)) {
+    if ((level ?? 0) < 1) continue;
+    if (authoredLessonId(id, corpusIds) === authored) return true;
+  }
+  return false;
+}
+
 /** Every session id in a corpus. */
 export function corpusLessonIds(units: readonly ScopedUnit[]): Set<string> {
   const ids = new Set<string>();

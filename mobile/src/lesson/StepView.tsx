@@ -969,7 +969,7 @@ const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
 
 // ── Draw the circuit (freeform, graded by vision) ──────────────────────────
 const DrawStep: React.FC<Props & { step: StepDraw }> = ({
-  step, checked, onSubmit, onCanCheck, registerGrader, onDrawingChange,
+  step, checked, onSubmit, onUnassessed, onCanCheck, registerGrader, onDrawingChange,
 }) => {
   const canvasRef = useRef<DrawCanvasHandle>(null);
   const shotRef = useRef<View>(null);
@@ -988,17 +988,22 @@ const DrawStep: React.FC<Props & { step: StepDraw }> = ({
         const uri = await captureRef(shotRef, { format: 'jpg', quality: 0.7, result: 'base64' });
         const verdict = await gradeDrawing(uri, step.expected ?? [], step.type);
         if (!verdict) {
-          // The grader is unreachable. Accept the attempt rather than marking a
-          // learner wrong for a network failure, and say so honestly.
-          setNote('Could not reach the grader, so this one is counted as complete.');
-          onSubmit(true);
+          // Unreachable grader. NOT onSubmit(true): telling a learner they were
+          // right about a drawing nobody looked at is a lie, and it paid a
+          // flawless run for a network blip. NOT an error that blocks them
+          // either, which is what the browser did, because a quiz-engine outage
+          // then made every drawing lesson unfinishable. Neither wrong nor
+          // right: it simply was not checked, and the run stops being eligible
+          // for "perfect".
+          setNote('Could not reach the grader, so this drawing was not checked. It will not count against you.');
+          onUnassessed();
           return;
         }
         setNote(verdict.feedback || null);
         onSubmit(verdict.correct);
       } catch {
-        setNote('Could not read the drawing, so this one is counted as complete.');
-        onSubmit(true);
+        setNote('Could not read the drawing, so this one was not checked. It will not count against you.');
+        onUnassessed();
       } finally {
         setGrading(false);
       }

@@ -58,6 +58,16 @@ const CORPUS = [
   { skills: [{ lessons: [{ id: 'C' }, { id: 'D' }, { id: 'D II' }, { id: 'D III' }] }] },
 ];
 const AUTHORED = ['A', 'B', 'C', 'D'];
+// The real thing, alongside the fixture. A rule that holds on four made-up ids
+// and not on the 284 the server actually serves is not a rule.
+const SERVED = JSON.parse(readFileSync(
+  fileURLToPath(new URL('../../backend/live-bridge/app/curriculum_data/curriculum.json', import.meta.url)),
+  'utf8',
+));
+const corpusIds = new Set(
+  (SERVED.units ?? []).flatMap((u) => (u.skills ?? []).flatMap((s) => (s.lessons ?? []).map((l) => l.id))),
+);
+
 const EVERY_SESSION = ['A', 'A II', 'B', 'B II', 'C', 'D', 'D II', 'D III'];
 
 /** The rule as it was: every lesson on the path, sessions and all. */
@@ -138,6 +148,53 @@ check('the better informed counter wins, and neither side can lower the other', 
   assert.deepEqual(rules.mergeStats({ units: 3 }, { units: 'twelve' }), { units: 3 });
 });
 
+// ── The once-per-lesson counters ────────────────────────────────────────────
+//
+// `perfect` and `drawings` are paid the first time a lesson is cleared. That
+// gate asked about the SESSION id, so once one authored lesson began shipping
+// as two parts the same work paid twice, while `builds` counted it once. Three
+// counters, two denominators.
+{
+  const corpus = new Set(['The Closed Loop', 'The Closed Loop II', 'Voltage Basics', 'Ohm 2 Ohm']);
+
+  check('clearing part one means the authored lesson is cleared for part two', () => {
+    const levels = { 'The Closed Loop': 1 };
+    assert.equal(rules.authoredLessonAlreadyCleared('The Closed Loop II', levels, corpus), true,
+      'part two paid the counter a second time for work already paid');
+    assert.equal(rules.authoredLessonAlreadyCleared('The Closed Loop', levels, corpus), true);
+  });
+
+  check('clearing part two also settles part one', () => {
+    const levels = { 'The Closed Loop II': 2 };
+    assert.equal(rules.authoredLessonAlreadyCleared('The Closed Loop', levels, corpus), true);
+  });
+
+  check('a different lesson is untouched', () => {
+    assert.equal(rules.authoredLessonAlreadyCleared('Voltage Basics', { 'The Closed Loop': 1 }, corpus), false);
+  });
+
+  check('a level of zero is not a clearance', () => {
+    assert.equal(rules.authoredLessonAlreadyCleared('The Closed Loop II', { 'The Closed Loop': 0 }, corpus), false);
+  });
+
+  check('a title that merely ends in a numeral is not a part two', () => {
+    // "Ohm 2 Ohm" ends in "Ohm", but there is no lesson called "Ohm 2" for it to
+    // be a continuation OF, so it must stand alone.
+    assert.equal(rules.authoredLessonAlreadyCleared('Ohm 2 Ohm', { 'Ohm 2': 1 }, corpus), false);
+  });
+
+  check('it holds against the real corpus, not just a fixture', () => {
+    const ids = [...corpusIds];
+    const parts = ids.filter((id) => rules.authoredLessonId(id, corpusIds) !== id);
+    assert.ok(parts.length > 100, `expected the served corpus to be split; found ${parts.length} continuation parts`);
+    for (const part of parts.slice(0, 40)) {
+      const head = rules.authoredLessonId(part, corpusIds);
+      assert.equal(rules.authoredLessonAlreadyCleared(part, { [head]: 1 }, corpusIds), true,
+        `clearing "${head}" left "${part}" able to pay the counter again`);
+    }
+  });
+}
+
 rmSync(dir, { recursive: true, force: true });
 
 if (failures.length) {
@@ -145,4 +202,4 @@ if (failures.length) {
   failures.forEach((f) => console.error(`  ${f}\n`));
   process.exit(1);
 }
-console.log('OK: unit medals survive the session split, and an earned medal stays earned.');
+console.log('OK: unit medals survive the session split, an earned medal stays earned, and the\n    once-per-lesson counters are paid once per AUTHORED lesson.');

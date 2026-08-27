@@ -178,6 +178,11 @@ export interface StepProps {
   correct: boolean | null;
   /** Report whether the learner's current answer is correct. */
   onSubmit: (isCorrect: boolean) => void;
+  /**
+   * The grader could not be reached, so this step goes by without a verdict.
+   * Distinct from onSubmit(true), which claims the learner was right.
+   */
+  onUnassessed: () => void;
   /** Lets the shell enable/disable its Check button. */
   onCanCheck: (can: boolean) => void;
   /** Set by the shell: pressing Check calls this step's grader. */
