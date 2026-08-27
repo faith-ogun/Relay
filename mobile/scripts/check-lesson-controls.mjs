@@ -13,7 +13,12 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const LESSONS = '/Users/faith/Desktop/Ohmlet/backend/live-bridge/app/curriculum_data/lessons.json';
+// Resolved from this file, not from an absolute path: a machine-specific path
+// works everywhere the author sits and nowhere else, which is precisely how a
+// check ends up never running in CI.
+const LESSONS = fileURLToPath(
+  new URL('../../backend/live-bridge/app/curriculum_data/lessons.json', import.meta.url),
+);
 const dir = mkdtempSync(join(tmpdir(), 'ohmlet-controls-'));
 
 const load = async (rel, name) => {

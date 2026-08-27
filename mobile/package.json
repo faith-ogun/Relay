@@ -60,7 +60,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "check": "npm run typecheck && for f in scripts/check-*.mjs; do echo \"  $f\" && node \"$f\" >/dev/null || exit 1; done"
   },
   "private": true
 }

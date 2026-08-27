@@ -38,7 +38,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
-const LESSONS = '/Users/faith/Desktop/Ohmlet/backend/live-bridge/app/curriculum_data/lessons.json';
+// Resolved from this file, not from an absolute path: a machine-specific path
+// works everywhere the author sits and nowhere else, which is precisely how a
+// check ends up never running in CI.
+const LESSONS = fileURLToPath(
+  new URL('../../backend/live-bridge/app/curriculum_data/lessons.json', import.meta.url),
+);
 const LESSON_DIR = new URL('../src/lesson/', import.meta.url);
 const VIEW = new URL('StepView.tsx', LESSON_DIR);
 

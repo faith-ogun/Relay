@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // Renders every mobile circuit diagram to one static SVG contact sheet, so a
 // schematic can be checked by eye before it reaches a learner. Symbols that
 // overlap their own labels, wires that lead nowhere, and a fault diagram with
@@ -15,7 +16,7 @@
 //
 // esbuild is resolved from ../frontend, which already depends on it for the
 // curriculum export; it is a dev-only tool and not worth a second copy.
-import { build } from '/Users/faith/Desktop/Ohmlet/frontend/node_modules/esbuild/lib/main.js';
+import { build } from fileURLToPath(new URL('../../frontend/node_modules/esbuild/lib/main.js', import.meta.url));
 import { writeFileSync } from 'node:fs';
 
 const shim = {
