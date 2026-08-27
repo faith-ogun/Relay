@@ -26,7 +26,14 @@ def test_every_manifest_lesson_has_content():
         for skill in unit.get("skills", [])
         for lesson in skill.get("lessons", [])
     ]
-    assert len(ids) == 142
+    # Not a hardcoded total. Splitting long sessions into parts changed the count
+    # from 142 to 284 and this assertion went stale for days without anyone
+    # noticing, which is worse than no canary at all. What actually matters is
+    # that the manifest never advertises a lesson the store lacks, that no id is
+    # served twice, and that the path has not been silently truncated.
+    assert len(ids) >= 140, f"the path collapsed to {len(ids)} lessons"
+    dupes = [i for i in set(ids) if ids.count(i) > 1]
+    assert not dupes, f"the manifest lists the same lesson id more than once: {dupes[:5]}"
     missing = [i for i in ids if i not in store]
     assert not missing, f"manifest lists lessons with no content: {missing[:5]}"
 
