@@ -128,6 +128,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createServer } from 'vite';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import ts from 'typescript';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EXPORT_JSON = path.resolve(root, '../backend/live-bridge/app/curriculum_data/lessons.json');
@@ -416,14 +419,31 @@ export const MOBILE_GRADERS = ['toggleTile', 'gradeFillTiles', 'gradeOrder'];
  * this loads and calls it. The Vite server is the web graph's, but the module is
  * plain TypeScript and resolves by absolute path.
  */
-export async function loadMobileGrading(server, file = MOBILE_GRADING) {
+export async function loadMobileGrading(_server, file = MOBILE_GRADING) {
   if (!existsSync(file)) {
     throw new Error(
       `${file} is missing, so the mobile tile and order rules cannot run. They are not allowed to quietly not run: ` +
         'point MOBILE_GRADING at the module holding mobile\'s grading functions.',
     );
   }
-  const mod = await server.ssrLoadModule(file);
+  // Transpiled in isolation, NOT loaded through the Vite server the frontend
+  // modules use. Vite resolves the nearest tsconfig, which for a mobile file is
+  // mobile/tsconfig.json, and that extends "expo/tsconfig.base". CI's frontend
+  // job installs frontend/node_modules only, so expo is not there and the
+  // extends cannot resolve: the check passed on every machine with a populated
+  // mobile/node_modules and failed the moment it ran anywhere clean.
+  //
+  // grading.ts is deliberately pure and dependency-free so this works, which is
+  // the same reason meterScale.ts and resistorCode.ts are separate modules.
+  // transpileModule ignores tsconfig entirely, and it is what every other check
+  // script in this repo already uses to read a TypeScript module.
+  const js = ts.transpileModule(readFileSync(file, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const dir = mkdtempSync(path.join(tmpdir(), 'ohmlet-grading-'));
+  const out = path.join(dir, 'grading.mjs');
+  writeFileSync(out, js);
+  const mod = await import(pathToFileURL(out).href);
   const missing = MOBILE_GRADERS.filter((name) => typeof mod[name] !== 'function');
   if (missing.length) {
     throw new Error(`${file} no longer exports ${missing.join(', ')} — update loadMobileGrading() and the rules that call it`);
