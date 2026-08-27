@@ -57,8 +57,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
-      - name: npm audit (high+)
-        run: npm audit --omit=dev --audit-level=high
+      # NOT `npm audit --audit-level=high` like the frontend job. Vite is a
+      # devDependency there so --omit=dev removes it; in an Expo app `expo` is a
+      # runtime dependency by necessity and drags @expo/cli and metro in with it.
+      # Every high advisory today is in that build toolchain, which never reaches
+      # a device. This gate fails on any critical, and on any high OUTSIDE a named
+      # build-toolchain list, so a real one in shipped code still stops the build.
+      - name: Vulnerability gate
+        run: node scripts/check-audit.mjs
       # Typecheck plus every scripts/check-*.mjs. The checks read the served
       # curriculum from backend/live-bridge/app/curriculum_data and some read the
       # web source, so this job needs the whole checkout, not just mobile/.
