@@ -718,11 +718,12 @@ export default function LiveTutor() {
       </View>
 
       <View style={s.controls}>
-        {/* TEMPORARY diagnostic. Jargon in a shipped surface is against the
-            house rules, and this is here deliberately and briefly: six builds
-            were spent inferring what the audio engine was doing instead of
-            measuring it. It comes out the moment the rate is settled. */}
-        {!!live.audioDiag && <Text style={s.diag}>{live.audioDiag}</Text>}
+        {/* Development builds only. A learner never sees a sample rate.
+            It stays available because reading the engine's source and reasoning
+            about what it ought to do was wrong six times running, and measuring
+            it was right the first time. See docs/live-audio.md.
+            A healthy session reads about 0.85x, not 1.00: onEnded fires late. */}
+        {__DEV__ && !!live.audioDiag && <Text style={s.diag}>{live.audioDiag}</Text>}
         {live.micOn && live.agentSpeaking && (
           <Text style={s.floor} accessibilityLiveRegion="polite">
             The tutor is speaking. Tap the microphone to cut in.

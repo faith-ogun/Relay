@@ -629,9 +629,16 @@ check('chunks abut on the sample grid, with no float to round', () => {
   // consecutive chunks overlap or gap by a sample around 25 times a second. One
   // sample is a click; 25 a second is the buzz under the voice.
   assert.ok(/queuedFramesRef/.test(play), 'playback no longer counts whole samples, so boundaries round again');
+  // Advanced by the RESAMPLED length, which is the number of frames actually
+  // handed to the output. Using the incoming 24kHz count here would put the mark
+  // in the wrong units and space the chunks wrongly all over again.
   assert.ok(
-    /queuedFramesRef\.current = startFrames \+ samples\.length/.test(play),
-    'the sample mark is not advanced by the chunk length, so chunk N will not start where N-1 ended',
+    /queuedFramesRef\.current = startFrames \+ voice\.length/.test(play),
+    'the sample mark is not advanced by the RESAMPLED chunk length, so chunk N will not start where N-1 ended',
+  );
+  assert.ok(
+    !/startFrames \+ samples\.length/.test(play),
+    'the mark counts incoming 24kHz samples while the clock runs at the output rate',
   );
   assert.ok(
     !/startAt \+ buffer\.duration/.test(play),
