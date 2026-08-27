@@ -678,6 +678,38 @@ check('a playback failure is reported rather than swallowed', () => {
   );
 });
 
+check('the buffer queue is filled before it is started', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
+  const enqueueAt = play.indexOf('enqueueBuffer(');
+  const startAt = play.indexOf('queue.start(');
+  assert.ok(enqueueAt > 0 && startAt > 0, 'the queue path is gone');
+  // processNode returns early on an empty deque and never reaches the code that
+  // moves the node from SCHEDULED to PLAYING, so a queue started empty never
+  // plays anything. That shipped once, as a session with no sound at all.
+  assert.ok(
+    enqueueAt < startAt,
+    'the queue is started BEFORE its first buffer is enqueued, which is exactly the ordering that shipped silence',
+  );
+});
+
+check('the queue is not trusted without evidence', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
+  // A native node cannot be exercised off a device, so the code must be able to
+  // notice it is producing nothing and go back to the path that works.
+  assert.ok(/queueHealthyRef/.test(play), 'nothing tracks whether the queue is actually producing audio');
+  assert.ok(/onBufferEnded/.test(play), 'nothing listens for evidence that a buffer played');
+  assert.ok(
+    /queueHealthyRef\.current = false/.test(play),
+    'there is no path that gives up on the queue, so a silent queue stays silent for the session',
+  );
+  assert.ok(
+    play.indexOf('createBufferSource(') > play.indexOf('queueHealthyRef'),
+    'the per-chunk fallback no longer follows the queue attempt',
+  );
+});
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 if (problems.length) {

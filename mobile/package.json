@@ -53,6 +53,7 @@
     "@types/three": "^0.185.4",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "scripts": {
@@ -62,7 +63,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit --incremental false",
-    "check": "npm run typecheck && node scripts/check-audit.mjs && for f in scripts/check-*.mjs; do node \"$f\" >/dev/null || exit 1; done"
+    "check": "npm run typecheck && node scripts/check-audit.mjs && for f in scripts/check-*.mjs; do node \"$f\" >/dev/null || exit 1; done",
+    "postinstall": "patch-package"
   },
   "private": true
 }

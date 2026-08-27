@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import {
   AudioContext, AudioManager, AudioRecorder,
-  type AudioBufferSourceNode, type PermissionStatus, type SessionOptions,
+  type AudioBufferQueueSourceNode, type AudioBufferSourceNode,
+  type PermissionStatus, type SessionOptions,
 } from 'react-native-audio-api';
 import { getIdToken } from '../services/firebase';
 import { base64ToBytes } from '../services/pcm';
@@ -746,6 +747,11 @@ export function useLiveBridge({
   // Latched so a failing playback path reports once, not per chunk.
   const playbackFaultRef = useRef(false);
   const speedProbedRef = useRef(false);
+  const queueNodeRef = useRef<AudioBufferQueueSourceNode | null>(null);
+  const queueStartedRef = useRef(false);
+  // null while unproven, true once a buffer has reported back, false once
+  // the queue has been given its chance and produced nothing.
+  const queueHealthyRef = useRef<boolean | null>(null);
   const devicePreferredRef = useRef(0);
   // TEMPORARY: surfaced in the live view so the real numbers can be read off
   // a device instead of inferred. Removed once the rate is settled.
@@ -797,6 +803,10 @@ export function useLiveBridge({
     scheduledRef.current = [];
     queuedUntilRef.current = 0;
     queuedFramesRef.current = 0;
+    // Drop what has not been heard and leave the node running: it renders
+    // silence on an empty queue, so the next reply resumes in the same node.
+    const queue = queueNodeRef.current;
+    if (queue) { try { queue.clearBuffers(); } catch { /* torn down */ } }
     if (!ctx) return;
     for (const chunk of scheduled) {
       try { chunk.node.stop(ctx.currentTime); } catch { /* already finished */ }
@@ -851,6 +861,70 @@ export function useLiveBridge({
       const voice = resampleTo(samples, AGENT_SAMPLE_RATE, rate);
       const buffer = ctx.createBuffer(1, voice.length, rate);
       buffer.copyToChannel(voice, 0);
+      // ── The queue path, with a way back ──────────────────────────────
+      //
+      // One long-lived node walking a queue of buffers is the right shape for
+      // streamed audio: the native renderer handles every chunk boundary, so a
+      // chunk that arrives late resumes the sentence instead of leaving a hole
+      // that per-chunk scheduling cannot avoid.
+      //
+      // It shipped total silence once. The node was started with an EMPTY queue,
+      // and processNode returns early on an empty deque
+      // (`if (buffers_.empty()) { processingBuffer->zero(); return; }`) without
+      // ever reaching the code that moves it from SCHEDULED to PLAYING. So the
+      // buffer goes in FIRST and the node is started after.
+      //
+      // And because a native node cannot be tested off a device, it is not
+      // trusted: if the first buffer has not reported back by the time it should
+      // have finished, the queue is abandoned and every remaining chunk goes
+      // through the per-chunk scheduler below, which is known to work. Being
+      // wrong about this again costs a moment of the first reply, not a session
+      // of silence.
+      if (queueHealthyRef.current !== false) {
+        try {
+          let queue = queueNodeRef.current;
+          if (!queue) {
+            queue = ctx.createBufferQueueSource();
+            queue.connect(ctx.destination);
+            queue.onBufferEnded = () => { queueHealthyRef.current = true; };
+            queueNodeRef.current = queue;
+          }
+          queue.enqueueBuffer(buffer);
+          if (!queueStartedRef.current) {
+            queueStartedRef.current = true;
+            queue.start(0);
+            // Nothing has come back yet, so give it until the first buffer
+            // should have finished, plus a second of slack, then decide.
+            const verdictIn = (buffer.duration * 2 + 1) * 1000;
+            setTimeout(() => {
+              if (queueHealthyRef.current === null) {
+                queueHealthyRef.current = false;
+                console.warn(
+                  '[ohmlet-audio] the buffer queue produced nothing; falling back to '
+                  + 'per-chunk playback for this session.',
+                );
+                const dead = queueNodeRef.current;
+                queueNodeRef.current = null;
+                queueStartedRef.current = false;
+                if (dead) {
+                  try { dead.stop(0); } catch { /* never started */ }
+                  try { dead.disconnect(); } catch { /* already detached */ }
+                }
+              }
+            }, verdictIn);
+          }
+          // The queue plays continuously, so the only thing still worth tracking
+          // is when it will run dry, which is what the echo gate reads.
+          queuedFramesRef.current =
+            Math.max(queuedFramesRef.current, secondsToFrames(ctx.currentTime, rate)) + voice.length;
+          queuedUntilRef.current = framesToSeconds(queuedFramesRef.current, rate);
+          return;
+        } catch (err) {
+          queueHealthyRef.current = false;
+          console.warn('[ohmlet-audio] the buffer queue threw; using per-chunk playback:', err);
+        }
+      }
+
       const node = ctx.createBufferSource();
       node.buffer = buffer;
       node.connect(ctx.destination);
@@ -912,6 +986,18 @@ export function useLiveBridge({
 
   const closePlayback = useCallback(() => {
     stopSpeaking();
+    // The queue node outlives individual replies, so it is torn down with the
+    // session rather than with a sentence. Its health verdict resets too: a new
+    // session gets a fresh chance at the queue rather than inheriting a fallback
+    // decided by one bad start.
+    const queue = queueNodeRef.current;
+    queueNodeRef.current = null;
+    queueStartedRef.current = false;
+    queueHealthyRef.current = null;
+    if (queue) {
+      try { queue.stop(0); } catch { /* never started */ }
+      try { queue.disconnect(); } catch { /* already detached */ }
+    }
     const ctx = playbackCtxRef.current;
     playbackCtxRef.current = null;
     if (ctx) void ctx.close().catch(() => {});

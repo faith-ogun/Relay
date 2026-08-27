@@ -18,8 +18,10 @@ context rate for you; React Native does not.
 | Server expects | `types.Blob(mime_type="audio/pcm;rate=16000")` (`backend/live-bridge/app/main.py`) |
 | Chunk cadence | Gemini Live sends roughly one chunk every **40 ms** |
 
-Playback is `react-native-audio-api` (miniaudio underneath). Capture is the same
-library's `AudioRecorder`.
+Both directions are `react-native-audio-api`, and on iOS both run on ONE shared
+`AVAudioEngine` (`ios/audioapi/ios/system/AudioEngine.mm`). miniaudio is vendored
+in the package but is not the iOS path; assuming it was cost a wrong diagnosis,
+recorded below.
 
 ---
 
@@ -69,17 +71,38 @@ the code looks correct and the tutor talks at double speed.
 
 ## The other two things, both real, both separate
 
-**No echo cancellation exists on this path.** `react-native-audio-api` records
-through miniaudio, which hardcodes `kAudioUnitSubType_RemoteIO`. Apple's
-canceller lives in `kAudioUnitSubType_VoiceProcessingIO` and nothing in
-`SessionOptions` reaches it. Without mitigation the loudspeaker goes straight
-back into the microphone: the model hears itself, cuts its own sentence off, and
-its words arrive on the learner's side of the transcript.
+**Echo cancellation was off, and the first explanation of why was wrong.**
 
-Mitigated by going **half duplex**: while the tutor is speaking, and for 250 ms
-after while the last buffer leaves the speaker, no microphone frames are sent
-(`micGatedForEcho`). The cost is that talking over the tutor no longer
-interrupts, so interrupting is a press of the microphone control.
+Without cancellation the loudspeaker goes straight back into the microphone: the
+model hears itself, cuts its own sentence off, and its words arrive on the
+learner's side of the transcript.
+
+The first diagnosis said `react-native-audio-api` records through miniaudio,
+which hardcodes `kAudioUnitSubType_RemoteIO`, so Apple's canceller was
+unreachable. **That was wrong about iOS.** miniaudio is in the tree, but
+`ios/audioapi/ios/core/IOSAudioRecorder.mm` records through
+`[AudioEngine sharedInstance]`, and `system/AudioEngine.mm` holds ONE
+`AVAudioEngine` used for capture and playback both. The RemoteIO in miniaudio is
+a path iOS never takes.
+
+That distinction is the whole thing, because Apple's canceller needs to see both
+directions. One shared engine means
+`audioEngine.inputNode.setVoiceProcessingEnabled:YES` is all it takes, and the
+library simply never called it. `patches/react-native-audio-api+0.12.2.patch`
+adds that call; `scripts/check-patches.mjs` fails if it stops being applied.
+
+**Watch the playback quality when changing this.** The voice-processing unit is
+duplex, so enabling it on the input affects the OUTPUT too, which is the same
+mechanism that made the tutor sound like a phone call under `iosMode:
+'videoChat'`. If the voice degrades after a change here, this is the first thing
+to suspect.
+
+Half duplex is kept **as well as** the canceller, deliberately: while the tutor
+is speaking, and for 250 ms after while the last buffer leaves the speaker, no
+microphone frames are sent (`micGatedForEcho`). Belt and braces until the
+canceller has been heard working on a device. Once it has, relaxing the gate is
+what gives barge-in back, and that is a one-constant change to make on its own so
+it can be judged on its own.
 
 **Do not set a telephony session mode.** `iosMode: 'videoChat'` (and `voiceChat`,
 `gameChat`, `voicePrompt`) engages iOS voice processing and pulls the session to
@@ -149,14 +172,15 @@ Trust it for "is this 2x" and not for finer than about 20%.
 
 ---
 
-## Still open, both optional
+## Both optionals, now done
 
-- **`createBufferQueueSource`.** One long-lived node walking a queue, instead of
-  a source node per chunk. The right shape for streamed audio and it removes
-  per-chunk scheduling entirely. Tried once and shipped total silence: it was
+- ~~`createBufferQueueSource`~~ **done.** One long-lived node walking a queue
+  instead of a source node per chunk, so a late chunk resumes the sentence rather
+  than leaving a hole. It shipped total silence the first time because it was
   started with an **empty** queue, and `processNode` returns early on an empty
-  buffer deque, so the node never reached the code that moves it from SCHEDULED
-  to PLAYING. Enqueue first, then start. Test it with the harness before a device.
-- **Patching miniaudio to use `VoiceProcessingIO`** would give real echo
-  cancellation and let a learner talk over the tutor again. A native patch to a
-  vendored dependency, so it needs a deliberate decision.
+  buffer deque without ever reaching the code that moves the node from SCHEDULED
+  to PLAYING. Enqueue first, then start; `check-live-audio.mjs` asserts that
+  order. Because a native node cannot be exercised off a device, the code does
+  not trust it: if the first buffer has not reported back by the time it should
+  have finished, the queue is abandoned and the rest of the session uses the
+  per-chunk scheduler, which is known to work.
