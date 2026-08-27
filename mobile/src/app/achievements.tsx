@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
 import { Lock } from '../components/icons';
 import { goBack } from '../services/nav';
 import Svg, { Circle } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { useAuth } from '../hooks/useAuth';
 import {
-  getAchievements, isEarned, progressOf, TIER_COLOR, TIER_LABEL, UNTRACKED,
-  type Achievement, type Tier,
+  getAchievements, progressOf, readCachedEarned, syncEarned, TIER_COLOR, TIER_LABEL, UNTRACKED,
+  type Achievement, type EarnedEntry, type Tier,
 } from '../services/achievements';
+import {
+  authoredLessonsCompleted, authoredUnitsCompleted, isEarnedWith, mergeStats,
+} from '../services/achievementRules';
 import { achievementStats, EMPTY, loadProgress, type Progress, type ServerStats } from '../services/progress';
 import { fetchCommunityStats } from '../services/community';
 import { getManifest } from '../services/curriculum';
@@ -22,42 +24,82 @@ export default function Achievements() {
   const [items, setItems] = useState<Achievement[] | null>(null);
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [units, setUnits] = useState(0);
+  const [builds, setBuilds] = useState(0);
   const [open, setOpen] = useState<Achievement | null>(null);
   const [server, setServer] = useState<ServerStats | null>(null);
+  // The durable record: what this learner has EARNED, which is a thing that
+  // happened and not a property of today's counters. Seeded from this device's
+  // cache so the case is right before the network answers, then replaced by the
+  // server's copy, which is the one that survives a reinstall and a second phone.
+  const [earnedAt, setEarnedAt] = useState<Record<string, EarnedEntry>>({});
+  const [serverStats, setServerStats] = useState<Record<string, number> | null>(null);
+  const [recordUnreachable, setRecordUnreachable] = useState(false);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const [list, prog, manifest, stats] = await Promise.all([
+      const [list, prog, manifest, stats, cached] = await Promise.all([
         getAchievements(),
         user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
         getManifest(),
         // Community stats are a bonus, not a gate: the screen renders from
         // local progress if the call fails, rather than blocking on the network.
         user?.uid ? fetchCommunityStats() : Promise.resolve(null),
+        readCachedEarned(user?.uid),
       ]);
       if (!alive) return;
       setItems(list);
       setProgress(prog);
+      setEarnedAt(cached);
       if (stats && stats.ok) setServer(stats.data);
-      // A unit counts as complete when every lesson under it is done.
+      // A unit counts as complete when every AUTHORED lesson under it is done.
+      //
+      // Not every lesson ON THE PATH: the 142 authored lessons are served as 284
+      // shorter sessions, and counting sessions meant a learner who had finished
+      // the whole curriculum had every part one done and every part two
+      // untouched, so their unit medals vanished. How many sittings a lesson is
+      // delivered in is packaging, and packaging must not move medals.
       if (manifest) {
         const done = new Set(Object.keys(prog.lessonLevels));
-        setUnits(manifest.units.filter((u) =>
-          u.skills.every((sk) => sk.lessons.every((l) => done.has(l.id)))).length);
+        setUnits(authoredUnitsCompleted(manifest.units, done));
+        setBuilds(authoredLessonsCompleted(manifest.units, done));
+      }
+
+      // Then the durable record. Separate from the paint above on purpose: the
+      // case renders from what this device knows, and the server's answer
+      // arrives into it rather than gating it.
+      const record = await syncEarned(user?.uid);
+      if (!alive) return;
+      if (record) {
+        // Merged, never replaced. The cache can hold a stamp the server has not
+        // answered with yet, and nothing in this screen may narrow the set.
+        setEarnedAt((held) => ({ ...held, ...record.earned }));
+        setServerStats(record.stats);
+        setRecordUnreachable(false);
+      } else {
+        setRecordUnreachable(Object.keys(cached).length === 0);
       }
     })();
     return () => { alive = false; };
   }, [user?.uid]);
 
-  const stats = useMemo(() => achievementStats(progress, units, server), [progress, units, server]);
+  // `builds` counts lessons, so it is counted in AUTHORED lessons for the same
+  // reason `units` is. The server's stats win where they are higher: they see a
+  // second device, where this one only sees itself.
+  const stats = useMemo<Record<string, number>>(
+    () => mergeStats<Record<string, number>>(
+      { ...achievementStats(progress, units, server), builds },
+      serverStats,
+    ),
+    [progress, units, server, builds, serverStats],
+  );
 
   const ordered = useMemo(() => {
     if (!items) return [];
     return [...items]
-      .map((a) => ({ a, earned: isEarned(a, stats), pct: progressOf(a, stats) }))
+      .map((a) => ({ a, earned: isEarnedWith(a, stats, earnedAt), pct: progressOf(a, stats) }))
       .sort((x, y) => (x.earned === y.earned ? y.pct - x.pct : x.earned ? -1 : 1));
-  }, [items, stats]);
+  }, [items, stats, earnedAt]);
 
   const earnedCount = ordered.filter((o) => o.earned).length;
 
@@ -74,6 +116,15 @@ export default function Achievements() {
       <Text style={s.eyebrow}>TROPHY CASE</Text>
       <Text style={s.title}>Achievements</Text>
       <Text style={s.sub}>{earnedCount} of {items.length} unlocked</Text>
+
+      {/* The case still renders from what this device can prove, so this is a
+          freshness notice rather than an error screen. What it costs is a medal
+          earned on another device, which is worth saying out loud. */}
+      {recordUnreachable && (
+        <Text style={s.notice} accessibilityRole="alert">
+          Showing this device. Medals earned elsewhere will appear once you are back online.
+        </Text>
+      )}
 
       <View style={s.grid}>
         {ordered.map(({ a, earned, pct }) => (
@@ -113,7 +164,7 @@ export default function Achievements() {
             <Pressable onPress={(e) => e.stopPropagation()}>
               <AchievementCard
                 achievement={open}
-                earned={isEarned(open, stats)}
+                earned={isEarnedWith(open, stats, earnedAt)}
                 progress={progressOf(open, stats)}
                 progressLabel={
                   UNTRACKED.has(open.metric)
@@ -190,6 +241,10 @@ const s = StyleSheet.create({
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
   sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: 4, marginBottom: space.lg },
+  notice: {
+    fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft,
+    borderLeftWidth: 3, borderLeftColor: colors.red, paddingLeft: space.sm, marginBottom: space.lg,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   card: {
     width: '31%', backgroundColor: colors.white, borderWidth: 2, borderColor: colors.line,

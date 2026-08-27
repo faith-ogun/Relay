@@ -113,8 +113,16 @@ export const ACHIEVEMENTS: Achievement[] = [
   mk('league-5', 'League Champion', 'Reach the podium 5 times', 'Five podium weeks. Consistency at the top is the hardest kind.', 3, 'legendary', 'crown', 'crown', 'leagueWins', 5),
 ];
 
-// ── Earn logic (computed from real stats, never a hardcoded flag) ──
-export const isEarned = (a: Achievement, stats: AchievementStats): boolean => (stats[a.metric] ?? 0) >= a.threshold;
+// ── Progress toward a card, for the label under a LOCKED one ──
+//
+// Whether an achievement is EARNED is deliberately not decided here any more.
+// It used to be `stats[metric] >= threshold`, recomputed on every render, which
+// made a medal exactly as permanent as the arithmetic behind it: the session
+// split, the checkpoint XP correction and the move to server-side community
+// counters each un-earned medals from learners who had done the work. Earning is
+// an event, so it is stamped once and read from the record. See
+// `isEarnedWith` in services/achievementRules.ts and the durable record in
+// backend/live-bridge/app/achievements.py.
 export const metricValue = (a: Achievement, stats: AchievementStats): number => stats[a.metric] ?? 0;
 
 export const METRIC_NOUN: Record<AchievementMetric, string> = {
