@@ -129,7 +129,20 @@ records.
 
 1. An HTTPS **uptime check** on `/health` (every 60s) + a down alert.
 2. A **5xx error-rate** alert (sustained server errors).
-3. A **p95 latency** alert (degraded service).
+3. A **p95 latency** alert (degraded service), **excluding `1xx` responses**.
+
+   That exclusion is not tidying. Cloud Run reports a `101 Switching Protocols`
+   request's latency as the **entire lifetime of the WebSocket**, and
+   `live-bridge` exists to hold long WebSockets: a learner talking to the tutor
+   for a minute is one request with 60000ms of "latency". Without it the policy
+   fires on every session that is any use. It did, on 2026-08-27, on a 27-second
+   voice test, while every real HTTP request in the same hour ran between 3 and
+   10 milliseconds.
+
+   WebSocket health is not measured by duration. Failures to establish return
+   4xx or 5xx and are caught by the alert above; in-session failures are logged
+   by the bridge itself. What is genuinely NOT alerted on is a slow upgrade
+   handshake, which is the price of this exclusion and is worth knowing.
 
 All notify an email channel (default `hello@ohmlet.org`; override with
 `OHMLET_ALERT_EMAIL`). Run once after the services are deployed:

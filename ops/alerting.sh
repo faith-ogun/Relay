@@ -119,6 +119,23 @@ EOF
   ok "5xx alert policy created for ${service}."
 }
 
+# NOTE the "response_code_class != 1xx" in the filter, which is load bearing.
+#
+# Cloud Run reports a 101 Switching Protocols request's latency as the ENTIRE
+# LIFETIME OF THE WEBSOCKET. live-bridge exists to hold long WebSockets: a
+# learner talking to the tutor for a minute is one request with 60000ms of
+# "latency". Without the exclusion this policy fires on every session that is
+# any use, which is the opposite of what an alert is for. It did: on 2026-08-27
+# it paged on a 27s voice test while every real HTTP request in the same hour
+# was between 3 and 10 milliseconds.
+#
+# A noisy alert is worse than no alert, because it is the one nobody reads when
+# the service is genuinely down.
+#
+# WebSocket health is not measured by duration. It is measured by the 5xx policy
+# beside this one, by the connection errors the bridge logs itself, and by the
+# session length distribution in ops/observability.md, none of which mistake a
+# long conversation for a slow one.
 create_latency_policy() {
   local service="$1" channel="$2"
   cat <<EOF | create_policy_from_stdin
@@ -128,7 +145,7 @@ create_latency_policy() {
   "conditions": [{
     "displayName": "p95 latency > ${LATENCY_P95_MS}ms for 5m",
     "conditionThreshold": {
-      "filter": "resource.type=\"cloud_run_revision\" AND resource.label.\"service_name\"=\"${service}\" AND metric.type=\"run.googleapis.com/request_latencies\"",
+      "filter": "resource.type=\"cloud_run_revision\" AND resource.label.\"service_name\"=\"${service}\" AND metric.type=\"run.googleapis.com/request_latencies\" AND metric.label.\"response_code_class\"!=\"1xx\"",
       "aggregations": [{ "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_PERCENTILE_95" }],
       "comparison": "COMPARISON_GT",
       "thresholdValue": ${LATENCY_P95_MS},
