@@ -236,5 +236,11 @@ export function unoPinAtPoint(x: number, z: number, slack = PITCH * 0.7): HoleId
 /** The y plane a tap is projected onto, per surface. */
 export const SURFACE_Y = { board: BOARD_TOP, uno: UNO_TOP } as const;
 
-/** Radius used for the highlight ring drawn under a targeted hole. */
-export const HOLE_HIGHLIGHT_RADIUS = HOLE_RADIUS * 2.1;
+/**
+ * Outer radius of the ring drawn around the hole a finger is over.
+ *
+ * 2.6 socket radii, which is 0.125 inch across: a quarter wider than the pitch,
+ * so the ring is thick enough to see at a fitted camera on a phone and still
+ * unambiguous about which of two neighbouring holes it is naming.
+ */
+export const HOLE_HIGHLIGHT_RADIUS = HOLE_RADIUS * 2.6;

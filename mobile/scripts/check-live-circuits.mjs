@@ -82,21 +82,98 @@ if (par) {
 }
 
 // RC has to be a CURVE, not a step. One time constant should land near 63.2%.
+// Tau is read off the netlist rather than hardcoded, so changing R or C moves
+// the assertion with the circuit instead of breaking it.
 const rc = LIVE_CIRCUITS.find((c) => c.id === 'rc');
 if (rc) {
   const net = rc.build(rc.control.initial);
+  const R = net.find((x) => x.kind === 'R').value;
+  const C = net.find((x) => x.kind === 'C').value;
+  const supply = net.find((x) => x.kind === 'V').value;
+  const tau = R * C;
+  const dt = tau / 100;
   const st = initTransient(net);
   const at = {};
-  for (let i = 1; i <= 200; i += 1) at[i] = stepTransient(net, st, 0.001).V[2];
+  for (let i = 1; i <= 200; i += 1) at[i] = stepTransient(net, st, dt).V[2];
   const oneTau = at[100];
-  if (!(oneTau > 5 * 0.55 && oneTau < 5 * 0.70)) {
-    fail(`RC: after one time constant the capacitor reads ${oneTau.toFixed(2)}V, expected roughly ${(5 * 0.632).toFixed(2)}V`);
+  if (!(oneTau > supply * 0.55 && oneTau < supply * 0.70)) {
+    fail(`RC: after one time constant (${tau.toFixed(3)}s) the capacitor reads ${oneTau.toFixed(2)}V, expected roughly ${(supply * 0.632).toFixed(2)}V`);
   } else if (!(at[10] < at[100] && at[100] < at[200])) {
     fail('RC: the voltage is not rising monotonically, so it is not charging');
   } else {
-    console.log(`  ok    RC charges on a real curve: ${at[10].toFixed(2)}V, ${at[100].toFixed(2)}V at one tau, ${at[200].toFixed(2)}V`);
+    console.log(`  ok    RC charges on a real curve: tau=${tau.toFixed(2)}s, ${at[10].toFixed(2)}V, ${at[100].toFixed(2)}V at one tau, ${at[200].toFixed(2)}V`);
+  }
+
+  // The control changes the TIME, and the time is the only thing it changes, so
+  // the fill must be visibly slower at the top of the travel than at the bottom
+  // and both must be watchable rather than instant or interminable.
+  const secondsToFull = (r) => {
+    const n = rc.build(r);
+    const s2 = initTransient(n);
+    const step = (r * C) / 50;
+    let t = 0;
+    for (let i = 0; i < 20000; i += 1) {
+      const v = stepTransient(n, s2, step).V[2];
+      t += step;
+      if (v >= supply * 0.99) return t;
+    }
+    return Infinity;
+  };
+  const fast = secondsToFull(rc.control.min);
+  const slow = secondsToFull(rc.control.max);
+  if (!(fast >= 0.15)) fail(`RC: fills in ${fast.toFixed(2)}s at the fast end, too quick to watch`);
+  if (!(slow <= 8)) fail(`RC: takes ${slow.toFixed(1)}s at the slow end, nobody waits that long`);
+  if (!(slow / fast >= 3)) fail(`RC: only ${(slow / fast).toFixed(1)}x between the ends, the knob will not feel like it does anything`);
+  else console.log(`  ok    RC fill time answers to the knob: ${fast.toFixed(2)}s at ${rc.control.min}Ω to ${slow.toFixed(2)}s at ${rc.control.max}Ω`);
+}
+
+// THE ONE THAT MATTERS. A slider whose readout does not change is a slider the
+// learner believes is broken, and they are right to. Before this check the RC
+// circuit showed 5.00V and 0.00mA at every position on its travel, because the
+// settled state of an RC circuit does not depend on R at all, and the transistor
+// showed a flat 12.24mA across the whole saturated third. Both looked frozen.
+//
+// So sample what the learner ACTUALLY SEES, which is the state banner, the lead
+// reading, the derived rows and the instrument rows together, and require that
+// it keeps changing across the travel.
+const before1 = bad;
+for (const c of LIVE_CIRCUITS) {
+  const N = 41;
+  const seen = new Set();
+  const settle = (net) => {
+    if (!c.transient) return solve(net);
+    const st = initTransient(net);
+    let r;
+    for (let i = 0; i < 600; i += 1) r = stepTransient(net, st, 0.005);
+    return r;
+  };
+  for (let i = 0; i < N; i += 1) {
+    const v = c.control.min + ((c.control.max - c.control.min) * i) / (N - 1);
+    const snapped = Math.min(c.control.max, Math.max(c.control.min, Math.round(v / c.control.step) * c.control.step));
+    const r = settle(c.build(snapped));
+    const st = c.state ? c.state(snapped, r) : null;
+    const dv = (c.derive ? c.derive(snapped, r) : []).map((d) => `${d.label}=${d.value}`).join('|');
+    const rows = [
+      ...c.probes.map((p) => (r.V[p.node] ?? 0).toFixed(2)),
+      ...c.currents.map((x) => (Math.abs(r.I[x.id] ?? 0) * 1000).toFixed(2)),
+    ].join(',');
+    seen.add(`${st ? st.title + st.body : ''}~${dv}~${rows}`);
+  }
+  const pct = (seen.size / N) * 100;
+  if (seen.size < N * 0.85) {
+    fail(`${c.id}: only ${seen.size}/${N} positions on this slider show the learner anything different (${pct.toFixed(0)}%). The knob will look broken.`);
   }
 }
+if (bad === before1) console.log('  ok    every slider changes what is on screen across at least 85% of its own travel');
+
+// Each circuit must speak for itself rather than share one generic readout.
+const before2 = bad;
+for (const c of LIVE_CIRCUITS) {
+  if (!c.state) fail(`${c.id}: has no state verdict, so a flat stretch of its travel reads as the app being stuck`);
+  if (!c.derive) fail(`${c.id}: has no derived reading of its own`);
+  if (!c.control.ticks || c.control.ticks.length < 3) fail(`${c.id}: does not label its own scale`);
+}
+if (bad === before2) console.log('  ok    every circuit brings its own verdict, its own reading and its own labelled scale');
 
 rmSync(dir, { recursive: true, force: true });
 if (bad) { console.error(`\n${bad} problem(s)`); process.exit(1); }
