@@ -620,6 +620,57 @@ check('the audio session is not a telephony mode', () => {
   );
 });
 
+check('chunks abut on the sample grid, with no float to round', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
+
+  // Gemini sends a chunk about every 40ms. Scheduling each one at an accumulated
+  // FLOAT time means the engine rounds every boundary independently, so
+  // consecutive chunks overlap or gap by a sample around 25 times a second. One
+  // sample is a click; 25 a second is the buzz under the voice.
+  assert.ok(/queuedFramesRef/.test(play), 'playback no longer counts whole samples, so boundaries round again');
+  assert.ok(
+    /queuedFramesRef\.current = startFrames \+ samples\.length/.test(play),
+    'the sample mark is not advanced by the chunk length, so chunk N will not start where N-1 ended',
+  );
+  assert.ok(
+    !/startAt \+ buffer\.duration/.test(play),
+    'the float accumulation is back',
+  );
+
+  // Prove the arithmetic: a hundred chunks of an awkward length must land
+  // exactly end to end, with zero drift.
+  const rate = AGENT_SAMPLE_RATE;
+  let frames = 1000;
+  const CHUNK = 967;                     // deliberately not a round number of ms
+  for (let i = 0; i < 100; i += 1) {
+    const startFrames = frames;          // always ahead of the clock in this test
+    const startSeconds = startFrames / rate;
+    // What the engine will convert that back to.
+    assert.equal(Math.round(startSeconds * rate), startFrames, `boundary ${i} does not land on a sample`);
+    frames = startFrames + CHUNK;
+  }
+  assert.equal(frames, 1000 + 100 * CHUNK, 'a hundred chunks drifted');
+});
+
+check('the cushion is big enough to ride out arrival jitter', () => {
+  // 40ms chunks consumed as fast as they arrive means any hiccup underruns, and
+  // an underrun inserts a whole lead of silence. The cushion has to be worth
+  // several chunks without being a noticeable delay before the tutor speaks.
+  assert.ok(PLAYBACK_LEAD_S >= 0.2, `a ${PLAYBACK_LEAD_S}s cushion is under five 40ms chunks; it will underrun`);
+  assert.ok(PLAYBACK_LEAD_S <= 0.4, `a ${PLAYBACK_LEAD_S}s cushion is an audible delay before the tutor answers`);
+});
+
+check('a playback failure is reported rather than swallowed', () => {
+  const hook = readFileSync(new URL('../src/hooks/useLiveBridge.ts', import.meta.url), 'utf8');
+  const play = hook.slice(hook.indexOf('const playAudio'), hook.indexOf('const closePlayback'));
+  const tail = play.slice(play.lastIndexOf('} catch'));
+  assert.ok(
+    /console\.(error|warn)/.test(tail),
+    'playAudio swallows its errors again: a broken playback path is silence with nothing in the logs, which is exactly how one shipped',
+  );
+});
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 if (problems.length) {

@@ -117,7 +117,25 @@ export const AGENT_SAMPLE_RATE = 24000;
  * opening. Every chunk after it is scheduled flush against the previous one, so
  * this cost is paid once per utterance rather than once per chunk.
  */
-export const PLAYBACK_LEAD_S = 0.08;
+export const PLAYBACK_LEAD_S = 0.28;
+
+/**
+ * The tutor's chunks abut on an INTEGER SAMPLE grid, not on floating seconds.
+ *
+ * Each chunk used to be scheduled at `previousStart + previousDuration`, a float
+ * accumulated across hundreds of chunks. The engine converts that start time to
+ * a frame with `timeToSampleFrame`, which ROUNDS, and it rounds each chunk
+ * independently. So consecutive chunks could overlap by a sample or gap by a
+ * sample, at every boundary, forever.
+ *
+ * Gemini Live sends roughly a chunk every 40ms, so that is a discontinuity
+ * around 25 times a second. A single-sample step is a click; 25 of them a second
+ * is a buzz sitting under the voice, which is what "grainy and sandpapery"
+ * sounds like. Counting whole samples instead makes the arithmetic exact: chunk
+ * N starts precisely where chunk N-1 ended, with nothing to round.
+ */
+const framesToSeconds = (frames: number, rate: number) => frames / rate;
+const secondsToFrames = (seconds: number, rate: number) => Math.round(seconds * rate);
 
 /**
  * How long the microphone has to produce its first frame before the session
@@ -680,6 +698,10 @@ export function useLiveBridge({
   const micWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playbackCtxRef = useRef<AudioContext | null>(null);
   const queuedUntilRef = useRef(0);
+  // The same mark in whole samples, which is what the scheduling uses.
+  const queuedFramesRef = useRef(0);
+  // Latched so a failing playback path reports once, not per chunk.
+  const playbackFaultRef = useRef(false);
   const scheduledRef = useRef<ScheduledChunk[]>([]);
 
   const closeSpan = useCallback(() => {
@@ -726,6 +748,7 @@ export function useLiveBridge({
     const scheduled = scheduledRef.current;
     scheduledRef.current = [];
     queuedUntilRef.current = 0;
+    queuedFramesRef.current = 0;
     if (!ctx) return;
     for (const chunk of scheduled) {
       try { chunk.node.stop(ctx.currentTime); } catch { /* already finished */ }
@@ -743,6 +766,8 @@ export function useLiveBridge({
         ctx = new AudioContext({ sampleRate: AGENT_SAMPLE_RATE });
         playbackCtxRef.current = ctx;
         queuedUntilRef.current = 0;
+        queuedFramesRef.current = 0;
+        playbackFaultRef.current = false;
         // The rate we ASKED for is not necessarily the rate we got. iOS hands
         // back whatever the audio session settled on, and everything is then
         // resampled into it, which is audible as graininess rather than as an
@@ -773,17 +798,38 @@ export function useLiveBridge({
       node.buffer = buffer;
       node.connect(ctx.destination);
 
-      const startAt = nextChunkStart(ctx.currentTime, queuedUntilRef.current);
-      node.start(startAt);
-      queuedUntilRef.current = startAt + buffer.duration;
+      // Scheduled on the sample grid. queuedFramesRef counts WHOLE SAMPLES of
+      // the tutor's voice already placed, so chunk N starts exactly where chunk
+      // N-1 ended and there is no float to round at the boundary.
+      const rate = AGENT_SAMPLE_RATE;
+      const nowFrames = secondsToFrames(ctx.currentTime, rate);
+      const queuedFrames = queuedFramesRef.current;
+      // Behind the clock means the queue ran dry: rebuild the cushion rather
+      // than starting in the past, which the engine would clamp to now anyway
+      // and then immediately underrun again.
+      const startFrames = queuedFrames > nowFrames
+        ? queuedFrames
+        : nowFrames + secondsToFrames(PLAYBACK_LEAD_S, rate);
+      node.start(framesToSeconds(startFrames, rate));
+      queuedFramesRef.current = startFrames + samples.length;
+      queuedUntilRef.current = framesToSeconds(queuedFramesRef.current, rate);
 
       // Keep only what is still to play. Barge-in has to be able to silence
       // every chunk already queued, and nothing else needs the finished ones.
       const now = ctx.currentTime;
       scheduledRef.current = scheduledRef.current.filter((c) => c.endsAt > now);
       scheduledRef.current.push({ node, endsAt: queuedUntilRef.current });
-    } catch {
-      /* a dropped chunk is better than a crashed session */
+    } catch (err) {
+      // A dropped chunk IS better than a crashed session, and that stays true.
+      // Swallowing it in silence is not: when the playback path was changed and
+      // the first call threw, the result was a session with no sound at all and
+      // nothing anywhere saying why. The learner heard silence and so did the
+      // logs. Report the first one, then go quiet so a genuinely bad network
+      // cannot flood the console.
+      if (!playbackFaultRef.current) {
+        playbackFaultRef.current = true;
+        console.error('[ohmlet-audio] playback failed and the tutor will be silent:', err);
+      }
     }
   }, []);
 
