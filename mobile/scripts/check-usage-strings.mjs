@@ -11,7 +11,6 @@
 // A missing usage description is worse than a wrong one: iOS terminates the app
 // the instant it touches that API, so this also refuses a declared permission
 // with no string at all.
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,13 +21,37 @@ const PLIST = join(MOBILE, 'ios', 'Ohmlet', 'Info.plist');
 const app = JSON.parse(readFileSync(join(MOBILE, 'app.json'), 'utf8'));
 const declared = app?.expo?.ios?.infoPlist ?? {};
 
+// Parsed here rather than shelled out to `plutil`, which is macOS only. The
+// first version of this file used it, passed on a laptop, and reported both
+// permission strings ABSENT on the Ubuntu runner, because the throw landed in a
+// catch that returned null. A check that cannot run where it matters is worse
+// than no check: this one would have blocked every push while claiming the app
+// was about to be terminated by iOS.
+const PLIST_XML = readFileSync(PLIST, 'utf8');
+
+if (!PLIST_XML.startsWith('<?xml')) {
+  // A binary plist would silently match nothing and report everything missing,
+  // which is precisely the failure this comment exists to prevent recurring.
+  console.error('  FAIL  Info.plist is not XML, so this check cannot read it. Convert it, or teach this script the binary format.');
+  process.exit(1);
+}
+
+const unescapeXml = (s) => s
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+  // Ampersand last, or an escaped entity would be decoded twice.
+  .replace(/&amp;/g, '&');
+
 const fromPlist = (key) => {
-  try {
-    return execFileSync('plutil', ['-extract', key, 'raw', PLIST],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  } catch {
-    return null;
-  }
+  // <key>NAME</key> followed by its value. Only <string> is a usage
+  // description; anything else means the key exists but is the wrong type, and
+  // returning null for that is right because iOS will not show it either.
+  const at = PLIST_XML.indexOf(`<key>${key}</key>`);
+  if (at === -1) return null;
+  const rest = PLIST_XML.slice(at + `<key>${key}</key>`.length);
+  const m = rest.match(/^\s*<string>([\s\S]*?)<\/string>/);
+  return m ? unescapeXml(m[1]) : null;
 };
 
 let bad = 0;
