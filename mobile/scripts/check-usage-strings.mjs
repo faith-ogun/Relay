@@ -67,6 +67,32 @@ for (const { key, why, signals } of USES) {
 }
 const usedCount = USES.filter(({ signals }) => signals.some((re) => re.test(code))).length;
 
+// ── 1b. A config plugin must not be quietly overriding the declaration ──────
+//
+// There are THREE places a usage string can live, not two, and the one that
+// looks authoritative loses. `expo.ios.infoPlist` is the obvious declaration;
+// the react-native-audio-api config PLUGIN takes its own
+// `iosMicrophonePermission` and writes the plist during prebuild, AFTER the
+// infoPlist block. So editing infoPlist alone changes nothing: prebuild put the
+// plugin's older sentence straight back, and the infoPlist value sat there
+// reading like the source of truth while being a decoy.
+const PLUGIN_OVERRIDES = [
+  { plugin: 'react-native-audio-api', option: 'iosMicrophonePermission', key: 'NSMicrophoneUsageDescription' },
+];
+
+for (const { plugin, option, key } of PLUGIN_OVERRIDES) {
+  const entry = (app?.expo?.plugins ?? []).find((e) => Array.isArray(e) && e[0] === plugin);
+  if (!entry) continue;
+  const viaPlugin = entry[1]?.[option];
+  if (viaPlugin === undefined) continue;
+  if (declared[key] !== undefined && viaPlugin !== declared[key]) {
+    fail(`${plugin} sets ${option}, which OVERRIDES ${key} at prebuild time, and the two disagree.\n`
+      + `          ios.infoPlist: ${declared[key]}\n`
+      + `          ${plugin}: ${viaPlugin}\n`
+      + `        The plugin wins, so the infoPlist value is a decoy. Set both.`);
+  }
+}
+
 // ── 2. A generated plist, if there is one, must not be stale ────────────────
 let compared = 0;
 if (existsSync(PLIST)) {

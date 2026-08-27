@@ -133,7 +133,7 @@
       [
         "react-native-audio-api",
         {
-          "iosMicrophonePermission": "Ohmlet streams your microphone to the live tutor while a session is open, so you can ask questions out loud and it can answer while you build. The microphone is only on while you have turned it on in a session.",
+          "iosMicrophonePermission": "Ohmlet streams your microphone to the live tutor so you can ask questions out loud while you build. It is only on while you turn it on in a session.",
           "iosBackgroundMode": false,
           "androidForegroundService": false,
           "androidPermissions": [
