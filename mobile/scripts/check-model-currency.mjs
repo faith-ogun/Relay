@@ -18,8 +18,25 @@ const REPO = resolve(dirname(dirname(fileURLToPath(import.meta.url))), '..');
  * flash all answer while no 3.x Pro exists yet.
  */
 const RETIRING = [
-  // Catches BOTH id forms: gemini-2.5-flash and gemini-live-2.5-flash-native-audio.
-  { match: /gemini-(?:[a-z]+-)?2\.5-/, retires: '2026-10-16', note: 'move to a gemini-3.x model on location=global' },
+  // The LIVE model has its own, LATER date, and getting this wrong drives false
+  // urgency. Vertex lists gemini-live-2.5-flash-native-audio for 2026-12-13,
+  // where the rest of the 2.5 cluster goes in October. Checked 2026-08-27.
+  //
+  // That difference decides a real question: the Shipaton deadline is
+  // 2026-09-30 and judging follows in October, so the live tutor's voice is NOT
+  // a judging-period risk. There is no reason to rush it onto an API-key path.
+  {
+    match: /gemini-(?:[a-z]+-)?2\.5-[a-z0-9.-]*(?:live|native-audio)[a-z0-9.-]*|gemini-live-2\.5-[a-z0-9.-]*/,
+    retires: '2026-12-13',
+    note: 'Vertex has no 3.x live model yet. Run backend/live-bridge/scripts/probe_models.py; it exits 0 the day one appears.',
+  },
+  // Everything else in the 2.5 cluster. Google's own pages disagree between
+  // 2026-10-16 and 2026-10-20, so the earlier date is the one to plan to.
+  {
+    match: /gemini-(?:[a-z]+-)?2\.5-/,
+    retires: '2026-10-16',
+    note: 'move to a gemini-3.x model on location=global',
+  },
 ];
 
 /** Warn this many days before the date, so it is never a surprise. */
@@ -56,13 +73,15 @@ for (const f of FILES) {
     // Only DEFAULTS and deploy values matter. A comment naming an old model, or
     // a doc line explaining the migration, is not a dependency on it.
     if (/^\s*[#/]/.test(line)) continue;
+    // First rule that matches wins, and the live rule is first, so a live model
+    // is never charged the text cluster's earlier date.
     for (const r of RETIRING) {
-      const m = line.match(new RegExp(`(gemini-(?:[a-z]+-)?2\\.5-[a-z0-9.-]*)`));
+      const m = line.match(r.match);
       if (!m) continue;
-      const key = `${m[1]}`;
-      const at = hits.get(key) ?? { retires: r.retires, note: r.note, where: new Set() };
+      const at = hits.get(m[0]) ?? { retires: r.retires, note: r.note, where: new Set() };
       at.where.add(f.slice(REPO.length + 1));
-      hits.set(key, at);
+      hits.set(m[0], at);
+      break;
     }
   }
 }
@@ -81,11 +100,7 @@ for (const [model, info] of hits) {
     // (backend/live-bridge/scripts/probe_models.py). So it is blocked upstream
     // rather than forgotten, and saying so is the difference between a warning
     // somebody acts on and one they learn to scroll past.
-    const isLive = /live|native-audio/.test(model);
-    const why = isLive
-      ? 'BLOCKED UPSTREAM: no 3.x live model is reachable yet. '
-        + 'Run backend/live-bridge/scripts/probe_models.py to check again; it exits 0 the day one appears.'
-      : info.note;
+    const why = info.note;
     console.error(`  WARN  ${model} retires ${info.retires}, in ${days} days, still in ${where}. ${why}`);
   }
 }

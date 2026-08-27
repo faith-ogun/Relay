@@ -38,8 +38,34 @@ for (const m of home.matchAll(/art="\/stats\/([a-z]+)\.png"/g)) {
   }
 }
 
+// ── The tab bar, same rules ────────────────────────────────────────────────
+// Comments stripped: this file EXPLAINS what was removed, and matching the
+// explanation instead of the code is the false alarm that trains people to
+// ignore a check.
+const tabsRaw = readFileSync(join(MOBILE, 'src/components/TabBar.tsx'), 'utf8');
+const tabs = tabsRaw.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+const TABS = ['learn', 'practice', 'live', 'community', 'profile'];
+for (const name of TABS) {
+  for (const state of ['off', 'on']) {
+    if (!new RegExp(`${name}-${state}\\.png`).test(tabsRaw)) {
+      fail(`TabBar no longer references ${name}-${state}.png, so that tab draws nothing in that state`);
+      continue;
+    }
+    for (const suffix of ['', '@2x', '@3x']) {
+      const f = join(MOBILE, 'assets/nav', `${name}-${state}${suffix}.png`);
+      if (!existsSync(f)) fail(`mobile/assets/nav/${name}-${state}${suffix}.png is missing`);
+    }
+  }
+}
+// The selected state carries its own plate, so a second one drawn in code would
+// sit behind it.
+if (/slotOn/.test(tabs)) {
+  fail('TabBar draws slotOn behind the icon again, and the selected artwork already has a plate');
+}
+
 // The line glyphs they replaced must not creep back in beside them.
-if (/const (Flame|Bolt|Target|HeartGlyph): React\.FC/.test(strip)) {
+if (/const (Flame|Bolt|Target|HeartGlyph): React\.FC/.test(strip)
+    || /const (LearnIcon|PracticeIcon|LiveIcon|CommunityIcon|ProfileIcon): React\.FC/.test(tabs)) {
   fail('a hand-drawn stat glyph is back in StatStrip alongside the painted set; pick one');
 }
 

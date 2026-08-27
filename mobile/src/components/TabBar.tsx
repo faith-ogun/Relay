@@ -1,6 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, curve, font, type } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
@@ -27,59 +26,36 @@ const stroke = (a: boolean) => (a ? colors.ink : colors.inkSoft);
 const ICON_SIZE = 26;
 const ICON_STROKE = 2.5 * (24 / ICON_SIZE);
 
-const LearnIcon: React.FC<IconProps> = ({ active }) => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24">
-    <Path d="M3 7.5 12 3.5l9 4-9 4z" fill={active ? colors.gold : 'none'}
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinejoin="round" />
-    <Path d="M6.5 10.5v4.8c0 1.6 2.5 2.7 5.5 2.7s5.5-1.1 5.5-2.7v-4.8"
-          fill="none" stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinecap="round" />
-  </Svg>
-);
-
-const PracticeIcon: React.FC<IconProps> = ({ active }) => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24">
-    <Rect x={3} y={5} width={18} height={14} rx={3} fill={active ? colors.gold : 'none'}
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} />
-    <Path d="M13 8.5 9.5 13h3.2L11 16.5" fill="none" stroke={stroke(active)}
-          strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const LiveIcon: React.FC<IconProps> = ({ active }) => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24">
-    <Rect x={2.5} y={6.5} width={13} height={11} rx={3} fill={active ? colors.gold : 'none'}
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} />
-    <Path d="M16.5 11.5 21.5 8.5v7l-5-3z" fill={active ? colors.gold : 'none'}
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinejoin="round" />
-  </Svg>
-);
-
-const CommunityIcon: React.FC<IconProps> = ({ active }) => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24">
-    <Circle cx={9} cy={9} r={3.2} fill={active ? colors.gold : 'none'} stroke={stroke(active)} strokeWidth={ICON_STROKE} />
-    <Circle cx={16.5} cy={10.5} r={2.4} fill="none" stroke={stroke(active)} strokeWidth={ICON_STROKE} />
-    <Path d="M3.5 19c0-3 2.5-4.6 5.5-4.6s5.5 1.6 5.5 4.6" fill="none"
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinecap="round" />
-    <Path d="M16 14.6c2.4.2 4.5 1.6 4.5 4.4" fill="none"
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinecap="round" />
-  </Svg>
-);
-
-const ProfileIcon: React.FC<IconProps> = ({ active }) => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24">
-    <Circle cx={12} cy={8.5} r={3.6} fill={active ? colors.gold : 'none'} stroke={stroke(active)} strokeWidth={ICON_STROKE} />
-    <Path d="M4.5 19.5c0-3.6 3.4-5.6 7.5-5.6s7.5 2 7.5 5.6" fill="none"
-          stroke={stroke(active)} strokeWidth={ICON_STROKE} strokeLinecap="round" />
-  </Svg>
-);
-
-export const TAB_ICONS = {
-  learn: LearnIcon,
-  practice: PracticeIcon,
-  live: LiveIcon,
-  community: CommunityIcon,
-  profile: ProfileIcon,
+/**
+ * The tab icons are painted artwork, one file per state.
+ *
+ * They were five SVG paths drawn here. The comment above used to argue that
+ * drawing them beat pulling from an icon set, because a lightning bolt from a
+ * pack is somebody else's lightning bolt. That reasoning was right and the
+ * result still was not Ohmlet's: Faith's words for the old Practice icon were
+ * "very, very rudimentary". Hand-drawn generic is still generic.
+ *
+ * Every one now carries the electronics idea. The graduation cap's tassel is a
+ * resistor, Practice is a breadboard with a real component across it, Live is a
+ * camera with a lit indicator, Community wires three people together, Profile
+ * has a component at the collar.
+ *
+ * Two files each. The selected state is not a tint of the unselected one: it is
+ * its own drawing, with the gold plate built into the art. That is why `slotOn`
+ * is gone from the styles below, and why the two states must stay the same
+ * scale as each other, which is enforced by generating both from one source
+ * normalised on its LINEWORK rather than its canvas. Scale the icon on tap and
+ * the whole bar twitches.
+ */
+const TAB_ART = {
+  learn: { off: require('../../assets/nav/learn-off.png'), on: require('../../assets/nav/learn-on.png') },
+  practice: { off: require('../../assets/nav/practice-off.png'), on: require('../../assets/nav/practice-on.png') },
+  live: { off: require('../../assets/nav/live-off.png'), on: require('../../assets/nav/live-on.png') },
+  community: { off: require('../../assets/nav/community-off.png'), on: require('../../assets/nav/community-on.png') },
+  profile: { off: require('../../assets/nav/profile-off.png'), on: require('../../assets/nav/profile-on.png') },
 } as const;
+
+export const TAB_ICONS = TAB_ART;
 
 export interface TabItem {
   key: keyof typeof TAB_ICONS;
@@ -92,7 +68,6 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
   return (
     <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {items.map((item) => {
-        const Icon = TAB_ICONS[item.key];
         const on = item.key === active;
         return (
           <Pressable
@@ -108,8 +83,13 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
           >
             {/* The active tab gets a filled plate behind its icon. A colour swap
                 on a hairline row is not enough signal to find yourself by. */}
-            <View style={[s.slot, on && s.slotOn]}>
-              <Icon active={on} />
+            <View style={s.slot}>
+              <Image
+                source={TAB_ART[item.key][on ? 'on' : 'off']}
+                style={s.icon}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </View>
             <Text style={[s.label, on && s.labelOn]} maxFontSizeMultiplier={1.15} numberOfLines={1}>
               {item.label}
@@ -134,10 +114,12 @@ const s = StyleSheet.create({
   },
   tab: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 },
   slot: {
-    width: 46, height: 30, borderRadius: 15, ...curve,
+    width: 46, height: 34,
     alignItems: 'center', justifyContent: 'center',
   },
-  slotOn: { backgroundColor: colors.goldSoft },
+  // 30, not the 26 the drawn glyphs used: the selected state carries its own
+  // plate inside the artwork and needs the room for it.
+  icon: { width: 30, height: 30 },
   label: {
     // Sentence case at 11px, not uppercase at 11px with wide tracking: the old
     // treatment made five short words into five grey smears.
