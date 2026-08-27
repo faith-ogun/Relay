@@ -73,8 +73,17 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>(onClose: () =>
       node.removeEventListener('keydown', onKeyDown);
       // Restore focus only if it's still inside the (now unmounting) dialog, so we
       // don't yank focus away from wherever the user has since moved.
+      //
+      // preventScroll matters here. The dialog's scroll lock has already released
+      // by the time this cleanup runs (effects tear down in declaration order), so
+      // a plain focus() lets the browser scroll the opener into view. On the
+      // achievements grid that meant closing a card jumped the page down to fully
+      // reveal the tile behind it: "why has it scrolled? why has the card shown up
+      // halfway through the scrollbar?". The element was on screen when the dialog
+      // opened and the lock restores the exact offset, so suppressing the scroll is
+      // always the right behaviour, not just here.
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-        previouslyFocused.focus();
+        previouslyFocused.focus({ preventScroll: true });
       }
     };
   }, [onClose]);

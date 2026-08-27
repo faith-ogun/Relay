@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "node scripts/build-sitemap.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "lint:lessons": "node scripts/lint-lessons.mjs"
+    "lint:lessons": "node scripts/lint-lessons.mjs && node scripts/check-lesson-solvability.mjs --self-test && node scripts/check-lesson-solvability.mjs",
+    "check:solvability": "node scripts/check-lesson-solvability.mjs --self-test && node scripts/check-lesson-solvability.mjs",
+    "check:api-coverage": "node scripts/check-api-coverage.mjs",
+    "check:achievements": "node scripts/check-achievement-durability.mjs",
+    "check:curriculum": "node scripts/check-curriculum-parity.mjs && node scripts/check-curriculum-fallback.mjs",
+    "check:curriculum-parity": "node scripts/check-curriculum-parity.mjs",
+    "check:curriculum-fallback": "node scripts/check-curriculum-fallback.mjs",
+    "export:curriculum": "node scripts/export-curriculum.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

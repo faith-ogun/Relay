@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePlan } from '../hooks/usePlan';
 import { deleteMyAccount, fetchMyData } from '../services/privacy';
 import { clearLocalState } from '../services/progress';
+import { clearCachedEarned } from '../services/achievements';
 import { clearProfile } from '../services/learnerProfile';
 import { clearGates } from '../services/gates';
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
@@ -104,6 +105,7 @@ export default function Account() {
     // the setup answers, which describe a person as much as their progress does.
     await Promise.all([
       clearLocalState(user?.uid), clearProfile(), clearGates(user?.uid), clearEvents(),
+      clearCachedEarned(user?.uid),
     ]);
     await signOut().catch(() => undefined);
     router.replace('/welcome');

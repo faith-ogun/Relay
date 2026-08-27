@@ -5,7 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { usePlan } from '../hooks/usePlan';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
-import { getAchievements, isEarned, type Achievement } from '../services/achievements';
+import { getAchievements, readCachedEarned, type Achievement } from '../services/achievements';
+import {
+  authoredLessonsCompleted, authoredUnitsCompleted, isEarnedWith,
+} from '../services/achievementRules';
 import { achievementStats } from '../services/progress';
 import { getManifest, allLessons } from '../services/curriculum';
 import { AppTabs } from '../components/AppTabs';
@@ -26,31 +29,38 @@ export default function Profile() {
   const plan = usePlan();
   const [progress, setProgress] = useState<Progress>(EMPTY);
   const [earned, setEarned] = useState<Achievement[]>([]);
-  const [units, setUnits] = useState(0);
   const [total, setTotal] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       void (async () => {
-        const [p, list, manifest] = await Promise.all([
+        const [p, list, manifest, earnedAt] = await Promise.all([
           user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
           getAchievements(),
           getManifest(),
+          // The durable record, from this device's mirror of it. The trophy
+          // shelf here has to agree with the trophy case on /achievements, and
+          // that one reads the record rather than recomputing from counters.
+          readCachedEarned(user?.uid),
         ]);
         if (!alive) return;
         setProgress(p);
         setTotal(manifest ? allLessons(manifest).length : 0);
-        if (manifest) {
-          const done = new Set(Object.keys(p.lessonLevels));
-          setUnits(manifest.units.filter((u) =>
-            u.skills.every((sk) => sk.lessons.every((l) => done.has(l.id)))).length);
-        }
-        const stats = achievementStats(p, units);
-        setEarned((list ?? []).filter((a) => isEarned(a, stats)));
+        // Units and lessons counted in AUTHORED lessons, not in the sessions
+        // they are delivered as. Counting sessions is what stripped the unit
+        // medals off a learner who had finished the whole curriculum before it
+        // was cut, and this shelf was still doing it after the trophy case
+        // stopped. Both surfaces, one rule: services/achievementRules.ts.
+        const done = new Set(Object.keys(p.lessonLevels));
+        const unitsDone = manifest ? authoredUnitsCompleted(manifest.units, done) : 0;
+        const buildsDone = manifest ? authoredLessonsCompleted(manifest.units, done) : done.size;
+        const stats = { ...achievementStats(p, unitsDone), builds: buildsDone };
+        // Earned is what the record says, then what today's counters can prove.
+        setEarned((list ?? []).filter((a) => isEarnedWith(a, stats, earnedAt)));
       })();
       return () => { alive = false; };
-    }, [user?.uid, units]),
+    }, [user?.uid]),
   );
 
   const built = Object.keys(progress.lessonLevels).length;
