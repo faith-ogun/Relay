@@ -7,11 +7,10 @@
 //
 // Cues come from the same measured timings the picture is laid out from, so the
 // subtitle and the shot change on the same frame by construction.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { allLessons, ROOT } from './lessons.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const GAP = 11 / 30;
 
 const stamp = (s) => {
@@ -19,13 +18,17 @@ const stamp = (s) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${sec.toFixed(3).padStart(6, '0')}`;
 };
 
-const { closedLoop } = await import(join(ROOT, 'src/lesson-film/lessons/closed-loop.ts'));
-const { timeConstant } = await import(join(ROOT, 'src/lesson-film/lessons/time-constant.ts'));
-const { drivingLoads } = await import(join(ROOT, 'src/lesson-film/lessons/driving-loads.ts'));
-
 mkdirSync(join(ROOT, 'out'), { recursive: true });
-for (const lesson of [closedLoop, timeConstant, drivingLoads]) {
-  const timings = JSON.parse(readFileSync(join(ROOT, `src/lesson-film/timings/${lesson.id}.json`), 'utf8'));
+for (const lesson of await allLessons()) {
+  // A script can exist before its narration does, mid-batch. Skip it rather
+  // than failing the whole run: the cues cannot be written until the audio has
+  // been measured anyway.
+  const tPath = join(ROOT, `src/lesson-film/timings/${lesson.id}.json`);
+  if (!existsSync(tPath)) {
+    console.log(`  ${lesson.id}: no timings yet, skipped`);
+    continue;
+  }
+  const timings = JSON.parse(readFileSync(tPath, 'utf8'));
   const lines = ['WEBVTT', ''];
   let t = 0;
   lesson.segments.forEach((seg, i) => {

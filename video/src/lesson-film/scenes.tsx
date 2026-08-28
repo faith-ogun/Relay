@@ -74,11 +74,15 @@ export const SceneView: React.FC<{ scene: Scene; f: Frame; accent: string; title
   }
 
   if (scene.kind === 'formula') {
+    // Long expressions step down rather than wrapping to three lines. The
+    // thresholds start ABOVE the longest expression in the films that already
+    // shipped, so nothing already rendered changes size.
+    const size = scene.expr.length <= 24 ? 96 : scene.expr.length <= 34 ? 76 : 62;
     return (
       <div style={{ ...box, flexDirection: 'column', gap: 26 * f.k }}>
         <div style={{
           ...rise(frame, 0), fontFamily: NUNITO, fontWeight: 900, textAlign: 'center',
-          fontSize: 96 * f.k, color: C.ink, letterSpacing: -2,
+          fontSize: size * f.k, color: C.ink, letterSpacing: -2,
           background: C.white, border: `${7 * f.k}px solid ${C.ink}`, borderRadius: 28 * f.k,
           padding: `${34 * f.k}px ${54 * f.k}px`, boxShadow: `0 ${10 * f.k}px 0 ${accent}`,
         }}>{scene.expr}</div>

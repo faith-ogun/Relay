@@ -5,13 +5,21 @@
 # published and the app will cache it hard, so a re-cut has to arrive at a NEW
 # address rather than replacing bytes behind a URL somebody is already caching.
 # The curriculum already learned this lesson the expensive way.
+#
+# Ids come from the lessons directory. Pass ids as arguments to publish a subset.
 set -e
 cd "$(dirname "$0")/.." || exit 1
 BUCKET=gs://ohmlet-app-lessons
 PROJECT=ohmlet-app
 V=v1
 
-for id in closed-loop time-constant driving-loads; do
+if [ $# -gt 0 ]; then
+  IDS="$*"
+else
+  IDS=$(ls src/lesson-film/lessons/*.ts | xargs -n1 basename | sed 's/\.ts$//')
+fi
+
+for id in $IDS; do
   echo "  ${id}"
   for f in out/ohmlet-lesson-${id}-*.mp4; do
     [ -f "$f" ] || continue
