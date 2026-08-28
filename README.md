@@ -1,224 +1,162 @@
-# Ohmlet
+<p align="center">
+  <img src="assets/readme/ohmlet-logo.png" width="440" alt="Ohmlet, learn electronics by building">
+</p>
 
-![React](https://img.shields.io/badge/React-18-61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4)
-![Three.js](https://img.shields.io/badge/Three.js-r170-000000)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.116-009688)
-![Python](https://img.shields.io/badge/Python-3.13-3776AB)
-![Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployed-4285F4)
-![Gemini](https://img.shields.io/badge/Gemini-Live_API-8E75B2)
-![Firestore](https://img.shields.io/badge/Firestore-Realtime-FFCA28)
+<p align="center"><i>learn electronics by building, with a tutor that watches your bench</i></p>
 
-**Learn electronics by building, with a live AI tutor that watches your bench.**
+<p align="center">
+  A real-time multimodal tutor for <b>electronics, mechatronics and robotics</b>. It sees your<br>
+  breadboard through the camera, hears you, and corrects the wire you are holding <b>before</b><br>
+  you power it up. Not a chatbot about electronics. A tutor that watches you build one.
+</p>
 
-Ohmlet is a commercial, real-time multimodal lab tutor for learning electronics, mechatronics, and robotics by building. It uses the Gemini Live API (bidirectional audio + video streaming) to watch a learner's physical workspace — breadboard, Arduino, components — and guide them through builds with voice and vision, correcting mistakes mid-action.
+<p align="center">
+  <b>Commercial product</b> &nbsp;·&nbsp; <a href="https://ohmlet.org">ohmlet.org</a> &nbsp;·&nbsp; iOS and web &nbsp;·&nbsp; Proprietary, all rights reserved
+</p>
 
-Think **Duolingo / Brilliant / Mimo, but for hands-on electronics**: a friendly mascot (the Ohmlet, an ohm-resistor egg), a gamified learning loop, a real social layer, and a live AI bench tutor that sees and talks.
+<p align="center">
+  <a href="#the-live-tutor-is-the-product"><b>◆ How the tutor works&nbsp;→</b></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#the-learning-loop">The learning loop</a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#architecture">Architecture</a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#run-it">Run it</a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#what-is-real-and-what-is-not">What is real</a>
+</p>
 
-- **Domain:** [ohmlet.org](https://ohmlet.org)
-- **GCP project:** `ohmlet-app`
+<p align="center">
+  <img src="https://img.shields.io/badge/Gemini-Live_native_audio-8E75B2" alt="Gemini Live native audio">
+  <img src="https://img.shields.io/badge/Google_ADK-bidi_streaming-1F2940" alt="Google ADK bidi streaming">
+  <img src="https://img.shields.io/badge/Cloud_Run-europe--west1-4285F4" alt="Cloud Run europe-west1">
+  <img src="https://img.shields.io/badge/Expo-SDK_54-000020" alt="Expo SDK 54">
+  <img src="https://img.shields.io/badge/curriculum-284_lessons_·_2355_steps-facc2e" alt="284 lessons, 2355 steps">
+  <img src="https://img.shields.io/badge/backend-300_tests_passing-2ea043" alt="300 backend tests passing">
+</p>
+
+<p align="center">
+  <img src="assets/readme/lesson-film.gif" width="82%" alt="A lesson film: current flowing round a closed loop">
+</p>
+
+---
+
+## The problem
+
+Electronics is learned at a bench, and every good explanation of it is a *motion*:
+current moving, a capacitor filling, a transistor switching. Text cannot show
+motion. A video cannot see your bench. A chatbot can see neither.
+
+So beginners get stuck in the specific, lonely way that hardware makes you stuck:
+the circuit does nothing, everything *looks* right, and there is nobody to ask.
+The wire is one hole across and you cannot see it, because you do not yet know
+that is a thing that happens.
+
+## The live tutor is the product
+
+A session opens a WebSocket to the Gemini Live API through Google ADK, streaming
+**audio both ways and video one way** at once. The learner talks; the tutor talks
+back in native audio, watching the bench through the camera the whole time.
+
+Three things make it a tutor rather than a demo:
+
+- **It sees the workspace, continuously.** Camera frames go up with the audio, so
+  "is this right?" is answerable without describing anything.
+- **It corrects mid-action.** The value is catching the wire before it is powered,
+  not grading the result afterwards.
+- **One voice, several models.** The live model handles conversation; component
+  identification, Arduino code generation and deep debugging are dispatched to
+  faster or stronger models behind it. The learner hears one tutor.
 
 ## The learning loop
 
-1. Pick a build from the library (e.g. Light-Activated Alarm)
-2. Show your components, and Ohmlet verifies inventory via camera
-3. Wire step by step while Ohmlet guides and corrects in real time
-4. Generate and debug the Arduino sketch
-5. Run the circuit; Ohmlet validates via serial output and camera
-6. Earn XP, keep your streak, and share the build to the community
+1. Pick a build from the library, for example the light-activated alarm
+2. The agent verifies your components through the camera before you start
+3. It guides the wiring step by step, correcting mistakes as they happen
+4. It generates and debugs the Arduino sketch with you
+5. You run the circuit; it validates against serial output and what it can see
+6. The session produces a **3D digital twin** of what you actually built
+7. XP, streak, league position, and the build shared to the community if you want
 
-**No hardware?** Simulation mode lets you learn without an Arduino. Turn on your camera and the tutor works with whatever is in view.
-
-## The product
-
-### Marketing site
-- **Landing** — the brand, the pitch, the mascot
-- **Learn** — the electronics curriculum: build paths and the topics you master
-- **Build** — community builds gallery and learner stories
-- **Blog** — plain-English electronics writing (SEO)
-- **Pricing** — Free, Pro, and Teams
-
-### App workspace (`/ohmlet-app`)
-
-| Tab | What it does |
-|-----|-------------|
-| **Build** | Live workspace: camera feed, voice interaction, step-by-step guidance |
-| **Learn** | Adaptive quizzes, interactive circuit diagrams, drawing exercises with Gemini Vision assessment, and review history |
-| **Sandbox** | 3D breadboard workspace: place components, edit wires, write Arduino in Monaco, run circuit validation and simulation |
-| **Community** | Share builds, react, comment |
-| **Library** | Starter projects with 3D Twin presets for the sandbox |
-
-### Pricing
-
-| Tier | Price | For |
-|------|-------|-----|
-| **Free** | $0 | First build path, 30 min/week of live tutor, core lessons |
-| **Pro** | $15.99/mo ($11.99 annual) | Unlimited paths, up to 15 hrs/mo live tutor, 3D twins, progress tracking |
-| **Teams** | $9.99/seat/mo | Classrooms and cohorts: educator dashboard, rosters, shared libraries |
-
-## Multi-model architecture
-
-One voice session, multiple models working behind the scenes:
-
-| Role | Model |
-|------|-------|
-| Live tutor (voice + vision) | `gemini-live-2.5-flash-native-audio` |
-| Quick checks (component ID) | `gemini-2.5-flash` |
-| Code generation (Arduino) | `gemini-2.5-pro` |
-| Deep reasoning (debugging) | `gemini-2.5-pro` |
-| Drawing assessment (vision) | `gemini-2.5-pro` |
+Around that sits an authored curriculum: **12 units, 57 skills, 284 lessons,
+2,355 steps**, with a checkpoint at every skill boundary and a **boss exam** at
+the end of every unit that must be cleared before the next unit opens. Bosses
+are composed server-side across every skill in the unit, graded server-side, and
+cost no hearts, so they gate without punishing.
 
 ## Architecture
 
+| Layer | What |
+|---|---|
+| Mobile | Expo SDK 54, React Native, expo-router, Reanimated, three.js via expo-gl |
+| Web | React, TypeScript, Vite, Tailwind, three.js, Monaco |
+| Live agent | Google ADK bidi-streaming over WebSocket to Gemini Live native audio |
+| Services | FastAPI on Cloud Run, `europe-west1`, one service per concern |
+| State | Firestore, server-owned for anything that costs money or gates progress |
+| Media | GCS for session clips, twins and lesson films |
+| Auth, billing | Firebase Auth, Stripe on web, RevenueCat on iOS |
+
+Five independent services under `backend/`: `live-bridge` (the real-time core),
+`quiz-engine`, `vision-verifier`, `compiler`, `reporter`. Each deploys on its own
+and shares an observability spine: structured JSON logs correlated to Cloud Trace,
+a token-guarded metrics endpoint, a security audit trail, and scoped CORS.
+
+**The rule the money follows:** anything that costs money or gates progress is
+decided on the server. Hearts, live-tutor minutes, twin quotas, checkpoint
+payouts and boss results are all server-owned and idempotent, because a client
+that computes its own entitlement can grant itself anything.
+
+## Repo layout
+
 ```
-┌──────────────────────────────────────────────────────┐
-│                   Ohmlet Frontend                      │
-│         React + TypeScript + Three.js + Monaco         │
-│                                                        │
-│  Landing · Learn · Build · Blog · Pricing · /app       │
-│                                                        │
-│   WebSocket          HTTP            HTTP              │
-│       │               │               │               │
-└───────┼───────────────┼───────────────┼───────────────┘
-        │               │               │
-   ┌────▼────┐     ┌─────▼─────┐         │
-   │  Live   │     │   Quiz    │         │
-   │ Bridge  │     │  Engine   │         │
-   │(Cloud   │     │ (Cloud    │         │
-   │  Run)   │     │   Run)    │         │
-   └────┬────┘     └─────┬─────┘         │
-        │                │               │
-        │          ┌─────▼──────┐  ┌─────▼──────┐
-        │          │  /v1/state │  │  Firestore │
-        │          │ (service-  │──│ (ohmlet-   │
-        │          │  account)  │  │   app)     │
-        │          └────────────┘  └────────────┘
-        │
-   ┌────▼──────────────────┐
-   │   Gemini (Vertex AI)  │
-   │  Live audio + Flash   │
-   │  + Pro models         │
-   └───────────────────────┘
+mobile/      Expo app, the primary surface
+frontend/    React web app and the marketing site
+backend/     five FastAPI services, one folder each
+video/       Remotion: the pitch film, and the lesson films
+metadata/    the company brain: strategy, decisions, runbooks (not shipped)
+tasks/       todo.md, the long-running plan
 ```
 
-Persistence is **backend-mediated**: the browser never touches Firestore directly. It calls `/v1/state/{user}` on the live-bridge service, which reads and writes Firestore with the service account, so Firestore client rules can deny all direct browser access.
-
-## Tech stack
-
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Nunito
-- **3D:** Three.js via @react-three/fiber + @react-three/drei
-- **Code editor:** Monaco Editor
-- **Live backend:** FastAPI + Google ADK (bidirectional WebSocket streaming)
-- **Quiz backend:** FastAPI + google-genai SDK
-- **Persistence:** Firestore (europe-west2), accessed via the backend service account
-- **Hosting:** Firebase Hosting (frontend), Cloud Run (services)
-- **GCP project:** `ohmlet-app`
-
-## Local development
-
-### Prerequisites
-- Node.js 18+
-- Python 3.13 (not 3.14 — pydantic-core wheels are missing)
-- Google Cloud SDK (for deployment and local Firestore access)
-
-### Frontend
+## Run it
 
 ```bash
-cd frontend
-npm install
-npm run dev   # http://localhost:5173  (app workspace at /ohmlet-app)
-```
+# Web
+cd frontend && npm install && npm run dev          # :3000
 
-Create `frontend/.env.local`:
+# Mobile
+cd mobile && npm install && npx expo start
 
-```env
-VITE_OHMLET_API_BASE_URL=http://localhost:8082
-VITE_OHMLET_WS_URL=ws://localhost:8082
-VITE_OHMLET_QUIZ_API_BASE_URL=http://localhost:8083
-VITE_OHMLET_DEFAULT_USER_ID=faith
-VITE_OHMLET_GCP_PROJECT_ID=ohmlet-app
-```
-
-### Live bridge backend (port 8082)
-
-```bash
+# The live agent (Python 3.13, NOT 3.14)
 cd backend/live-bridge
-python3.13 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
+PYTHONPATH=app uvicorn app.main:app --port 8082 --reload
+
+# Deploy everything, or one service
+./deploy.sh
+./deploy.sh live-bridge
 ```
 
-```env
-GOOGLE_GENAI_USE_VERTEXAI=TRUE
-GOOGLE_CLOUD_PROJECT=ohmlet-app
-GOOGLE_CLOUD_LOCATION=europe-west1
-OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio
-OHMLET_FLASH_MODEL=gemini-2.5-flash
-OHMLET_PRO_MODEL=gemini-2.5-pro
-```
+On Cloud Run with Vertex AI there is no API key: the service account is the auth.
 
-Local Firestore access uses Application Default Credentials (`gcloud auth application-default login`).
+## What is real, and what is not
 
-### Quiz engine backend (port 8083)
+Honest, because a README that overstates is worse than no README.
 
-```bash
-cd backend/quiz-engine
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload
-```
+**Working today:** the live tutor with voice and vision; the full authored
+curriculum on both surfaces; hearts, XP, streaks, leagues and achievements;
+checkpoints and unit bosses; the community feed; the circuit simulator; the
+component inventory check; Arduino compilation; account, privacy and erasure
+flows; three lesson films rendered and published.
 
-### Vision-verifier backend (port 8084)
+**Not finished:** the 3D twin pipeline needs one external key before it runs; a
+CDN and adaptive bitrate for the lesson films; the remaining lesson films;
+consumable in-app purchases; Interview Mode is built and Max-gated but barely
+exercised.
 
-The camera component inventory check (step 2 of the core loop).
+---
 
-```bash
-cd backend/vision-verifier
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8084 --reload
-```
-
-## Deployment
-
-```bash
-./deploy.sh                  # all services + frontend build
-./deploy.sh live-bridge      # one service
-./deploy.sh vision-verifier  # one service
-./deploy.sh verify           # health-check deployed services
-```
-
-## Observability & alerting
-
-All services emit structured JSON logs with Cloud Trace correlation, expose a
-token-guarded `/internal/metrics`, and keep a security audit trail. See
-[`ops/observability.md`](ops/observability.md). Provision Cloud Monitoring
-alerts (uptime, 5xx rate, latency) with `./ops/alerting.sh`.
-
-On Cloud Run with Vertex AI, no API key is needed — authentication uses the service account automatically.
-
-## Build verification
-
-```bash
-cd frontend && npm run build                           # must pass before any merge
-python3 -m py_compile backend/live-bridge/app/*.py
-python3 -m py_compile backend/quiz-engine/app/*.py
-python3 -m py_compile backend/vision-verifier/app/*.py
-```
-
-## Gemini API session limits
-
-The Gemini Live API imposes per-session limits: **15 minutes** for audio-only and **2 minutes** with video active. These are hard API limits; ending a session and starting a new one gives fresh limits. The UI surfaces them so users understand disconnections are API-imposed, not bugs.
-
-## Known limitations
-
-- The sandbox validates circuit structure (component presence, wiring, connections) but does not compute voltages/currents like a SPICE simulator
-- Drawing assessment is easiest on a touchscreen; trackpad drawing is harder
-- Gemini Live video sessions are capped at 2 minutes per the API
-
-## Links
-
-- **Blog:** [I Built a Real-Time AI Lab Partner for Electronics Learning with Gemini Live](https://medium.com/@faith-ogun/i-built-a-real-time-ai-lab-partner-for-electronics-learning-with-gemini-live-8b450a6b4f2a)
-- **GDG profile:** [developers.google.com/profile/u/faithogundimu](https://developers.google.com/profile/u/faithogundimu)
+<p align="center">
+  <sub><b>Ohmlet</b> is proprietary software. See <a href="LICENSE">LICENSE</a>.<br>
+  No licence is granted to use, copy, modify or distribute any part of it.</sub>
+</p>

@@ -66,5 +66,6 @@
     "check": "npm run typecheck && node scripts/check-audit.mjs && for f in scripts/check-*.mjs; do node \"$f\" >/dev/null || exit 1; done",
     "postinstall": "patch-package"
   },
-  "private": true
+  "private": true,
+  "license": "UNLICENSED"
 }
