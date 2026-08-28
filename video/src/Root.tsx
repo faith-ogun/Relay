@@ -10,12 +10,24 @@ import { Future } from "./scenes/Future";
 import { Close } from "./scenes/Close";
 import { Film, totalFrames } from "./lesson-film/Film";
 import { FPS as LESSON_FPS } from "./lesson-film/palette";
+import { breadboarding } from "./lesson-film/lessons/breadboarding";
+import { buildingCircuits } from "./lesson-film/lessons/building-circuits";
 import { closedLoop } from "./lesson-film/lessons/closed-loop";
-import { timeConstant } from "./lesson-film/lessons/time-constant";
 import { drivingLoads } from "./lesson-film/lessons/driving-loads";
+import { ledsLimiting } from "./lesson-film/lessons/leds-limiting";
+import { resistanceOhms } from "./lesson-film/lessons/resistance-ohms";
+import { seriesParallel } from "./lesson-film/lessons/series-parallel";
+import { switchesControl } from "./lesson-film/lessons/switches-control";
+import { timeConstant } from "./lesson-film/lessons/time-constant";
+import breadboardingTimings from "./lesson-film/timings/breadboarding.json";
+import buildingCircuitsTimings from "./lesson-film/timings/building-circuits.json";
 import closedLoopTimings from "./lesson-film/timings/closed-loop.json";
-import timeConstantTimings from "./lesson-film/timings/time-constant.json";
 import drivingLoadsTimings from "./lesson-film/timings/driving-loads.json";
+import ledsLimitingTimings from "./lesson-film/timings/leds-limiting.json";
+import resistanceOhmsTimings from "./lesson-film/timings/resistance-ohms.json";
+import seriesParallelTimings from "./lesson-film/timings/series-parallel.json";
+import switchesControlTimings from "./lesson-film/timings/switches-control.json";
+import timeConstantTimings from "./lesson-film/timings/time-constant.json";
 
 // The full journey video. Scenes laid out in order; each phase is its own Sequence.
 const JourneyVideo: React.FC = () => {
@@ -60,9 +72,15 @@ const JourneyVideo: React.FC = () => {
  * script edit reflows the film instead of silently truncating the last scene.
  */
 const LESSONS = [
+  { lesson: breadboarding, timings: breadboardingTimings },
+  { lesson: buildingCircuits, timings: buildingCircuitsTimings },
   { lesson: closedLoop, timings: closedLoopTimings },
-  { lesson: timeConstant, timings: timeConstantTimings },
   { lesson: drivingLoads, timings: drivingLoadsTimings },
+  { lesson: ledsLimiting, timings: ledsLimitingTimings },
+  { lesson: resistanceOhms, timings: resistanceOhmsTimings },
+  { lesson: seriesParallel, timings: seriesParallelTimings },
+  { lesson: switchesControl, timings: switchesControlTimings },
+  { lesson: timeConstant, timings: timeConstantTimings },
 ];
 
 const SHAPES = [

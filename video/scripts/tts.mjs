@@ -11,18 +11,14 @@
 // whole point of measuring.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { allLessons, ROOT } from './lessons.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PROJECT = 'ohmlet-app';
 const VOICE = 'en-GB-Chirp3-HD-Aoede';
 const RATE = 24000;
 
-const { closedLoop } = await import(join(ROOT, 'src/lessons/closed-loop.ts'));
-const { timeConstant } = await import(join(ROOT, 'src/lessons/time-constant.ts'));
-const { drivingLoads } = await import(join(ROOT, 'src/lessons/driving-loads.ts'));
-const LESSONS = [closedLoop, timeConstant, drivingLoads];
+const LESSONS = await allLessons();
 
 const token = execFileSync('gcloud', ['auth', 'application-default', 'print-access-token'])
   .toString().trim();
@@ -78,6 +74,11 @@ for (const lesson of LESSONS) {
   }
 
   writeFileSync(join(ROOT, 'public/audio', `${lesson.id}.timings.json`), JSON.stringify(timings, null, 2));
-  const mins = Math.floor(total / 60), secs = Math.round(total % 60);
-  console.log(`\r  ${lesson.id}: ${lesson.segments.length} segments, ${mins}m ${String(secs).padStart(2, '0')}s of narration   `);
+  // The film is longer than the narration by one beat per segment, and it is the
+  // FILM that has to stay under five minutes, so report that number and not the
+  // flattering one.
+  const film = total + lesson.segments.length * (11 / 30);
+  const mins = Math.floor(film / 60), secs = Math.round(film % 60);
+  const flag = film > 300 ? '  ** OVER 5 MINUTES, CUT IT **' : '';
+  console.log(`\r  ${lesson.id}: ${lesson.segments.length} segments, ${mins}m ${String(secs).padStart(2, '0')}s of film${flag}   `);
 }

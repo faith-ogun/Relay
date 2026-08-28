@@ -12,7 +12,19 @@ export type Scene =
   | { kind: 'recap'; items: string[] }
   | { kind: 'outro' };
 
-export type CircuitVariant = 'loop' | 'switch' | 'trace' | 'rc' | 'pin-direct' | 'transistor';
+/** The drawings. Mostly schematics; `wave` and `bode` are signal pictures, and
+ *  they live here rather than as new Scene kinds because they occupy the same
+ *  slot in a film, a diagram under a line of narration, and adding a scene kind
+ *  for each would grow the vocabulary the film is deliberately built on.
+ *
+ *  Several are parameterised through `highlight`, which new variants read as a
+ *  SPACE SEPARATED TOKEN SET rather than a single name: "ldr r1" both draws the
+ *  top element as a light dependent resistor and rings it. */
+export type CircuitVariant =
+  | 'loop' | 'switch' | 'trace' | 'rc' | 'pin-direct' | 'transistor'
+  | 'divider' | 'led' | 'parallel' | 'breadboard' | 'pullup'
+  | 'opamp' | 'gate' | 'regulator' | 'flyback' | 'board'
+  | 'wave' | 'bode';
 
 export interface Segment {
   /** What the narrator says. One or two sentences: each becomes its own shot. */
