@@ -29,6 +29,22 @@ export interface LabsStatus {
   hasEarlyAccess: boolean;
 }
 
+/** What Ohmlet can attest to about a learner, from server-owned records only. */
+export interface CareerEvidence {
+  bench: { sessions: number; minutes: number; cameraSessions: number; cameraMinutes: number };
+  learning: { completed: number; total: number; gold: number };
+  assessed: {
+    unitsCleared: number; unitsTotal: number; meanScore: number;
+    strongest: Array<{ unitId: string; title: string; score: number; attempts: number }>;
+    attemptedNotCleared: Array<{ unitId: string; title: string; score: number; attempts: number }>;
+  };
+  artifacts: { twins: number };
+  /** Travels with the numbers on purpose. Every one of them is a floor. */
+  caveat: string;
+  /** One sentence a learner could defensibly put in front of an interviewer. */
+  summary: string;
+}
+
 export interface FilmUrls {
   skillId: string;
   expiresInSeconds: number;
@@ -76,4 +92,14 @@ export function fetchLabs(): Promise<Result<LabsStatus>> {
  */
 export function fetchFilm(skillId: string): Promise<Result<FilmUrls>> {
   return call<FilmUrls>(`/v1/curriculum/films/${encodeURIComponent(skillId)}`);
+}
+
+/**
+ * The verified build record behind career coaching.
+ *
+ * Max only, and the server says so rather than the client guessing: a 402 comes
+ * back as `upgrade_required`.
+ */
+export function fetchCareer(): Promise<Result<CareerEvidence>> {
+  return call<CareerEvidence>('/v1/me/career');
 }

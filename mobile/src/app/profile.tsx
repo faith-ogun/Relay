@@ -120,6 +120,13 @@ export default function Profile() {
             onPress={() => router.push('/plans')}
           />
         )}
+        {plan.plan === 'max' && (
+          <Row
+            title="Your build record"
+            sub="What Ohmlet can actually verify about you"
+            onPress={() => router.push('/career')}
+          />
+        )}
         {/* Shown on every plan, not just Max. Someone without early access
             should be able to see what Labs is and what it costs to get in;
             hiding the thing you are selling is a strange way to sell it. */}
