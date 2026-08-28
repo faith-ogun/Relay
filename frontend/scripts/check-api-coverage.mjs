@@ -73,6 +73,29 @@ const EXEMPT = [
 
 // ── Directories ───────────────────────────────────────────────────────────────
 
+/**
+ * Routes that must be reachable from BOTH the web and the phone.
+ *
+ * "Has a caller" was not a strong enough question. On 2026-08-28 the answer was
+ * yes for `/v1/me/career`, `/v1/me/labs` and `/v1/curriculum/films`, and the
+ * caller was the phone in all three cases. The web pricing page sold every one
+ * of them, so the web was charging $34.99 for a build record it never showed.
+ * The same day, in the other direction, Interview Mode existed only on the web
+ * while `mode: 'interview'` sat unused in the mobile hook.
+ *
+ * A route belongs here when a paying learner is promised the feature regardless
+ * of which surface they open. It does NOT belong here when the feature is
+ * genuinely one-surface (a phone camera permission dance, a desktop-only editor)
+ * — say so in `why` and leave it out.
+ */
+const BOTH_SURFACES = [
+  { path: '/v1/me/career', why: 'the verified build record is a Max promise on both pricing pages' },
+  { path: '/v1/me/labs', why: 'early access to Labs is sold to Max on both surfaces' },
+  { path: '/v1/curriculum/films/{}', why: 'the lesson films are curriculum, not a phone feature' },
+  { path: '/v1/interview/report', why: 'Interview Mode is the headline Max feature on both' },
+  { path: '/v1/interview/reports', why: 'past reports are server-owned and must be readable anywhere' },
+];
+
 const SKIP_DIRS = new Set([
   'node_modules', '.venv', '__pycache__', 'dist', 'build', '.git',
   '.expo', 'ios', 'android', 'coverage', '.next',
@@ -303,7 +326,41 @@ function main() {
   console.log(`Covered: ${new Set(covered.map((c) => c.route.path)).size} paths`);
   console.log(`Exempt (server-only): ${usedExemptions.size}`);
 
+  // ── Both surfaces ──
+  // A caller ANYWHERE is not the same as a caller everywhere the feature is sold.
+  const surfaceOf = (where) => (where.startsWith('mobile/') ? 'mobile' : 'web');
+  const oneSided = [];
+  for (const entry of BOTH_SURFACES) {
+    const route = routes.find((r) => r.path === entry.path);
+    if (!route) {
+      oneSided.push({ ...entry, missing: true });
+      continue;
+    }
+    const callers = callersFor(entry.path, literals);
+    const all = callers.length ? callers : splitCallersFor(entry.path, byFile);
+    const surfaces = new Set(all.map((w) => surfaceOf(w)));
+    if (!surfaces.has('web') || !surfaces.has('mobile')) {
+      oneSided.push({ ...entry, has: [...surfaces], callers: all });
+    }
+  }
+
   let failed = false;
+
+  if (oneSided.length) {
+    failed = true;
+    console.log('\nSOLD ON BOTH SURFACES, CALLED FROM ONE:');
+    for (const o of oneSided) {
+      if (o.missing) {
+        console.log(`  ${o.path.padEnd(34)} no such route any more — remove it from BOTH_SURFACES`);
+        continue;
+      }
+      const has = o.has.length ? o.has.join(' only') : 'neither surface';
+      console.log(`  ${o.path.padEnd(34)} ${has}`);
+      console.log(`      must be on both because: ${o.why}`);
+      if (o.callers?.length) console.log(`      called from ${o.callers.slice(0, 3).join(', ')}`);
+    }
+    console.log('\nBuild the missing side, or remove the route from BOTH_SURFACES with a reason it is one-surface.');
+  }
 
   if (uncovered.length) {
     failed = true;
@@ -342,7 +399,7 @@ function main() {
   }
 
   if (failed) process.exit(1);
-  console.log('\nEvery route has a caller or a documented reason not to.');
+  console.log(`\nEvery route has a caller or a documented reason not to, and all ${BOTH_SURFACES.length} cross-surface features are reachable from web and phone.`);
 }
 
 main();
