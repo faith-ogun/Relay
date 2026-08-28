@@ -58,6 +58,12 @@ interface LiveTutorViewProps {
   buildTitle?: string;
   /** Route the learner to the upgrade path (pricing now, Stripe Checkout via #30). */
   onUpgrade?: () => void;
+  /**
+   * `coach` opens the career coach on the same spine: same camera, microphone and
+   * socket, different persona, primed by the server from the verified build
+   * record. Max only, and the server enforces that rather than trusting this.
+   */
+  mode?: 'tutor' | 'coach';
 }
 
 type Stage = 'inventory' | 'wiring' | 'code' | 'test';
@@ -76,7 +82,7 @@ const QUICK = [
   'Why is my LED not lighting up?',
 ];
 
-export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgrade }) => {
+export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgrade, mode = 'tutor' }) => {
   const build = useMemo(
     () => BUILD_LIBRARY.find((b) => b.title === buildTitle) ?? BUILD_LIBRARY[0],
     [buildTitle],
@@ -124,7 +130,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     sendText,
     sendStageUpdate,
     videoRef,
-  } = useLiveBridge({ wsUrl, userId, sessionId, childSafe });
+  } = useLiveBridge({ wsUrl, userId, sessionId, childSafe, mode });
 
   const live = state === 'connected';
 

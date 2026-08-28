@@ -28,8 +28,12 @@ type UseLiveBridgeOptions = {
    * heartbeat entirely (pure on-demand snapshots).
    */
   visionIntervalMs?: number;
-  /** Session mode. 'interview' connects the Max-tier mock interviewer (#21). */
-  mode?: 'tutor' | 'interview';
+  /**
+   * Session mode. Both non-tutor personas are Max-tier and the server refuses
+   * them for anyone else, so this is a request rather than a grant: 'interview'
+   * connects the mock interviewer, 'coach' connects the career coach.
+   */
+  mode?: 'tutor' | 'interview' | 'coach';
   /** Fires once, right after the auth frame is sent, with a JSON sender. Use it
    *  to prime the session (e.g. send the interview context) in the correct order. */
   onReady?: (sendJson: (obj: unknown) => void) => void;
@@ -239,7 +243,11 @@ export function useLiveBridge({
     intentionalCloseRef.current = false;
     setState('connecting');
 
-    const url = `${wsUrl}/ws/${userId}/${sessionId}${mode === 'interview' ? '?mode=interview' : ''}`;
+    // The path is built as its own literal so `/ws/{}/{}` stays greppable for
+    // scripts/check-api-coverage.mjs, which reads route templates out of both
+    // the server and its callers.
+    const path = `${wsUrl}/ws/${userId}/${sessionId}`;
+    const url = mode === 'tutor' ? path : `${path}?mode=${encodeURIComponent(mode)}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -252,6 +260,13 @@ export function useLiveBridge({
           ws.send(JSON.stringify({ type: 'auth', token }));
           // After auth, let the caller prime the session (e.g. interview context),
           // guaranteeing it arrives after the auth frame.
+          if (mode === 'coach') {
+            // Asks the SERVER to prime the coach from its own records. No
+            // payload, deliberately: the point of the feature is that the
+            // evidence was watched rather than claimed, and anything the client
+            // sent here would be exactly the self-report it exists to replace.
+            ws.send(JSON.stringify({ type: 'coach_context' }));
+          }
           onReadyRef.current?.((obj: unknown) => {
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
           });

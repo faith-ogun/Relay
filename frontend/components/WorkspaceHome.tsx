@@ -3,11 +3,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
+  BadgeCheck,
+  Beaker,
   Boxes,
   Briefcase,
+  Check,
   CircuitBoard,
   Flame,
-  Check,
   Home,
   Map as MapIcon,
   PanelLeftClose,
@@ -33,6 +35,8 @@ import { LearnPath } from './LearnPath';
 import { LessonRunner } from './ohmlet/views/LessonRunner';
 import { LiveTutorView } from './ohmlet/views/LiveTutorView';
 import { InterviewView } from './ohmlet/views/InterviewView';
+import { CareerView } from './ohmlet/views/CareerView';
+import { LabsView } from './ohmlet/views/LabsView';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
@@ -148,7 +152,7 @@ interface WorkspaceHomeProps {
   onAccount?: () => void;
 }
 
-type ViewId = 'today' | 'path' | 'live' | 'simulator' | 'sandbox' | 'community' | 'achievements' | 'draw' | 'interview';
+type ViewId = 'today' | 'path' | 'live' | 'simulator' | 'sandbox' | 'community' | 'achievements' | 'draw' | 'interview' | 'career' | 'labs';
 
 const ACCENT_HEX: Record<CurriculumAccent, string> = {
   gold: '#facc2e',
@@ -175,10 +179,12 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'path', label: 'Learning path', icon: MapIcon },
   { id: 'live', label: 'Live tutor', icon: Video },
   { id: 'interview', label: 'Interview mode', icon: Briefcase },
+  { id: 'career', label: 'Build record', icon: BadgeCheck },
   { id: 'simulator', label: 'Simulator', icon: CircuitBoard },
   { id: 'sandbox', label: 'Sandbox', icon: Boxes, beta: true },
   { id: 'community', label: 'Community', icon: Users },
   { id: 'achievements', label: 'Achievements', icon: Award },
+  { id: 'labs', label: 'Labs', icon: Beaker },
 ];
 
 /**
@@ -516,6 +522,10 @@ const CheckpointCeremony: React.FC<{ grant: CheckpointGrant; onClose: () => void
 
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade, onAccount }) => {
   const [active, setActive] = useState<ViewId>('today');
+  // Which persona the live view opens on. Set by the build record before it
+  // hands over, and reset to the tutor by every other route into Live so a
+  // coaching session cannot leak into the next build.
+  const [liveMode, setLiveMode] = useState<'tutor' | 'coach'>('tutor');
   // Collapsible left rail — gives space-hungry views (Sandbox/Simulator) room.
   // Persisted so it stays the way the learner left it.
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => {
@@ -1026,7 +1036,15 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
             </div>
           )}
 
-          {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} />}
+          {active === 'live' && <LiveTutorView onUpgrade={onUpgrade} mode={liveMode} />}
+          {active === 'career' && (
+            <CareerView
+              onUpgrade={onUpgrade}
+              onOpenLive={(m) => { setLiveMode(m ?? 'tutor'); setActive('live'); }}
+              onOpenPath={() => setActive('path')}
+            />
+          )}
+          {active === 'labs' && <LabsView onUpgrade={onUpgrade} />}
           {active === 'interview' && <InterviewView onUpgrade={onUpgrade} onOpenLessons={() => setActive('path')} />}
           {active === 'simulator' && <SimulatorView />}
           {active === 'sandbox' && <SandboxView />}
