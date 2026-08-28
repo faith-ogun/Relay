@@ -127,6 +127,14 @@ export default function Profile() {
             onPress={() => router.push('/career')}
           />
         )}
+        {/* Shown on every plan, like Labs and for the same reason: someone
+            deciding whether Max is worth it should be able to see what they
+            would be buying. The screen itself explains the gate. */}
+        <Row
+          title="Interview Mode"
+          sub={plan.plan === 'max' ? 'A live mock interview for the job you want' : 'Live mock interviews, on Max'}
+          onPress={() => router.push('/interview')}
+        />
         {/* Shown on every plan, not just Max. Someone without early access
             should be able to see what Labs is and what it costs to get in;
             hiding the thing you are selling is a strange way to sell it. */}

@@ -252,9 +252,11 @@ def create_report(req: ReportRequest, uid: str = Depends(_max_guard)) -> dict:
     report["uncoveredTopics"] = uncovered
     if uncovered:
         # The most honest curriculum backlog the product will ever have, written
-        # by what real candidates get asked rather than by us. The interviewer
-        # already probes RTOS, volatile, Nyquist, CAN and metastability, and the
-        # corpus teaches none of them.
+        # by what real candidates get asked rather than by us. It used to be
+        # long: the interviewer probed RTOS, volatile, Nyquist, CAN bus and
+        # metastability and the corpus taught none of them. Those six skills were
+        # authored on 2026-08-28, so this list should now be short and every
+        # entry in it is a lesson somebody should write.
         obs.audit("interview.topic_uncovered", uid=uid, topics=uncovered[:10], count=len(uncovered))
 
     report_id = uuid.uuid4().hex

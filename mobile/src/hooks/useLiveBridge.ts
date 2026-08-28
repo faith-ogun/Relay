@@ -639,6 +639,25 @@ interface Options {
    * is chosen at connect time, before any message has been exchanged.
    */
   mode?: 'tutor' | 'interview' | 'coach';
+  /**
+   * What the interviewer opens on: the role, the seniority band, the job
+   * description and the resume. Only read when `mode` is `interview`.
+   *
+   * Unlike the coach, which the SERVER primes from its own records, this half is
+   * genuinely the learner's to supply: nobody but them has the job advert they
+   * are actually applying for. The server sanitises and injection-fences all of
+   * it before it reaches the model.
+   *
+   * Sent on every open, including reconnects, because a reconnected interviewer
+   * that forgot the role would start asking generic questions mid-interview.
+   */
+  interviewContext?: {
+    role?: string;
+    seniority?: string;
+    jobDescription?: string;
+    resume?: string;
+    warmup?: boolean;
+  };
   userId: string;
   sessionId: string;
   /** Milliseconds between background frames. 0 disables the heartbeat. */
@@ -672,6 +691,7 @@ const MIC_FAILED_LINE =
 export function useLiveBridge({
   wsUrl,
   mode = 'tutor',
+  interviewContext,
   userId,
   sessionId,
   visionIntervalMs = 2500,
@@ -709,6 +729,11 @@ export function useLiveBridge({
   // releases the agent session when the socket closes and the new one starts
   // back at the default stage otherwise.
   const stageRef = useRef<Stage>('inventory');
+  // Held in a ref, not read from the closure: `connect` is memoised, and an
+  // interview whose JD was pasted after the first render would otherwise open on
+  // a context the hook captured before it existed.
+  const interviewCtxRef = useRef(interviewContext);
+  interviewCtxRef.current = interviewContext;
   // Live time already used in this sitting, and when the current connected span
   // began. The session cap is spent by connected time, not by the wall clock, so
   // a reconnect cannot buy a minor more of it and a gap after a dropped socket
@@ -1297,6 +1322,11 @@ export function useLiveBridge({
           // was watched rather than claimed, and anything the client sent here
           // would be exactly the self-report it exists to replace.
           ws.send(JSON.stringify({ type: 'coach_context' }));
+        }
+        if (mode === 'interview') {
+          // Read through a ref so a reconnect re-primes with the CURRENT context
+          // rather than whatever was captured when connect() was first built.
+          ws.send(JSON.stringify({ type: 'interview_context', ...(interviewCtxRef.current ?? {}) }));
         }
         if (retry) {
           // Put the tutor back on the step the learner is actually on.

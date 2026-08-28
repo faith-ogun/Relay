@@ -13,6 +13,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useLocalSearchParams } from 'expo-router';
 import { flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
+import { finishInterview, pendingInterview } from '../services/interviewSession';
 import { SafetyAck } from '../components/SafetyAck';
 import { Send } from '../components/icons';
 import { acceptSafety, hasAcceptedSafety } from '../services/gates';
@@ -197,11 +198,23 @@ function MicControl({
 }
 
 export default function LiveTutor() {
-  // `?mode=coach` opens a career coaching session on the same live spine.
-  // Anything else is the tutor: an unknown value must never silently become a
-  // paid persona, and the server refuses it for non-Max regardless.
+  // `?mode=coach` and `?mode=interview` open the two Max personas on the same
+  // live spine. Anything else is the tutor: an unknown value must never silently
+  // become a paid persona, and the server refuses both for non-Max regardless.
   const params = useLocalSearchParams<{ mode?: string }>();
-  const sessionMode = params.mode === 'coach' ? 'coach' as const : 'tutor' as const;
+  const sessionMode =
+    params.mode === 'coach' ? 'coach' as const
+      : params.mode === 'interview' ? 'interview' as const
+        : 'tutor' as const;
+  // Set by /interview immediately before it navigates here.
+  const interviewCtx = sessionMode === 'interview' ? pendingInterview() : null;
+  // An interview reached any other way, a deep link or a stale back-stack entry,
+  // has no role, no job description and no CV. That is not a harder interview,
+  // it is a generic one, and it would be scored as though it were the real
+  // thing. Send them to set it up rather than run it hollow.
+  useEffect(() => {
+    if (sessionMode === 'interview' && !interviewCtx) router.replace('/interview');
+  }, [sessionMode, interviewCtx]);
 
   const { user, loading: authLoading } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
@@ -229,6 +242,7 @@ export default function LiveTutor() {
     // Coaching reuses the entire live spine on a different persona. The server
     // refuses it for anyone but Max, so this is a request rather than a grant.
     mode: sessionMode,
+    interviewContext: interviewCtx ?? undefined,
     userId: user?.uid ?? '',
     sessionId,
     childSafe,
@@ -236,6 +250,30 @@ export default function LiveTutor() {
     // undefined keeps the hook's own default rather than restating it here.
     visionIntervalMs: kitBusy ? 0 : undefined,
   });
+
+  /**
+   * The one way out of a session.
+   *
+   * A tutoring session just leaves. An interview has to carry its transcript
+   * back to /interview to be scored, and the roles have to be translated on the
+   * way: the hook speaks in `agent` and `user`, and a report is written about an
+   * `interviewer` and a `candidate`. System lines are dropped, because
+   * "Reconnecting" is not something the candidate said.
+   */
+  const endSession = useCallback(() => {
+    if (sessionMode === 'interview') {
+      finishInterview(
+        live.transcripts
+          .filter((t) => t.role === 'agent' || t.role === 'user')
+          .map((t) => ({ role: t.role === 'agent' ? 'interviewer' as const : 'candidate' as const, text: t.text })),
+      );
+      live.disconnect();
+      goBack('/interview');
+      return;
+    }
+    live.disconnect();
+    goBack('/home');
+  }, [sessionMode, live]);
 
   // ── Step 1 of the loop: what are we building ──
   //
@@ -785,11 +823,11 @@ export default function LiveTutor() {
             <Text style={s.ctrlText}>Look now</Text>
           </Pressable>
           <Pressable
-            onPress={() => { live.disconnect(); goBack('/home'); }}
+            onPress={endSession}
             style={[s.ctrl, s.ctrlEnd]}
             accessibilityRole="button"
           >
-            <Text style={[s.ctrlText, s.ctrlEndText]}>End</Text>
+            <Text style={[s.ctrlText, s.ctrlEndText]}>{sessionMode === 'interview' ? 'End and score' : 'End'}</Text>
           </Pressable>
         </View>
       </View>
