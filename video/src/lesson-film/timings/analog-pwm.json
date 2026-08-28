@@ -1,0 +1,152 @@
+[
+  {
+    "index": 0,
+    "seconds": 7.04,
+    "file": "audio/analog-pwm/00.wav"
+  },
+  {
+    "index": 1,
+    "seconds": 4.6,
+    "file": "audio/analog-pwm/01.wav"
+  },
+  {
+    "index": 2,
+    "seconds": 5.8,
+    "file": "audio/analog-pwm/02.wav"
+  },
+  {
+    "index": 3,
+    "seconds": 5.8,
+    "file": "audio/analog-pwm/03.wav"
+  },
+  {
+    "index": 4,
+    "seconds": 6.04,
+    "file": "audio/analog-pwm/04.wav"
+  },
+  {
+    "index": 5,
+    "seconds": 4.96,
+    "file": "audio/analog-pwm/05.wav"
+  },
+  {
+    "index": 6,
+    "seconds": 5.32,
+    "file": "audio/analog-pwm/06.wav"
+  },
+  {
+    "index": 7,
+    "seconds": 5.24,
+    "file": "audio/analog-pwm/07.wav"
+  },
+  {
+    "index": 8,
+    "seconds": 5.2,
+    "file": "audio/analog-pwm/08.wav"
+  },
+  {
+    "index": 9,
+    "seconds": 3.52,
+    "file": "audio/analog-pwm/09.wav"
+  },
+  {
+    "index": 10,
+    "seconds": 5.32,
+    "file": "audio/analog-pwm/10.wav"
+  },
+  {
+    "index": 11,
+    "seconds": 6.88,
+    "file": "audio/analog-pwm/11.wav"
+  },
+  {
+    "index": 12,
+    "seconds": 4.96,
+    "file": "audio/analog-pwm/12.wav"
+  },
+  {
+    "index": 13,
+    "seconds": 4.4,
+    "file": "audio/analog-pwm/13.wav"
+  },
+  {
+    "index": 14,
+    "seconds": 7.28,
+    "file": "audio/analog-pwm/14.wav"
+  },
+  {
+    "index": 15,
+    "seconds": 4.68,
+    "file": "audio/analog-pwm/15.wav"
+  },
+  {
+    "index": 16,
+    "seconds": 6.32,
+    "file": "audio/analog-pwm/16.wav"
+  },
+  {
+    "index": 17,
+    "seconds": 5.24,
+    "file": "audio/analog-pwm/17.wav"
+  },
+  {
+    "index": 18,
+    "seconds": 6.76,
+    "file": "audio/analog-pwm/18.wav"
+  },
+  {
+    "index": 19,
+    "seconds": 5.12,
+    "file": "audio/analog-pwm/19.wav"
+  },
+  {
+    "index": 20,
+    "seconds": 5.24,
+    "file": "audio/analog-pwm/20.wav"
+  },
+  {
+    "index": 21,
+    "seconds": 4.96,
+    "file": "audio/analog-pwm/21.wav"
+  },
+  {
+    "index": 22,
+    "seconds": 6.52,
+    "file": "audio/analog-pwm/22.wav"
+  },
+  {
+    "index": 23,
+    "seconds": 5.88,
+    "file": "audio/analog-pwm/23.wav"
+  },
+  {
+    "index": 24,
+    "seconds": 5.12,
+    "file": "audio/analog-pwm/24.wav"
+  },
+  {
+    "index": 25,
+    "seconds": 2.24,
+    "file": "audio/analog-pwm/25.wav"
+  },
+  {
+    "index": 26,
+    "seconds": 6.68,
+    "file": "audio/analog-pwm/26.wav"
+  },
+  {
+    "index": 27,
+    "seconds": 8.12,
+    "file": "audio/analog-pwm/27.wav"
+  },
+  {
+    "index": 28,
+    "seconds": 6.36,
+    "file": "audio/analog-pwm/28.wav"
+  },
+  {
+    "index": 29,
+    "seconds": 5.12,
+    "file": "audio/analog-pwm/29.wav"
+  }
+]

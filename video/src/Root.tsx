@@ -10,24 +10,48 @@ import { Future } from "./scenes/Future";
 import { Close } from "./scenes/Close";
 import { Film, totalFrames } from "./lesson-film/Film";
 import { FPS as LESSON_FPS } from "./lesson-film/palette";
+import { analogPwm } from "./lesson-film/lessons/analog-pwm";
 import { breadboarding } from "./lesson-film/lessons/breadboarding";
 import { buildingCircuits } from "./lesson-film/lessons/building-circuits";
+import { capsAtWork } from "./lesson-film/lessons/caps-at-work";
 import { closedLoop } from "./lesson-film/lessons/closed-loop";
+import { codeAlarm } from "./lesson-film/lessons/code-alarm";
+import { debuggingSafety } from "./lesson-film/lessons/debugging-safety";
 import { drivingLoads } from "./lesson-film/lessons/driving-loads";
+import { firstSketch } from "./lesson-film/lessons/first-sketch";
 import { ledsLimiting } from "./lesson-film/lessons/leds-limiting";
+import { lightAlarm } from "./lesson-film/lessons/light-alarm";
+import { meetCapacitor } from "./lesson-film/lessons/meet-capacitor";
+import { readingInputs } from "./lesson-film/lessons/reading-inputs";
+import { readingSensors } from "./lesson-film/lessons/reading-sensors";
 import { resistanceOhms } from "./lesson-film/lessons/resistance-ohms";
 import { seriesParallel } from "./lesson-film/lessons/series-parallel";
 import { switchesControl } from "./lesson-film/lessons/switches-control";
+import { talkDebug } from "./lesson-film/lessons/talk-debug";
 import { timeConstant } from "./lesson-film/lessons/time-constant";
+import { variableResistance } from "./lesson-film/lessons/variable-resistance";
+import { whatArduino } from "./lesson-film/lessons/what-arduino";
+import analogPwmTimings from "./lesson-film/timings/analog-pwm.json";
 import breadboardingTimings from "./lesson-film/timings/breadboarding.json";
 import buildingCircuitsTimings from "./lesson-film/timings/building-circuits.json";
+import capsAtWorkTimings from "./lesson-film/timings/caps-at-work.json";
 import closedLoopTimings from "./lesson-film/timings/closed-loop.json";
+import codeAlarmTimings from "./lesson-film/timings/code-alarm.json";
+import debuggingSafetyTimings from "./lesson-film/timings/debugging-safety.json";
 import drivingLoadsTimings from "./lesson-film/timings/driving-loads.json";
+import firstSketchTimings from "./lesson-film/timings/first-sketch.json";
 import ledsLimitingTimings from "./lesson-film/timings/leds-limiting.json";
+import lightAlarmTimings from "./lesson-film/timings/light-alarm.json";
+import meetCapacitorTimings from "./lesson-film/timings/meet-capacitor.json";
+import readingInputsTimings from "./lesson-film/timings/reading-inputs.json";
+import readingSensorsTimings from "./lesson-film/timings/reading-sensors.json";
 import resistanceOhmsTimings from "./lesson-film/timings/resistance-ohms.json";
 import seriesParallelTimings from "./lesson-film/timings/series-parallel.json";
 import switchesControlTimings from "./lesson-film/timings/switches-control.json";
+import talkDebugTimings from "./lesson-film/timings/talk-debug.json";
 import timeConstantTimings from "./lesson-film/timings/time-constant.json";
+import variableResistanceTimings from "./lesson-film/timings/variable-resistance.json";
+import whatArduinoTimings from "./lesson-film/timings/what-arduino.json";
 
 // The full journey video. Scenes laid out in order; each phase is its own Sequence.
 const JourneyVideo: React.FC = () => {
@@ -72,15 +96,27 @@ const JourneyVideo: React.FC = () => {
  * script edit reflows the film instead of silently truncating the last scene.
  */
 const LESSONS = [
+  { lesson: analogPwm, timings: analogPwmTimings },
   { lesson: breadboarding, timings: breadboardingTimings },
   { lesson: buildingCircuits, timings: buildingCircuitsTimings },
+  { lesson: capsAtWork, timings: capsAtWorkTimings },
   { lesson: closedLoop, timings: closedLoopTimings },
+  { lesson: codeAlarm, timings: codeAlarmTimings },
+  { lesson: debuggingSafety, timings: debuggingSafetyTimings },
   { lesson: drivingLoads, timings: drivingLoadsTimings },
+  { lesson: firstSketch, timings: firstSketchTimings },
   { lesson: ledsLimiting, timings: ledsLimitingTimings },
+  { lesson: lightAlarm, timings: lightAlarmTimings },
+  { lesson: meetCapacitor, timings: meetCapacitorTimings },
+  { lesson: readingInputs, timings: readingInputsTimings },
+  { lesson: readingSensors, timings: readingSensorsTimings },
   { lesson: resistanceOhms, timings: resistanceOhmsTimings },
   { lesson: seriesParallel, timings: seriesParallelTimings },
   { lesson: switchesControl, timings: switchesControlTimings },
+  { lesson: talkDebug, timings: talkDebugTimings },
   { lesson: timeConstant, timings: timeConstantTimings },
+  { lesson: variableResistance, timings: variableResistanceTimings },
+  { lesson: whatArduino, timings: whatArduinoTimings },
 ];
 
 const SHAPES = [
