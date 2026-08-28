@@ -8,6 +8,7 @@ import { StatStrip } from '../components/StatStrip';
 import { PathSkeleton } from '../components/Skeleton';
 import { UnitPath } from '../components/path/UnitPath';
 import { BossCard } from '../components/BossCard';
+import { UnitEmblem } from '../components/path/UnitEmblem';
 import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
@@ -146,11 +147,21 @@ export default function Home() {
             return (
               <View key={unit.id} style={s.unitBlock}>
                 <View style={[s.banner, { backgroundColor: tint }]}>
-                  <Text style={s.bannerKicker}>
-                    UNIT {ui + 1}
-                    {complete ? ' · COMPLETE' : unlocked ? '' : ' · LOCKED'}
-                  </Text>
-                  <Text style={s.bannerTitle}>{unit.title}</Text>
+                  {/* Text and emblem share a row; the progress bar spans the
+                      full width underneath it, because a bar interrupted by a
+                      picture stops reading as a measure of the whole unit. */}
+                  <View style={s.bannerRow}>
+                    <View style={s.bannerText}>
+                      <Text style={s.bannerKicker}>
+                        UNIT {ui + 1}
+                        {complete ? ' · COMPLETE' : unlocked ? '' : ' · LOCKED'}
+                      </Text>
+                      <Text style={s.bannerTitle}>{unit.title}</Text>
+                    </View>
+                    <UnitEmblem unitId={unit.id} dimmed={!unlocked} />
+                  </View>
+                  {/* Full width, below the emblem row. Beside the art it lost a
+                      third of its width and half the units ellipsised. */}
                   <Text style={s.bannerSub} numberOfLines={1}>{unit.subtitle}</Text>
                   {/* Progress as a bar rather than a count in the kicker. "6 of 12"
                       is a fact; a filled bar is a position, and position is what
@@ -237,9 +248,13 @@ const s = StyleSheet.create({
     borderRadius: radius.lg, ...curve, borderWidth: 2.5, borderColor: colors.ink,
     paddingVertical: space.md, paddingHorizontal: space.md, ...elevation.card,
   },
+  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 64 },
+  bannerText: { flex: 1, minWidth: 0 },
   bannerKicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 1.6, color: 'rgba(255,255,255,0.85)' },
-  bannerTitle: { fontFamily: font.black, fontSize: type.title, color: colors.white, marginTop: 1, letterSpacing: -0.6 },
-  bannerSub: { fontFamily: font.bold, fontSize: type.small, color: 'rgba(255,255,255,0.88)', marginTop: 2 },
+  // 22, not type.title's 28: see the note on EMBLEM in UnitEmblem.tsx. At 28 the
+  // long titles ran to three lines and no two banners were the same height.
+  bannerTitle: { fontFamily: font.black, fontSize: 22, color: colors.white, marginTop: 1, letterSpacing: -0.5, lineHeight: 27 },
+  bannerSub: { fontFamily: font.bold, fontSize: type.small, color: 'rgba(255,255,255,0.88)', marginTop: 4 },
   bannerProgress: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.md },
   bannerTrack: {
     flex: 1, height: 12, borderRadius: 6, ...curve,
