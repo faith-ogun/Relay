@@ -703,6 +703,42 @@ export const AUTHORED_CURRICULUM: CurriculumUnit[] = [
         ],
       },
       {
+        id: 'rtos-basics',
+        title: 'Tasks and the RTOS',
+        description: 'Real-time scheduling, safe sharing between tasks, and the priority inversion bug that grounded a Mars rover.',
+        icon: 'Cog',
+        lessons: [
+          { id: 'Superloop or RTOS', title: 'Superloop or RTOS', summary: 'What a scheduler buys you, and what each task\'s stack costs in RAM.', estMinutes: 14 },
+          { id: 'The Preemptive Scheduler', title: 'The Preemptive Scheduler', summary: 'Task states, the tick, and why a task should block instead of spin.', estMinutes: 14 },
+          { id: 'Mutex, Semaphore, Queue', title: 'Mutex, Semaphore, Queue', summary: 'Three tools for sharing data and hardware between tasks, and when each is right.', estMinutes: 15 },
+          { id: 'Priority Inversion', title: 'Priority Inversion', summary: 'The Mars Pathfinder bug, and the fix that saved it: priority inheritance.', estMinutes: 16 },
+        ],
+      },
+      {
+        id: 'volatile-and-isrs',
+        title: 'Interrupts and volatile',
+        description: 'How a microcontroller reacts to hardware events, and why the volatile keyword alone does not make shared data safe.',
+        icon: 'Zap',
+        lessons: [
+          { id: 'What an Interrupt Actually Is', title: 'What an Interrupt Actually Is', summary: 'Hardware events, latency and jitter, and the rules that keep a handler short and safe.', estMinutes: 14 },
+          { id: 'Volatile and What It Really Means', title: 'Volatile and What It Really Means', summary: 'Stopping the compiler from caching a value, and the atomicity guarantee it does not give you.', estMinutes: 14 },
+          { id: 'Atomicity and the Torn Read', title: 'Atomicity and the Torn Read', summary: 'Why a 32-bit counter on an 8-bit chip needs a critical section, not just volatile.', estMinutes: 15 },
+          { id: 'Getting Data Out of an ISR', title: 'Getting Data Out of an ISR', summary: 'Flags, a single-producer ring buffer, and debouncing without ever blocking in the handler.', estMinutes: 15 },
+        ],
+      },
+      {
+        id: 'clock-domains',
+        title: 'Timing and Clock Domains',
+        description: 'The margins that cap a clock\'s speed, and what breaks when two clocks meet.',
+        icon: 'Gauge',
+        lessons: [
+          { id: 'Setup and Hold Time', title: 'Setup & Hold', summary: 'The stability window every input needs around a clock edge, and why hold violations are the nastier kind.', estMinutes: 14 },
+          { id: 'What Limits the Clock', title: 'Clock Speed Limits', summary: 'Clock-to-Q, logic delay and setup time stack up to cap the fastest clock a design can run.', estMinutes: 14 },
+          { id: 'Metastability', title: 'Metastability', summary: 'The undefined output a timing violation can produce, and why the risk never quite reaches zero.', estMinutes: 14 },
+          { id: 'Crossing Clock Domains', title: 'Crossing Clock Domains', summary: 'Why unrelated clocks guarantee a violation eventually, and the synchroniser, handshake and Grey code fixes.', estMinutes: 16 },
+        ],
+      },
+      {
         id: 'digital-check',
         title: 'Unit Checkpoint',
         description: 'Prove you can reason about digital logic and embedded peripherals.',
@@ -764,6 +800,42 @@ export const AUTHORED_CURRICULUM: CurriculumUnit[] = [
         ],
       },
       {
+        id: 'can-bus',
+        title: 'The CAN Bus',
+        description: 'How a hundred car modules share one bus with no master, and what happens when it fails.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'Why CAN Has No Master', title: 'Why CAN Has No Master', summary: 'Multi-master, message-addressed, and differential signaling on a twisted pair.', estMinutes: 14 },
+          { id: 'Winning Arbitration', title: 'Winning Arbitration', summary: 'Non-destructive bitwise arbitration: the clever part, bit by bit.', estMinutes: 14 },
+          { id: 'The Wire and the Frame', title: 'The Wire and the Frame', summary: 'Termination, bit rate versus bus length, and the CAN frame.', estMinutes: 15 },
+          { id: 'When the Bus Goes Wrong', title: 'When the Bus Goes Wrong', summary: 'Error frames, error counters, and the three fault states.', estMinutes: 15 },
+        ],
+      },
+      {
+        id: 'sensor-fusion',
+        title: 'Fusing Sensors',
+        description: 'Combine noisy, disagreeing sensors into one estimate you can trust.',
+        icon: 'Clock',
+        lessons: [
+          { id: 'One Sensor Is Never Enough', title: 'One Sensor Is Never Enough', summary: 'Why an accelerometer alone is noisy and a gyroscope alone drifts.', estMinutes: 14 },
+          { id: 'The Complementary Filter', title: 'The Complementary Filter', summary: 'Blend both sensors with one line of code and one tunable number.', estMinutes: 14 },
+          { id: 'Kalman Without the Matrices', title: 'Kalman Without the Matrices', summary: 'Predict, then correct: the idea behind a filter that tunes itself.', estMinutes: 16 },
+          { id: 'Odometry and Drift', title: 'Odometry and Drift', summary: 'Wheel encoders still drift, and why dead reckoning needs a reference.', estMinutes: 15 },
+        ],
+      },
+      {
+        id: 'brushless-and-foc',
+        title: 'Brushless Motors and FOC',
+        description: 'Electronic commutation, rotor sensing, six-step drive, and the field-oriented control that makes torque smooth.',
+        icon: 'Cpu',
+        lessons: [
+          { id: 'Going Brushless', title: 'Going Brushless', summary: 'Remove the brushes and something else must decide which coils fire, and when.', estMinutes: 13 },
+          { id: 'Sensing Rotor Position', title: 'Sensing Rotor Position', summary: 'Hall sensors, encoders, and back-EMF: three ways to know where the rotor is.', estMinutes: 14 },
+          { id: 'Six-Step Commutation', title: 'Six-Step Commutation', summary: 'Two phases driven, one floating: simple, cheap, and it ripples.', estMinutes: 13 },
+          { id: 'Field-Oriented Control', title: 'Field-Oriented Control', summary: 'Hold the angle at 90 degrees continuously, and torque stops rippling.', estMinutes: 16 },
+        ],
+      },
+      {
         id: 'robotics-check',
         title: 'Unit Checkpoint',
         description: 'Prove you can reason about motors, sensing, and robot control.',
@@ -786,7 +858,7 @@ export const AUTHORED_CURRICULUM: CurriculumUnit[] = [
  * is stale and the server's corpus wins; scripts/check-curriculum-parity.mjs
  * fails the build when the two drift apart.
  */
-export const BUNDLED_CURRICULUM_VERSION = '239408ce076d48af';
+export const BUNDLED_CURRICULUM_VERSION = '9cd0b68a257f1370';
 
 /** Mirror the session cut into the unit, skill and lesson index. */
 function toSessionUnits(units: CurriculumUnit[]): CurriculumUnit[] {

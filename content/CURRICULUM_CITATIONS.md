@@ -580,6 +580,92 @@ ranging. Lints 0/0.
   ~500 between line 200 / floor 800).
 - **Unit 12 Checkpoint** (new) — mixed cumulative retrieval; no new claims.
 
+## The six interview-gap skills (added 2026-08-28)
+
+These six were authored because Ohmlet's Interview Mode was measurably asking
+about things Ohmlet did not teach. `interview_agent.py` instructs the interviewer
+to probe RTOS, `volatile`, Nyquist, CAN bus, metastability, sensor fusion,
+odometry and field-oriented control. Counted against all 2,355 authored steps at
+the time: **zero mentions of any of them**. The product could diagnose a gap and
+had nowhere to send the learner, which on a paid tier is worse than not
+diagnosing it.
+
+**A provenance note this ledger has no precedent for.** Most of this material is
+NOT in the nine source books, and every author flagged that themselves rather
+than implying a source that does not exist. The books are a hobbyist-electronics
+library; RTOS scheduling, clock-domain crossing and field-oriented control are
+not in them and would not be expected to be. Where a book does cover something,
+it is cited below. Where none does, that is stated plainly: the content rests on
+standard, well-established engineering knowledge of the kind found in FreeRTOS's
+own documentation, FPGA-vendor synchroniser application notes, and motor-control
+literature, authored original as always.
+
+### Unit 11 additions
+
+- **Tasks and the RTOS** (`rtos-basics`). No book coverage; grepped all nine and
+  found zero hits for RTOS or FreeRTOS. Standard FreeRTOS convention for the API
+  names and numbers (stack depth in words, a 1 ms tick, priority 0 as lowest
+  through `configMAX_PRIORITIES-1`). The Mars Pathfinder account is the
+  widely-published one, deliberately kept to what is well attested: VxWorks, a
+  low-priority task holding a mutex on a shared bus, a medium-priority task
+  starving it, a watchdog reset, and a fix by enabling priority inheritance
+  already present in the OS. No dates beyond 1997 and no named individuals,
+  because those could not be verified to this corpus's standard.
+- **Interrupts and volatile** (`volatile-and-isrs`). Blum's *Exploring Arduino*
+  ch.13 for the ISR and volatile material; Scherz & Monk *PEI* for the ATmega328
+  interrupt capability and switch-bounce settling. Interrupt latency is given as
+  "a few microseconds" rather than a cycle count, deliberately: exact latency
+  depends on the compiler-generated prologue and the instruction in flight, and
+  false precision is worse than an honest range. The torn-read worked example
+  assumes the low byte is read first, which is framed as "suppose" rather than
+  asserted, because the C standard does not fix it; the mechanism holds either
+  way and only the specific figure depends on the assumption.
+- **Timing and Clock Domains** (`clock-domains`). No book coverage. Standard
+  digital-design and CDC engineering: the setup/hold/slack/critical-path model,
+  and the synchroniser, handshake, asynchronous FIFO and Grey-code toolkit.
+  Every MTBF figure is illustrative order-of-magnitude, flagged as such in the
+  lessons; no specific tau or T-zero constant is stated as sourced fact.
+
+### Unit 12 additions
+
+- **The CAN Bus** (`can-bus`). *The Art of Electronics* §14.7.15 covers CAN and
+  independently confirms the multi-master framing, the message-labelled rather
+  than node-addressed character of the ID, and the 1 Mbit/s at 40 m data point.
+  Other numbers (120 ohms, 500 kbit/s at 100 m, roughly 2 V dominant
+  differential, 8 data bytes, error counter thresholds of 127 and 255) are
+  standard CAN specification values. One nuance deliberately left out of scope:
+  a real vehicle splits its ECUs across several CAN segments joined by gateways,
+  and a single segment carries far fewer nodes than a car has modules. Nothing
+  in the lessons asserts a single-segment node count.
+- **Fusing Sensors** (`sensor-fusion`). Lesson 1's accelerometer and gyroscope
+  fundamentals are grounded in *EAC* Vol. 3 (Sensors) ch.9-10, including the
+  MPU-6050. Lesson 4's encoder and interrupt mechanics trace to Blum ch.13.
+  Lessons 2 and 3 have no book coverage: the complementary filter and the scalar
+  Kalman gain are textbook-standard results with no equivalent in the nine books.
+  The time-constant relationship taught for the complementary filter is a
+  standard rule of thumb, presented as "works out to about" rather than as an
+  exact law in the way tau equals RC is.
+- **Brushless Motors and FOC** (`brushless-and-foc`). *EAC* Vol. 1 ch.22 ("DC
+  motor") grounds lessons 1 and 2: electronic commutation replacing brushes,
+  Hall-effect position sensing, inrunner versus outrunner, back-EMF from a
+  spinning rotor. Lessons 3 and 4 have no book coverage; six-step ripple
+  mechanics and the whole of FOC (the 90 degree torque angle, Clarke and Park,
+  Id and Iq, the PI loops) are standard power-electronics theory. Numbers checked
+  by hand: 6 x 7 = 42 Hall transitions per mechanical revolution, 250 x 7 = 1,750
+  Hz electrical, 10,000 / 1,750 which is about 5.7 loop updates per electrical
+  revolution.
+
+### What these six lack, stated rather than hidden
+
+Every lesson carries a `draw_circuit` step where the topic has something real to
+draw, added after an authoring error ruled the type out by mistake. Where a
+lesson genuinely has nothing drawable, it has none, and that is a deliberate
+choice: a fake drawing exercise on a topic with no circuit is worse than an
+honest gap. None of the six references a named `circuitDiagram`, because none of
+these topics has one in the registry. Adding schematics for a synchroniser, a
+three-phase inverter and a terminated CAN bus is the obvious next improvement.
+
+
 ## Gateway Exams
 
 Two cumulative cross-unit retrieval exams (task #42) that gate progression between

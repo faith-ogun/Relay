@@ -76,11 +76,17 @@ def test_a_real_skill_routes_with_enough_to_deep_link():
 
 def test_an_invented_id_is_reported_uncovered_not_dropped():
     """The signal is the point. Dropping it would hide that the interviewer is
-    probing something the curriculum does not teach."""
+    probing something the curriculum does not teach.
+
+    This test used to use `rtos-basics` as its example of an invented id. It is a
+    real skill now, so the example had to change: the curriculum grew to cover
+    the thing the test was built around. A deliberately impossible id keeps the
+    behaviour pinned without depending on what happens to be unauthored today.
+    """
     routed, uncovered = gaps.resolve([
-        {"topic": "RTOS mutexes and priority inversion", "skillId": "rtos-basics", "why": "asked, no answer"},
+        {"topic": "Quantum flux capacitor tuning", "skillId": "quantum-flux", "why": "asked, no answer"},
     ])
-    assert uncovered == ["RTOS mutexes and priority inversion"]
+    assert uncovered == ["Quantum flux capacitor tuning"]
     (r,) = routed
     assert r["covered"] is False
     assert r["skillId"] is None
@@ -129,18 +135,19 @@ def test_an_empty_list_is_fine():
 
 # ── The finding this whole module exists because of ─────────────────────────
 
-def test_the_interviewer_probes_topics_the_curriculum_does_not_teach():
-    """Not a bug in this module: a measured fact about the product.
+def test_the_curriculum_now_teaches_what_the_interviewer_probes():
+    """This test used to assert the OPPOSITE, and its failure was the point.
 
-    ohmlet_live_agent/interview_agent.py instructs the interviewer to probe
-    RTOS, `volatile`, Nyquist, CAN bus and metastability. None appears anywhere
-    in the 2,355 authored steps. Interview Mode can therefore diagnose gaps
-    Ohmlet cannot close.
+    It read: "ohmlet_live_agent/interview_agent.py instructs the interviewer to
+    probe RTOS, `volatile`, Nyquist, CAN bus and metastability. None appears
+    anywhere in the 2,355 authored steps. Interview Mode can therefore diagnose
+    gaps Ohmlet cannot close." It ended with: "If this shrinks, somebody authored
+    the lessons and that is good news."
 
-    This test does not fail today, and it is not meant to: it documents the gap
-    and will start passing MORE meaningfully as those skills get authored. What
-    it does enforce is that none of them is silently mapped onto an unrelated
-    lesson.
+    Somebody did. Six skills were authored on 2026-08-28 and every one of those
+    topics is now taught, so the test is inverted: it guards the closure rather
+    than documenting the hole. If a topic ever drops back to zero, this fails and
+    says which one.
     """
     import json
     import pathlib
@@ -151,13 +158,18 @@ def test_the_interviewer_probes_topics_the_curriculum_does_not_teach():
         )
     ).lower()
 
-    untaught = [t for t in ("rtos", "volatile", "nyquist", "can bus", "metastab") if t not in corpus]
-    # If this shrinks, somebody authored the lessons and that is good news.
-    assert untaught, "every probed topic is now taught, update this test's premise"
-
-    # Whatever is untaught must route to nothing rather than to a near-miss.
-    routed, uncovered = gaps.resolve(
-        [{"topic": t, "skillId": "none", "why": "probed but not taught"} for t in untaught]
+    # The exact list interview_agent.py tells the interviewer to probe.
+    probed = ["rtos", "volatile", "nyquist", "can bus", "metastab", "odometry", "field-oriented"]
+    untaught = [t for t in probed if t not in corpus]
+    assert not untaught, (
+        f"the interviewer probes {untaught} and the curriculum teaches none of it. "
+        "Interview Mode would diagnose a gap it cannot close."
     )
-    assert all(r["covered"] is False for r in routed)
-    assert uncovered == untaught
+
+    # And an id that genuinely does not exist must still route to nothing rather
+    # than to a near-miss lesson that happens to share a word.
+    routed, uncovered = gaps.resolve(
+        [{"topic": "Something we do not teach", "skillId": "none", "why": "probed but not taught"}]
+    )
+    assert routed[0]["covered"] is False
+    assert uncovered == ["Something we do not teach"]
