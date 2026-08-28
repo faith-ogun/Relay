@@ -1,0 +1,162 @@
+[
+  {
+    "index": 0,
+    "seconds": 4.72,
+    "file": "audio/resonance-oscillators/00.wav"
+  },
+  {
+    "index": 1,
+    "seconds": 4.44,
+    "file": "audio/resonance-oscillators/01.wav"
+  },
+  {
+    "index": 2,
+    "seconds": 5.24,
+    "file": "audio/resonance-oscillators/02.wav"
+  },
+  {
+    "index": 3,
+    "seconds": 5,
+    "file": "audio/resonance-oscillators/03.wav"
+  },
+  {
+    "index": 4,
+    "seconds": 4.08,
+    "file": "audio/resonance-oscillators/04.wav"
+  },
+  {
+    "index": 5,
+    "seconds": 5.08,
+    "file": "audio/resonance-oscillators/05.wav"
+  },
+  {
+    "index": 6,
+    "seconds": 4.56,
+    "file": "audio/resonance-oscillators/06.wav"
+  },
+  {
+    "index": 7,
+    "seconds": 5.24,
+    "file": "audio/resonance-oscillators/07.wav"
+  },
+  {
+    "index": 8,
+    "seconds": 3.88,
+    "file": "audio/resonance-oscillators/08.wav"
+  },
+  {
+    "index": 9,
+    "seconds": 4.44,
+    "file": "audio/resonance-oscillators/09.wav"
+  },
+  {
+    "index": 10,
+    "seconds": 5.36,
+    "file": "audio/resonance-oscillators/10.wav"
+  },
+  {
+    "index": 11,
+    "seconds": 5.84,
+    "file": "audio/resonance-oscillators/11.wav"
+  },
+  {
+    "index": 12,
+    "seconds": 6.28,
+    "file": "audio/resonance-oscillators/12.wav"
+  },
+  {
+    "index": 13,
+    "seconds": 5.2,
+    "file": "audio/resonance-oscillators/13.wav"
+  },
+  {
+    "index": 14,
+    "seconds": 5.88,
+    "file": "audio/resonance-oscillators/14.wav"
+  },
+  {
+    "index": 15,
+    "seconds": 4.12,
+    "file": "audio/resonance-oscillators/15.wav"
+  },
+  {
+    "index": 16,
+    "seconds": 5.72,
+    "file": "audio/resonance-oscillators/16.wav"
+  },
+  {
+    "index": 17,
+    "seconds": 5.04,
+    "file": "audio/resonance-oscillators/17.wav"
+  },
+  {
+    "index": 18,
+    "seconds": 5.76,
+    "file": "audio/resonance-oscillators/18.wav"
+  },
+  {
+    "index": 19,
+    "seconds": 4.2,
+    "file": "audio/resonance-oscillators/19.wav"
+  },
+  {
+    "index": 20,
+    "seconds": 6.52,
+    "file": "audio/resonance-oscillators/20.wav"
+  },
+  {
+    "index": 21,
+    "seconds": 4.04,
+    "file": "audio/resonance-oscillators/21.wav"
+  },
+  {
+    "index": 22,
+    "seconds": 6.88,
+    "file": "audio/resonance-oscillators/22.wav"
+  },
+  {
+    "index": 23,
+    "seconds": 6.64,
+    "file": "audio/resonance-oscillators/23.wav"
+  },
+  {
+    "index": 24,
+    "seconds": 5.32,
+    "file": "audio/resonance-oscillators/24.wav"
+  },
+  {
+    "index": 25,
+    "seconds": 5.16,
+    "file": "audio/resonance-oscillators/25.wav"
+  },
+  {
+    "index": 26,
+    "seconds": 6.52,
+    "file": "audio/resonance-oscillators/26.wav"
+  },
+  {
+    "index": 27,
+    "seconds": 1.84,
+    "file": "audio/resonance-oscillators/27.wav"
+  },
+  {
+    "index": 28,
+    "seconds": 6.16,
+    "file": "audio/resonance-oscillators/28.wav"
+  },
+  {
+    "index": 29,
+    "seconds": 6.4,
+    "file": "audio/resonance-oscillators/29.wav"
+  },
+  {
+    "index": 30,
+    "seconds": 6.12,
+    "file": "audio/resonance-oscillators/30.wav"
+  },
+  {
+    "index": 31,
+    "seconds": 6.16,
+    "file": "audio/resonance-oscillators/31.wav"
+  }
+]

@@ -813,7 +813,7 @@ const BoardCircuit: React.FC<Props> = ({ flow, highlight }) => {
 };
 
 // ── Signals, drawn rather than described ───────────────────────────────────
-const WL = 150, WR = 900, WT = 126, WB = 480;
+const WL = 150, WR = 900, WT = 175, WB = 495;
 
 const hash = (i: number) => {
   const s = Math.sin(i * 12.9898) * 43758.5453;
@@ -879,14 +879,14 @@ const WaveCircuit: React.FC<Props> = ({ highlight }) => {
       {t.has('avg') && (
         <>
           <line x1={WL} y1={y(avg)} x2={WR} y2={y(avg)} stroke={C.red} strokeWidth={6} strokeDasharray="14 12" />
-          <text fontFamily={NUNITO} x={WR} y={WT - 46} textAnchor="end" fontSize={36} fontWeight={900} fill={C.red}>
+          <text fontFamily={NUNITO} x={WR} y={WT - 55} textAnchor="end" fontSize={36} fontWeight={900} fill={C.red}>
             average
           </text>
         </>
       )}
       <text fontFamily={NUNITO} x={WL - 22} y={WT - 4} textAnchor="end" fontSize={34} fontWeight={900} fill={C.inkMute}>V</text>
       <text fontFamily={NUNITO} x={WR} y={WB + 54} textAnchor="end" fontSize={32} fontWeight={900} fill={C.inkMute}>time</text>
-      <text fontFamily={NUNITO} x={WL + 8} y={WT - 46} textAnchor="start" fontSize={40} fontWeight={900} fill={C.inkSoft}>
+      <text fontFamily={NUNITO} x={WL + 8} y={WT - 55} textAnchor="start" fontSize={40} fontWeight={900} fill={C.inkSoft}>
         {shape.name}
       </text>
     </>
@@ -894,7 +894,7 @@ const WaveCircuit: React.FC<Props> = ({ highlight }) => {
 };
 
 // ── Frequency response ─────────────────────────────────────────────────────
-const BL = 170, BR = 900, BT = 150, BB = 460;
+const BL = 170, BR = 900, BT = 180, BB = 475;
 
 const BodeCircuit: React.FC<Props> = ({ highlight }) => {
   const frame = useCurrentFrame();
@@ -931,7 +931,7 @@ const BodeCircuit: React.FC<Props> = ({ highlight }) => {
       <text fontFamily={NUNITO} x={BL - 20} y={y(0.707) + 12} textAnchor="end" fontSize={30} fontWeight={900} fill={C.inkMute}>-3dB</text>
       <text fontFamily={NUNITO} x={BL - 20} y={y(1) + 12} textAnchor="end" fontSize={30} fontWeight={900} fill={C.inkMute}>1x</text>
       <text fontFamily={NUNITO} x={BR} y={BB + 54} textAnchor="end" fontSize={32} fontWeight={900} fill={C.inkMute}>frequency</text>
-      <text fontFamily={NUNITO} x={BL + 10} y={BT - 52} textAnchor="start" fontSize={40} fontWeight={900} fill={C.inkSoft}>
+      <text fontFamily={NUNITO} x={BL + 10} y={BT - 58} textAnchor="start" fontSize={40} fontWeight={900} fill={C.inkSoft}>
         {kind === 'lowpass' ? 'LOW PASS' : kind === 'highpass' ? 'HIGH PASS' : 'BAND PASS'}
       </text>
     </>

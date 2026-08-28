@@ -18,17 +18,39 @@ import { closedLoop } from "./lesson-film/lessons/closed-loop";
 import { codeAlarm } from "./lesson-film/lessons/code-alarm";
 import { debuggingSafety } from "./lesson-film/lessons/debugging-safety";
 import { drivingLoads } from "./lesson-film/lessons/driving-loads";
+import { drivingMotors } from "./lesson-film/lessons/driving-motors";
+import { embeddedBridge } from "./lesson-film/lessons/embedded-bridge";
+import { filters } from "./lesson-film/lessons/filters";
 import { firstSketch } from "./lesson-film/lessons/first-sketch";
+import { inductiveProtection } from "./lesson-film/lessons/inductive-protection";
 import { ledsLimiting } from "./lesson-film/lessons/leds-limiting";
 import { lightAlarm } from "./lesson-film/lessons/light-alarm";
+import { linearRegulation } from "./lesson-film/lessons/linear-regulation";
+import { logicGates } from "./lesson-film/lessons/logic-gates";
+import { makingDc } from "./lesson-film/lessons/making-dc";
 import { meetCapacitor } from "./lesson-film/lessons/meet-capacitor";
+import { memoryAndSequencing } from "./lesson-film/lessons/memory-and-sequencing";
+import { numbersAndLevels } from "./lesson-film/lessons/numbers-and-levels";
+import { opampAmplifiers } from "./lesson-film/lessons/opamp-amplifiers";
+import { opampBasics } from "./lesson-film/lessons/opamp-basics";
+import { opampComparators } from "./lesson-film/lessons/opamp-comparators";
+import { opampRealWorld } from "./lesson-film/lessons/opamp-real-world";
 import { readingInputs } from "./lesson-film/lessons/reading-inputs";
 import { readingSensors } from "./lesson-film/lessons/reading-sensors";
 import { resistanceOhms } from "./lesson-film/lessons/resistance-ohms";
+import { resonanceOscillators } from "./lesson-film/lessons/resonance-oscillators";
+import { robotControl } from "./lesson-film/lessons/robot-control";
+import { robotSensingComms } from "./lesson-film/lessons/robot-sensing-comms";
 import { seriesParallel } from "./lesson-film/lessons/series-parallel";
+import { signals } from "./lesson-film/lessons/signals";
+import { speedAndPrecision } from "./lesson-film/lessons/speed-and-precision";
 import { switchesControl } from "./lesson-film/lessons/switches-control";
+import { switchingRegulation } from "./lesson-film/lessons/switching-regulation";
 import { talkDebug } from "./lesson-film/lessons/talk-debug";
+import { theTransistor } from "./lesson-film/lessons/the-transistor";
 import { timeConstant } from "./lesson-film/lessons/time-constant";
+import { timing555 } from "./lesson-film/lessons/timing-555";
+import { transistorVariety } from "./lesson-film/lessons/transistor-variety";
 import { variableResistance } from "./lesson-film/lessons/variable-resistance";
 import { whatArduino } from "./lesson-film/lessons/what-arduino";
 import analogPwmTimings from "./lesson-film/timings/analog-pwm.json";
@@ -39,17 +61,39 @@ import closedLoopTimings from "./lesson-film/timings/closed-loop.json";
 import codeAlarmTimings from "./lesson-film/timings/code-alarm.json";
 import debuggingSafetyTimings from "./lesson-film/timings/debugging-safety.json";
 import drivingLoadsTimings from "./lesson-film/timings/driving-loads.json";
+import drivingMotorsTimings from "./lesson-film/timings/driving-motors.json";
+import embeddedBridgeTimings from "./lesson-film/timings/embedded-bridge.json";
+import filtersTimings from "./lesson-film/timings/filters.json";
 import firstSketchTimings from "./lesson-film/timings/first-sketch.json";
+import inductiveProtectionTimings from "./lesson-film/timings/inductive-protection.json";
 import ledsLimitingTimings from "./lesson-film/timings/leds-limiting.json";
 import lightAlarmTimings from "./lesson-film/timings/light-alarm.json";
+import linearRegulationTimings from "./lesson-film/timings/linear-regulation.json";
+import logicGatesTimings from "./lesson-film/timings/logic-gates.json";
+import makingDcTimings from "./lesson-film/timings/making-dc.json";
 import meetCapacitorTimings from "./lesson-film/timings/meet-capacitor.json";
+import memoryAndSequencingTimings from "./lesson-film/timings/memory-and-sequencing.json";
+import numbersAndLevelsTimings from "./lesson-film/timings/numbers-and-levels.json";
+import opampAmplifiersTimings from "./lesson-film/timings/opamp-amplifiers.json";
+import opampBasicsTimings from "./lesson-film/timings/opamp-basics.json";
+import opampComparatorsTimings from "./lesson-film/timings/opamp-comparators.json";
+import opampRealWorldTimings from "./lesson-film/timings/opamp-real-world.json";
 import readingInputsTimings from "./lesson-film/timings/reading-inputs.json";
 import readingSensorsTimings from "./lesson-film/timings/reading-sensors.json";
 import resistanceOhmsTimings from "./lesson-film/timings/resistance-ohms.json";
+import resonanceOscillatorsTimings from "./lesson-film/timings/resonance-oscillators.json";
+import robotControlTimings from "./lesson-film/timings/robot-control.json";
+import robotSensingCommsTimings from "./lesson-film/timings/robot-sensing-comms.json";
 import seriesParallelTimings from "./lesson-film/timings/series-parallel.json";
+import signalsTimings from "./lesson-film/timings/signals.json";
+import speedAndPrecisionTimings from "./lesson-film/timings/speed-and-precision.json";
 import switchesControlTimings from "./lesson-film/timings/switches-control.json";
+import switchingRegulationTimings from "./lesson-film/timings/switching-regulation.json";
 import talkDebugTimings from "./lesson-film/timings/talk-debug.json";
+import theTransistorTimings from "./lesson-film/timings/the-transistor.json";
 import timeConstantTimings from "./lesson-film/timings/time-constant.json";
+import timing555Timings from "./lesson-film/timings/timing-555.json";
+import transistorVarietyTimings from "./lesson-film/timings/transistor-variety.json";
 import variableResistanceTimings from "./lesson-film/timings/variable-resistance.json";
 import whatArduinoTimings from "./lesson-film/timings/what-arduino.json";
 
@@ -104,17 +148,39 @@ const LESSONS = [
   { lesson: codeAlarm, timings: codeAlarmTimings },
   { lesson: debuggingSafety, timings: debuggingSafetyTimings },
   { lesson: drivingLoads, timings: drivingLoadsTimings },
+  { lesson: drivingMotors, timings: drivingMotorsTimings },
+  { lesson: embeddedBridge, timings: embeddedBridgeTimings },
+  { lesson: filters, timings: filtersTimings },
   { lesson: firstSketch, timings: firstSketchTimings },
+  { lesson: inductiveProtection, timings: inductiveProtectionTimings },
   { lesson: ledsLimiting, timings: ledsLimitingTimings },
   { lesson: lightAlarm, timings: lightAlarmTimings },
+  { lesson: linearRegulation, timings: linearRegulationTimings },
+  { lesson: logicGates, timings: logicGatesTimings },
+  { lesson: makingDc, timings: makingDcTimings },
   { lesson: meetCapacitor, timings: meetCapacitorTimings },
+  { lesson: memoryAndSequencing, timings: memoryAndSequencingTimings },
+  { lesson: numbersAndLevels, timings: numbersAndLevelsTimings },
+  { lesson: opampAmplifiers, timings: opampAmplifiersTimings },
+  { lesson: opampBasics, timings: opampBasicsTimings },
+  { lesson: opampComparators, timings: opampComparatorsTimings },
+  { lesson: opampRealWorld, timings: opampRealWorldTimings },
   { lesson: readingInputs, timings: readingInputsTimings },
   { lesson: readingSensors, timings: readingSensorsTimings },
   { lesson: resistanceOhms, timings: resistanceOhmsTimings },
+  { lesson: resonanceOscillators, timings: resonanceOscillatorsTimings },
+  { lesson: robotControl, timings: robotControlTimings },
+  { lesson: robotSensingComms, timings: robotSensingCommsTimings },
   { lesson: seriesParallel, timings: seriesParallelTimings },
+  { lesson: signals, timings: signalsTimings },
+  { lesson: speedAndPrecision, timings: speedAndPrecisionTimings },
   { lesson: switchesControl, timings: switchesControlTimings },
+  { lesson: switchingRegulation, timings: switchingRegulationTimings },
   { lesson: talkDebug, timings: talkDebugTimings },
+  { lesson: theTransistor, timings: theTransistorTimings },
   { lesson: timeConstant, timings: timeConstantTimings },
+  { lesson: timing555, timings: timing555Timings },
+  { lesson: transistorVariety, timings: transistorVarietyTimings },
   { lesson: variableResistance, timings: variableResistanceTimings },
   { lesson: whatArduino, timings: whatArduinoTimings },
 ];
