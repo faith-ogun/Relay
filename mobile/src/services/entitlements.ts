@@ -62,13 +62,15 @@ export const PLAN_META: Record<Plan, {
   max: {
     label: 'Max',
     priceMonthly: 34.99,
-    tagline: 'Learn it, then land the job',
-    blurb: 'Everything, plus Interview Mode.',
+    tagline: 'Prove what you have built',
+    blurb: 'A record of your bench work that an employer can trust.',
     perks: [
       'Everything in Pro',
+      'A verified build record, proven not claimed',
+      'Career coaching built on that record',
+      'Interview Mode, with every gap routed to a lesson',
+      'Early access to Ohmlet Labs',
       '9 hours of live tutoring a month',
-      'Every 3D twin kept for good',
-      'Interview Mode',
     ],
   },
 };

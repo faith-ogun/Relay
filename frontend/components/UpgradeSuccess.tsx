@@ -25,9 +25,10 @@ const PLAN_COPY: Record<PaidPlan, { name: string; tagline: string; features: str
     tagline: "Everything's unlocked, including the career track. Time to get hired.",
     features: [
       'Everything in Pro',
+      'A verified build record: bench hours, exam scores and finished builds, proven not claimed',
+      'Career coaching built on that record, not on what you say about yourself',
       'Interview Mode: AI mock interviews tuned to a job description',
-      'Company prep from real interview data',
-      'Career coaching sessions',
+      'Every weakness routed to the lesson that closes it',
       'Early access to Ohmlet Labs',
       'Live tutor sessions, up to 9 hours a month',
     ],
