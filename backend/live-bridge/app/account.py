@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 import bosses as bosses_mod
+import career as career_mod
 import checkpoints as checkpoints_mod
 import labs as labs_mod
 import entitlements
@@ -203,3 +204,22 @@ def get_labs(claims: dict = Depends(require_claims)) -> dict:
     it, rather than an empty page that reads as a bug.
     """
     return labs_mod.status(entitlements.get_plan(claims["uid"]))
+
+
+@router.get("/career")
+def get_career(claims: dict = Depends(require_claims)) -> dict:
+    """The verified build record: what Ohmlet can attest to about this learner.
+
+    Max only, because it is the substance behind the career coaching the tier
+    sells. Assembled entirely from server-owned records, so none of it is
+    self-reported and none of it can be inflated from a client.
+
+    Returned with its own caveat attached, deliberately. Every number is a
+    FLOOR: it is what Ohmlet observed, not everything the person has ever done,
+    and a coach or a CV that treats it as a complete history will overclaim.
+    """
+    uid = claims["uid"]
+    if entitlements.get_plan(uid) != "max":
+        raise HTTPException(status_code=402, detail="Career coaching is a Max-plan feature.")
+    ev = career_mod.evidence(uid)
+    return {**ev, "summary": career_mod.summary_line(ev)}
