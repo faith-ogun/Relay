@@ -227,3 +227,43 @@ def test_the_coach_is_told_not_to_inflate_and_not_to_quote_salaries():
     bound = instruction_with("Verified on Ohmlet: 10 minutes.", '{"bench": {}}')
     assert "[CAREER CONTEXT]" in bound
     assert "10 minutes" in bound
+
+
+# ── The live coaching session ───────────────────────────────────────────────
+
+def test_coach_is_a_distinct_mode_gated_to_max():
+    """Both Max modes are gated in one place, and the refusal names the right
+    feature: telling someone Interview Mode is a Max feature when they asked for
+    coaching sends them looking for the wrong thing."""
+    import pathlib
+
+    main = (pathlib.Path(__file__).resolve().parents[1] / "app" / "main.py").read_text()
+    assert 'requested in ("interview", "coach")' in main
+    assert 'mode in ("interview", "coach") and plan != "max"' in main
+    assert "Career coaching is a Max-plan feature." in main
+
+
+def test_the_coach_is_primed_from_our_records_not_the_client():
+    """The whole feature is that the evidence was WATCHED rather than claimed. A
+    client-supplied record would be exactly the self-report it replaces, so the
+    context is assembled server-side from the verified uid."""
+    import pathlib
+
+    main = (pathlib.Path(__file__).resolve().parents[1] / "app" / "main.py").read_text()
+    block = main[main.index('if msg_type == "coach_context"'):]
+    block = block[: block.index('if msg_type == "interview_context"')]
+    # Off the event loop, because Firestore is synchronous and this coroutine
+    # shares the loop with live audio.
+    assert "asyncio.to_thread(career.evidence, user_id)" in block
+    # Nothing from the inbound message is read into the context.
+    assert "msg.get(" not in block
+
+
+def test_the_coach_has_its_own_runner_not_a_flag_on_the_interviewer():
+    """A mock interview tests you; a coaching session tells you what to do next.
+    An agent asked to do both does neither well."""
+    import pathlib
+
+    main = (pathlib.Path(__file__).resolve().parents[1] / "app" / "main.py").read_text()
+    assert "coach_runner = Runner(" in main
+    assert "agent=coach_agent," in main

@@ -10,7 +10,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { SafetyAck } from '../components/SafetyAck';
@@ -197,6 +197,12 @@ function MicControl({
 }
 
 export default function LiveTutor() {
+  // `?mode=coach` opens a career coaching session on the same live spine.
+  // Anything else is the tutor: an unknown value must never silently become a
+  // paid persona, and the server refuses it for non-Max regardless.
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const sessionMode = params.mode === 'coach' ? 'coach' as const : 'tutor' as const;
+
   const { user, loading: authLoading } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -220,6 +226,9 @@ export default function LiveTutor() {
 
   const live = useLiveBridge({
     wsUrl: liveBridgeWsUrl(),
+    // Coaching reuses the entire live spine on a different persona. The server
+    // refuses it for anyone but Max, so this is a request rather than a grant.
+    mode: sessionMode,
     userId: user?.uid ?? '',
     sessionId,
     childSafe,

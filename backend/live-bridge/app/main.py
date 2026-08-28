@@ -26,6 +26,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from ohmlet_live_agent import agent, child_agent
+from ohmlet_live_agent.coach_agent import coach_agent, instruction_with as coach_instruction_with
 from ohmlet_live_agent.interview_agent import interview_agent
 from ohmlet_live_agent.tools import set_priority_models
 import interview as interview_mod
@@ -45,6 +46,7 @@ from achievements import router as achievements_router
 from builds import router as builds_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
+import career
 import entitlements
 import ratelimit
 from resilience import CircuitBreaker
@@ -177,6 +179,15 @@ runner = Runner(
 interview_runner = Runner(
     app_name=APP_NAME,
     agent=interview_agent,
+    session_service=session_service,
+)
+# Career coaching: the same live spine again, on a coach rather than an
+# interviewer. Deliberately a different agent and not a mode of Quinn's: a mock
+# interview tests you and a coaching session tells you what to do next, and an
+# agent asked to do both does neither well.
+coach_runner = Runner(
+    app_name=APP_NAME,
+    agent=coach_agent,
     session_service=session_service,
 )
 # Child mode (#94): the same live spine on the hardened agent (Vertex safety
@@ -312,17 +323,23 @@ async def websocket_endpoint(
 
     logger.info("WS connected: user=%s session=%s child=%s", user_id, session_id, child_session)
 
-    # ── Session mode: tutor (default) or interview (#21, Max-only) ──
-    mode = "interview" if (websocket.query_params.get("mode") == "interview") else "tutor"
+    # ── Session mode: tutor (default), interview or coach (both Max-only) ──
+    requested = websocket.query_params.get("mode")
+    mode = requested if requested in ("interview", "coach") else "tutor"
 
     # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
     plan = entitlements.get_plan(user_id)
 
     # Interview Mode is a Max-tier feature; enforce it server-side (#56), never
     # trusting the client's UI gate.
-    if mode == "interview" and plan != "max":
-        logger.info("Interview mode refused for user=%s plan=%s", user_id, plan)
-        await _reject_ws(websocket, "upgrade_required", "Interview Mode is a Max-plan feature.")
+    if mode in ("interview", "coach") and plan != "max":
+        logger.info("%s mode refused for user=%s plan=%s", mode, user_id, plan)
+        await _reject_ws(
+            websocket,
+            "upgrade_required",
+            "Interview Mode is a Max-plan feature." if mode == "interview"
+            else "Career coaching is a Max-plan feature.",
+        )
         return
 
     remaining_seconds = entitlements.live_seconds_remaining(user_id, plan)
@@ -416,6 +433,27 @@ async def websocket_endpoint(
                         live_queue.send_content(stage_content)
                         continue
 
+                    if msg_type == "coach_context" and mode == "coach":
+                        # The coach is primed from OUR records, not from anything
+                        # the client sends. That is the whole point: every
+                        # hardware CV claims bench experience and this is the one
+                        # that was watched. A client-supplied record would be
+                        # exactly the self-report the feature exists to replace.
+                        try:
+                            ev = await asyncio.to_thread(career.evidence, user_id)
+                            ctx = coach_instruction_with(
+                                career.summary_line(ev), json.dumps(ev, ensure_ascii=False)
+                            )
+                        except Exception as exc:
+                            logger.warning("career evidence unavailable for %s: %s", user_id, exc)
+                            ctx = coach_instruction_with(
+                                "No verified record could be loaded for this session.", "{}"
+                            )
+                        live_queue.send_content(
+                            types.Content(role="user", parts=[types.Part(text=ctx)])
+                        )
+                        continue
+
                     if msg_type == "interview_context" and mode == "interview":
                         # Prime the interviewer with the role + JD + (fenced) resume.
                         # Sanitised + injection-fenced in interview.build_context_message.
@@ -435,7 +473,9 @@ async def websocket_endpoint(
                         text = validation.validate_ws_text(msg.get("text", ""))  # capped length (#45)
                         if text:
                             # Interview mode has no tutor stages; send the turn as-is.
-                            prefixed = text if mode == "interview" else f"[stage={current_stage}] {text}"
+                            # Neither the interviewer nor the coach has tutor
+                            # stages, so the turn goes as-is.
+                            prefixed = text if mode in ("interview", "coach") else f"[stage={current_stage}] {text}"
                             content = types.Content(
                                 role="user",
                                 parts=[types.Part(text=prefixed)],
@@ -475,7 +515,10 @@ async def websocket_endpoint(
         # Interview Mode swaps the persona (interviewer) but reuses the whole spine.
         # Child safety wins over every other persona: a verified minor always runs
         # on the hardened child agent, never the interview persona.
-        active_runner = child_runner if child_session else (interview_runner if mode == "interview" else runner)
+        active_runner = child_runner if child_session else {
+            "interview": interview_runner,
+            "coach": coach_runner,
+        }.get(mode, runner)
         try:
             event_count = 0
             async for event in active_runner.run_live(

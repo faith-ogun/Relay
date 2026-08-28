@@ -151,6 +151,15 @@ export default function Career() {
               variant="secondary"
               onPress={() => void Share.share({ message: ev.summary })}
             />
+
+            {/* The record is the input to the conversation, not the end of it.
+                Ash reads this back honestly, names the gap, and decides what to
+                build next. */}
+            <Text style={s.section}>TALK IT THROUGH</Text>
+            <Button
+              label="Start a coaching session"
+              onPress={() => router.push({ pathname: '/live', params: { mode: 'coach' } })}
+            />
           </>
         )}
 

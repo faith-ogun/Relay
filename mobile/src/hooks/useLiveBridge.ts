@@ -632,6 +632,13 @@ export function appendTranscript(prev: Transcript[], entry: Transcript, echo = f
 
 interface Options {
   wsUrl: string;
+  /**
+   * Session persona. `tutor` is the default and the only one a Free or Pro
+   * learner can open; the server refuses the other two with `upgrade_required`
+   * rather than trusting this. It is a query parameter because the ADK runner
+   * is chosen at connect time, before any message has been exchanged.
+   */
+  mode?: 'tutor' | 'interview' | 'coach';
   userId: string;
   sessionId: string;
   /** Milliseconds between background frames. 0 disables the heartbeat. */
@@ -664,6 +671,7 @@ const MIC_FAILED_LINE =
 
 export function useLiveBridge({
   wsUrl,
+  mode = 'tutor',
   userId,
   sessionId,
   visionIntervalMs = 2500,
@@ -1270,11 +1278,26 @@ export function useLiveBridge({
       // model's modality is re-learned from its first events.
       eventStateRef.current = freshLiveEventState();
 
-      const ws = new WebSocket(`${wsUrl}/ws/${encodeURIComponent(userId)}/${encodeURIComponent(sessionId)}`);
+      // The path is built as its own literal, with the query appended after,
+      // so `/ws/{}/{}` stays greppable. frontend/scripts/check-api-coverage.mjs
+      // matches client call sites against server routes textually, and
+      // interpolating the query INTO the template made this socket look like a
+      // route with no caller.
+      const path = `${wsUrl}/ws/${encodeURIComponent(userId)}/${encodeURIComponent(sessionId)}`;
+      const ws = new WebSocket(
+        mode === 'tutor' ? path : `${path}?mode=${encodeURIComponent(mode)}`,
+      );
       wsRef.current = ws;
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'auth', token }));   // must be the first frame
+        if (mode === 'coach') {
+          // Asks the SERVER to prime the coach from its own records. No payload,
+          // deliberately: the whole point of the feature is that the evidence
+          // was watched rather than claimed, and anything the client sent here
+          // would be exactly the self-report it exists to replace.
+          ws.send(JSON.stringify({ type: 'coach_context' }));
+        }
         if (retry) {
           // Put the tutor back on the step the learner is actually on.
           ws.send(JSON.stringify({ type: 'stage', stage: stageRef.current }));
