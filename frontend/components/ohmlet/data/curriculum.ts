@@ -858,7 +858,7 @@ export const AUTHORED_CURRICULUM: CurriculumUnit[] = [
  * is stale and the server's corpus wins; scripts/check-curriculum-parity.mjs
  * fails the build when the two drift apart.
  */
-export const BUNDLED_CURRICULUM_VERSION = '9cd0b68a257f1370';
+export const BUNDLED_CURRICULUM_VERSION = 'fd7efe04087d1ec5';
 
 /** Mirror the session cut into the unit, skill and lesson index. */
 function toSessionUnits(units: CurriculumUnit[]): CurriculumUnit[] {
