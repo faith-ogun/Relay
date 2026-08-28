@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 import bosses as bosses_mod
 import checkpoints as checkpoints_mod
+import labs as labs_mod
 import entitlements
 import hearts as hearts_mod
 import idempotency
@@ -191,3 +192,14 @@ def post_boss_result(unit_id: str, body: BossResult, claims: dict = Depends(requ
     if result["firstClear"]:
         obs.audit("boss.cleared", uid=uid, unitId=unit_id, xp=result["xp"], ratio=round(result["ratio"], 3))
     return result
+
+
+@router.get("/labs")
+def get_labs(claims: dict = Depends(require_claims)) -> dict:
+    """Ohmlet Labs: unfinished features, switched on early for Max.
+
+    Returns what this plan can use AND what it cannot yet, because a learner on
+    Free or Pro opening this screen should see that Labs exists and what is in
+    it, rather than an empty page that reads as a bug.
+    """
+    return labs_mod.status(entitlements.get_plan(claims["uid"]))

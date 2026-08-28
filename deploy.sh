@@ -61,7 +61,9 @@ OHMLET_LIVE_MIN_FREE=60,\
 OHMLET_LIVE_MIN_PRO=240,\
 OHMLET_LIVE_MIN_MAX=540,\
 OHMLET_RATE_PROMPT_1K_USD=0.00125,\
-OHMLET_RATE_RESPONSE_1K_USD=0.010"
+OHMLET_RATE_RESPONSE_1K_USD=0.010,\
+OHMLET_FILMS_BUCKET=ohmlet-app-lessons,\
+OHMLET_FILMS_VERSION=v1"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).

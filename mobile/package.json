@@ -31,6 +31,7 @@
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
     "expo-three": "^8.0.0",
+    "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.18.0",
     "react": "19.1.0",

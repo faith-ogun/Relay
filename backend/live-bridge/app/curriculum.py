@@ -30,6 +30,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from auth import require_uid
 
+import entitlements
+import films
+import labs
+
 logger = logging.getLogger("ohmlet.curriculum")
 
 DATA_DIR = Path(__file__).parent / "curriculum_data"
@@ -149,3 +153,35 @@ def achievements(uid: str = Depends(require_uid)) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="Achievements aren't available right now.")
     items = [_absolute_art(a) for a in data.get("achievements", [])]
     return {"version": data.get("version", ""), "achievements": items}
+
+
+@router.get("/films/{skill_id}")
+def film(skill_id: str, uid: str = Depends(require_uid)) -> dict[str, Any]:
+    """Short-lived signed URLs for one skill's lesson film.
+
+    Gated through Labs rather than through a plan check directly, because the
+    films themselves are free for everyone by decision: what is gated is early
+    access to the PLAYER while it is unfinished. When it graduates, the stage
+    moves to `all` and this gate opens for every plan without a code change.
+
+    Three distinct failures, three distinct answers, because "no film" and "we
+    cannot serve films" are not the same thing to a learner staring at a spinner.
+    """
+    key = (skill_id or "").strip()
+    if not key or len(key) > 100:
+        raise HTTPException(status_code=422, detail="Invalid skill id.")
+
+    plan = entitlements.get_plan(uid)
+    if not labs.is_on("lesson-films", plan):
+        raise HTTPException(
+            status_code=402,
+            detail="Lesson films are in Ohmlet Labs, an early-access feature for Max.",
+        )
+
+    try:
+        return films.urls_for(key)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="There is no film for this skill.")
+    except RuntimeError:
+        logger.error("film signing unavailable for %s", key)
+        raise HTTPException(status_code=503, detail="Films aren't available right now.")

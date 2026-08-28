@@ -57,7 +57,13 @@ export type FailReason =
   | 'timeout'
   | 'unauthenticated'
   | 'rate_limited'
-  | 'server';
+  | 'server'
+  // Labs and films add two outcomes the older callers never had. They are
+  // distinct on purpose: "you cannot use this yet" and "this does not exist"
+  // deserve different words on screen, and collapsing them into 'server' would
+  // show a learner an error for a working system.
+  | 'upgrade_required'
+  | 'not_found';
 
 export type Result<T> = { ok: true; data: T } | { ok: false; reason: FailReason };
 

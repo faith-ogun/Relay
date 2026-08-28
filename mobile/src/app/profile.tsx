@@ -120,6 +120,14 @@ export default function Profile() {
             onPress={() => router.push('/plans')}
           />
         )}
+        {/* Shown on every plan, not just Max. Someone without early access
+            should be able to see what Labs is and what it costs to get in;
+            hiding the thing you are selling is a strange way to sell it. */}
+        <Row
+          title="Ohmlet Labs"
+          sub={plan.plan === 'max' ? 'Early access, yours now' : 'Unfinished features, Max first'}
+          onPress={() => router.push('/labs')}
+        />
         <Row title="Account and privacy" sub="Your data, legal, sign out" onPress={() => router.push('/account')} />
       </ScrollView>
     </AppTabs>

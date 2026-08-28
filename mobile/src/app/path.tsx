@@ -59,6 +59,12 @@ const FAIL_COPY: Record<FailReason, string> = {
   unauthenticated: 'Sign in again to collect your checkpoints.',
   rate_limited: 'Slow down a moment, then collect them.',
   server: 'Something went wrong on our side. Your checkpoints are safe, try again.',
+  // Neither can happen for checkpoints, which are earned rather than unlocked
+  // and always exist. Present because the map is exhaustive over FailReason,
+  // and an exhaustive map is what makes adding a reason a compile error
+  // everywhere it is handled rather than a silent blank.
+  upgrade_required: 'Your checkpoints are safe. Something on our side is confused, try again.',
+  not_found: 'Your checkpoints are safe. Something on our side is confused, try again.',
 };
 
 export default function LearningPath() {
