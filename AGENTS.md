@@ -206,7 +206,9 @@ The live agent is the single entry point for voice sessions but dispatches to di
 
 1. **Plan before building.** For any task touching 3+ files or making architectural decisions: write a plan in `tasks/todo.md` with checkable items, get confirmation, track progress.
 2. **One thing at a time.** Atomic, testable changes. Build → verify → commit → move on. Don't refactor five files at once.
-3. **Frontend validation.** After any frontend change run `cd frontend && npm run build` — it must pass with zero errors. Then describe the visual result and confirm no regressions.
+3. **Frontend validation.** After any frontend change run `cd frontend && npm run check && npm run build`, and `cd mobile && npm run check`. All must pass with zero errors. Then describe the visual result and confirm no regressions.
+
+   `npm run check` is the half that catches what reading does not. On 2026-08-28 alone the guards caught a report view rendering an object as a JSX child (React throws; the Max flagship took its own screen down), three Max features sold on the web and callable only from the phone, and a curriculum step that shipped stale because a fix landed after the export ran. The build was green through every one of them. Each guard names the defect it exists for in its own header, and a new guard is expected to prove it has teeth by failing on the defect before it is fixed.
 4. **Backend validation.** Run `python3 -m py_compile` on modified files; run tests if present; confirm services start without import errors.
 5. **Iteration logging.** After a meaningful unit of work, create `logs/YYYY-MM-DD-iter-NNN-short-description.md`: what changed, why, what was validated, what's next.
 6. **Learn from corrections.** When corrected, update `tasks/lessons.md` with a rule that prevents recurrence.
