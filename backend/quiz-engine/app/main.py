@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 import obs
 import ratelimit
+import quota
 from auth import uid_from_bearer
 from cors import install_cors
 from resilience import CircuitBreaker, CircuitOpenError, run_resilient
@@ -31,6 +32,10 @@ def guard(request: Request, authorization: Optional[str] = Header(default=None))
     uid = uid_from_bearer(authorization)
     obs.set_uid(uid)
     ratelimit.enforce_rest(request, uid)
+    # The monthly ceiling. `ratelimit` bounds how FAST an identity can spend our
+    # money; this bounds how MUCH. Without it a signed-in caller could make
+    # 172,800 paid calls a day inside the per-minute limit and never trip it.
+    quota.enforce(uid, "quiz")
     return uid
 
 # ── Model routing (latency + lifecycle) ──

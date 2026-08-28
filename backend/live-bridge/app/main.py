@@ -328,6 +328,11 @@ async def websocket_endpoint(
     remaining_seconds = entitlements.live_seconds_remaining(user_id, plan)
     if remaining_seconds <= 0:
         logger.info("Live budget exhausted for user=%s plan=%s; rejecting", user_id, plan)
+        # Audited, not just logged, because this is the number the whole free
+        # tier rests on. How often a learner is turned away, and on which plan,
+        # is the only evidence that will ever say whether the caps are set right.
+        # scripts/first_build.py reads these.
+        obs.audit("live.budget.refused", uid=user_id, plan=plan, mode=mode)
         await websocket.send_text(
             json.dumps(
                 {
@@ -552,6 +557,17 @@ async def websocket_endpoint(
                 logger.info(
                     "Live budget reached (%.0fs) for user=%s session=%s; closing",
                     remaining_seconds, user_id, session_id,
+                )
+                # Distinct from a refusal at the door, and much worse: this
+                # learner was mid-build when the tutor stopped talking. If this
+                # fires often on the free plan, 60 minutes does not cover a first
+                # build and the cap is wrong.
+                obs.audit(
+                    "live.budget.cutoff",
+                    uid=user_id,
+                    plan=plan,
+                    sessionId=session_id,
+                    elapsedSeconds=round(meter.duration_seconds(), 1),
                 )
                 try:
                     await websocket.send_text(

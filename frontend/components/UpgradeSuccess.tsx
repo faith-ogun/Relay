@@ -14,9 +14,9 @@ const PLAN_COPY: Record<PaidPlan, { name: string; tagline: string; features: str
     name: 'Pro',
     tagline: "Your full bench tutor is unlocked. Let's build something.",
     features: [
-      'Live tutor sessions, up to 10 hours a month',
+      'Live tutor sessions, up to 4 hours a month',
       'All build paths & advanced lessons',
-      '3D digital twin of every build',
+      'A 3D twin of every build, kept for good',
       'Progress tracking, streaks & XP',
     ],
   },
@@ -29,7 +29,7 @@ const PLAN_COPY: Record<PaidPlan, { name: string; tagline: string; features: str
       'Company prep from real interview data',
       'Career coaching sessions',
       'Early access to Ohmlet Labs',
-      'Live tutor sessions, up to 30 hours a month',
+      'Live tutor sessions, up to 9 hours a month',
     ],
   },
 };

@@ -41,6 +41,14 @@ LIVE_BRIDGE_SA="${OHMLET_LIVE_BRIDGE_SA:-ohmlet-live-bridge@${PROJECT_ID}.iam.gs
 # without opening a bidi session, so it is migrated on a deployed revision and
 # checked, not guessed here. scripts/check-model-currency.mjs fails when this is
 # still unresolved.
+#
+# The minute caps and the token rates are set HERE as well as defaulted in code,
+# so the deployed numbers are visible in one place rather than only inside a
+# Python file. Both were changed on 2026-08-28: the caps came down from
+# 60/600/1800 because Pro and Max lost money at full utilisation, and the token
+# rates were set at all, having defaulted to ZERO, which made the Pro-model spend
+# that premium routing exists to protect invisible to the meter watching it.
+# The arithmetic is in backend/live-bridge/app/entitlements.py.
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
@@ -48,7 +56,12 @@ OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
 OHMLET_TEXT_LOCATION=global,\
 OHMLET_FLASH_MODEL=gemini-3.7-flash,\
 OHMLET_PRO_MODEL=gemini-3.1-pro-preview,\
-OHMLET_REASONING_MODEL=gemini-3.1-pro-preview"
+OHMLET_REASONING_MODEL=gemini-3.1-pro-preview,\
+OHMLET_LIVE_MIN_FREE=60,\
+OHMLET_LIVE_MIN_PRO=240,\
+OHMLET_LIVE_MIN_MAX=540,\
+OHMLET_RATE_PROMPT_1K_USD=0.00125,\
+OHMLET_RATE_RESPONSE_1K_USD=0.010"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).

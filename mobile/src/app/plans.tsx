@@ -189,7 +189,11 @@ export default function Plans() {
                   <Text style={[s.cardTitle, tone.text]}>{meta.label}</Text>
                   <View style={s.priceWrap}>
                     <Text style={[s.price, tone.text]}>
-                      {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `€${meta.priceMonthly}`}
+                      {/* The store package is the real, localised price and always wins. This
+                        fallback shows only until it loads, and it is in DOLLARS because
+                        that is the currency the pricing page publishes. It used to render
+                        a euro sign, so the app quoted a currency the website never did. */}
+                    {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `$${meta.priceMonthly}`}
                     </Text>
                     {(pkg || meta.priceMonthly !== null) && (
                       <Text style={[s.pricePer, tone.muted]}>

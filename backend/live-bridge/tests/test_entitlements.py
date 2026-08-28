@@ -1,5 +1,6 @@
 """Entitlements: plan normalisation, caps, model routing, period keys (#56)."""
 
+import pathlib
 import re
 
 import entitlements
@@ -15,10 +16,57 @@ def test_normalize_plan_accepts_valid_and_floors_unknown():
 
 
 def test_live_cap_matches_pricing_page():
-    assert entitlements.live_cap_minutes("free") == 60
-    assert entitlements.live_cap_minutes("pro") == 600   # 10 hours
-    assert entitlements.live_cap_minutes("max") == 1800  # 30 hours
-    assert entitlements.live_cap_minutes("bogus") == 60  # safe default
+    """The server cap and the published promise must be the same number.
+
+    This used to hard-code 60/600/1800 alongside a comment saying which hours
+    they were, which pins the caps but not the PROMISE: the copy could drift and
+    the test would still pass. It now reads the pricing page and compares, so
+    the invariant it claims to protect is the one it actually checks.
+
+    Caps were cut on 2026-08-28 (600 -> 240, 1800 -> 540) because Pro and Max
+    lost money at full utilisation. This test is what made that a two-file change
+    instead of a silent lie on the pricing page.
+    """
+    page = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "frontend" / "components" / "PricingPage.tsx"
+    ).read_text()
+
+    # 'Live tutor sessions, up to N hours a month' / 'Voice tutor, N minutes a month'
+    hours = [int(h) for h in re.findall(r"up to (\d+) hours a month", page)]
+    minutes = [int(m) for m in re.findall(r"Voice tutor, (\d+) minutes a month", page)]
+    assert len(minutes) == 1, f"expected one free minutes line, found {minutes}"
+    assert len(hours) == 2, f"expected a Pro and a Max hours line, found {hours}"
+
+    assert entitlements.live_cap_minutes("free") == minutes[0]
+    assert entitlements.live_cap_minutes("pro") == hours[0] * 60
+    assert entitlements.live_cap_minutes("max") == hours[1] * 60
+    assert entitlements.live_cap_minutes("bogus") == minutes[0]  # safe default
+
+
+def test_caps_do_not_lose_money_at_full_utilisation():
+    """The reason the caps were cut. A learner who burns their whole budget must
+    not cost more than they paid.
+
+    Cost per minute is audio + video + amortised Pro-routed tokens, from
+    usage_meter's own rates. Net revenue is after Apple's 15% under the Small
+    Business Programme, which is the generous reading; off-programme is 30% and
+    tightens this further.
+
+    If someone raises a cap without re-doing this arithmetic, this fails and
+    tells them what the ceiling is.
+    """
+    COST_PER_MIN = 0.037 + 0.012 + 0.004   # audio, video, tokens
+    APPLE_NET = 0.85
+    prices = {"pro": 15.99, "max": 34.99}
+
+    for plan, price in prices.items():
+        net = price * APPLE_NET
+        cost = entitlements.live_cap_minutes(plan) * COST_PER_MIN
+        assert cost <= net, (
+            f"{plan}: {entitlements.live_cap_minutes(plan):.0f} min costs ${cost:.2f} "
+            f"against ${net:.2f} net. Cap must be at most {net / COST_PER_MIN:.0f} min."
+        )
 
 
 def test_priority_models_only_for_paid():

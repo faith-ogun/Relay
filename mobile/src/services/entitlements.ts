@@ -40,10 +40,10 @@ export const PLAN_META: Record<Plan, {
     tagline: 'Start building today',
     blurb: 'Learn the fundamentals and try a live session.',
     perks: [
-      'All 142 lessons',
+      'All 284 lessons',
       '3 hearts, back on their own in 90 minutes',
       '60 minutes of live tutoring a month',
-      '1 3D twin a month',
+      'A 3D twin of every build, kept for 30 days',
     ],
   },
   pro: {
@@ -54,8 +54,8 @@ export const PLAN_META: Record<Plan, {
     perks: [
       'Everything in Free',
       'Unlimited hearts, so a wrong answer never stops you',
-      '10 hours of live tutoring a month',
-      '30 3D twins a month',
+      '4 hours of live tutoring a month',
+      'Every 3D twin kept for good',
       'Priority models',
     ],
   },
@@ -66,8 +66,8 @@ export const PLAN_META: Record<Plan, {
     blurb: 'Everything, plus Interview Mode.',
     perks: [
       'Everything in Pro',
-      '30 hours of live tutoring a month',
-      '100 3D twins a month',
+      '9 hours of live tutoring a month',
+      'Every 3D twin kept for good',
       'Interview Mode',
     ],
   },

@@ -37,6 +37,12 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Lint lessons
         run: npm run lint:lessons
+      # Five guards that existed but were never run on push: price agreement
+      # across the three files that publish it, API route coverage, achievement
+      # durability, curriculum parity and fallback, and lesson solvability.
+      # A guard nobody runs is a comment.
+      - name: Guards
+        run: npm run check
       - name: Production build
         run: npm run build
 

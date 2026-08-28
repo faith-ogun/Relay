@@ -26,20 +26,53 @@ logger = logging.getLogger("ohmlet.entitlements")
 
 VALID_PLANS = ("free", "pro", "max")
 
-# Monthly live-tutor budget per plan (minutes). These MATCH the public pricing
-# page and the business brief (Free 60 min, Pro 10 hr, Max 30 hr) and are the
-# real, server-enforced spend ceiling — no plan is unlimited.
+# Monthly live-tutor budget per plan (minutes).
 #
-# Cost basis (instrumented in usage_meter.py, #17): a blended ~$2.50-4.50 per
-# active tutor-hour (~$0.037/min audio + snapshot vision + routed Pro calls). At
-# ~$3/hr a full Free month is ~$3 (funnel cost), a capped Pro month ~$30 (the
-# heavy-user ceiling), a capped Max month ~$90 (priced to clear it). Deliberately
-# conservative until real billing data lands (#19); every value is env-tunable so
-# caps can be tightened without a deploy. Nothing here exceeds the page's promise.
+# CUT on 2026-08-28, from 60/600/1800, because the old caps lost money at full
+# utilisation and the loss grew with the price of the tier. Faith's call, on the
+# arithmetic below.
+#
+# The cost of a paid minute, with the token rates now set honestly in
+# usage_meter.py (they defaulted to ZERO for tokens, which hid the Pro-model
+# spend entirely):
+#
+#     audio      $0.037 / min
+#     video      $0.012 / min   (1 frame/sec at $0.0002)
+#     tokens     ~$0.004 / min amortised, from Pro-routed tool calls
+#     ---------------------------------
+#     TOTAL      ~$0.053 / min
+#
+# Net revenue, after Apple's 15% under the Small Business Program (the worse
+# case is 30% off-programme, which tightens all of this further):
+#
+#     Pro   $15.99 -> $13.59 net -> break-even at 256 min
+#     Max   $34.99 -> $29.74 net -> break-even at 561 min
+#
+# The caps sit just under break-even, so a learner who burns their ENTIRE budget
+# still contributes a little rather than costing us money. Everyone below the cap
+# is profitable, and the cap is a ceiling on loss rather than a target.
+#
+#     Free   60 min ->  $3.18 cost. Unchanged: this is CAC, and activation
+#                       depends on it. See the note below.
+#     Pro   240 min -> $12.72 cost against $13.59 net
+#     Max   540 min -> $28.62 cost against $29.74 net
+#
+# The Pro to Max step is now 2.25x rather than 3x, and that is the right
+# direction: Max's reason to exist is Interview Mode and the career features,
+# not a bigger number of minutes. A tier differentiated only by quantity is one
+# most subscribers never have a reason to reach for.
+#
+# FREE IS DELIBERATELY UNCHANGED, and it rests on an assumption nobody has
+# tested: that 60 minutes covers one real first build including a beginner's
+# mis-wires. Session duration is instrumented (usage_meter.duration_seconds) but
+# there is no production data yet. If that assumption is wrong, the free tier is
+# stringent in the one place it must not be. Run scripts/first_build.py.
+#
+# Every value is env-tunable, so a cap can be changed without a deploy.
 LIVE_MINUTES_PER_MONTH: dict[str, float] = {
     "free": float(os.getenv("OHMLET_LIVE_MIN_FREE", "60")),
-    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "600")),   # 10 hours
-    "max": float(os.getenv("OHMLET_LIVE_MIN_MAX", "1800")),  # 30 hours
+    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "240")),   # 4 hours
+    "max": float(os.getenv("OHMLET_LIVE_MIN_MAX", "540")),   # 9 hours
 }
 
 # Plans that get the premium models for code gen / deep reasoning tools.

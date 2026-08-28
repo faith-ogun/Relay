@@ -103,18 +103,18 @@ def create_twin(req: TwinRequest, uid: str = Depends(guard)) -> TwinView:
         # Not configured in this environment — be honest, never fake an artifact.
         raise HTTPException(status_code=503, detail="3D twin generation isn't available right now.")
 
-    # Server-side entitlement + monthly quota (#56). The twin is a paid artifact.
+    # An ABUSE ceiling, not the product gate. Every completed build gets a twin
+    # on every plan; what the paid tiers buy is that the gallery keeps it. See
+    # entitlements.RETENTION_DAYS. Generation still calls a paid provider, so it
+    # cannot be literally unbounded, but the limit sits far above what the live
+    # tutor budget physically allows anyone to reach.
     plan = entitlements.get_plan(uid)
     quota = entitlements.monthly_quota(plan)
     used = storage.count_for_period(uid, entitlements.period())
     if used >= quota:
         raise HTTPException(
-            status_code=402,
-            detail=(
-                "You've used all your 3D twins this month. Upgrade for more."
-                if plan == "free"
-                else "You've reached your monthly 3D twin limit."
-            ),
+            status_code=429,
+            detail="You have generated an unusual number of twins this month. Get in touch if this is wrong.",
         )
 
     twin_id = uuid.uuid4().hex
@@ -146,8 +146,23 @@ def create_twin(req: TwinRequest, uid: str = Depends(guard)) -> TwinView:
 
 @app.get("/v1/twins")
 def list_twins(uid: str = Depends(guard)) -> dict:
-    """The caller's twins, newest first."""
-    return {"twins": [TwinView.of(r).model_dump() for r in storage.list_records(uid)]}
+    """The caller's twins, newest first, minus any that have rolled off.
+
+    Free galleries keep 30 days. Nothing is deleted when it rolls off, so the
+    moment somebody upgrades their whole collection reappears, which is a far
+    better upgrade than a number going up.
+    """
+    plan = entitlements.get_plan(uid)
+    records = storage.list_records(uid)
+    visible = [r for r in records if entitlements.is_visible(r, plan)]
+    return {
+        "twins": [TwinView.of(r).model_dump() for r in visible],
+        "plan": plan,
+        "retentionDays": entitlements.retention_days(plan),
+        # What an upgrade would bring back, so the client can say so honestly
+        # rather than guessing at a number.
+        "hiddenByRetention": len(records) - len(visible),
+    }
 
 
 @app.get("/v1/twins/{twin_id}", response_model=TwinView)
@@ -155,6 +170,11 @@ def get_twin(twin_id: str, uid: str = Depends(guard)) -> TwinView:
     rec = storage.get_record(uid, validation.clean_id(twin_id))
     if not rec:
         raise HTTPException(status_code=404, detail="Twin not found.")
+    if not entitlements.is_visible(rec, entitlements.get_plan(uid)):
+        raise HTTPException(
+            status_code=402,
+            detail="This twin is older than your plan keeps. Upgrade to bring your whole gallery back.",
+        )
     return TwinView.of(rec)
 
 
@@ -165,6 +185,11 @@ def get_twin_model(twin_id: str, uid: str = Depends(guard)) -> Response:
     rec = storage.get_record(uid, tid)
     if not rec:
         raise HTTPException(status_code=404, detail="Twin not found.")
+    if not entitlements.is_visible(rec, entitlements.get_plan(uid)):
+        raise HTTPException(
+            status_code=402,
+            detail="This twin is older than your plan keeps. Upgrade to bring your whole gallery back.",
+        )
     if rec.get("status") != "ready":
         raise HTTPException(status_code=409, detail="Twin is not ready yet.")
     glb = storage.download_glb(uid, tid)
@@ -198,6 +223,11 @@ def share_twin(twin_id: str, uid: str = Depends(guard)) -> dict:
     rec = storage.get_record(uid, tid)
     if not rec:
         raise HTTPException(status_code=404, detail="Twin not found.")
+    if not entitlements.is_visible(rec, entitlements.get_plan(uid)):
+        raise HTTPException(
+            status_code=402,
+            detail="This twin is older than your plan keeps. Upgrade to bring your whole gallery back.",
+        )
     if rec.get("status") != "ready":
         raise HTTPException(status_code=409, detail="Twin is not ready yet.")
     share_id = storage.create_share(uid, tid)

@@ -14,7 +14,9 @@
     "check:curriculum": "node scripts/check-curriculum-parity.mjs && node scripts/check-curriculum-fallback.mjs",
     "check:curriculum-parity": "node scripts/check-curriculum-parity.mjs",
     "check:curriculum-fallback": "node scripts/check-curriculum-fallback.mjs",
-    "export:curriculum": "node scripts/export-curriculum.mjs"
+    "export:curriculum": "node scripts/export-curriculum.mjs",
+    "check:prices": "node scripts/check-prices.mjs",
+    "check": "npm run check:prices && npm run check:api-coverage && npm run check:achievements && npm run check:curriculum && npm run check:solvability"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

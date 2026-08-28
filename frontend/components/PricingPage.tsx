@@ -39,6 +39,7 @@ const tiers: Tier[] = [
       'Voice tutor, 60 minutes a month',
       'Core lessons & circuit diagrams',
       'Community feed access',
+      'A 3D twin of every build, yours for 30 days',
     ],
   },
   {
@@ -52,9 +53,9 @@ const tiers: Tier[] = [
     features: [
       'Everything in Free',
       'Unlimited hearts, so a wrong answer never stops you',
-      'Live tutor sessions, up to 10 hours a month',
+      'Live tutor sessions, up to 4 hours a month',
       'All build paths & advanced lessons',
-      '3D digital twin of every build',
+      'A 3D twin of every build, kept for good',
       'Progress tracking, streaks & XP',
     ],
   },
@@ -72,7 +73,7 @@ const tiers: Tier[] = [
       'Company prep from real interview data',
       'Career coaching sessions',
       'Early access to Ohmlet Labs',
-      'Live tutor sessions, up to 30 hours a month',
+      'Live tutor sessions, up to 9 hours a month',
     ],
   },
 ];
