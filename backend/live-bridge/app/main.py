@@ -204,11 +204,23 @@ child_runner = Runner(
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Liveness, plus the two facts you need to know WHICH build answered.
+
+    `curriculum` is the content hash the service is serving. Without it, the only
+    way to check whether a curriculum change actually reached production was to
+    mint a Firebase token and call the authenticated manifest, which is too much
+    friction for a question asked after every curriculum deploy. The stamp is a
+    hash of published lesson content, so exposing it discloses nothing that the
+    app does not already hand to every signed-in learner.
+    """
+    from curriculum import content_version
+
     return {
         "status": "ok",
         "service": "live-bridge",
         "runtime": "google-adk-bidi",
         "model": os.getenv("OHMLET_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
+        "curriculum": content_version(),
     }
 
 

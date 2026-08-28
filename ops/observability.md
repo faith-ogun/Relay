@@ -123,6 +123,33 @@ records.
 
 ---
 
+## 4b. Which build answered
+
+`/health` on `live-bridge` is the only unauthenticated endpoint, and it reports
+the **curriculum content stamp** alongside the model:
+
+```bash
+curl -s https://ohmlet-live-bridge-182102811288.europe-west1.run.app/health
+# {"status":"ok","service":"live-bridge","runtime":"google-adk-bidi",
+#  "model":"gemini-live-2.5-flash-native-audio","curriculum":"fd7efe04087d1ec5"}
+```
+
+Compare `curriculum` against `backend/live-bridge/app/curriculum_data/curriculum.json`
+after any curriculum deploy. That is the whole check.
+
+It exists because the question "did the new lessons actually reach production?"
+had no cheap answer: the manifest that carries the stamp needs a Firebase bearer
+token, so on 2026-08-28 a curriculum deploy was verified by comparing a Cloud Run
+revision timestamp against a git commit timestamp. That proves when a container
+was built, not what is inside it. The stamp is a hash of published lesson
+content, so exposing it discloses nothing the app does not hand to every
+signed-in learner.
+
+An empty `curriculum` means the corpus failed to load, and a service answering
+`"status":"ok"` while serving no lessons is worse than one that fails outright.
+
+---
+
 ## 5. Alerting
 
 `ops/alerting.sh` provisions Cloud Monitoring for all three services:
