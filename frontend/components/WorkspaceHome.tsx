@@ -7,6 +7,7 @@ import {
   Briefcase,
   CircuitBoard,
   Flame,
+  Check,
   Home,
   Map as MapIcon,
   PanelLeftClose,
@@ -1190,7 +1191,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ohmlet-ink text-xs font-black"
                               style={medal ? { background: medal.color, color: '#fff' } : undefined}
                             >
-                              {isDone ? '✓' : isNext ? <Play className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4 text-ohmlet-ink-soft" fill="currentColor" />}
+                              {isDone ? <Check className="h-4 w-4" strokeWidth={3.5} /> : isNext ? <Play className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4 text-ohmlet-ink-soft" fill="currentColor" />}
                             </span>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-black">{l.title}</p>

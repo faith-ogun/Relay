@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Close, Comment as CommentIcon, Heart } from '../components/icons';
+import { Close, Comment as CommentIcon, Heart, Send } from '../components/icons';
 import {
   ChallengeArt, CheckGlyph, ClockGlyph, RewardGlyph, TargetGlyph, TrophyGlyph, UsersGlyph,
   themeFor, type ChallengePalette,
@@ -406,7 +406,7 @@ const Comments: React.FC<{ postId: string; onChanged: () => Promise<void>; uid?:
         <TextInput value={draft} onChangeText={setDraft} placeholder="Reply…"
           placeholderTextColor={colors.inkSoft} style={s.replyInput} accessibilityLabel="Reply" />
         <Pressable onPress={send} disabled={!draft.trim() || busy} style={[s.replySend, (!draft.trim() || busy) && { opacity: 0.4 }]}>
-          <Text style={s.replySendText}>↑</Text>
+          <Send size={18} />
         </Pressable>
       </View>
     </View>

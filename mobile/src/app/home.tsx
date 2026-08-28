@@ -7,10 +7,12 @@ import { AppTabs } from '../components/AppTabs';
 import { StatStrip } from '../components/StatStrip';
 import { PathSkeleton } from '../components/Skeleton';
 import { UnitPath } from '../components/path/UnitPath';
+import { BossCard } from '../components/BossCard';
 import { useAuth } from '../hooks/useAuth';
 import { getManifest, allLessons, type Manifest } from '../services/curriculum';
 import { EMPTY, loadProgress, type Progress } from '../services/progress';
 import { GOAL_FRAMING, loadProfile, type LearnerProfile } from '../services/learnerProfile';
+import { fetchBosses, type BossStatus } from '../services/bosses';
 import { colors, font, radius, space, type, unitColor, curve, tabular } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 
@@ -34,6 +36,14 @@ export default function Home() {
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  /**
+   * Boss state, keyed by unit. Null until it has ever been fetched, which is
+   * the distinction the gate below turns on: "not cleared" and "we do not know"
+   * must not be treated the same, or a learner on a train would find every unit
+   * they had already opened locked behind an exam they cannot reach.
+   */
+  const [bosses, setBosses] = useState<Record<string, BossStatus> | null>(null);
+  const [passRatio, setPassRatio] = useState(0.8);
 
   const load = useCallback(async () => {
     // getManifest returns the cached path first and refreshes behind it, so the
@@ -42,17 +52,24 @@ export default function Home() {
     // Promise.all settles. Applying the returned copy unconditionally then put
     // the stale path straight back on screen.
     let refreshed = false;
-    const [m, p, prof] = await Promise.all([
+    const [m, p, prof, b] = await Promise.all([
       // The callback matters: without it a refreshed manifest was written to
       // cache and not shown until the next cold start, so content changes
       // appeared to take a relaunch.
       getManifest((fresh) => { refreshed = true; setManifest(fresh); }),
       user?.uid ? loadProgress(user.uid) : Promise.resolve(EMPTY),
       loadProfile(),
+      fetchBosses(),
     ]);
     if (!refreshed) setManifest(m);
     setProgress(p);
     setProfile(prof);
+    // Left alone on failure rather than cleared: a dropped connection should not
+    // relock the path, and a stale "cleared" is the safe direction to be wrong in.
+    if (b.ok) {
+      setBosses(Object.fromEntries(b.data.units.map((u) => [u.unitId, u])));
+      setPassRatio(b.data.passRatio);
+    }
   }, [user?.uid]);
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
@@ -108,12 +125,23 @@ export default function Home() {
             const unitDone = lessons.filter((l) => done.has(l.id)).length;
             const complete = unitDone === lessons.length && lessons.length > 0;
             const tint = unitColor(ui);
-            // A unit is open once the one before it is finished, so the path
-            // reads as a path rather than a list of everything at once.
+            // A unit is open once the one before it is FINISHED AND ITS BOSS IS
+            // CLEARED, so the path reads as a path rather than a list of
+            // everything at once, and nobody advances carrying a skill they
+            // never proved.
+            //
+            // The boss half is applied only when boss state has actually been
+            // fetched. Offline, this falls back to the old rule (previous unit's
+            // lessons complete), which leaves an offline learner exactly where
+            // they were before bosses existed rather than locked out. The server
+            // refuses the exam endpoint independently, so the gate does not rest
+            // on this check being unskippable.
             const prev = ui === 0 ? null : manifest.units[ui - 1];
-            const unlocked = ui === 0 || (prev
+            const prevLessonsDone = prev
               ? prev.skills.flatMap((sk) => sk.lessons).every((l) => done.has(l.id))
-              : false);
+              : false;
+            const prevBossCleared = !bosses || !prev || (bosses[prev.id]?.cleared ?? false);
+            const unlocked = ui === 0 || (prevLessonsDone && prevBossCleared);
 
             return (
               <View key={unit.id} style={s.unitBlock}>
@@ -155,6 +183,20 @@ export default function Home() {
                     onStart={(lessonId) => router.push({ pathname: '/lesson/[id]', params: { id: lessonId } })}
                   />
                 </View>
+
+                {/* The boss sits at the END of the unit, after its path, because
+                    that is where it is in the journey. Shown from the moment the
+                    unit is open so a learner can see what they are working
+                    toward, not sprung on them once the lessons run out. */}
+                {unlocked && (
+                  <BossCard
+                    unitTitle={unit.title}
+                    status={bosses?.[unit.id] ?? null}
+                    passRatio={passRatio}
+                    lessonsRemaining={lessons.length - unitDone}
+                    onStart={() => router.push({ pathname: '/boss/[unitId]', params: { unitId: unit.id } })}
+                  />
+                )}
 
                 {isNextUnit(next, lessons) && (
                   <View style={[s.nextCard, { borderColor: tint }]}>

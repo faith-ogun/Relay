@@ -571,11 +571,14 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
 
     const serialInit = ['--- Simulation started ---'];
     if (warnings.length > 0) {
-      serialInit.push('⚠ Circuit validation:');
+      // Plain words, no symbol. This is a serial monitor: the Arduino IDE prints
+      // ASCII, and a glyph here reads as decoration on output that is meant to
+      // look like the real thing.
+      serialInit.push('Circuit validation:');
       warnings.forEach((w) => serialInit.push(`  • ${w}`));
       serialInit.push('Simulation running with available components...');
     } else {
-      serialInit.push('✓ Circuit validation passed. All key components connected.');
+      serialInit.push('Circuit validation passed. All key components connected.');
     }
 
     setSimState((prev) => ({

@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
 import { SafetyAck } from '../components/SafetyAck';
+import { Send } from '../components/icons';
 import { acceptSafety, hasAcceptedSafety } from '../services/gates';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -763,7 +764,7 @@ export default function LiveTutor() {
             accessibilityRole="button"
             accessibilityLabel="Send"
           >
-            <Text style={s.sendText}>↑</Text>
+            <Send size={18} />
           </Pressable>
         </View>
 

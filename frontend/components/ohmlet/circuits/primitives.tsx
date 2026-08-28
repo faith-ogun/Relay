@@ -111,7 +111,13 @@ export function Buzzer({ x, y, label, highlight, onClick, id }: { x: number; y: 
       {onClick && <rect x={-22} y={-16} width={44} height={38} fill="transparent" />}
       <line x1={-20} y1={0} x2={-10} y2={0} stroke="currentColor" strokeWidth={2} />
       <rect x={-10} y={-10} width={20} height={20} rx={3} fill="none" stroke="currentColor" strokeWidth={2} />
-      <text x={0} y={4} textAnchor="middle" fontSize={10} fill="currentColor" fontWeight={700}>♪</text>
+      {/* Sound, drawn rather than set as a "♪" character. A text glyph in an SVG
+          schematic inherits whatever font resolves, so it rendered at a
+          different weight to every stroke around it and moved between
+          platforms. Two arcs read as a buzzer at any size. */}
+      <path d="M-1.5 -5.5 A 6 6 0 0 1 -1.5 5.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M2.5 -8 A 9.5 9.5 0 0 1 2.5 8" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+      <circle cx={-5} cy={0} r={1.8} fill="currentColor" />
       <line x1={10} y1={0} x2={20} y2={0} stroke="currentColor" strokeWidth={2} />
       {label && <text x={0} y={22} textAnchor="middle" fontSize={9} fill="currentColor" fontWeight={500}>{label}</text>}
       {highlight && <rect x={-14} y={-14} width={28} height={28} rx={6} fill="none" stroke="#f3e515" strokeWidth={2.5} strokeDasharray="4 2" className="circuit-pulse" />}

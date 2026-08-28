@@ -78,6 +78,12 @@ KNOWN_EVENTS = {
     # "hearts_paywall_view" and then "checkout_start" is what says whether the
     # perk converts or just annoys.
     "heart_lost", "hearts_depleted", "hearts_paywall_view",
+    # Bosses: the unit exam, and the only hard gate in the product.
+    # The pair answers the question that decides whether the gate is set right.
+    # A high "boss_start" with a low pass rate in "boss_result" means the bar is
+    # too high or the unit under-taught, and both are content problems rather
+    # than difficulty to be proud of.
+    "boss_start", "boss_result",
     # Commercial
     "paywall_view", "checkout_start", "purchase_complete", "restore_purchases",
     # The one that answers "why did they go". Fired from the deletion flow

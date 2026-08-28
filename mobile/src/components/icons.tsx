@@ -56,6 +56,21 @@ export const Comment: React.FC<Props> = ({ size = 18, color = colors.inkSoft }) 
   </Svg>
 );
 
+/**
+ * Send.
+ *
+ * Replaces a literal "↑" that two screens were using as a button face. A text
+ * arrow inherits the font, so it sat off-centre, ignored the icon sizing every
+ * neighbouring control obeyed, and shifted between iOS versions. Drawn, it is
+ * the same weight as Close and Comment beside it.
+ */
+export const Send: React.FC<Props> = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M12 19V6.5M12 5l-5.5 5.5M12 5l5.5 5.5" fill="none" stroke={color}
+          strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 export const Close: React.FC<Props> = ({ size = 20, color = colors.ink }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke={color}
