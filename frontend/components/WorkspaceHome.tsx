@@ -1082,15 +1082,18 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Today</p>
                   <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Welcome back, {displayName}.</h1>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-5">
                   <Stat icon={Flame} art="/stats/streak.png" value={`${streak}`} label="streak" tint="text-ohmlet-red" />
                   <Stat icon={Zap} art="/stats/xp.png" value={xp.toLocaleString()} label="XP" tint="text-ohmlet-gold-deep" />
-                  <div className="flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-3 py-2 shadow-press-sm">
+                  {/* The ring stays: it is a picture of the progress, not a
+                      label for it, and it is the one thing here a number alone
+                      cannot say. */}
+                  <div
+                    className="flex items-center gap-2"
+                    aria-label={`${goalDone} of ${GOAL_TARGET} lessons towards today's goal`}
+                  >
                     <Ring pct={goalPct} />
-                    <div className="leading-tight">
-                      <p className="text-sm font-black">{goalDone}/{GOAL_TARGET}</p>
-                      <p className="text-[10px] font-bold uppercase text-ohmlet-ink-soft">goal</p>
-                    </div>
+                    <p className="text-xl font-black tabular-nums tracking-tight">{goalDone}/{GOAL_TARGET}</p>
                   </div>
                 </div>
               </div>
@@ -1330,19 +1333,24 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
  * the flame's mouth, an LED lighting the heart), which is what makes it Ohmlet's
  * rather than an icon pack's. Falls back to the lucide glyph if the image cannot
  * be fetched, so a stat is never a blank square.
+ *
+ * Unboxed on 2026-08-29, matching the phone. Each stat used to sit in a bordered
+ * white card with its name captioned under the number, which left the artwork at
+ * 24px and spent a third of the width on the words "streak" and "XP". The icon
+ * already says which stat it is. What the caption was genuinely carrying was the
+ * accessible name, so that moved to `aria-label` rather than being lost.
  */
 const Stat: React.FC<{
   icon: React.ComponentType<{ className?: string }>;
   art?: string; value: string; label: string; tint: string;
 }> = ({ icon: Icon, art, value, label, tint }) => (
-  <div className="flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-3 py-2 shadow-press-sm">
+  // No box, no caption. `label` survives as the accessible name, because "2070"
+  // read out on its own is not a stat; it is a number. See the note above.
+  <div className="flex items-center gap-2" aria-label={`${value} ${label}`}>
     {art
-      ? <img src={art} alt="" aria-hidden className="h-6 w-6 shrink-0 object-contain" />
-      : <Icon className={`h-5 w-5 ${tint}`} />}
-    <div className="leading-tight">
-      <p className="text-sm font-black">{value}</p>
-      <p className="text-[10px] font-bold uppercase text-ohmlet-ink-soft">{label}</p>
-    </div>
+      ? <img src={art} alt="" aria-hidden className="h-9 w-9 shrink-0 object-contain" />
+      : <Icon className={`h-7 w-7 ${tint}`} />}
+    <p className="text-xl font-black tabular-nums tracking-tight">{value}</p>
   </div>
 );
 

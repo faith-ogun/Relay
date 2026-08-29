@@ -5,8 +5,7 @@ import { InfinityMark } from './icons';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { track } from '../services/analytics';
-import { colors, font, curve, radius, tabular } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { colors, font, tabular } from '../theme/tokens';
 
 /**
  * The three numbers that say how you are doing, in a strip across the top.
@@ -27,8 +26,25 @@ import { elevation } from '../theme/elevation';
  * has a resistor for a mouth, the heart is lit by an LED, and the goal ring is a
  * circuit node with a check at its centre.
  *
- * Drawn at 22pt rather than the 17pt the line glyphs used. Painted art needs the
- * extra points to read: at 17 the resistor bands on the XP coin turn to mush.
+ * Drawn at 32pt, up from 22, and before that 17 for the line glyphs they
+ * replaced. Painted art needs the points to read: at 17 the resistor bands on
+ * the XP coin turned to mush.
+ *
+ * The 32 is what removing the boxes bought. Each stat used to sit in a bordered
+ * white pill with a caption under the number, and between the border, the
+ * padding and the word XP there was no room for the artwork to be anything but
+ * small. Faith asked for the Duolingo treatment: no container, no caption, and
+ * let the icon and the number do the talking. The caption was never carrying
+ * meaning the icon did not already carry, and the border was carrying none at
+ * all.
+ *
+ * Two things the container WAS carrying, now moved rather than dropped: the goal
+ * turning green when met (the number turns green, and its icon stops being
+ * dimmed), and hearts being empty (the icon dims and the count becomes a
+ * countdown). The third thing, the caption, was the only real loss, and it was a
+ * loss for screen readers rather than for eyes: every stat now carries an
+ * explicit accessibilityLabel, which none of them but hearts had before, because
+ * "2070" on its own is not a stat.
  */
 const STAT_ART = {
   xp: require('../../assets/stats/xp.png'),
@@ -37,7 +53,7 @@ const STAT_ART = {
   goal: require('../../assets/stats/goal.png'),
 } as const;
 
-const ICON = 22;
+const ICON = 32;
 
 const StatIcon: React.FC<{
   name: keyof typeof STAT_ART;
@@ -57,24 +73,21 @@ const StatIcon: React.FC<{
  * Here they are one number among four; there they are the thing being spent, and
  * the difference in treatment is the difference between context and content.
  */
-const HeartsPill: React.FC = () => {
+const HeartsStat: React.FC = () => {
   const { hearts, unlimited, loaded, nextIn, empty } = useHeartsCountdown();
   // A minor cannot self-purchase (#96): they get the count, not a doorway to
   // a paywall.
   const { childSafe } = useChildSafe();
-  // Nothing, not a blank pill. If the hearts service is unreachable this state
-  // is permanent, and an empty pill in the strip would read as broken for the
+  // Nothing, not a blank slot. If the hearts service is unreachable this state
+  // is permanent, and an empty gap in the strip would read as broken for the
   // whole session; the other three simply take the space.
   if (!loaded) return null;
 
   if (unlimited) {
     return (
-      <View style={[s.pill, s.pillGold]} accessibilityLabel="Unlimited hearts">
+      <View style={s.stat} accessible accessibilityLabel="Unlimited hearts">
         <StatIcon name="hearts" />
-        <View style={s.stack}>
-          <InfinityMark size={17} color={colors.goldText} />
-          <Text style={s.caption} maxFontSizeMultiplier={1.1}>HEARTS</Text>
-        </View>
+        <InfinityMark size={22} color={colors.goldText} />
       </View>
     );
   }
@@ -83,7 +96,6 @@ const HeartsPill: React.FC = () => {
   const body = (
     <>
       <StatIcon name="hearts" dim={empty} />
-      <View style={s.stack}>
       <Text
         style={[s.value, empty ? s.valueWait : { color: colors.red }]}
         maxFontSizeMultiplier={1.2}
@@ -91,15 +103,11 @@ const HeartsPill: React.FC = () => {
       >
         {empty ? formatWait(nextIn) || '--' : hearts ?? 0}
       </Text>
-      <Text style={s.caption} maxFontSizeMultiplier={1.1}>{empty ? 'BACK IN' : 'HEARTS'}</Text>
-      </View>
     </>
   );
 
   if (childSafe) {
-    return (
-      <View style={[s.pill, empty && s.pillEmpty]} accessibilityLabel={label}>{body}</View>
-    );
+    return <View style={s.stat} accessible accessibilityLabel={label}>{body}</View>;
   }
 
   return (
@@ -107,7 +115,7 @@ const HeartsPill: React.FC = () => {
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={() => { track('hearts_paywall_view'); router.push('/plans'); }}
-      style={({ pressed }) => [s.pill, empty && s.pillEmpty, pressed && s.pillPressed]}
+      style={({ pressed }) => [s.stat, pressed && s.statPressed]}
     >
       {body}
     </Pressable>
@@ -121,57 +129,67 @@ export const StatStrip: React.FC<{
   dailyGoal: number;
 }> = ({ xp, streak, doneToday, dailyGoal }) => {
   const met = doneToday >= dailyGoal;
+  const done = Math.min(doneToday, dailyGoal);
   return (
     <View style={s.strip}>
-      <View style={s.pill}>
+      {/* Every stat says out loud what its caption used to say on screen. A
+          screen reader reading "2070" and moving on is not reading a stat.
+          `accessible` is what makes the label take effect: a View is not an
+          accessibility element on its own, and without it VoiceOver walks
+          straight past the label to the number underneath. The old hearts
+          Views had exactly that bug; it did not matter while the caption was
+          on screen, and it would have mattered from today. */}
+      <View style={s.stat} accessible accessibilityLabel={`${xp} XP`}>
         <StatIcon name="xp" />
-        <View style={s.stack}>
-          <Text style={s.value} maxFontSizeMultiplier={1.15}>{xp}</Text>
-          <Text style={s.caption} maxFontSizeMultiplier={1.1}>XP</Text>
-        </View>
+        <Text style={s.value} maxFontSizeMultiplier={1.15}>{xp}</Text>
       </View>
-      <View style={s.pill}>
+      <View
+        style={s.stat}
+        accessible
+        accessibilityLabel={streak === 0 ? 'No streak yet' : `${streak} day streak`}
+      >
         <StatIcon name="streak" dim={streak === 0} />
-        <View style={s.stack}>
-          <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.15}>{streak}</Text>
-          <Text style={s.caption} maxFontSizeMultiplier={1.1}>{streak === 1 ? 'DAY' : 'DAYS'}</Text>
-        </View>
+        <Text style={[s.value, streak > 0 && { color: colors.red }]} maxFontSizeMultiplier={1.15}>
+          {streak}
+        </Text>
       </View>
-      <HeartsPill />
-      <View style={[s.pill, met && s.pillDone]}>
+      <HeartsStat />
+      <View
+        style={s.stat}
+        accessible
+        accessibilityLabel={
+          met
+            ? `Daily goal met, ${done} of ${dailyGoal} lessons`
+            : `${done} of ${dailyGoal} lessons towards today's goal`
+        }
+      >
         <StatIcon name="goal" dim={!met} />
-        <View style={s.stack}>
-          <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.15}>
-            {Math.min(doneToday, dailyGoal)}/{dailyGoal}
-          </Text>
-          <Text style={s.caption} maxFontSizeMultiplier={1.1}>GOAL</Text>
-        </View>
+        <Text style={[s.value, met && { color: colors.greenDeep }]} maxFontSizeMultiplier={1.15}>
+          {done}/{dailyGoal}
+        </Text>
       </View>
     </View>
   );
 };
 
 const s = StyleSheet.create({
-  strip: { flexDirection: 'row', gap: 7, paddingHorizontal: 16, paddingBottom: 12 },
-  pill: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 8, paddingHorizontal: 4,
-    ...elevation.card,
+  strip: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 2, paddingBottom: 12,
   },
+  /**
+   * No border, no fill, no shadow. `flex: 1` still shares the width evenly, so
+   * the four sit where they always did; what has gone is everything that was
+   * drawing a box around them.
+   */
+  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  statPressed: { transform: [{ scale: 0.94 }] },
   icon: { width: ICON, height: ICON },
   // Not greyscale: the art is the brand. Flattened enough that a spent
   // stat reads as spent without becoming a different picture.
   iconDim: { opacity: 0.38 },
-  stack: { minWidth: 0 },
-  caption: {
-    fontFamily: font.extrabold, fontSize: 9, letterSpacing: 0.6,
-    color: colors.inkMute, textTransform: 'uppercase', marginTop: -1,
-  },
-  pillDone: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  pillGold: { borderColor: colors.goldPlate, backgroundColor: colors.goldSoft },
-  pillEmpty: { borderColor: colors.inkFaint, backgroundColor: colors.inkFaint },
-  pillPressed: { transform: [{ scale: 0.97 }] },
-  value: { ...tabular, fontFamily: font.black, fontSize: 14, color: colors.ink },
+  value: { ...tabular, fontFamily: font.black, fontSize: 20, color: colors.ink, letterSpacing: -0.4 },
+  // The countdown can be as wide as "14m 30s", so it stays small enough to fit
+  // beside a 32pt icon in a quarter of the bar.
   valueWait: { fontSize: 12, color: colors.inkSoft, letterSpacing: 0.2 },
 });
