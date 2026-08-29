@@ -150,6 +150,20 @@ An empty `curriculum` means the corpus failed to load, and a service answering
 
 ---
 
+## 4c. Resources created outside Terraform
+
+Recorded here because CLAUDE.md asks for it and because a bucket nobody
+remembers creating is a bucket nobody remembers to bill for.
+
+| When | What | Why |
+|---|---|---|
+| 2026-08-29 | `gs://ohmlet-app-twins` — `europe-west1`, STANDARD, uniform bucket-level access, **public access prevention enforced**, `objectAdmin` for `182102811288-compute@…` | Where the reporter writes 3D twin meshes. Public access is prevented on purpose: a twin is streamed through the authenticated `/v1/twins/{id}/model` endpoint after an ownership check, so it is as private as the rest of a learner's data. Empty until the Stability key lands. |
+
+`ops/enable-twins.sh` re-checks the bucket, so that script is the whole story
+even on a fresh project.
+
+---
+
 ## 5. Alerting
 
 `ops/alerting.sh` provisions Cloud Monitoring for all three services:
