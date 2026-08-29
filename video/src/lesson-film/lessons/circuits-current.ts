@@ -1,5 +1,11 @@
 import type { LessonScript } from '../types';
 
+/* Renamed from `closed-loop` on 2026-08-29. Every file name in the pipeline comes
+ * from `id`, and films.py signs v1/<skillId>/ohmlet-lesson-<skillId>-...,
+ * so an id that is not the skill id publishes to an address the server
+ * never asks for. This film and one other 404ed in production for exactly
+ * that reason, and check-films.mjs now refuses the mismatch. */
+
 /**
  * Unit 1, Foundations. Sits at the checkpoint for the skill "Circuits & Current".
  *
@@ -8,8 +14,8 @@ import type { LessonScript } from '../types';
  * needs a complete loop" correctly on a quiz and still not picture it. Here they
  * watch it stop.
  */
-export const closedLoop: LessonScript = {
-  id: 'closed-loop',
+export const circuitsCurrent: LessonScript = {
+  id: 'circuits-current',
   title: 'The Closed Loop',
   unitTitle: 'Foundations',
   unitId: 'foundations',

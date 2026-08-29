@@ -17,7 +17,7 @@
 //
 // It does NOT talk to GCS, so it runs in CI. sync-films.mjs is the half that
 // needs credentials.
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -68,7 +68,43 @@ for (const [file, re] of GUESSERS) {
   }
 }
 
-// ── 3. What is not filmed, said out loud ──
+// ── 3. A film script's id must BE its skill id ──
+//
+// films.py signs `v1/<skill>/ohmlet-lesson-<skill>-<shape>.mp4`, and every file
+// name in the pipeline comes from the script's `id`. When the two differ, the
+// film uploads to an address the server never asks for and 404s in production
+// while every other film works.
+//
+// It happened twice. closed-loop was circuits-current and time-constant was
+// rc-charging: their folders had been renamed by hand and the files inside them
+// had not, so the two films were dead for weeks. circuits-current is the first
+// film in Foundations, which made it the one a new learner was most likely to
+// press.
+{
+  const dir = join(REPO, 'video/src/lesson-film/lessons');
+  let names = [];
+  try { names = readdirSync(dir).filter((n) => n.endsWith('.ts')); } catch { names = []; }
+  for (const name of names) {
+    const src = readFileSync(join(dir, name), 'utf8');
+    const id = src.match(/^\s*id:\s*'([^']+)'/m)?.[1];
+    const skillId = src.match(/^\s*skillId:\s*'([^']+)'/m)?.[1];
+    const fileId = name.replace(/\.ts$/, '');
+    if (!id || !skillId) {
+      fail(`video/.../${name} has no id or no skillId, so nothing can work out where to publish it`);
+      continue;
+    }
+    if (id !== skillId) {
+      fail(`video/.../${name}: id '${id}' is not skillId '${skillId}'. `
+        + 'Every file name in the pipeline comes from `id` and the server signs by skill, so this film would 404.');
+    }
+    if (fileId !== id) {
+      fail(`video/.../${name}: the file is named '${fileId}' and its id is '${id}'. `
+        + 'render-lessons.sh and upload.sh take ids from file names, so these must match.');
+    }
+  }
+}
+
+// ── 4. What is not filmed, said out loud ──
 // Not a failure. A newly authored skill legitimately has no film until one is
 // rendered, and failing here would mean authoring a lesson breaks the build. But
 // a silent gap is how six of them went unnoticed, so it gets printed every run.

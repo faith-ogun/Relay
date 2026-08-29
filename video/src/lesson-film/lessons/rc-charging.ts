@@ -1,5 +1,11 @@
 import type { LessonScript } from '../types';
 
+/* Renamed from `time-constant` on 2026-08-29. Every file name in the pipeline comes
+ * from `id`, and films.py signs v1/<skillId>/ohmlet-lesson-<skillId>-...,
+ * so an id that is not the skill id publishes to an address the server
+ * never asks for. This film and one other 404ed in production for exactly
+ * that reason, and check-films.mjs now refuses the mismatch. */
+
 /**
  * Unit 6, Capacitors, RC & Timing. Checkpoint for "Charging & the Time Constant".
  *
@@ -8,8 +14,8 @@ import type { LessonScript } from '../types';
  * the curve draws itself at the speed the narration describes, and the 63% mark
  * arrives exactly when the words do.
  */
-export const timeConstant: LessonScript = {
-  id: 'time-constant',
+export const rcCharging: LessonScript = {
+  id: 'rc-charging',
   title: 'Charging and the Time Constant',
   unitTitle: 'Capacitors, RC & Timing',
   unitId: 'capacitors-rc',

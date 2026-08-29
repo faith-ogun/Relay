@@ -14,9 +14,12 @@
 export const FILMED_SKILLS: ReadonlySet<string> = new Set([
   'analog-pwm',
   'breadboarding',
+  'brushless-and-foc',
   'building-circuits',
+  'can-bus',
   'caps-at-work',
   'circuits-current',
+  'clock-domains',
   'code-alarm',
   'debugging-safety',
   'driving-loads',
@@ -44,6 +47,8 @@ export const FILMED_SKILLS: ReadonlySet<string> = new Set([
   'resonance-oscillators',
   'robot-control',
   'robot-sensing-comms',
+  'rtos-basics',
+  'sensor-fusion',
   'series-parallel',
   'signals',
   'speed-and-precision',
@@ -54,5 +59,6 @@ export const FILMED_SKILLS: ReadonlySet<string> = new Set([
   'timing-555',
   'transistor-variety',
   'variable-resistance',
+  'volatile-and-isrs',
   'what-arduino',
 ]);

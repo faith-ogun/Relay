@@ -55,19 +55,33 @@ for (const path of listing) {
   bySkill.get(seg[0]).add(seg[seg.length - 1]);
 }
 
+/**
+ * The EXACT object names the server signs, not "some mp4 and some poster".
+ *
+ * films.py builds `v1/<skill>/ohmlet-lesson-<skill>-<shape>.mp4` and
+ * `v1/<skill>/<skill>.vtt`. Two films had the right folder and the wrong file
+ * names inside it: the folder had been renamed from the film id to the skill id
+ * and the files had not. `circuits-current` and `rc-charging` therefore 404ed in
+ * production while every other film worked, and a check that only counted
+ * extensions called both of them complete.
+ *
+ * `circuits-current` is the first film in Foundations, so it was the one a new
+ * learner was most likely to press.
+ */
+const expected = (id) => [
+  `ohmlet-lesson-${id}-phone-1080x1920.mp4`,
+  `ohmlet-lesson-${id}-web-1920x1080.mp4`,
+  `ohmlet-lesson-${id}-phone-1080x1920.jpg`,
+  `ohmlet-lesson-${id}-web-1920x1080.jpg`,
+  `${id}.vtt`,
+];
+
 const complete = [];
 const partial = [];
 for (const [id, files] of [...bySkill].sort(([a], [b]) => a.localeCompare(b))) {
-  const f = [...files];
-  const renders = f.filter((n) => n.endsWith('.mp4'));
-  const poster = f.some((n) => /\.(jpg|jpeg|png|webp)$/.test(n));
-  const captions = f.some((n) => n.endsWith('.vtt'));
-  if (renders.length >= 2 && poster && captions) complete.push(id);
-  else partial.push({ id, missing: [
-    renders.length < 2 ? `${2 - renders.length} render(s)` : null,
-    poster ? null : 'poster',
-    captions ? null : 'captions',
-  ].filter(Boolean) });
+  const missing = expected(id).filter((n) => !files.has(n));
+  if (missing.length === 0) complete.push(id);
+  else partial.push({ id, missing });
 }
 
 const out = resolve(REPO, 'content/films.json');

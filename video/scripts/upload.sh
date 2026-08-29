@@ -20,7 +20,22 @@ else
 fi
 
 for id in $IDS; do
-  echo "  ${id}"
+  # PUBLISH UNDER THE SKILL ID, NOT THE FILE NAME.
+  #
+  # films.py signs v1/<skill id>/..., and two of the earliest films are named
+  # after the film rather than the skill: closed-loop is circuits-current, and
+  # time-constant is capacitors-basics. Publishing those by file name puts them
+  # at an address nothing ever looks at, and the film silently 404s while every
+  # other one works. It happened once and was fixed by hand in the bucket.
+  #
+  # Read from the script itself so the two can never disagree again.
+  skill=$(node -e "import('./scripts/lessons.mjs').then(async(m)=>{const l=(await m.allLessons()).find(x=>x.id===process.argv[1]);if(!l){process.exit(3)}process.stdout.write(l.skillId)})" "$id") || {
+    echo "  !! $id has no script, or it exports no skillId" >&2; exit 1; }
+  if [ "$skill" != "$id" ]; then
+    echo "  ${id}  ->  ${skill}"
+  else
+    echo "  ${skill}"
+  fi
   for f in out/ohmlet-lesson-${id}-*.mp4; do
     [ -f "$f" ] || continue
     base=$(basename "$f")
@@ -28,12 +43,12 @@ for id in $IDS; do
     # shows the diagram rather than a word.
     poster="out/${base%.mp4}.jpg"
     ffmpeg -y -v error -ss 40 -i "$f" -frames:v 1 -q:v 3 "$poster"
-    gcloud storage cp "$f" "$BUCKET/$V/$id/$base" --project=$PROJECT \
+    gcloud storage cp "$f" "$BUCKET/$V/$skill/$base" --project=$PROJECT \
       --content-type=video/mp4 --cache-control="public, max-age=31536000, immutable" -q
-    gcloud storage cp "$poster" "$BUCKET/$V/$id/$(basename "$poster")" --project=$PROJECT \
+    gcloud storage cp "$poster" "$BUCKET/$V/$skill/$(basename "$poster")" --project=$PROJECT \
       --content-type=image/jpeg --cache-control="public, max-age=31536000, immutable" -q
   done
-  gcloud storage cp "out/${id}.vtt" "$BUCKET/$V/$id/${id}.vtt" --project=$PROJECT \
+  gcloud storage cp "out/${id}.vtt" "$BUCKET/$V/$skill/${skill}.vtt" --project=$PROJECT \
     --content-type=text/vtt --cache-control="public, max-age=31536000, immutable" -q
 done
 

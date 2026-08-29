@@ -12,9 +12,12 @@ import { Film, totalFrames } from "./lesson-film/Film";
 import { FPS as LESSON_FPS } from "./lesson-film/palette";
 import { analogPwm } from "./lesson-film/lessons/analog-pwm";
 import { breadboarding } from "./lesson-film/lessons/breadboarding";
+import { brushlessAndFoc } from "./lesson-film/lessons/brushless-and-foc";
 import { buildingCircuits } from "./lesson-film/lessons/building-circuits";
+import { canBus } from "./lesson-film/lessons/can-bus";
 import { capsAtWork } from "./lesson-film/lessons/caps-at-work";
-import { closedLoop } from "./lesson-film/lessons/closed-loop";
+import { clockDomains } from "./lesson-film/lessons/clock-domains";
+import { circuitsCurrent } from "./lesson-film/lessons/circuits-current";
 import { codeAlarm } from "./lesson-film/lessons/code-alarm";
 import { debuggingSafety } from "./lesson-film/lessons/debugging-safety";
 import { drivingLoads } from "./lesson-film/lessons/driving-loads";
@@ -41,6 +44,8 @@ import { resistanceOhms } from "./lesson-film/lessons/resistance-ohms";
 import { resonanceOscillators } from "./lesson-film/lessons/resonance-oscillators";
 import { robotControl } from "./lesson-film/lessons/robot-control";
 import { robotSensingComms } from "./lesson-film/lessons/robot-sensing-comms";
+import { rtosBasics } from "./lesson-film/lessons/rtos-basics";
+import { sensorFusion } from "./lesson-film/lessons/sensor-fusion";
 import { seriesParallel } from "./lesson-film/lessons/series-parallel";
 import { signals } from "./lesson-film/lessons/signals";
 import { speedAndPrecision } from "./lesson-film/lessons/speed-and-precision";
@@ -48,16 +53,20 @@ import { switchesControl } from "./lesson-film/lessons/switches-control";
 import { switchingRegulation } from "./lesson-film/lessons/switching-regulation";
 import { talkDebug } from "./lesson-film/lessons/talk-debug";
 import { theTransistor } from "./lesson-film/lessons/the-transistor";
-import { timeConstant } from "./lesson-film/lessons/time-constant";
+import { rcCharging } from "./lesson-film/lessons/rc-charging";
 import { timing555 } from "./lesson-film/lessons/timing-555";
 import { transistorVariety } from "./lesson-film/lessons/transistor-variety";
 import { variableResistance } from "./lesson-film/lessons/variable-resistance";
+import { volatileAndIsrs } from "./lesson-film/lessons/volatile-and-isrs";
 import { whatArduino } from "./lesson-film/lessons/what-arduino";
 import analogPwmTimings from "./lesson-film/timings/analog-pwm.json";
 import breadboardingTimings from "./lesson-film/timings/breadboarding.json";
+import brushlessAndFocTimings from "./lesson-film/timings/brushless-and-foc.json";
 import buildingCircuitsTimings from "./lesson-film/timings/building-circuits.json";
+import canBusTimings from "./lesson-film/timings/can-bus.json";
 import capsAtWorkTimings from "./lesson-film/timings/caps-at-work.json";
-import closedLoopTimings from "./lesson-film/timings/closed-loop.json";
+import clockDomainsTimings from "./lesson-film/timings/clock-domains.json";
+import circuitsCurrentTimings from "./lesson-film/timings/circuits-current.json";
 import codeAlarmTimings from "./lesson-film/timings/code-alarm.json";
 import debuggingSafetyTimings from "./lesson-film/timings/debugging-safety.json";
 import drivingLoadsTimings from "./lesson-film/timings/driving-loads.json";
@@ -84,6 +93,8 @@ import resistanceOhmsTimings from "./lesson-film/timings/resistance-ohms.json";
 import resonanceOscillatorsTimings from "./lesson-film/timings/resonance-oscillators.json";
 import robotControlTimings from "./lesson-film/timings/robot-control.json";
 import robotSensingCommsTimings from "./lesson-film/timings/robot-sensing-comms.json";
+import rtosBasicsTimings from "./lesson-film/timings/rtos-basics.json";
+import sensorFusionTimings from "./lesson-film/timings/sensor-fusion.json";
 import seriesParallelTimings from "./lesson-film/timings/series-parallel.json";
 import signalsTimings from "./lesson-film/timings/signals.json";
 import speedAndPrecisionTimings from "./lesson-film/timings/speed-and-precision.json";
@@ -91,10 +102,11 @@ import switchesControlTimings from "./lesson-film/timings/switches-control.json"
 import switchingRegulationTimings from "./lesson-film/timings/switching-regulation.json";
 import talkDebugTimings from "./lesson-film/timings/talk-debug.json";
 import theTransistorTimings from "./lesson-film/timings/the-transistor.json";
-import timeConstantTimings from "./lesson-film/timings/time-constant.json";
+import rcChargingTimings from "./lesson-film/timings/rc-charging.json";
 import timing555Timings from "./lesson-film/timings/timing-555.json";
 import transistorVarietyTimings from "./lesson-film/timings/transistor-variety.json";
 import variableResistanceTimings from "./lesson-film/timings/variable-resistance.json";
+import volatileAndIsrsTimings from "./lesson-film/timings/volatile-and-isrs.json";
 import whatArduinoTimings from "./lesson-film/timings/what-arduino.json";
 
 // The full journey video. Scenes laid out in order; each phase is its own Sequence.
@@ -142,9 +154,12 @@ const JourneyVideo: React.FC = () => {
 const LESSONS = [
   { lesson: analogPwm, timings: analogPwmTimings },
   { lesson: breadboarding, timings: breadboardingTimings },
+  { lesson: brushlessAndFoc, timings: brushlessAndFocTimings },
   { lesson: buildingCircuits, timings: buildingCircuitsTimings },
+  { lesson: canBus, timings: canBusTimings },
   { lesson: capsAtWork, timings: capsAtWorkTimings },
-  { lesson: closedLoop, timings: closedLoopTimings },
+  { lesson: clockDomains, timings: clockDomainsTimings },
+  { lesson: circuitsCurrent, timings: circuitsCurrentTimings },
   { lesson: codeAlarm, timings: codeAlarmTimings },
   { lesson: debuggingSafety, timings: debuggingSafetyTimings },
   { lesson: drivingLoads, timings: drivingLoadsTimings },
@@ -171,6 +186,8 @@ const LESSONS = [
   { lesson: resonanceOscillators, timings: resonanceOscillatorsTimings },
   { lesson: robotControl, timings: robotControlTimings },
   { lesson: robotSensingComms, timings: robotSensingCommsTimings },
+  { lesson: rtosBasics, timings: rtosBasicsTimings },
+  { lesson: sensorFusion, timings: sensorFusionTimings },
   { lesson: seriesParallel, timings: seriesParallelTimings },
   { lesson: signals, timings: signalsTimings },
   { lesson: speedAndPrecision, timings: speedAndPrecisionTimings },
@@ -178,10 +195,11 @@ const LESSONS = [
   { lesson: switchingRegulation, timings: switchingRegulationTimings },
   { lesson: talkDebug, timings: talkDebugTimings },
   { lesson: theTransistor, timings: theTransistorTimings },
-  { lesson: timeConstant, timings: timeConstantTimings },
+  { lesson: rcCharging, timings: rcChargingTimings },
   { lesson: timing555, timings: timing555Timings },
   { lesson: transistorVariety, timings: transistorVarietyTimings },
   { lesson: variableResistance, timings: variableResistanceTimings },
+  { lesson: volatileAndIsrs, timings: volatileAndIsrsTimings },
   { lesson: whatArduino, timings: whatArduinoTimings },
 ];
 
