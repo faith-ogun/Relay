@@ -55,6 +55,33 @@ const STAT_ART = {
 
 const ICON = 32;
 
+/**
+ * XP, short enough to fit beside a 32pt icon in a quarter of the bar.
+ *
+ * The arithmetic, because it is the whole reason this exists: on a 430pt phone
+ * the strip has 398pt inside its padding, four stats share it evenly at ~99pt
+ * each, and the icon and its gap take 37 of those. That leaves ~62pt, and a
+ * tabular digit of Nunito Black at 20pt is about 12pt wide. Five digits fit.
+ * Six do not, and 100,000 XP is a number a committed learner reaches rather
+ * than a hypothetical.
+ *
+ * It only bites at 20pt. At the 14pt the number used to be drawn at, inside its
+ * box, this was not a problem, which is exactly the kind of thing that makes a
+ * purely cosmetic change stop being purely cosmetic.
+ */
+const shortXp = (n: number): string => {
+  if (n < 10_000) return String(n);
+  // 12.4K up to 99.9K, then 100K: three significant figures either way, so the
+  // width never grows past five characters.
+  const band = (v: number, suffix: string) =>
+    (v < 100 ? `${v.toFixed(1)}` : `${Math.round(v)}`) + suffix;
+  // Rounded, not raw. 999,999 is under a million but rounds to 1000K, and
+  // "1000K" is not a thing anyone writes; it promotes to 1.0M.
+  const k = n / 1000;
+  if (Math.round(k) < 1000) return band(k, 'K');
+  return band(n / 1_000_000, 'M');
+};
+
 const StatIcon: React.FC<{
   name: keyof typeof STAT_ART;
   /** Drawn flat when the stat is at zero, so the strip still reads at a glance. */
@@ -139,9 +166,12 @@ export const StatStrip: React.FC<{
           straight past the label to the number underneath. The old hearts
           Views had exactly that bug; it did not matter while the caption was
           on screen, and it would have mattered from today. */}
+      {/* The label carries the FULL number; only the drawn one is shortened.
+          "12.4K XP" read aloud is a rounding, and a screen reader should not be
+          told a different number from the one the learner has. */}
       <View style={s.stat} accessible accessibilityLabel={`${xp} XP`}>
         <StatIcon name="xp" />
-        <Text style={s.value} maxFontSizeMultiplier={1.15}>{xp}</Text>
+        <Text style={s.value} maxFontSizeMultiplier={1.15} numberOfLines={1}>{shortXp(xp)}</Text>
       </View>
       <View
         style={s.stat}
