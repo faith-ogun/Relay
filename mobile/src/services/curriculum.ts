@@ -41,6 +41,14 @@ export interface CurriculumSkill {
    *  human-chosen variety, and what the path uses to tell one stretch from
    *  the next. */
   icon?: string;
+  /** True when a lesson film for this skill exists in the bucket.
+   *
+   *  Stamped by the curriculum export from content/films.json, which is
+   *  generated from the bucket itself. Never re-derive it from the skill id:
+   *  three places used to, all guessed "not a review and not a gateway", and all
+   *  three were wrong together the moment six skills were authored without
+   *  films. Guarded by frontend/scripts/check-films.mjs. */
+  hasFilm?: boolean;
   lessons: CurriculumLesson[];
 }
 

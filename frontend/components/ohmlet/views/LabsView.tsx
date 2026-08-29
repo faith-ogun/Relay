@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Beaker, Lock, Play, X } from 'lucide-react';
-import { fetchFilm, fetchLabs, type FilmUrls, type LabsStatus } from '../../../services/careerLabs';
+import { Beaker, Lock, Play } from 'lucide-react';
+import { fetchLabs, type LabsStatus } from '../../../services/careerLabs';
+import { FilmModal } from '../FilmModal';
 import { getManifest, type Manifest } from '../../../services/curriculum';
 
 /**
@@ -14,14 +15,16 @@ import { getManifest, type Manifest } from '../../../services/curriculum';
  * costs to get in. An empty screen reads as broken, and hiding the thing you are
  * selling is a strange way to sell it.
  *
+ * Which skills have a film comes off the skill itself (`hasFilm`), stamped by
+ * the curriculum export from what is actually in the bucket. This file used to
+ * work it out from the skill id, and was wrong for six skills the day they were
+ * authored.
+ *
  * The films are behind the `lesson-films` lab. Their URLs are V4-signed and
  * expire in thirty minutes, so they are fetched when the learner presses play
  * and never cached: a cached signed URL is one that outlives the reason it was
  * short-lived.
  */
-
-/** Review and gateway skills have no film: the unit boss covers that ground. */
-const hasFilm = (skillId: string) => !skillId.endsWith('-check') && !skillId.endsWith('-gateway');
 
 interface Props {
   /** Absent when the workspace has no upgrade route wired (child-safe shells). */
@@ -128,7 +131,7 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
           </p>
           <div className="mt-4 space-y-6">
             {manifest.units.map((unit) => {
-              const skills = unit.skills.filter((sk) => hasFilm(sk.id));
+              const skills = unit.skills.filter((sk) => sk.hasFilm);
               if (!skills.length) return null;
               return (
                 <div key={unit.id}>
@@ -158,74 +161,6 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
       {playing && (
         <FilmModal skillId={playing.skillId} title={playing.title} onClose={() => setPlaying(null)} />
       )}
-    </div>
-  );
-};
-
-/**
- * The player.
- *
- * The signed URL is fetched here, on open, and thrown away on close. Captions
- * ship with every film and default to on: these are explanatory films watched on
- * a bench, often next to something that is buzzing.
- */
-const FilmModal: React.FC<{ skillId: string; title: string; onClose: () => void }> = ({ skillId, title, onClose }) => {
-  const [urls, setUrls] = useState<FilmUrls | null>(null);
-  const [failure, setFailure] = useState('');
-
-  useEffect(() => {
-    let alive = true;
-    void fetchFilm(skillId).then((r) => {
-      if (!alive) return;
-      if (r.ok) setUrls(r.data);
-      else setFailure('That film could not be loaded just now.');
-    });
-    return () => { alive = false; };
-  }, [skillId]);
-
-  const onKey = useCallback((e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }, [onClose]);
-  useEffect(() => {
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onKey]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ohmlet-ink/80 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${title} film`}
-      onClick={onClose}
-    >
-      <div className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3 pb-3">
-          <h2 className="flex-1 text-lg font-black tracking-tight text-white">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/25 text-white transition-colors hover:bg-white/10"
-          >
-            <X className="h-4 w-4" strokeWidth={2.5} />
-          </button>
-        </div>
-        {failure ? (
-          <p className="rounded-2xl bg-white px-5 py-6 text-center text-sm font-semibold text-ohmlet-ink-soft">{failure}</p>
-        ) : urls ? (
-          <video
-            className="w-full rounded-2xl border-2 border-white/20 bg-black"
-            src={urls.video.web}
-            poster={urls.poster.web}
-            controls
-            autoPlay
-            crossOrigin="anonymous"
-          >
-            <track kind="captions" src={urls.captions} srcLang="en" label="English" default />
-          </video>
-        ) : (
-          <div className="aspect-video w-full animate-pulse rounded-2xl bg-white/10" />
-        )}
-      </div>
     </div>
   );
 };

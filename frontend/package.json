@@ -16,8 +16,10 @@
     "check:curriculum-fallback": "node scripts/check-curriculum-fallback.mjs",
     "export:curriculum": "node scripts/export-curriculum.mjs",
     "check:prices": "node scripts/check-prices.mjs",
-    "check": "npm run check:prices && npm run check:interview-contract && npm run check:api-coverage && npm run check:achievements && npm run check:curriculum && npm run check:solvability",
-    "check:interview-contract": "node scripts/check-interview-contract.mjs"
+    "check": "npm run check:prices && npm run check:interview-contract && npm run check:films && npm run check:api-coverage && npm run check:achievements && npm run check:curriculum && npm run check:solvability",
+    "check:interview-contract": "node scripts/check-interview-contract.mjs",
+    "check:films": "node scripts/check-films.mjs",
+    "sync:films": "node scripts/sync-films.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

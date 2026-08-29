@@ -79,6 +79,22 @@ const achievements = await loadModule('components/ohmlet/data/achievements.tsx')
 const units = plain(curriculum.SESSION_CURRICULUM);
 const sessionContent = plain(lessons.SESSION_CONTENT);
 
+// ── Which skills have a film ──────────────────────────────────────────────────
+//
+// Counted here, never computed here. curriculum.ts already stamps `hasFilm` on
+// every skill from the generated components/ohmlet/data/films.ts, which
+// sync-films.mjs writes from the bucket itself.
+//
+// The backend used to INFER it: every skill that was not a review or a gateway
+// was assumed to have a film. True on the day the films were rendered, false the
+// moment six skills were authored on 2026-08-28. Labs drew a play button on all
+// six and pressing one signed a URL for an object that is not there.
+//
+// Stamping it a second time here is how the web bundle and the backend copy
+// would end up with two answers, and the parity check would then be enforcing a
+// disagreement that neither side owns.
+const withFilm = units.reduce((n, u) => n + (u.skills ?? []).filter((sk) => sk.hasFilm).length, 0);
+
 // Achievements: plain data only. The web module also carries React icon
 // components, which cannot cross the wire and are re-derived per client.
 const achievementList = plain(achievements.ACHIEVEMENTS ?? []);
@@ -136,5 +152,6 @@ console.log(`sessions:         ${sessionStats.count}, ${sessionStats.min}-${sess
 console.log(`lesson entries:   ${lessonIds.length}`);
 console.log(`lesson content:   ${contentCount}`);
 console.log(`achievements:     ${achievementList.length}`);
+console.log(`skills with film: ${withFilm}`);
 console.log(`version:          ${version}${stamped === source ? ' (bundle stamp already current)' : ' (bundle stamp updated)'}`);
 console.log(`written to:       ${out}`);

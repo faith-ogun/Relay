@@ -19,6 +19,7 @@
 //                        bundled sessions and is replaced by the corpus the
 //                        backend serves as soon as that arrives. A live binding:
 //                        importers see the swap, and subscribeCurriculum() tells
+import { FILMED_SKILLS } from './films';
 //                        React when to re-render.
 //
 // The web used to render AUTHORED_CURRICULUM while the backend served the cut
@@ -50,6 +51,14 @@ export interface CurriculumSkill {
   description: string;
   /** lucide-react icon name (rendered by the UI layer). */
   icon: string;
+  /** True when a lesson film for this skill exists in the bucket.
+   *
+   *  Stamped by the curriculum export from content/films.json, which is
+   *  generated from the bucket itself. Never re-derive it from the skill id:
+   *  three places used to, all guessed "not a review and not a gateway", and all
+   *  three were wrong together the moment six skills were authored without
+   *  films. Guarded by frontend/scripts/check-films.mjs. */
+  hasFilm?: boolean;
   lessons: CurriculumLesson[];
 }
 
@@ -858,7 +867,7 @@ export const AUTHORED_CURRICULUM: CurriculumUnit[] = [
  * is stale and the server's corpus wins; scripts/check-curriculum-parity.mjs
  * fails the build when the two drift apart.
  */
-export const BUNDLED_CURRICULUM_VERSION = 'fd7efe04087d1ec5';
+export const BUNDLED_CURRICULUM_VERSION = 'e2815681bd62e23c';
 
 /** Mirror the session cut into the unit, skill and lesson index. */
 function toSessionUnits(units: CurriculumUnit[]): CurriculumUnit[] {
@@ -866,6 +875,10 @@ function toSessionUnits(units: CurriculumUnit[]): CurriculumUnit[] {
     ...unit,
     skills: unit.skills.map((skill) => ({
       ...skill,
+      // From the generated list, which comes from the bucket. Stamped here so
+      // the web bundle and the exported backend copy carry the same answer and
+      // the parity check holds by construction.
+      hasFilm: FILMED_SKILLS.has(skill.id),
       lessons: skill.lessons.flatMap((meta): CurriculumLesson[] => {
         const parts = SESSION_PARTS.get(meta.id);
         if (!parts || parts.length < 2) return [meta];

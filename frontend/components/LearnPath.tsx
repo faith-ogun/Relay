@@ -17,6 +17,8 @@ interface LearnPathProps {
   /** Per-lesson level: 1 Bronze, 2 Silver, 3 Gold. */
   lessonLevels?: Record<string, number>;
   onStartLesson?: (lessonId: string) => void;
+  /** Open the film for a skill. Absent when no player is mounted above. */
+  onPlayFilm?: (skillId: string, title: string) => void;
 }
 
 const SKILL_ICONS: Record<string, IconType> = {
@@ -117,7 +119,7 @@ const LessonNode: React.FC<{
   );
 };
 
-export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new Set(), lessonLevels = {}, onStartLesson }) => {
+export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new Set(), lessonLevels = {}, onStartLesson, onPlayFilm }) => {
   const next = nextLesson(completedLessonIds);
   let nodeIndex = 0;
 
@@ -151,16 +153,34 @@ export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new S
 
             {unit.skills.map((skill) => {
               const SkillIcon = SKILL_ICONS[skill.icon] ?? Zap;
+              // The film unlocks when the skill is cleared. Same rule as the
+              // phone, in this layout's own shape: the phone path has a
+              // checkpoint node to hang it on and this one groups by skill, so
+              // the film lives in the skill's header rather than inventing a
+              // checkpoint the web path does not otherwise have.
+              const skillDone = skill.lessons.length > 0
+                && skill.lessons.every((l) => completedLessonIds.has(l.id));
+              const filmReady = !!skill.hasFilm && skillDone && !!onPlayFilm;
               return (
                 <div key={skill.id} className="mb-10">
                   <div className="mx-auto mb-6 flex max-w-md items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-3 shadow-press-sm">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ohmlet-ink text-ohmlet-gold">
                       <SkillIcon className="h-5 w-5" />
                     </span>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-base font-black leading-tight text-ohmlet-ink">{skill.title}</h3>
                       <p className="text-xs font-semibold text-ohmlet-ink-soft">{skill.description}</p>
                     </div>
+                    {filmReady && (
+                      <button
+                        type="button"
+                        onClick={() => onPlayFilm(skill.id, skill.title)}
+                        aria-label={`Watch the film for ${skill.title}`}
+                        className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-deep active:translate-y-0"
+                      >
+                        <Play className="h-4 w-4 fill-current" strokeWidth={0} />
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex flex-col items-center gap-7">

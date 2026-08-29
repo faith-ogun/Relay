@@ -37,6 +37,7 @@ import { LiveTutorView } from './ohmlet/views/LiveTutorView';
 import { InterviewView } from './ohmlet/views/InterviewView';
 import { CareerView } from './ohmlet/views/CareerView';
 import { LabsView } from './ohmlet/views/LabsView';
+import { FilmModal } from './ohmlet/FilmModal';
 import { SandboxView } from './ohmlet/views/SandboxView';
 import { SimulatorView } from './ohmlet/views/SimulatorView';
 import { CommunityView } from './ohmlet/views/CommunityView';
@@ -526,6 +527,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   // hands over, and reset to the tutor by every other route into Live so a
   // coaching session cannot leak into the next build.
   const [liveMode, setLiveMode] = useState<'tutor' | 'coach'>('tutor');
+  // The film opened from a skill header on the path. One modal for the whole
+  // workspace, the same component Labs opens.
+  const [playingFilm, setPlayingFilm] = useState<{ skillId: string; title: string } | null>(null);
   // Collapsible left rail — gives space-hungry views (Sandbox/Simulator) room.
   // Persisted so it stays the way the learner left it.
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => {
@@ -1031,7 +1035,12 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                 </p>
               )}
               <div className="mt-4">
-                <LearnPath completedLessonIds={completed} lessonLevels={lessonLevels} onStartLesson={launchLesson} />
+                <LearnPath
+                  completedLessonIds={completed}
+                  lessonLevels={lessonLevels}
+                  onStartLesson={launchLesson}
+                  onPlayFilm={(skillId, title) => setPlayingFilm({ skillId, title })}
+                />
               </div>
             </div>
           )}
@@ -1045,6 +1054,13 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
             />
           )}
           {active === 'labs' && <LabsView onUpgrade={onUpgrade} />}
+          {playingFilm && (
+            <FilmModal
+              skillId={playingFilm.skillId}
+              title={playingFilm.title}
+              onClose={() => setPlayingFilm(null)}
+            />
+          )}
           {active === 'interview' && <InterviewView onUpgrade={onUpgrade} onOpenLessons={() => setActive('path')} />}
           {active === 'simulator' && <SimulatorView />}
           {active === 'sandbox' && <SandboxView />}

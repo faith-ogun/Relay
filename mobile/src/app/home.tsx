@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { AppTabs } from '../components/AppTabs';
 import { StatStrip } from '../components/StatStrip';
 import { PathSkeleton } from '../components/Skeleton';
 import { UnitPath } from '../components/path/UnitPath';
+import { FilmPlayer } from '../components/FilmPlayer';
 import { BossCard } from '../components/BossCard';
 import { UnitEmblem } from '../components/path/UnitEmblem';
 import { useAuth } from '../hooks/useAuth';
@@ -37,6 +38,9 @@ export default function Home() {
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // The film opened from a path node. Held here rather than in UnitPath so the
+  // player is a modal over the whole screen, the same way Labs opens one.
+  const [playing, setPlaying] = useState<{ skillId: string; title: string } | null>(null);
   /**
    * Boss state, keyed by unit. Null until it has ever been fetched, which is
    * the distinction the gate below turns on: "not cleared" and "we do not know"
@@ -192,6 +196,7 @@ export default function Home() {
                     accent={tint}
                     locked={!unlocked}
                     onStart={(lessonId) => router.push({ pathname: '/lesson/[id]', params: { id: lessonId } })}
+                    onPlayFilm={(skillId, title) => setPlaying({ skillId, title })}
                   />
                 </View>
 
@@ -230,6 +235,12 @@ export default function Home() {
           })
         )}
       </ScrollView>
+
+      <Modal visible={!!playing} animationType="slide" onRequestClose={() => setPlaying(null)}>
+        {playing && (
+          <FilmPlayer skillId={playing.skillId} title={playing.title} onClose={() => setPlaying(null)} />
+        )}
+      </Modal>
     </AppTabs>
   );
 }

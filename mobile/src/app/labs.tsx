@@ -24,9 +24,6 @@ import { elevation } from '../theme/elevation';
  * selling is a strange way to sell it.
  */
 
-/** Review and gateway skills have no film: the unit boss covers that ground. */
-const hasFilm = (skillId: string) => !skillId.endsWith('-check') && !skillId.endsWith('-gateway');
-
 export default function Labs() {
   const [status, setStatus] = useState<LabsStatus | null>(null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
@@ -102,7 +99,7 @@ export default function Labs() {
           <>
             <Text style={s.section}>THE FILMS</Text>
             {manifest.units.map((unit) => {
-              const skills = unit.skills.filter((sk) => hasFilm(sk.id));
+              const skills = unit.skills.filter((sk) => sk.hasFilm);
               if (!skills.length) return null;
               return (
                 <View key={unit.id} style={s.unit}>

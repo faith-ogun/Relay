@@ -47,12 +47,14 @@ const XP_PER_STEP = 0.5;
 
 const CARD_H = 76;
 const CHECK_H = 96;
+const FILM_H = 84;
 const GAP = 44;
 const TILE = 52;
 
 type Item =
   | { kind: 'lesson'; id: string; skillId: string; title: string; icon?: string; index: number }
-  | { kind: 'checkpoint'; id: string; skillId: string; title: string; icon?: string };
+  | { kind: 'checkpoint'; id: string; skillId: string; title: string; icon?: string }
+  | { kind: 'film'; id: string; skillId: string; title: string };
 
 interface Placed {
   item: Item;
@@ -66,6 +68,8 @@ export const UnitPath: React.FC<{
   unit: CurriculumUnit;
   completed: ReadonlySet<string>;
   onStart: (lessonId: string) => void;
+  /** Open the film for a skill. Absent on surfaces with no player. */
+  onPlayFilm?: (skillId: string, title: string) => void;
   /** Overrides the unit's authored accent. Home colours units by position so
    *  that "the green one" is how a learner remembers where they got to, and the
    *  path has to carry the same colour or the wayfinding breaks at the banner. */
@@ -74,7 +78,7 @@ export const UnitPath: React.FC<{
   locked?: boolean;
   /** Width to lay out in. Defaults to the window minus the screen gutter. */
   width?: number;
-}> = ({ unit, completed, onStart, accent: accentProp, locked = false, width: widthProp }) => {
+}> = ({ unit, completed, onStart, onPlayFilm, accent: accentProp, locked = false, width: widthProp }) => {
   const { width } = useWindowDimensions();
   const W = Math.max(240, widthProp ?? width - space.lg * 2);
   const CARD_W = Math.round(W * 0.68);
@@ -102,6 +106,19 @@ export const UnitPath: React.FC<{
       if (skill.lessons.length >= 2) {
         out.push({ kind: 'checkpoint', id: `check:${skill.id}`, skillId: skill.id, title: skill.title, icon: skill.icon });
       }
+      // After the checkpoint, not before the first lesson. Decided on
+      // 2026-08-28 and written down in metadata/decisions: before practice,
+      // motion is decoration; after it, motion is what makes a dozen discrete
+      // facts cohere into one picture. A learner who has answered eight
+      // questions about complete loops has the parts, and watching the current
+      // stop when the wire is cut is what assembles them.
+      //
+      // `hasFilm` is stamped by the curriculum export from what is actually in
+      // the bucket. Never inferred from the skill id: doing that put a play
+      // button on six skills whose film does not exist.
+      if (skill.hasFilm) {
+        out.push({ kind: 'film', id: `film:${skill.id}`, skillId: skill.id, title: skill.title });
+      }
     });
     return out;
   }, [unit]);
@@ -110,13 +127,14 @@ export const UnitPath: React.FC<{
     let y = 0;
     let side = 0;
     return items.map((item) => {
-      if (item.kind === 'checkpoint') {
+      if (item.kind === 'checkpoint' || item.kind === 'film') {
         // Full width, unlike every lesson node. Spanning the whole column is the
         // cheapest possible signal that this is not another lesson.
-        const p: Placed = { item, x: 0, y, w: W, h: CHECK_H };
-        y += CHECK_H + GAP;
-        // A checkpoint spans the middle, so the side alternation restarts after
-        // it rather than carrying a half-step through.
+        const h = item.kind === 'film' ? FILM_H : CHECK_H;
+        const p: Placed = { item, x: 0, y, w: W, h };
+        y += h + GAP;
+        // A full-width node spans the middle, so the side alternation restarts
+        // after it rather than carrying a half-step through.
         side = 0;
         return p;
       }
@@ -219,7 +237,14 @@ export const UnitPath: React.FC<{
             entering={animate ? FadeInDown.delay(stagger(i, 34, 10)).springify().damping(18) : undefined}
             style={{ position: 'absolute', left: p.x, top: p.y, width: p.w, height: p.h }}
           >
-            {p.item.kind === 'checkpoint' ? (
+            {p.item.kind === 'film' ? (
+              <FilmNode
+                title={p.item.title}
+                unlocked={done}
+                accent={accent}
+                onPress={onPlayFilm ? () => onPlayFilm(p.item.skillId, p.item.title) : undefined}
+              />
+            ) : p.item.kind === 'checkpoint' ? (
               <Checkpoint title={p.item.title} done={done} xp={xpFor(p.item.skillId)} />
             ) : (
               <LessonNode
@@ -316,6 +341,123 @@ const Checkpoint: React.FC<{ title: string; done: boolean; xp: number }> = ({ ti
     )}
   </View>
 );
+
+/**
+ * The film node.
+ *
+ * Deliberately a different animal from the checkpoint it follows. The checkpoint
+ * is a white card with a chest and an XP figure: a reward, and it looks like
+ * one. This is ink and glass with a screen on it, because a film is a different
+ * kind of thing and two nodes that differ only in their words are two nodes a
+ * learner stops reading.
+ *
+ * The artwork is drawn here rather than painted, in the same vocabulary as the
+ * resistors on the wire: a scope screen with a trace across it and a play
+ * triangle. If a painted icon arrives to sit beside the chest, this swaps for an
+ * Image and nothing else changes.
+ *
+ * Locked until the skill is cleared, which is the whole placement argument: the
+ * film consolidates the practice, so it cannot come first.
+ */
+const FilmNode: React.FC<{
+  title: string;
+  unlocked: boolean;
+  accent: string;
+  onPress?: () => void;
+}> = ({ title, unlocked, accent, onPress }) => {
+  const body = (
+    <>
+      <View style={[fm.screen, !unlocked && fm.screenLocked]}>
+        <Svg width={38} height={30} viewBox="0 0 38 30">
+          {/* The scope face. */}
+          <Rect
+            x={1.5} y={1.5} width={35} height={27} rx={5}
+            fill={unlocked ? colors.ink : 'transparent'}
+            stroke={unlocked ? accent : colors.inkMute}
+            strokeWidth={2.5}
+          />
+          {/* A trace across it, so the screen is showing something. */}
+          <SvgPath
+            d="M6 19 C10 19 10 11 14 11 C18 11 18 19 22 19 C26 19 26 11 30 11 C32 11 32 15 32 15"
+            stroke={unlocked ? accent : colors.inkMute}
+            strokeWidth={2}
+            strokeLinecap="round"
+            fill="none"
+            opacity={unlocked ? 0.45 : 0.8}
+          />
+          {/* And the play control on top of it. */}
+          <SvgPath
+            d="M15.5 9.5 L26 15 L15.5 20.5 Z"
+            fill={unlocked ? colors.white : colors.inkMute}
+          />
+        </Svg>
+      </View>
+      <View style={fm.body}>
+        <Text style={[fm.kicker, !unlocked && fm.kickerLocked]}>
+          {unlocked ? 'FILM' : 'FILM LOCKED'}
+        </Text>
+        <Text style={[fm.title, !unlocked && fm.titleLocked]} numberOfLines={1}>{title}</Text>
+        <Text style={[fm.sub, !unlocked && fm.subLocked]} numberOfLines={1}>
+          {unlocked ? 'Watch the idea move' : 'Clear this skill to unlock'}
+        </Text>
+      </View>
+      {!unlocked && <View style={fm.lock}><Lock size={14} /></View>}
+    </>
+  );
+
+  const label = unlocked
+    ? `Film: ${title}. Watch the idea move.`
+    : `Film for ${title}, locked until the skill is cleared`;
+
+  if (!unlocked || !onPress) {
+    return <View style={[fm.card, !unlocked && fm.cardLocked]} accessible accessibilityLabel={label}>{body}</View>;
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [fm.card, pressed && fm.cardPressed]}
+    >
+      {body}
+    </Pressable>
+  );
+};
+
+const fm = StyleSheet.create({
+  card: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.ink, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, ...curve, paddingHorizontal: space.md, ...elevation.card,
+  },
+  // Not the ink card drained: an unwatchable film should read as a thing you
+  // have not got to, the same way a locked lesson does, rather than as a broken
+  // version of the watchable one.
+  cardLocked: {
+    backgroundColor: colors.cream, borderColor: colors.inkFaint, ...elevation.flush,
+  },
+  cardPressed: { transform: [{ translateY: 2 }], ...elevation.flush },
+  screen: {
+    width: 52, height: 44, borderRadius: radius.md, ...curve,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  screenLocked: { backgroundColor: 'transparent' },
+  body: { flex: 1, minWidth: 0 },
+  kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.8, color: colors.gold },
+  kickerLocked: { color: colors.inkMute },
+  title: { fontFamily: font.black, fontSize: type.label, color: colors.white, letterSpacing: -0.2 },
+  titleLocked: { color: colors.inkSoft },
+  sub: { fontFamily: font.semibold, fontSize: type.small, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  // The locked card is cream, so white-at-55% would be an invisible line of
+  // text saying how to unlock the thing, which is the one sentence that has to
+  // be readable when it is locked.
+  subLocked: { color: colors.inkMute },
+  lock: {
+    width: 26, height: 26, borderRadius: 13, backgroundColor: colors.inkFaint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+});
 
 const n = StyleSheet.create({
   card: {

@@ -90,3 +90,50 @@ def test_urls_are_short_lived():
     """A signed URL that outlives its reason to be short-lived is a public URL
     with extra steps. Thirty minutes covers a three minute film and a pause."""
     assert 5 <= films.SIGNED_URL_MINUTES <= 60
+
+
+def test_the_film_index_says_what_is_in_the_bucket_not_what_ought_to_be():
+    """It used to infer: not a review and not a gateway means it has a film.
+
+    True on the day the films were rendered. Six skills were authored on
+    2026-08-28 and it became false: the index claimed 49 films, the bucket held
+    43, and Labs drew a play button on six skills whose film does not exist.
+    Pressing it signed a URL for a missing object.
+
+    The index reads the `hasFilm` stamp now, which the curriculum export takes
+    from content/films.json, which sync-films.mjs generates from the bucket.
+    """
+    import json
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[3]
+    manifest = set(json.loads((root / "content" / "films.json").read_text())["skills"])
+    assert manifest, "the film manifest is empty, which would silently hide every film"
+
+    assert set(films._film_ids()) == manifest, (
+        "the served index and content/films.json disagree about which skills have a film"
+    )
+
+
+def test_a_skill_authored_without_a_film_is_not_offered_one():
+    """The honest failure. A skill with no film gets no play button anywhere,
+    rather than a play button that opens nothing."""
+    import json
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[3]
+    curriculum = json.loads(
+        (pathlib.Path(__file__).resolve().parents[1] / "app" / "curriculum_data" / "curriculum.json").read_text()
+    )
+    manifest = set(json.loads((root / "content" / "films.json").read_text())["skills"])
+
+    unfilmed = [
+        s["id"]
+        for u in curriculum["units"]
+        for s in u["skills"]
+        if s["id"] not in manifest
+    ]
+    for skill_id in unfilmed:
+        assert not films.has_film(skill_id), (
+            f"{skill_id} has no film in the bucket and the server would still sign a URL for one"
+        )

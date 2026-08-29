@@ -53,10 +53,19 @@ _SHAPES = {
 
 @lru_cache(maxsize=1)
 def _film_ids() -> frozenset[str]:
-    """Skills that have a film, read from the curriculum rather than a list.
+    """Skills that have a film, read from the `hasFilm` stamp on the curriculum.
 
-    A hand-kept list would drift the first time a film is added, and the failure
-    would be a 404 on a checkpoint that visibly has a film everywhere else.
+    This used to INFER it: every skill that was not a review or a gateway was
+    assumed to have a film. That was true on the day the films were rendered and
+    false the moment six skills were authored on 2026-08-28, at which point the
+    index claimed 49 films and the bucket held 43. Labs drew a play button on all
+    six of the new ones, and pressing it signed a URL for an object that is not
+    there.
+
+    The stamp comes from content/films.json, which is generated FROM the bucket
+    by frontend/scripts/sync-films.mjs, so the index says what exists rather than
+    what ought to. A skill with no film is a skill with no play button, which is
+    the honest failure: nothing is offered that cannot be delivered.
     """
     import curriculum
 
@@ -65,12 +74,11 @@ def _film_ids() -> frozenset[str]:
     except Exception as exc:
         logger.warning("curriculum unavailable for film index: %s", exc)
         return frozenset()
-    # Review and gateway skills deliberately have no film: the boss covers them.
     return frozenset(
-        s.get("id")
+        s["id"]
         for u in data.get("units", [])
         for s in u.get("skills", [])
-        if s.get("id") and not s["id"].endswith(("-check", "-gateway"))
+        if s.get("id") and s.get("hasFilm")
     )
 
 
