@@ -29,16 +29,20 @@ import * as Haptics from 'expo-haptics';
  */
 
 /**
- * 34, up from 30, which is what removing the captions bought.
+ * 40, and the artwork is now authored for it.
  *
- * Not larger than 34, and the reason is measurable: the painted set is authored
- * at 30pt, so its @3x files are 90x90 and the ink already fills 90% of that
- * canvas. 34pt asks a 3x screen for 102px and gets 90, a 13% upscale that soft
- * edges absorb. 40pt would ask for 120 and start to blur the linework, which is
- * the opposite of what making them bigger was for. Past 34 the art has to be
- * re-exported, not stretched.
+ * The set was 30/60/90px, so 34pt was already asking a 3x screen for 102 pixels
+ * and getting 90. Soft edges absorbed it, but it was the ceiling. The 512px
+ * sources were in frontend/assets-source/nav all along, so nothing had to be
+ * redrawn: mobile/scripts/export-nav-icons.py cuts them again at 40/80/120 and
+ * preserves each icon's existing ink fraction rather than the source's own
+ * framing, which is what keeps an `off` state and its `on` state the same visual
+ * weight.
+ *
+ * To go further, run that script with a bigger number. The sources hold up to
+ * about 170pt before THEY are the limit.
  */
-const ICON = 34;
+const ICON = 40;
 
 /**
  * The tab icons are painted artwork, one file per state.
@@ -135,12 +139,12 @@ const s = StyleSheet.create({
     // surface the content sits above, which a 0.5px line does not achieve.
     borderTopWidth: 2,
     borderTopColor: colors.line,
-    paddingTop: 6,
+    paddingTop: 4,
     ...elevation.overlay,
   },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 2 },
   slot: {
-    width: ICON + 12, height: ICON + 4,
+    width: ICON + 10, height: ICON + 2,
     alignItems: 'center', justifyContent: 'center',
   },
   icon: { width: ICON, height: ICON },
