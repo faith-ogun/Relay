@@ -44,7 +44,7 @@ for (const m of home.matchAll(/art="\/stats\/([a-z]+)\.png"/g)) {
 // ignore a check.
 const tabsRaw = readFileSync(join(MOBILE, 'src/components/TabBar.tsx'), 'utf8');
 const tabs = tabsRaw.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
-const TABS = ['learn', 'practice', 'live', 'community', 'profile'];
+const TABS = ['learn', 'practice', 'live', 'community', 'plans', 'profile'];
 for (const name of TABS) {
   for (const state of ['off', 'on']) {
     if (!new RegExp(`${name}-${state}\\.png`).test(tabsRaw)) {
@@ -63,30 +63,13 @@ if (/slotOn/.test(tabs)) {
   fail('TabBar draws slotOn behind the icon again, and the selected artwork already has a plate');
 }
 
-// ── The plans tab is drawn, and only until its artwork exists ──────────────
+// The drawn placeholder must not come back now the artwork exists.
 //
-// Faith is making the real icon. Until it lands, TabBar draws a battery in SVG,
-// which is honest but is not the painted set. The risk with any temporary thing
-// is that it stops being temporary, so this makes the swap non-optional: the
-// moment plans-off.png appears, the drawn component has to go.
-{
-  const artHere = ['', '@2x', '@3x'].map((sfx) => join(MOBILE, 'assets/nav', `plans-off${sfx}.png`));
-  const anyArt = artHere.some((f) => existsSync(f));
-  const allArt = artHere.every((f) => existsSync(f))
-    && ['', '@2x', '@3x'].every((sfx) => existsSync(join(MOBILE, 'assets/nav', `plans-on${sfx}.png`)));
-  const drawn = /const PlansIcon: React\.FC/.test(tabsRaw);
-
-  if (anyArt && !allArt) {
-    fail('the plans tab art is half present. It needs plans-off and plans-on at 1x, 2x and 3x, '
-      + 'or a 2x phone falls back to a blurry bitmap for one tab and not the others.');
-  }
-  if (allArt && drawn) {
-    fail('assets/nav/plans-*.png exist and TabBar still draws PlansIcon in SVG. '
-      + 'Delete the component, add a `plans` entry to TAB_ART, and the drawn placeholder is gone.');
-  }
-  if (!anyArt && !drawn) {
-    fail('the plans tab has neither artwork nor a drawn icon, so it renders nothing at all.');
-  }
+// TabBar carried an SVG battery for one day while Faith made the real icon. The
+// swap is done; this is what stops a future "just until we have art" from
+// quietly becoming permanent beside a painted set.
+if (/const PlansIcon: React\.FC/.test(tabsRaw)) {
+  fail('TabBar is drawing PlansIcon again, and assets/nav/plans-*.png exist. Use the artwork.');
 }
 
 // The line glyphs they replaced must not creep back in beside them.
@@ -98,8 +81,5 @@ if (/const (Flame|Bolt|Target|HeartGlyph): React\.FC/.test(strip)
 console.log(bad === 0
   ? `  ok    all ${STATS.length} stat icons present on both surfaces, with the mobile density ladder`
   : '');
-if (bad === 0 && /const PlansIcon: React\.FC/.test(tabsRaw)) {
-  console.log('  note  the plans tab is still drawn in SVG, waiting on artwork');
-}
 console.log(bad === 0 ? '\nstat icons: all checks passed' : `\nstat icons: ${bad} failure(s)`);
 process.exit(bad === 0 ? 0 : 1);

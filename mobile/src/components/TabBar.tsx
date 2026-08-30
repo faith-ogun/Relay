@@ -1,7 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Rect } from 'react-native-svg';
 import { colors } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 import * as Haptics from 'expo-haptics';
@@ -68,52 +67,21 @@ const TAB_ART = {
   live: { off: require('../../assets/nav/live-off.png'), on: require('../../assets/nav/live-on.png') },
   community: { off: require('../../assets/nav/community-off.png'), on: require('../../assets/nav/community-on.png') },
   profile: { off: require('../../assets/nav/profile-off.png'), on: require('../../assets/nav/profile-on.png') },
+  // The mascot with its tool belt, from Faith, 2026-08-30. The only full-colour
+  // icon in the bar in BOTH states, and deliberately: the other five are ink
+  // linework until selected, so the one tab that asks for money is the one that
+  // catches the eye. Its plate is composited into the `on` file to the same
+  // measurements as the painted set, 10% inset and an 18% corner radius on a
+  // flat #fff6d6 with no outline, because a mascot has no plate of its own.
+  plans: { off: require('../../assets/nav/plans-off.png'), on: require('../../assets/nav/plans-on.png') },
 } as const;
 
 export const TAB_ICONS = TAB_ART;
 
-/**
- * The plans tab's icon, drawn here rather than painted.
- *
- * TEMPORARY, AND DELIBERATELY SO. Faith is making the real one; when
- * assets/nav/plans-off.png and plans-on.png land, this component goes and a
- * `plans` entry joins TAB_ART above. scripts/check-stat-icons.mjs fails if the
- * art appears and this is still being drawn, so the swap cannot be left half
- * done and forgotten.
- *
- * It is a battery rather than a coin or a crown, for the same reason every other
- * icon in this bar carries an electronics idea: a coin says "payment" in a way
- * that belongs to any app, and a battery says how much you have got, which is
- * exactly what a plan is here. Three cells for three tiers, and the selected
- * state fills them.
- *
- * Built to the same rules as the painted set: the off state is ink linework with
- * no plate, and the on state carries its own pale plate so the two never change
- * scale when you tap between them.
- */
-const PlansIcon: React.FC<{ active: boolean }> = ({ active }) => (
-  <Svg width={ICON} height={ICON} viewBox="0 0 30 30">
-    {active && (
-      <Rect x={0.9} y={0.9} width={28.2} height={28.2} rx={8}
-        fill={colors.goldSoft} stroke={colors.goldPlate} strokeWidth={1.4} />
-    )}
-    {/* The can. */}
-    <Rect x={5.5} y={9} width={16} height={12} rx={2.6}
-      fill={active ? colors.white : 'none'} stroke={colors.ink} strokeWidth={2.1} />
-    {/* The positive terminal. */}
-    <Rect x={22.2} y={12.6} width={2.6} height={4.8} rx={1.1} fill={colors.ink} />
-    {/* Three cells, filled when this is where you are. */}
-    {[7.9, 12.2, 16.5].map((x, i) => (
-      <Rect key={x} x={x} y={11.6} width={3.1} height={6.8} rx={1}
-        fill={active ? [colors.gold, colors.gold, colors.goldDeep][i] : colors.inkMute} />
-    ))}
-  </Svg>
-);
 
 
 export interface TabItem {
-  /** `plans` is drawn rather than painted, until its artwork exists. */
-  key: keyof typeof TAB_ICONS | 'plans';
+  key: keyof typeof TAB_ICONS;
   /**
    * No longer drawn on screen. It is the tab's ACCESSIBLE NAME, which is the
    * job the caption was actually doing: a row of six pictures with nothing said
@@ -145,16 +113,12 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
                 on a hairline row is not enough signal to find yourself by, and
                 it is the only signal left now the captions have gone. */}
             <View style={s.slot}>
-              {item.key === 'plans' ? (
-                <PlansIcon active={on} />
-              ) : (
-                <Image
-                  source={TAB_ART[item.key][on ? 'on' : 'off']}
-                  style={s.icon}
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
-                />
-              )}
+              <Image
+                source={TAB_ART[item.key][on ? 'on' : 'off']}
+                style={s.icon}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </View>
           </Pressable>
         );
