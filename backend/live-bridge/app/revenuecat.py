@@ -53,9 +53,22 @@ ACCEPT_SANDBOX = os.getenv("OHMLET_ACCEPT_SANDBOX_BILLING", "").strip().lower() 
 
 # Entitlement identifier in RevenueCat -> our plan. Highest wins when a user
 # somehow holds more than one, so a mapping change can never silently downgrade.
+# Both spellings of each, and the reason is not tidiness.
+#
+# RevenueCat's onboarding wizard creates an entitlement named after your app, so
+# Ohmlet's are `ohmlet_pro` and `ohmlet_max`, and RevenueCat does not allow the
+# ones it created to be deleted. A map holding only the bare names would have
+# taken the money and granted `free`: the App Store charges, RevenueCat records
+# the subscription, and this returns the free tier because it recognised nothing.
+#
+# Accepting both is one line and cannot be wrong. Refusing to accept the
+# identifiers that actually exist, in favour of the ones we would have preferred,
+# is a purist position that costs a paying customer their plan.
 ENTITLEMENT_TO_PLAN: dict[str, str] = {
     "max": "max",
+    "ohmlet_max": "max",
     "pro": "pro",
+    "ohmlet_pro": "pro",
 }
 PLAN_RANK = {"free": 0, "pro": 1, "max": 2}
 

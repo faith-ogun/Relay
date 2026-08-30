@@ -174,3 +174,26 @@ def test_an_event_with_no_environment_is_treated_as_production(rc):
                       "app_user_id": "uid-3", "entitlement_ids": ["max"]}}
     asyncio.run(revenuecat.webhook(FakeRequest(body)))
     assert rc.get("uid-3") == "max"
+
+
+def test_the_wizards_entitlement_names_grant_the_right_plan(rc):
+    """RevenueCat's onboarding wizard names entitlements after the app.
+
+    Ohmlet's are `ohmlet_pro` and `ohmlet_max`, and RevenueCat will not let the
+    ones it created be deleted. A map holding only `pro` and `max` recognised
+    neither, so a purchase would have charged the card and granted the free tier:
+    the worst possible outcome, because everything downstream looks healthy.
+    """
+    body = {"event": {"id": "e-wizard", "type": "INITIAL_PURCHASE",
+                      "app_user_id": "uid-w", "entitlement_ids": ["ohmlet_max"]}}
+    asyncio.run(revenuecat.webhook(FakeRequest(body)))
+    assert rc.get("uid-w") == "max"
+
+
+def test_holding_both_tiers_keeps_the_higher_one(rc):
+    """Highest wins, so a mapping change can never silently downgrade somebody
+    who is paying."""
+    body = {"event": {"id": "e-both", "type": "RENEWAL",
+                      "app_user_id": "uid-b", "entitlement_ids": ["ohmlet_pro", "ohmlet_max"]}}
+    asyncio.run(revenuecat.webhook(FakeRequest(body)))
+    assert rc.get("uid-b") == "max"
