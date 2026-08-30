@@ -31,12 +31,20 @@ export const PLAN_META: Record<Plan, {
    *  promises; the real charge always comes from the store package, so a card
    *  shows this only until a package is loaded. */
   priceMonthly: number | null;
+  /** Per month when paying yearly, and the total that is actually charged.
+   *  Apple sells only at fixed price points, so the total is NOT twelve times
+   *  the per-month figure: 11.99 x 12 is 143.88 and Apple's nearest is 143.99.
+   *  Kept in step with frontend/components/PricingPage.tsx by check-prices.mjs. */
+  priceAnnualPerMonth: number | null;
+  priceAnnualTotal: number | null;
   /** One line on why this tier exists, for the card header. */
   tagline: string;
 }> = {
   free: {
     label: 'Free',
     priceMonthly: null,
+    priceAnnualPerMonth: null,
+    priceAnnualTotal: null,
     tagline: 'Start building today',
     blurb: 'Learn the fundamentals and try a live session.',
     perks: [
@@ -49,6 +57,8 @@ export const PLAN_META: Record<Plan, {
   pro: {
     label: 'Pro',
     priceMonthly: 15.99,
+    priceAnnualPerMonth: 11.99,
+    priceAnnualTotal: 143.99,
     tagline: 'The full bench tutor',
     blurb: 'Real bench time, every week.',
     perks: [
@@ -62,6 +72,8 @@ export const PLAN_META: Record<Plan, {
   max: {
     label: 'Max',
     priceMonthly: 34.99,
+    priceAnnualPerMonth: 27.08,
+    priceAnnualTotal: 324.99,
     tagline: 'Prove what you have built',
     blurb: 'A record of your bench work that an employer can trust.',
     perks: [

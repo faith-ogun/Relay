@@ -85,17 +85,55 @@ const Tick: React.FC<{ color: string }> = ({ color }) => (
   </Svg>
 );
 
+type Interval = 'monthly' | 'annual';
+
 /**
- * The store package that buys a given tier.
+ * The store package that buys a given tier AT A GIVEN INTERVAL.
  *
- * RevenueCat identifiers are configured by us, so matching on the tier name is
- * the contract. A tier with no package shows why it cannot be bought rather than
- * a button that does nothing.
+ * The interval half is not decoration. This used to match on the tier alone,
+ * which worked while there was one product per tier and broke the moment four
+ * existed: `pro` matches BOTH `pro_monthly` and `pro_annual`, so the card would
+ * take whichever Apple happened to list first and could show $15.99 above a
+ * button that charges $143.99.
+ *
+ * RevenueCat identifiers are ours to choose, so matching on the names we chose
+ * is the contract. A tier with no package for the chosen interval shows why it
+ * cannot be bought rather than a button that does nothing.
  */
-function packageFor(packages: Package[] | null, plan: Plan): Package | null {
+function packageFor(packages: Package[] | null, plan: Plan, interval: Interval): Package | null {
   if (!packages) return null;
-  return packages.find((pkg) =>
-    `${pkg.id} ${pkg.title}`.toLowerCase().includes(plan)) ?? null;
+  const wanted = interval === 'annual' ? ['annual', 'yearly', 'year'] : ['monthly', 'month'];
+  return packages.find((pkg) => {
+    const hay = `${pkg.id} ${pkg.title}`.toLowerCase();
+    return hay.includes(plan) && wanted.some((w) => hay.includes(w));
+  }) ?? null;
+}
+
+/**
+ * What the big number says.
+ *
+ * A store package always wins: it is the real, localised price, and for an
+ * annual product `priceString` is the YEARLY total, so it is divided back to a
+ * monthly figure to sit under the "/month" label. The fallback is in dollars
+ * because dollars are what the pricing page publishes; it once rendered a euro
+ * sign and the app quoted a currency the website never did.
+ */
+function priceLabel(
+  pkg: Package | null,
+  meta: (typeof PLAN_META)[Plan],
+  interval: Interval,
+): string {
+  if (meta.priceMonthly === null) return 'Free';
+  if (pkg) {
+    const n = Number(pkg.priceString.replace(/[^0-9.]/g, ''));
+    if (interval === 'annual' && Number.isFinite(n) && n > 0) {
+      const symbol = pkg.priceString.replace(/[0-9.,\s]/g, '') || '$';
+      return `${symbol}${(n / 12).toFixed(2)}`;
+    }
+    return pkg.priceString;
+  }
+  const fallback = interval === 'annual' ? meta.priceAnnualPerMonth : meta.priceMonthly;
+  return `$${(fallback ?? meta.priceMonthly).toFixed(2)}`;
 }
 
 export default function Plans() {
@@ -105,6 +143,9 @@ export default function Plans() {
   const [packages, setPackages] = useState<Package[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // Annual first, deliberately: it is the better value and the one a learner is
+  // least likely to find on their own. The web pricing page defaults the same way.
+  const [interval, setInterval] = useState<Interval>('annual');
 
   useEffect(() => {
     let alive = true;
@@ -161,6 +202,30 @@ export default function Plans() {
           : `You have ${minutesRemaining ?? 0} minutes of live tutoring left this month.`}
       </Text>
 
+      {/* Monthly or annual. Not a nicety: Apple has four products and without a
+          way to reach the annual two, half the catalogue is unpurchasable and a
+          reviewer looking for the $324.99 product cannot find where it is sold. */}
+      <View style={s.toggle} accessibilityRole="radiogroup">
+        {(['monthly', 'annual'] as const).map((it) => {
+          const on = interval === it;
+          return (
+            <Pressable
+              key={it}
+              onPress={() => setInterval(it)}
+              style={({ pressed }) => [s.toggleTab, on && s.toggleTabOn, pressed && s.toggleDown]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={it === 'annual' ? 'Annual billing, cheaper per month' : 'Monthly billing'}
+            >
+              <Text style={[s.toggleText, on && s.toggleTextOn]}>
+                {it === 'annual' ? 'Annual' : 'Monthly'}
+              </Text>
+              {it === 'annual' && <View style={[s.saveTag, on && s.saveTagOn]}><Text style={s.saveText}>SAVE 25%</Text></View>}
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Three cards, three different builds. The old screen used one white
           rectangle for all of them, so the only thing separating a free tier
           from a paid one was the words inside it. Pro is the hero (gold, lifted,
@@ -169,7 +234,7 @@ export default function Plans() {
         const meta = PLAN_META[p];
         const current = p === plan;
         const tone = TONE[p];
-        const pkg = packageFor(packages, p);
+        const pkg = packageFor(packages, p, interval);
         return (
           <View key={p} style={[s.card, tone.card, current && s.cardCurrent]}>
             <View style={[s.strip, tone.strip]}>
@@ -191,14 +256,20 @@ export default function Plans() {
                         fallback shows only until it loads, and it is in DOLLARS because
                         that is the currency the pricing page publishes. It used to render
                         a euro sign, so the app quoted a currency the website never did. */}
-                    {pkg ? pkg.priceString : meta.priceMonthly === null ? 'Free' : `$${meta.priceMonthly}`}
+                    {priceLabel(pkg, meta, interval)}
                     </Text>
                     {(pkg || meta.priceMonthly !== null) && (
-                      <Text style={[s.pricePer, tone.muted]}>
-                        /{pkg && periodLabel(pkg.period) ? periodLabel(pkg.period) : 'month'}
-                      </Text>
+                      <Text style={[s.pricePer, tone.muted]}>/month</Text>
                     )}
                   </View>
+                  {/* The total that actually leaves the account. "Billed
+                      annually" on its own gives the cadence and withholds the
+                      amount, which is the half somebody needs to decide. */}
+                  {interval === 'annual' && meta.priceAnnualTotal !== null && (
+                    <Text style={[s.billedAt, tone.muted]}>
+                      billed annually at {pkg ? pkg.priceString : `$${meta.priceAnnualTotal.toFixed(2)}`}
+                    </Text>
+                  )}
                   <Text style={[s.cardBlurb, tone.muted]}>{meta.blurb}</Text>
                 </View>
                 {!!ART[p] && (
@@ -319,6 +390,22 @@ const s = StyleSheet.create({
   cardTitle: { fontFamily: font.black, fontSize: type.title, letterSpacing: -0.6 },
   priceWrap: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 },
   price: { fontFamily: font.black, fontSize: type.heading, letterSpacing: -0.4 },
+  billedAt: { fontFamily: font.bold, fontSize: type.small, marginTop: 2 },
+  toggle: {
+    flexDirection: 'row', alignSelf: 'center', marginTop: space.md, marginBottom: space.xs,
+    backgroundColor: colors.inkFaint, borderRadius: 999, padding: 3,
+  },
+  toggleTab: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 18, paddingVertical: 8, borderRadius: 999,
+  },
+  toggleTabOn: { backgroundColor: colors.ink },
+  toggleDown: { transform: [{ scale: 0.97 }] },
+  toggleText: { fontFamily: font.extrabold, fontSize: type.label, color: colors.inkSoft },
+  toggleTextOn: { color: colors.white },
+  saveTag: { backgroundColor: colors.goldPlate, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  saveTagOn: { backgroundColor: colors.gold },
+  saveText: { fontFamily: font.black, fontSize: 9, letterSpacing: 0.4, color: colors.ink },
   pricePer: { fontFamily: font.bold, fontSize: type.small, marginBottom: 2 },
   cardBlurb: { fontFamily: font.bold, fontSize: type.small, marginTop: 2 },
   cardNotice: { fontFamily: font.semibold, fontSize: type.small, marginTop: space.md, lineHeight: 18 },

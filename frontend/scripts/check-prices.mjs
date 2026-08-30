@@ -54,6 +54,37 @@ const sources = {};
   console.log("check-prices: ok  annual totals agree with their advertised monthly rate");
 }
 
+// ── The phone's annual figures, against the page's ──
+//
+// The mobile plans screen gained a monthly/annual toggle on 2026-08-30, so it
+// now carries annual prices of its own. Two files publishing the same annual
+// price is two files that can disagree, which is exactly what this whole script
+// exists to prevent for the monthly one.
+{
+  const web = code(read('frontend/components/PricingPage.tsx'));
+  const app = code(read('mobile/src/services/entitlements.ts'));
+
+  const webRows = Object.fromEntries([...web.matchAll(
+    /variant:\s*'(pro|max)'[\s\S]*?annual:\s*([\d.]+),[\s\S]*?annualTotal:\s*([\d.]+)/g,
+  )].map((m) => [m[1], [Number(m[2]), Number(m[3])]]));
+
+  const appRows = Object.fromEntries([...app.matchAll(
+    /(pro|max):\s*\{[\s\S]*?priceAnnualPerMonth:\s*([\d.]+),\s*priceAnnualTotal:\s*([\d.]+)/g,
+  )].map((m) => [m[1], [Number(m[2]), Number(m[3])]]));
+
+  for (const plan of ['pro', 'max']) {
+    const w = webRows[plan];
+    const a = appRows[plan];
+    if (!w) { fail(`PricingPage.tsx has no annual pair for ${plan}`); continue; }
+    if (!a) { fail(`mobile entitlements.ts has no annual pair for ${plan}`); continue; }
+    if (w[0] !== a[0] || w[1] !== a[1]) {
+      fail(`${plan} annual disagrees: the page says $${w[0]}/mo totalling $${w[1]}, `
+        + `the phone says $${a[0]}/mo totalling $${a[1]}. One price per product, on every surface.`);
+    }
+  }
+  console.log("check-prices: ok  the phone and the page agree on both annual prices");
+}
+
 
 // 1. The marketing pricing page: a tiers array with monthly/annual numbers.
 //    Keyed off `variant`, not `name`: the Max tier's display name is lowercase
