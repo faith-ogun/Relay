@@ -14,6 +14,7 @@ import {
   purchasePackage, restorePurchases, type Package,
 } from '../services/billing';
 import { PLAN_META, type Plan } from '../services/entitlements';
+import { packageFor, type Interval } from '../services/packageMatch';
 import { colors, font, radius, space, type, curve } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 
@@ -84,30 +85,6 @@ const Tick: React.FC<{ color: string }> = ({ color }) => (
           strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
-
-type Interval = 'monthly' | 'annual';
-
-/**
- * The store package that buys a given tier AT A GIVEN INTERVAL.
- *
- * The interval half is not decoration. This used to match on the tier alone,
- * which worked while there was one product per tier and broke the moment four
- * existed: `pro` matches BOTH `pro_monthly` and `pro_annual`, so the card would
- * take whichever Apple happened to list first and could show $15.99 above a
- * button that charges $143.99.
- *
- * RevenueCat identifiers are ours to choose, so matching on the names we chose
- * is the contract. A tier with no package for the chosen interval shows why it
- * cannot be bought rather than a button that does nothing.
- */
-function packageFor(packages: Package[] | null, plan: Plan, interval: Interval): Package | null {
-  if (!packages) return null;
-  const wanted = interval === 'annual' ? ['annual', 'yearly', 'year'] : ['monthly', 'month'];
-  return packages.find((pkg) => {
-    const hay = `${pkg.id} ${pkg.title}`.toLowerCase();
-    return hay.includes(plan) && wanted.some((w) => hay.includes(w));
-  }) ?? null;
-}
 
 /**
  * What the big number says.
