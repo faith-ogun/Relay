@@ -22,6 +22,9 @@ So each icon is trimmed to its ink, rescaled so the ink occupies the same
 fraction of the new canvas as it does of the old one, and re-centred where it
 already sat. The set looks identical. It is simply no longer the limit.
 
+`plans` is the exception, because it has no previous export to preserve: it is
+framed against the MEASURED average of the other five instead.
+
 Run:  python3 mobile/scripts/export-nav-icons.py [size]
       size defaults to 40 (points), producing 40/80/120px.
 """
@@ -35,16 +38,20 @@ REPO = MOBILE.parent
 SOURCE = REPO / "frontend" / "assets-source" / "nav"
 OUT = MOBILE / "assets" / "nav"
 
-# `plans` is Faith's mascot and came in at 1254px rather than 512, so it is
-# framed by the rule that produced it rather than by a previous export.
 PAINTED = ["learn", "practice", "live", "community", "profile"]
-MASCOT_TILE_FRACTION = 0.86
 
-# Measured off community-on@3x rather than guessed: 9px inset and a corner curve
-# running y=9 to 25 on a 90px canvas, over a flat fill with NO outline. A gold
-# border was the first attempt and it stood out against the other five the moment
-# the row was rendered side by side.
-PLATE_INSET, PLATE_RADIUS, PLATE_FILL = 0.10, 0.18, (255, 246, 210, 255)
+# `plans` arrives as one image holding BOTH states side by side: ink linework on
+# the left, full colour on its own plate on the right. That is the same shape as
+# the painted set, so it needs splitting rather than compositing. An earlier
+# version of this script drew the plate itself, because the first mascot Faith
+# sent had only one state; it does not have to any more.
+PLANS_STATES = "plans-states.png"
+
+# Measured across the five painted icons at 120px rather than assumed: their off
+# states run 62% to 75% of the tile and their on states 92% to 100%. Cutting the
+# plans plate at the 80% I had read off the OLD 90px files made it visibly the
+# small one in a rendered row.
+OFF_FRACTION, ON_FRACTION = 0.69, 0.95
 
 
 def ink_box(img: Image.Image):
@@ -74,15 +81,22 @@ def reframe(source: Image.Image, reference: Image.Image, size: int) -> Image.Ima
     return out
 
 
-def plate(size: int) -> Image.Image:
-    from PIL import ImageDraw
+def solid_box(img: Image.Image, threshold: int = 120):
+    """The ink, ignoring the faint halo a generated PNG carries around its edge."""
+    box = img.split()[3].point(lambda v: 255 if v >= threshold else 0).getbbox()
+    if box is None:
+        raise SystemExit("an icon state has no visible pixels at all")
+    return box
 
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    i = round(size * PLATE_INSET)
-    ImageDraw.Draw(img).rounded_rectangle(
-        [i, i, size - 1 - i, size - 1 - i], radius=round(size * PLATE_RADIUS), fill=PLATE_FILL
-    )
-    return img
+
+def fit(ink: Image.Image, size: int, fraction: float) -> Image.Image:
+    """Centre `ink` on a square tile, at `fraction` of its longest side."""
+    box = round(size * fraction)
+    scale = min(box / ink.width, box / ink.height)
+    art = ink.resize((max(1, round(ink.width * scale)), max(1, round(ink.height * scale))), Image.LANCZOS)
+    tile = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    tile.paste(art, ((size - art.width) // 2, (size - art.height) // 2), art)
+    return tile
 
 
 def main() -> None:
@@ -97,20 +111,16 @@ def main() -> None:
                 reframe(src, ref, px).save(OUT / f"{name}-{state}{suffix}.png")
         print(f"    {name}")
 
-    mascot = Image.open(SOURCE / "plans-source.png").convert("RGBA")
-    ink = mascot.crop(ink_box(mascot))
-    side = max(ink.size)
-    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    square.paste(ink, ((side - ink.width) // 2, (side - ink.height) // 2))
-    for suffix, px in (("", size), ("@2x", size * 2), ("@3x", size * 3)):
-        art = square.resize((round(px * MASCOT_TILE_FRACTION),) * 2, Image.LANCZOS)
-        at = ((px - art.width) // 2, (px - art.height) // 2)
-        off = Image.new("RGBA", (px, px), (0, 0, 0, 0))
-        off.paste(art, at, art)
-        off.save(OUT / f"plans-off{suffix}.png")
-        on = plate(px)
-        on.paste(art, at, art)
-        on.save(OUT / f"plans-on{suffix}.png")
+    sheet = Image.open(SOURCE / PLANS_STATES).convert("RGBA")
+    half = sheet.width // 2
+    states = {
+        "off": sheet.crop((0, 0, half, sheet.height)),
+        "on": sheet.crop((half, 0, sheet.width, sheet.height)),
+    }
+    for state, fraction in (("off", OFF_FRACTION), ("on", ON_FRACTION)):
+        ink = states[state].crop(solid_box(states[state]))
+        for suffix, px in (("", size), ("@2x", size * 2), ("@3x", size * 3)):
+            fit(ink, px, fraction).save(OUT / f"plans-{state}{suffix}.png")
     print("    plans")
 
     print(f"\n  Set ICON in mobile/src/components/TabBar.tsx to {size}.")
