@@ -21,7 +21,10 @@ def rc(monkeypatch):
     monkeypatch.setattr(revenuecat, "WEBHOOK_SECRET", "shhh")
     plans: dict[str, str] = {}
     monkeypatch.setattr(revenuecat.entitlements, "set_plan",
-                        lambda uid, plan: plans.__setitem__(uid, plan))
+                        lambda uid, plan, environment="PRODUCTION": plans.__setitem__(uid, plan))
+    # Production by default. The sandbox tests flip it deliberately, so a test
+    # that forgets is testing the shipped posture rather than a lucky one.
+    monkeypatch.setattr(revenuecat, "ACCEPT_SANDBOX", False)
     seen: set[str] = set()
     monkeypatch.setattr(revenuecat.idempotency, "claim_event",
                         lambda key: (key not in seen) and (seen.add(key) or True))
@@ -133,3 +136,41 @@ def test_missing_app_user_id_is_rejected(rc):
     with pytest.raises(HTTPException) as exc:
         call(event(app_user_id=""))
     assert exc.value.status_code == 422
+
+
+def test_a_sandbox_purchase_grants_nothing_by_default(rc):
+    """Sandbox purchases cost nothing.
+
+    RevenueCat stamps every event with an environment, and the handler ignored it
+    until 2026-08-30. An Apple sandbox tester could therefore have granted
+    themselves Max, free, in production Firestore, permanently. RevenueCat's own
+    "secure your sandbox access" list is the other half of this; neither is
+    sufficient alone.
+    """
+    body = {"event": {"id": "e-sandbox", "type": "INITIAL_PURCHASE",
+                      "app_user_id": "uid-1", "entitlement_ids": ["max"],
+                      "environment": "SANDBOX"}}
+    res = asyncio.run(revenuecat.webhook(FakeRequest(body)))
+    assert res["reason"] == "sandbox"
+    assert "uid-1" not in rc
+
+
+def test_sandbox_is_accepted_when_deliberately_switched_on(rc, monkeypatch):
+    """Refusing ALWAYS would make the end-to-end test unverifiable: a purchase
+    would reach RevenueCat and stop, and "the webhook fired" is not the same
+    evidence as "the learner's plan changed"."""
+    monkeypatch.setattr(revenuecat, "ACCEPT_SANDBOX", True)
+    body = {"event": {"id": "e-sandbox-ok", "type": "INITIAL_PURCHASE",
+                      "app_user_id": "uid-2", "entitlement_ids": ["pro"],
+                      "environment": "SANDBOX"}}
+    asyncio.run(revenuecat.webhook(FakeRequest(body)))
+    assert rc.get("uid-2") == "pro"
+
+
+def test_an_event_with_no_environment_is_treated_as_production(rc):
+    """The unknown case must not be the free one. Older payloads and anything
+    unexpected are production, so a missing field cannot become a way in."""
+    body = {"event": {"id": "e-noenv", "type": "INITIAL_PURCHASE",
+                      "app_user_id": "uid-3", "entitlement_ids": ["max"]}}
+    asyncio.run(revenuecat.webhook(FakeRequest(body)))
+    assert rc.get("uid-3") == "max"

@@ -123,15 +123,18 @@ def get_plan(user_id: str) -> str:
     return "free"
 
 
-def set_plan(user_id: str, plan: str) -> str:
+def set_plan(user_id: str, plan: str, environment: str = "PRODUCTION") -> str:
     """Write the user's plan to Firestore (the authoritative store). Returns the
     normalised plan actually written. In production the Stripe webhook is the
     real caller (#30); for now an admin-only endpoint uses this to test tiers."""
     plan = normalize_plan(plan)
     from state_store import get_client
 
+    # `environment` is stamped so a plan granted by a free sandbox purchase is
+    # distinguishable from one somebody paid for. Without it the two are the same
+    # document and a test grant is indistinguishable from revenue.
     get_client().collection(PLANS_COLLECTION).document(user_id).set(
-        {"plan": plan, "updated_at": _today()}, merge=True
+        {"plan": plan, "updated_at": _today(), "environment": environment}, merge=True
     )
     return plan
 

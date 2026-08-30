@@ -37,6 +37,20 @@ router = APIRouter(prefix="/v1/billing/revenuecat", tags=["billing"])
 
 WEBHOOK_SECRET = os.getenv("OHMLET_REVENUECAT_WEBHOOK_SECRET", "")
 
+# Sandbox purchases cost nothing. RevenueCat stamps every event with an
+# `environment`, and ignoring it means an Apple sandbox tester can grant
+# themselves Max for free, in production Firestore, forever.
+#
+# Refusing by default is the safe direction, but refusing ALWAYS would make the
+# end-to-end test unverifiable: a purchase on the phone would reach RevenueCat
+# and stop, and "the webhook fired" is not the same evidence as "the learner's
+# plan changed". So it is an explicit switch, on while testing and off at launch.
+#
+# Plans granted this way are stamped `environment: SANDBOX` on the document, so
+# they can be found and swept rather than living on indistinguishable from a
+# plan somebody paid for.
+ACCEPT_SANDBOX = os.getenv("OHMLET_ACCEPT_SANDBOX_BILLING", "").strip().lower() in ("1", "true", "yes")
+
 # Entitlement identifier in RevenueCat -> our plan. Highest wins when a user
 # somehow holds more than one, so a mapping change can never silently downgrade.
 ENTITLEMENT_TO_PLAN: dict[str, str] = {
@@ -100,6 +114,14 @@ async def webhook(request: Request) -> dict:
         obs.audit("billing.revenuecat_anonymous", eventId=event_id, eventType=event_type)
         return {"status": "ignored", "reason": "anonymous_app_user_id"}
 
+    # SANDBOX or PRODUCTION. Absent on older payloads, which are treated as
+    # production: the unknown case must not be the free one.
+    environment = str(event.get("environment") or "PRODUCTION").upper()
+    if environment != "PRODUCTION" and not ACCEPT_SANDBOX:
+        logger.warning("RevenueCat %s event refused: sandbox billing is off", environment)
+        obs.audit("billing.revenuecat_sandbox_refused", eventId=event_id, eventType=event_type)
+        return {"status": "ignored", "reason": "sandbox"}
+
     key = f"revenuecat:{event_id}"
     if not idempotency.claim_event(key):
         return {"status": "duplicate"}
@@ -112,11 +134,11 @@ async def webhook(request: Request) -> dict:
                     "RevenueCat %s for %s carried no known entitlement: %s",
                     event_type, uid, event.get("entitlement_ids"),
                 )
-            entitlements.set_plan(uid, plan)
+            entitlements.set_plan(uid, plan, environment=environment)
             obs.audit("billing.plan_granted", uid=uid, plan=plan, source="revenuecat", eventType=event_type)
 
         elif event_type in REVOKING:
-            entitlements.set_plan(uid, "free")
+            entitlements.set_plan(uid, "free", environment=environment)
             obs.audit("billing.plan_revoked", uid=uid, source="revenuecat", eventType=event_type)
 
         elif event_type == "TRANSFER":

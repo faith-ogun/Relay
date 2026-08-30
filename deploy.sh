@@ -63,7 +63,8 @@ OHMLET_LIVE_MIN_MAX=540,\
 OHMLET_RATE_PROMPT_1K_USD=0.00125,\
 OHMLET_RATE_RESPONSE_1K_USD=0.010,\
 OHMLET_FILMS_BUCKET=ohmlet-app-lessons,\
-OHMLET_FILMS_VERSION=v1"
+OHMLET_FILMS_VERSION=v1,\
+OHMLET_ACCEPT_SANDBOX_BILLING=true"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
@@ -74,6 +75,13 @@ OHMLET_FILMS_VERSION=v1"
 LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest,OHMLET_REVENUECAT_WEBHOOK_SECRET=ohmlet-revenuecat-webhook:latest"
 # Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
 # a gitignored file because the IDs differ between test and live mode. Each line
+# REMOVE OHMLET_ACCEPT_SANDBOX_BILLING BEFORE LAUNCH.
+# A sandbox purchase is free. With this on, an Apple sandbox tester can grant
+# themselves Max in production Firestore. It is on so that the end-to-end test
+# can be verified at the point that matters, which is the learner's plan
+# changing rather than a webhook firing. Plans granted this way carry
+# `environment: SANDBOX` on the document, so they can be found and swept.
+#
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
 LIVE_BRIDGE_ENV_FILE="${LIVE_BRIDGE_ENV_FILE:-backend/live-bridge/.deploy.env}"
 # Keep one instance warm. live-bridge was at 0, so it scaled to zero after a
