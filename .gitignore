@@ -65,3 +65,11 @@ backend/live-bridge/.deploy.env
 
 # Personal task tracker (local only, like HANDOFF.md)
 FAITH.md
+
+# Signing and store keys. mobile/.gitignore already covers these for that folder;
+# this covers the repo root, because a .p8 downloads from App Store Connect
+# exactly once and a stray copy in the wrong directory is the whole risk.
+*.p8
+*.pem
+*.mobileprovision
+*.p12
