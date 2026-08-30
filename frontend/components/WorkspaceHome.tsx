@@ -9,6 +9,7 @@ import {
   Briefcase,
   Check,
   CircuitBoard,
+  CreditCard,
   Flame,
   Home,
   Map as MapIcon,
@@ -187,6 +188,15 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'achievements', label: 'Achievements', icon: Award },
   { id: 'labs', label: 'Labs', icon: Beaker },
 ];
+
+/**
+ * Not a view: a nav row that leaves the workspace for the pricing page.
+ *
+ * The phone gained a plans TAB on 2026-08-29 and the web could only reach
+ * pricing from inside an upgrade prompt, which means the one page that takes
+ * money was the one page with no way in unless something else prompted you.
+ */
+const PLAN_NAV = { id: 'plan' as const, label: 'Your plan', icon: CreditCard };
 
 /**
  * Visual weight of a way-in tile. `gold` is the guided route, `ink` the live
@@ -948,6 +958,31 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                 </button>
               );
             })}
+
+            {/* Leaves the workspace rather than switching a view, so it is not
+                in NAV and never renders as the active row. Hidden for a minor
+                for the same reason the phone hides its plans tab: a minor
+                cannot self-purchase, so a doorway to a paywall should not
+                exist for them. */}
+            {!childSafe && onUpgrade && (
+              <button
+                type="button"
+                onClick={onUpgrade}
+                title={navCollapsed ? PLAN_NAV.label : undefined}
+                aria-label={PLAN_NAV.label}
+                className={`flex items-center rounded-xl py-2.5 text-[15px] font-extrabold text-ohmlet-ink-soft transition-colors hover:bg-ohmlet-gold-soft hover:text-ohmlet-ink ${
+                  navCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                }`}
+              >
+                <PLAN_NAV.icon className="h-5 w-5 shrink-0" />
+                {!navCollapsed && PLAN_NAV.label}
+                {!navCollapsed && (
+                  <span className="ml-auto rounded-full border-2 border-ohmlet-line px-1.5 py-0.5 text-[9px] font-black uppercase text-ohmlet-ink-soft">
+                    {PLAN_META[plan].label}
+                  </span>
+                )}
+              </button>
+            )}
           </nav>
 
           {navCollapsed ? (

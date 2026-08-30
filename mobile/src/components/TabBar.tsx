@@ -1,12 +1,13 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, curve, font, type } from '../theme/tokens';
+import Svg, { Rect } from 'react-native-svg';
+import { colors } from '../theme/tokens';
 import { elevation } from '../theme/elevation';
 import * as Haptics from 'expo-haptics';
 
 /**
- * The five places you can be.
+ * The six places you can be.
  *
  * Home was a stack of eight rows, which is a menu rather than a product: nothing
  * was ranked, so everything competed. A tab bar says what matters (learn), keeps
@@ -15,16 +16,30 @@ import * as Haptics from 'expo-haptics';
  *
  * Icons are drawn rather than pulled from an icon set, because a lightning bolt
  * and a breadboard say Ohmlet and a generic glyph set says nothing.
+ *
+ * NO CAPTIONS, since 2026-08-29. Each tab used to carry its name in 11px under
+ * the icon. Faith asked for the same treatment the top strip got: take the words
+ * away and let the icons be big enough to speak. The words were not carrying
+ * meaning the artwork did not already carry, and they were holding every icon
+ * down to 30pt in a bar that had room for more.
+ *
+ * The caption WAS carrying one thing, and it was not visual: the tab's name for
+ * anyone who cannot see the picture. That moved to `accessibilityLabel` on the
+ * Pressable, which unlike a plain View is an accessibility element already, so
+ * the label is read rather than merely present.
  */
 
-type IconProps = { active: boolean };
-const stroke = (a: boolean) => (a ? colors.ink : colors.inkSoft);
-
-// The icons draw on a 24 grid but render at 26, so the nominal stroke is scaled
-// to land at a true 2.5px on screen. Otherwise every icon is subtly lighter
-// than the borders beside it and the whole row looks unresolved.
-const ICON_SIZE = 26;
-const ICON_STROKE = 2.5 * (24 / ICON_SIZE);
+/**
+ * 34, up from 30, which is what removing the captions bought.
+ *
+ * Not larger than 34, and the reason is measurable: the painted set is authored
+ * at 30pt, so its @3x files are 90x90 and the ink already fills 90% of that
+ * canvas. 34pt asks a 3x screen for 102px and gets 90, a 13% upscale that soft
+ * edges absorb. 40pt would ask for 120 and start to blur the linework, which is
+ * the opposite of what making them bigger was for. Past 34 the art has to be
+ * re-exported, not stretched.
+ */
+const ICON = 34;
 
 /**
  * The tab icons are painted artwork, one file per state.
@@ -57,8 +72,53 @@ const TAB_ART = {
 
 export const TAB_ICONS = TAB_ART;
 
+/**
+ * The plans tab's icon, drawn here rather than painted.
+ *
+ * TEMPORARY, AND DELIBERATELY SO. Faith is making the real one; when
+ * assets/nav/plans-off.png and plans-on.png land, this component goes and a
+ * `plans` entry joins TAB_ART above. scripts/check-stat-icons.mjs fails if the
+ * art appears and this is still being drawn, so the swap cannot be left half
+ * done and forgotten.
+ *
+ * It is a battery rather than a coin or a crown, for the same reason every other
+ * icon in this bar carries an electronics idea: a coin says "payment" in a way
+ * that belongs to any app, and a battery says how much you have got, which is
+ * exactly what a plan is here. Three cells for three tiers, and the selected
+ * state fills them.
+ *
+ * Built to the same rules as the painted set: the off state is ink linework with
+ * no plate, and the on state carries its own pale plate so the two never change
+ * scale when you tap between them.
+ */
+const PlansIcon: React.FC<{ active: boolean }> = ({ active }) => (
+  <Svg width={ICON} height={ICON} viewBox="0 0 30 30">
+    {active && (
+      <Rect x={0.9} y={0.9} width={28.2} height={28.2} rx={8}
+        fill={colors.goldSoft} stroke={colors.goldPlate} strokeWidth={1.4} />
+    )}
+    {/* The can. */}
+    <Rect x={5.5} y={9} width={16} height={12} rx={2.6}
+      fill={active ? colors.white : 'none'} stroke={colors.ink} strokeWidth={2.1} />
+    {/* The positive terminal. */}
+    <Rect x={22.2} y={12.6} width={2.6} height={4.8} rx={1.1} fill={colors.ink} />
+    {/* Three cells, filled when this is where you are. */}
+    {[7.9, 12.2, 16.5].map((x, i) => (
+      <Rect key={x} x={x} y={11.6} width={3.1} height={6.8} rx={1}
+        fill={active ? [colors.gold, colors.gold, colors.goldDeep][i] : colors.inkMute} />
+    ))}
+  </Svg>
+);
+
+
 export interface TabItem {
-  key: keyof typeof TAB_ICONS;
+  /** `plans` is drawn rather than painted, until its artwork exists. */
+  key: keyof typeof TAB_ICONS | 'plans';
+  /**
+   * No longer drawn on screen. It is the tab's ACCESSIBLE NAME, which is the
+   * job the caption was actually doing: a row of six pictures with nothing said
+   * about them is not navigable by anyone who cannot see the pictures.
+   */
   label: string;
   onPress: () => void;
 }
@@ -82,18 +142,20 @@ export const TabBar: React.FC<{ items: TabItem[]; active: string }> = ({ items, 
             accessibilityLabel={item.label}
           >
             {/* The active tab gets a filled plate behind its icon. A colour swap
-                on a hairline row is not enough signal to find yourself by. */}
+                on a hairline row is not enough signal to find yourself by, and
+                it is the only signal left now the captions have gone. */}
             <View style={s.slot}>
-              <Image
-                source={TAB_ART[item.key][on ? 'on' : 'off']}
-                style={s.icon}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
+              {item.key === 'plans' ? (
+                <PlansIcon active={on} />
+              ) : (
+                <Image
+                  source={TAB_ART[item.key][on ? 'on' : 'off']}
+                  style={s.icon}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              )}
             </View>
-            <Text style={[s.label, on && s.labelOn]} maxFontSizeMultiplier={1.15} numberOfLines={1}>
-              {item.label}
-            </Text>
           </Pressable>
         );
       })}
@@ -109,22 +171,13 @@ const s = StyleSheet.create({
     // surface the content sits above, which a 0.5px line does not achieve.
     borderTopWidth: 2,
     borderTopColor: colors.line,
-    paddingTop: 8,
+    paddingTop: 6,
     ...elevation.overlay,
   },
-  tab: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   slot: {
-    width: 46, height: 34,
+    width: ICON + 12, height: ICON + 4,
     alignItems: 'center', justifyContent: 'center',
   },
-  // 30, not the 26 the drawn glyphs used: the selected state carries its own
-  // plate inside the artwork and needs the room for it.
-  icon: { width: 30, height: 30 },
-  label: {
-    // Sentence case at 11px, not uppercase at 11px with wide tracking: the old
-    // treatment made five short words into five grey smears.
-    fontFamily: font.extrabold, fontSize: type.meta, color: colors.inkMute,
-    letterSpacing: 0,
-  },
-  labelOn: { fontFamily: font.black, color: colors.ink },
+  icon: { width: ICON, height: ICON },
 });

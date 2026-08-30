@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { track } from '../services/analytics';
-import { goBack } from '../services/nav';
 import { useAuth } from '../hooks/useAuth';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { ClosedForNow } from '../components/ClosedForNow';
+import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
 import { usePlan } from '../hooks/usePlan';
 import {
@@ -150,11 +149,10 @@ export default function Plans() {
   };
 
   return (
-    <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-      <Pressable onPress={() => goBack('/home')} style={s.backLink} accessibilityRole="button">
-        <Text style={s.backText}>‹ Back</Text>
-      </Pressable>
-
+    // A tab, since 2026-08-29, so the bar stays under it and the back link is
+    // gone: a tab has no "back", it has five siblings one tap away.
+    <AppTabs active="plans">
+      <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
       <Text style={s.eyebrow}>PLANS</Text>
       <Text style={s.title}>More time on the bench.</Text>
       <Text style={s.sub}>
@@ -292,7 +290,8 @@ export default function Plans() {
           App Store account settings.
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </AppTabs>
   );
 }
 
