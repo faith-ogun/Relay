@@ -67,7 +67,11 @@ OHMLET_FILMS_VERSION=v1"
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
-LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
+# RevenueCat joins Stripe here because the two webhooks are the only writers of a
+# paid plan, one per surface. Both handlers refuse with 503 when their secret is
+# absent rather than treating an empty string as a match, so a missing secret is
+# a dead endpoint and never an open one.
+LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest,OHMLET_REVENUECAT_WEBHOOK_SECRET=ohmlet-revenuecat-webhook:latest"
 # Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
 # a gitignored file because the IDs differ between test and live mode. Each line
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.

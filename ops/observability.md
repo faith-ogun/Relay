@@ -157,6 +157,7 @@ remembers creating is a bucket nobody remembers to bill for.
 
 | When | What | Why |
 |---|---|---|
+| 2026-08-30 | Secret `ohmlet-revenuecat-webhook` — the Authorization header value RevenueCat sends to `/v1/billing/revenuecat` | Mounted on live-bridge. The handler returns 503 when it is absent rather than treating an empty string as a match, so a missing secret is a dead endpoint, never an open one. |
 | 2026-08-30 | Secret `ohmlet-appstore-iap-key` — the App Store Connect in-app purchase key (`.p8`, Key ID `DT6JKF7RJP`) | No service reads it. RevenueCat holds the working copy and talks to Apple; this is the backup, because App Store Connect allows exactly one download and losing it means revoking and regenerating. |
 | 2026-08-29 | `gs://ohmlet-app-twins` — `europe-west1`, STANDARD, uniform bucket-level access, **public access prevention enforced**, `objectAdmin` for `182102811288-compute@…` | Where the reporter writes 3D twin meshes. Public access is prevented on purpose: a twin is streamed through the authenticated `/v1/twins/{id}/model` endpoint after an ownership check, so it is as private as the rest of a learner's data. Empty until the Stability key lands. |
 
