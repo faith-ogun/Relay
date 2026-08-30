@@ -19,7 +19,10 @@ type Tier = {
   variant: Variant;
   tagline: string;
   monthly: number;
+  /** Shown per month. The annual TOTAL is `annualTotal`, not this times twelve:
+   *  Apple sells at fixed price points and the two differ by a few cents. */
   annual: number;
+  annualTotal: number;
   cta: string;
   badge?: string;
   features: string[];
@@ -32,6 +35,7 @@ const tiers: Tier[] = [
     tagline: 'Start building today, no card needed.',
     monthly: 0,
     annual: 0,
+    annualTotal: 0,
     cta: 'Get started',
     features: [
       'Your first build path',
@@ -48,6 +52,8 @@ const tiers: Tier[] = [
     tagline: 'The full bench tutor.',
     monthly: 15.99,
     annual: 11.99,
+    // Apple's nearest price point to 11.99 x 12 = 143.88.
+    annualTotal: 143.99,
     cta: 'Go Pro',
     badge: 'Most popular',
     features: [
@@ -64,7 +70,12 @@ const tiers: Tier[] = [
     variant: 'max',
     tagline: 'Prove what you have actually built.',
     monthly: 34.99,
-    annual: 26.99,
+    // 324.99 / 12. Not the 26.99 this used to advertise: Apple sells only at
+    // fixed price points, 323.88 is not one, and Faith checked the whole list
+    // rather than assuming a .99 existed at every dollar the way it does lower
+    // down. The store sets the price and the page follows, never the reverse.
+    annual: 27.08,
+    annualTotal: 324.99,
     cta: 'Go Max',
     badge: 'Career',
     features: [
@@ -207,7 +218,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                   <span className={`mb-1.5 text-sm font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>/month</span>
                 </div>
                 {price > 0 ? (
-                  annual && <p className={`mt-1 text-xs font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>billed annually</p>
+                  annual && <p className={`mt-1 text-xs font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>billed annually at ${tier.annualTotal.toFixed(2)}</p>
                 ) : (
                   <p className="mt-1 text-xs font-bold text-ohmlet-ink-soft">forever</p>
                 )}

@@ -23,6 +23,38 @@ const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, 
 
 const sources = {};
 
+// ── Annual, which this check did not cover until 2026-08-30 ──
+//
+// Apple sells subscriptions only at fixed price points, so an annual price is
+// never simply the monthly-equivalent times twelve. Pro's advertised $11.99 a
+// month works out at $143.88 and the nearest point Apple offers is $143.99.
+//
+// The site shows the per-month figure and, since today, the total that will
+// actually leave someone's account. Those two have to stay consistent with each
+// other, and the drift that matters is the one where the total creeps ABOVE
+// twelve times the advertised monthly: that is the site quoting one price and
+// the store charging another.
+{
+  const src = code(read('frontend/components/PricingPage.tsx'));
+  const rows = [...src.matchAll(/variant:\s*'(free|pro|max)'[\s\S]*?annual:\s*([\d.]+),[\s\S]*?annualTotal:\s*([\d.]+)/g)];
+  if (rows.length !== 3) fail(`expected 3 tiers with an annualTotal, found ${rows.length}`);
+  for (const [, variant, perMonth, total] of rows) {
+    const implied = Number(perMonth) * 12;
+    const actual = Number(total);
+    if (implied === 0 && actual === 0) continue;
+    const drift = actual - implied;
+    if (drift > 0.5) {
+      fail(`${variant}: the page advertises $${perMonth}/month annually, which is $${implied.toFixed(2)}, `
+        + `but bills $${actual.toFixed(2)}. Quoting less than you charge is the wrong direction to round.`);
+    }
+    if (drift < -5) {
+      fail(`${variant}: annualTotal $${actual.toFixed(2)} is far below 12 x $${perMonth}. One of the two is stale.`);
+    }
+  }
+  console.log("check-prices: ok  annual totals agree with their advertised monthly rate");
+}
+
+
 // 1. The marketing pricing page: a tiers array with monthly/annual numbers.
 //    Keyed off `variant`, not `name`: the Max tier's display name is lowercase
 //    'max' on purpose, for the shimmer treatment, so matching on a capitalised
