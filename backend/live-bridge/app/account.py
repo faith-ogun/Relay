@@ -60,7 +60,7 @@ def set_my_plan(payload: dict, claims: dict = Depends(require_claims)) -> dict:
     requested = payload.get("plan") if isinstance(payload, dict) else None
     if requested not in entitlements.VALID_PLANS:
         raise HTTPException(status_code=422, detail=f"plan must be one of {entitlements.VALID_PLANS}")
-    plan = entitlements.set_plan(claims["uid"], requested)
+    plan = entitlements.set_plan(claims["uid"], requested, source="admin-console")
     obs.audit("account.plan_set_admin", uid=claims["uid"], plan=plan, by=claims.get("email"))
     logger.info("Admin %s set their plan to %s", claims.get("email"), plan)
     return {"plan": plan}

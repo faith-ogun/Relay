@@ -648,17 +648,17 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
       return 'bg-[#f3e515] text-black shadow-[0_10px_24px_rgba(243,229,21,0.28)]';
     }
 
-    return 'bg-slate-100 text-slate-600 hover:bg-white hover:text-slate-900 hover:shadow-sm';
+    return 'bg-ohmlet-line text-ohmlet-ink-soft hover:bg-ohmlet-surface hover:text-ohmlet-ink hover:shadow-sm';
   };
 
   const panelToggleClass = (active: boolean) =>
     active
-      ? 'bg-slate-900 text-white shadow-sm'
-      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900';
+      ? 'bg-ohmlet-panel text-white shadow-sm'
+      : 'bg-ohmlet-line text-ohmlet-ink-soft hover:bg-ohmlet-line hover:text-ohmlet-ink';
 
   return (
-    <div className="ohmlet-fade-in flex h-full flex-col overflow-hidden bg-[#f6f8fb] text-slate-900">
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
+    <div className="ohmlet-fade-in flex h-full flex-col overflow-hidden bg-ohmlet-tint-neutral text-ohmlet-ink">
+      <div className="flex flex-wrap items-center gap-3 border-b border-ohmlet-line bg-ohmlet-surface/90 px-4 py-3 backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -695,10 +695,10 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
           </button>
         </div>
 
-        <div className="hidden h-7 w-px bg-slate-200 lg:block" />
+        <div className="hidden h-7 w-px bg-ohmlet-line lg:block" />
 
         {(selectedEntity || wireStart) && (
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600">
+          <div className="rounded-full border border-ohmlet-line bg-ohmlet-surface px-3 py-1.5 text-[11px] font-bold text-ohmlet-ink-soft">
             {toolHint(selectedTool, selectedPalette, wireStart, selectedEntity)}
           </div>
         )}
@@ -711,8 +711,8 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
               onClick={() => triggerCamera(option.id)}
               className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] transition-all ${
                 cameraPreset === option.id
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                  ? 'bg-ohmlet-panel text-white shadow-sm'
+                  : 'bg-ohmlet-line text-ohmlet-ink-mute hover:bg-ohmlet-line hover:text-ohmlet-ink'
               }`}
             >
               {option.label}
@@ -721,9 +721,9 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
-            <Circle className={`h-2.5 w-2.5 ${simState.running ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-slate-300'}`} />
-            <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+          <div className="flex items-center gap-2 rounded-full border border-ohmlet-line bg-ohmlet-surface px-3 py-1.5">
+            <Circle className={`h-2.5 w-2.5 ${simState.running ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-ohmlet-ink-mute'}`} />
+            <span className="text-[11px] font-black uppercase tracking-[0.14em] text-ohmlet-ink-mute">
               {simState.running ? 'Live sim' : 'Workbench ready'}
             </span>
           </div>
@@ -768,7 +768,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
           <button
             type="button"
             onClick={handleClear}
-            className="rounded-2xl bg-slate-100 p-2.5 text-slate-500 transition-all hover:bg-slate-200 hover:text-slate-900"
+            className="rounded-2xl bg-ohmlet-line p-2.5 text-ohmlet-ink-mute transition-all hover:bg-ohmlet-line hover:text-ohmlet-ink"
             aria-label="Clear sandbox"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -777,9 +777,9 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-[#fbfcfe]">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-ohmlet-line bg-ohmlet-tint-neutral">
           <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
-            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Boards</p>
+            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.22em] text-ohmlet-ink-mute">Boards</p>
 
             <div className="mb-4 space-y-1.5">
               {BOARD_ITEMS.map((item) => {
@@ -801,16 +801,16 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
                     className={`w-full rounded-[20px] border px-3 py-2.5 text-left transition-all ${
                       placed
                         ? 'border-emerald-200 bg-emerald-50/60 opacity-70'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]'
+                        : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-line hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${placed ? 'bg-emerald-50' : 'bg-slate-50'}`} style={{ color: item.color }}>
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${placed ? 'bg-emerald-50' : 'bg-ohmlet-surface'}`} style={{ color: item.color }}>
                         <PaletteGlyph type={item.type} color={item.color} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-black text-slate-900">{item.label}</p>
-                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        <p className="text-[13px] font-black text-ohmlet-ink">{item.label}</p>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ohmlet-ink-mute">
                           {placed ? 'Placed' : item.description}
                         </p>
                       </div>
@@ -820,7 +820,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
               })}
             </div>
 
-            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Components</p>
+            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.22em] text-ohmlet-ink-mute">Components</p>
 
             <div className="space-y-1.5">
               {PALETTE.map((item) => {
@@ -835,22 +835,22 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
                     }}
                     className={`w-full rounded-[20px] border px-3 py-2.5 text-left transition-all ${
                       active
-                        ? 'border-[#f3e515] bg-[#fffde8] shadow-[0_16px_32px_rgba(243,229,21,0.18)]'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]'
+                        ? 'border-[#f3e515] bg-ohmlet-gold-soft shadow-[0_16px_32px_rgba(243,229,21,0.18)]'
+                        : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-line hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                          active ? 'bg-white shadow-sm' : 'bg-slate-50'
+                          active ? 'bg-ohmlet-surface shadow-sm' : 'bg-ohmlet-surface'
                         }`}
                         style={{ color: item.color }}
                       >
                         <PaletteGlyph type={item.type} color={item.color} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-black text-slate-900">{item.label}</p>
-                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        <p className="text-[13px] font-black text-ohmlet-ink">{item.label}</p>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ohmlet-ink-mute">
                           {item.family}
                         </p>
                       </div>
@@ -864,13 +864,13 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 p-3">
-            <div className="relative h-full overflow-hidden rounded-[30px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.98),rgba(241,245,249,0.94)_42%,rgba(226,232,240,0.92))] shadow-[0_28px_80px_rgba(15,23,42,0.10)]">
+            <div className="relative h-full overflow-hidden rounded-[30px] border border-ohmlet-line bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.98),rgba(241,245,249,0.94)_42%,rgba(226,232,240,0.92))] shadow-[0_28px_80px_rgba(15,23,42,0.10)]">
               <Suspense
                 fallback={
                   <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95),rgba(226,232,240,0.9))]">
                     <div className="text-center">
-                      <Box className="mx-auto mb-3 h-9 w-9 animate-pulse text-slate-400" />
-                      <p className="text-sm font-black text-slate-500">Loading 3D workspace...</p>
+                      <Box className="mx-auto mb-3 h-9 w-9 animate-pulse text-ohmlet-ink-mute" />
+                      <p className="text-sm font-black text-ohmlet-ink-mute">Loading 3D workspace...</p>
                     </div>
                   </div>
                 }
@@ -904,7 +904,7 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
           </div>
 
           {showSerial && (
-            <div className="mx-3 mb-3 flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-[#0f172a] shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+            <div className="mx-3 mb-3 flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-[26px] border border-ohmlet-line bg-[#0f172a] shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Terminal className="h-4 w-4 text-emerald-400" />
@@ -945,18 +945,18 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
         </div>
 
         {showCode && (
-          <div className="flex w-[390px] shrink-0 flex-col border-l border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-4 py-3">
+          <div className="flex w-[390px] shrink-0 flex-col border-l border-ohmlet-line bg-ohmlet-surface">
+            <div className="border-b border-ohmlet-line px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Code2 className="h-4 w-4 text-[#f3e515]" />
-                  <span className="text-xs font-black text-slate-800">sketch.ino</span>
+                  <span className="text-xs font-black text-ohmlet-ink">sketch.ino</span>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                <span className="rounded-full bg-ohmlet-line px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-ohmlet-ink-mute">
                   Arduino C++
                 </span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
+              <p className="mt-2 text-xs leading-5 text-ohmlet-ink-mute">
                 Edit the sketch while you place components. The sandbox still uses lightweight simulation logic, so visuals stay fast.
               </p>
             </div>
@@ -964,8 +964,8 @@ export default function Sandbox({ dark, t: _t, preset }: SandboxProps) {
             <div className="min-h-0 flex-1">
               <Suspense
                 fallback={
-                  <div className="flex h-full items-center justify-center bg-white">
-                    <p className="text-sm font-semibold text-slate-400">Loading editor...</p>
+                  <div className="flex h-full items-center justify-center bg-ohmlet-surface">
+                    <p className="text-sm font-semibold text-ohmlet-ink-mute">Loading editor...</p>
                   </div>
                 }
               >

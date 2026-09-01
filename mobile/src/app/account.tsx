@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { clearEvents, flush, track } from '../services/analytics';
 import { goBack } from '../services/nav';
@@ -13,8 +11,8 @@ import { clearLocalState } from '../services/progress';
 import { clearCachedEarned } from '../services/achievements';
 import { clearProfile } from '../services/learnerProfile';
 import { clearGates } from '../services/gates';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 const LEGAL_BASE = 'https://ohmlet.org';
 
@@ -37,6 +35,8 @@ const PLAN_LABEL: Record<string, string> = {
  * the point.
  */
 export default function Account() {
+  const colors = useColors();
+  const s = useS();
   const { user, displayName, signOut } = useAuth();
   const plan = usePlan();
   const [busy, setBusy] = useState<'export' | 'delete' | null>(null);
@@ -218,7 +218,7 @@ export default function Account() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingBottom: space.xxl, gap: 2 },
   backLink: { paddingVertical: space.sm },
@@ -229,7 +229,7 @@ const s = StyleSheet.create({
 
   planCard: {
     marginTop: space.lg, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
-    backgroundColor: colors.goldSoft, padding: space.md, ...elevation.card,
+    backgroundColor: colors.goldSoft, padding: space.md, ...th.elevation.card,
   },
   planLabel: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.6, color: colors.inkSoft },
   planName: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 2 },
@@ -242,7 +242,7 @@ const s = StyleSheet.create({
   action: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, padding: space.md, marginBottom: 8,
+    backgroundColor: colors.surface, padding: space.md, marginBottom: 8,
   },
   actionBusy: { opacity: 0.6 },
   actionText: { flex: 1 },
@@ -255,7 +255,7 @@ const s = StyleSheet.create({
 
   danger: {
     marginTop: space.xl, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.lg, ...curve,
-    backgroundColor: '#fdece8', padding: space.md, gap: space.sm,
+    backgroundColor: colors.redSoft, padding: space.md, gap: space.sm,
   },
   dangerTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   dangerBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.ink, lineHeight: 19 },
@@ -268,9 +268,9 @@ const s = StyleSheet.create({
   confirmBlock: { gap: space.sm },
   confirmLabel: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.4, color: colors.ink },
   confirmInput: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.white,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.surface,
     paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.black, fontSize: type.body,
     color: colors.ink, letterSpacing: 2,
   },
   cancel: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, textAlign: 'center', paddingVertical: 8 },
-});
+}));

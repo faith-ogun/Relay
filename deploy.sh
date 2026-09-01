@@ -58,13 +58,36 @@ OHMLET_FLASH_MODEL=gemini-3.7-flash,\
 OHMLET_PRO_MODEL=gemini-3.1-pro-preview,\
 OHMLET_REASONING_MODEL=gemini-3.1-pro-preview,\
 OHMLET_LIVE_MIN_FREE=60,\
-OHMLET_LIVE_MIN_PRO=240,\
-OHMLET_LIVE_MIN_MAX=540,\
+OHMLET_LIVE_MIN_PRO=150,\
+OHMLET_LIVE_MIN_MAX=300,\
 OHMLET_RATE_PROMPT_1K_USD=0.00125,\
 OHMLET_RATE_RESPONSE_1K_USD=0.010,\
 OHMLET_FILMS_BUCKET=ohmlet-app-lessons,\
-OHMLET_FILMS_VERSION=v1,\
-OHMLET_ACCEPT_SANDBOX_BILLING=true"
+OHMLET_FILMS_VERSION=v1"
+
+# ── Sandbox billing: OFF unless asked for, on this invocation only ──
+#
+# An Apple sandbox purchase is free, so a handler that honours sandbox events
+# lets any sandbox tester grant themselves Max in production Firestore. It has to
+# be ON to verify the rail end to end, because "the webhook fired" is not the
+# same evidence as "the learner's plan changed", and it has to be OFF everywhere
+# else.
+#
+# It used to be a hardcoded `=true` above a comment saying REMOVE BEFORE LAUNCH.
+# That is not a gate, it is a note asking a human to remember something months
+# from now, on the day they are busiest. So the default flipped: the deploy is
+# safe when nobody is thinking about it, and testing costs one env var:
+#
+#     OHMLET_ACCEPT_SANDBOX_BILLING=true ./deploy.sh live-bridge
+#
+# Which is louder than editing a file, and cannot be left switched on by accident
+# because it lives for exactly one invocation.
+if [ "${OHMLET_ACCEPT_SANDBOX_BILLING:-}" = "true" ]; then
+  LIVE_BRIDGE_ENV="${LIVE_BRIDGE_ENV},OHMLET_ACCEPT_SANDBOX_BILLING=true"
+  echo -e "\033[1;31m[deploy]\033[0m SANDBOX BILLING IS ON for this deploy." >&2
+  echo -e "\033[1;31m[deploy]\033[0m Free Apple sandbox purchases will grant real plans." >&2
+  echo -e "\033[1;31m[deploy]\033[0m Redeploy without the env var to close it again." >&2
+fi
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
@@ -75,13 +98,6 @@ OHMLET_ACCEPT_SANDBOX_BILLING=true"
 LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest,OHMLET_REVENUECAT_WEBHOOK_SECRET=ohmlet-revenuecat-webhook:latest"
 # Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
 # a gitignored file because the IDs differ between test and live mode. Each line
-# REMOVE OHMLET_ACCEPT_SANDBOX_BILLING BEFORE LAUNCH.
-# A sandbox purchase is free. With this on, an Apple sandbox tester can grant
-# themselves Max in production Firestore. It is on so that the end-to-end test
-# can be verified at the point that matters, which is the learner's plan
-# changing rather than a webhook firing. Plans granted this way carry
-# `environment: SANDBOX` on the document, so they can be found and swept.
-#
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
 LIVE_BRIDGE_ENV_FILE="${LIVE_BRIDGE_ENV_FILE:-backend/live-bridge/.deploy.env}"
 # Keep one instance warm. live-bridge was at 0, so it scaled to zero after a

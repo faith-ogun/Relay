@@ -125,19 +125,19 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="twin-studio-title"
-        className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-white shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
+        className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close 3D twin"
-          className="absolute right-3 top-3 z-10 rounded-full bg-white/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-white hover:text-ohmlet-ink"
+          className="absolute right-3 top-3 z-10 rounded-full bg-ohmlet-surface/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-ohmlet-surface hover:text-ohmlet-ink"
         >
           <X className="h-4 w-4" strokeWidth={2.5} />
         </button>
 
         {/* Stage: viewer when ready, status panel otherwise */}
-        <div className="relative h-72 w-full border-b-2 border-ohmlet-ink bg-ohmlet-slate-900">
+        <div className="relative h-72 w-full border-b-2 border-ohmlet-ink bg-ohmlet-panel">
           {phase === 'ready' && modelUrl ? (
             <Suspense
               fallback={
@@ -173,7 +173,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
                   value={shareUrl}
                   aria-label="Public link to this build"
                   onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 rounded-lg border-2 border-ohmlet-ink/15 bg-white px-3 py-2 text-xs font-bold text-ohmlet-ink-soft focus:border-ohmlet-ink focus:outline-none"
+                  className="min-w-0 flex-1 rounded-lg border-2 border-ohmlet-ink/15 bg-ohmlet-surface px-3 py-2 text-xs font-bold text-ohmlet-ink-soft focus:border-ohmlet-ink focus:outline-none"
                 />
                 <button
                   type="button"
@@ -186,7 +186,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
                       })
                       .catch(() => undefined);
                   }}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-white px-3 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
                 >
                   {copied ? (
                     <>
@@ -215,7 +215,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
                   type="button"
                   onClick={() => void publish()}
                   disabled={shareState === 'working'}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-white px-3.5 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-3.5 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {shareState === 'working' ? (
                     <>
@@ -245,7 +245,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
               <button
                 type="button"
                 onClick={() => void run()}
-                className="rounded-xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
+                className="rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 Try again
               </button>

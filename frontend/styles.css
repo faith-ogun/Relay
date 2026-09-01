@@ -2,30 +2,231 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Palette ──────────────────────────────────────────────────────────────
+ *
+ * Every colour is declared TWICE: once as space-separated RGB channels, and
+ * once as a ready-made hex-equivalent for the handful of places that use
+ * `var(--ohmlet-x)` directly.
+ *
+ * The channels exist because tailwind.config.js binds its palette to
+ * `rgb(var(--ohmlet-x-rgb) / <alpha-value>)`. Bound to a plain colour instead,
+ * Tailwind cannot compose an opacity modifier, and the 83 places that write
+ * `text-ohmlet-ink/70` or `border-ohmlet-ink/15` would silently render at full
+ * opacity. Channels keep every one of those working.
+ *
+ * That indirection is the whole of dark mode on the web: about 1,700 existing
+ * `bg-ohmlet-*` / `text-ohmlet-*` classes become theme-aware without a single
+ * component being edited.
+ */
 :root {
   color-scheme: light;
-  /* ── Ohmlet rebrand palette (sampled from the mascot logo) ── */
-  --ohmlet-yellow: #facc2e;        /* warm golden accent — used sparingly */
-  --ohmlet-yellow-hover: #f5b800;  /* deeper gold for hover/contrast */
-  --ohmlet-yellow-soft: #fff6d6;   /* pale gold wash for tints */
-  --ohmlet-ink: #14181f;           /* near-black, faint navy lean — primary text/outline */
-  --ohmlet-ink-soft: #474d57;      /* muted body text */
-  --ohmlet-red: #ff6f5e;           /* friendly coral (softened from tomato) */
-  --ohmlet-blue: #549cf0;          /* friendly blue (from the illustrations) */
-  --ohmlet-blue-deep: #3e86e8;     /* blue for text/contrast */
-  --ohmlet-green: #84cc30;         /* success/leaf green (checkmarks) */
-  --ohmlet-green-deep: #6fb519;    /* green for text/contrast */
-  --ohmlet-cream: #faf8f0;         /* logo-background cream (nav surface) */
-  --ohmlet-line: #ece7db;          /* warm hairline on white */
-  --ohmlet-canvas: #ffffff;        /* page canvas — white, not cream */
-  --ohmlet-black: #14181f;         /* legacy alias → ink (kept for app workspace) */
 
-  /* Variant-B "chunky" brand signature: hard ink drop shadow + thick outline */
-  --ohmlet-shadow-press: 0 5px 0 var(--ohmlet-ink);
-  --ohmlet-shadow-press-sm: 0 3px 0 var(--ohmlet-ink);
-  --ohmlet-shadow-soft: 0 2px 4px rgba(20, 24, 31, 0.04), 0 8px 24px rgba(20, 24, 31, 0.06);
+  /* ── Channels, light ── */
+  --ohmlet-gold-rgb: 250 204 46;
+  --ohmlet-gold-deep-rgb: 245 184 0;
+  --ohmlet-gold-soft-rgb: 255 246 214;
+  --ohmlet-gold-plate-rgb: 201 154 0;
+  --ohmlet-gold-text-rgb: 143 109 0;
+  --ohmlet-ink-rgb: 20 24 31;
+  --ohmlet-ink-soft-rgb: 71 77 87;
+  --ohmlet-ink-mute-rgb: 168 173 182;
+  --ohmlet-red-rgb: 255 111 94;
+  --ohmlet-blue-rgb: 84 156 240;
+  --ohmlet-blue-deep-rgb: 62 134 232;
+  --ohmlet-blue-soft-rgb: 234 242 254;
+  --ohmlet-green-rgb: 132 204 48;
+  --ohmlet-green-deep-rgb: 111 181 25;
+  --ohmlet-cream-rgb: 250 248 240;
+  --ohmlet-line-rgb: 236 231 219;
+  --ohmlet-canvas-rgb: 255 255 255;
+  /* The raised card surface. White on light, so swapping `bg-white` for
+     `bg-ohmlet-surface` changes nothing in light mode and is the whole fix in
+     dark mode. 234 places used `bg-white` directly, which is a raw Tailwind
+     colour and therefore immune to the palette. */
+  --ohmlet-surface-rgb: 255 255 255;
+  /* Text and icons sitting ON an ink surface. White on light. It CANNOT stay
+     white on dark, because ink itself inverts to near-white there: 23 places
+     wrote `bg-ohmlet-ink text-white`, and every one of them would have rendered
+     white on white. This inverts with the surface it sits on. */
+  --ohmlet-on-ink-rgb: 255 255 255;
+  /* A deliberately dark panel, for the 3D viewer and the interview transcript.
+     These wrote `bg-ohmlet-slate-900`, which is not a token: there is no slate
+     under `ohmlet` in the Tailwind config, so both elements have been shipping
+     with NO background at all. */
+  --ohmlet-panel-rgb: 15 23 42;
+  /* Semantic tint washes. 44 places wrote these as arbitrary Tailwind values
+     (`bg-[#fdece8]`), which are literals and therefore immune to the theme: a
+     pale pink error wash stayed pale pink on a dark page and swallowed the text
+     on top of it. Like `-soft`, a tint inverts rather than darkens. */
+  --ohmlet-tint-red-rgb: 253 236 232;
+  --ohmlet-tint-green-rgb: 241 249 230;
+  --ohmlet-tint-neutral-rgb: 246 248 251;
+  /* The plate under a pressable surface. Ink on light; it has to change on dark
+     or a hard drop shadow disappears into the ground it is sitting on. */
+  --ohmlet-plate-rgb: 20 24 31;
+
+  /* ── The four tokens that decide what "white text" meant ──
+   *
+   * 113 places wrote `text-white`, and they did not all mean the same thing.
+   * Sorting them is the difference between a dark theme and an unreadable one.
+   *
+   * on-ink   Foreground for `bg-ohmlet-ink`. Ink INVERTS — it is near-white on
+   *          dark — so `text-white` on it becomes white-on-white the instant the
+   *          theme flips. This is the bucket that was an actual bug: active
+   *          pills, numbered badges, table headers, solid buttons. It flips with
+   *          the ink so the pair always contrasts.
+   * slab     A panel that is dark in BOTH themes: the Max tier card, the tutor
+   *          strip, a serial console. They carry gold and green accents chosen
+   *          against black; inverting them would destroy the thing they are for.
+   *          On dark it goes DARKER than the card behind it so it still reads as
+   *          a separate, inset surface rather than merging with the page.
+   * on-dark  Foreground on anything dark in every theme — the slab, a saturated
+   *          brand fill (red/blue/green barely move between themes), or photo,
+   *          video and 3D. This is the `text-white` that was never a bug; naming
+   *          it says so, instead of leaving a raw colour for the next person to
+   *          wonder about.
+   * scrim    The black wash under overlay chrome on media. Fixed, same reason.
+   */
+  --ohmlet-on-ink-rgb: 255 255 255;
+  --ohmlet-slab-rgb: 20 24 31;
+  --ohmlet-on-dark-rgb: 255 255 255;
+  --ohmlet-scrim-rgb: 0 0 0;
+
+  /* ── Named colours, for direct var() use ── */
+  --ohmlet-yellow: rgb(var(--ohmlet-gold-rgb));
+  --ohmlet-yellow-hover: rgb(var(--ohmlet-gold-deep-rgb));
+  --ohmlet-yellow-soft: rgb(var(--ohmlet-gold-soft-rgb));
+  --ohmlet-ink: rgb(var(--ohmlet-ink-rgb));
+  --ohmlet-ink-soft: rgb(var(--ohmlet-ink-soft-rgb));
+  --ohmlet-red: rgb(var(--ohmlet-red-rgb));
+  --ohmlet-blue: rgb(var(--ohmlet-blue-rgb));
+  --ohmlet-blue-deep: rgb(var(--ohmlet-blue-deep-rgb));
+  --ohmlet-green: rgb(var(--ohmlet-green-rgb));
+  --ohmlet-green-deep: rgb(var(--ohmlet-green-deep-rgb));
+  --ohmlet-cream: rgb(var(--ohmlet-cream-rgb));
+  --ohmlet-line: rgb(var(--ohmlet-line-rgb));
+  --ohmlet-canvas: rgb(var(--ohmlet-canvas-rgb));
+  --ohmlet-black: rgb(var(--ohmlet-ink-rgb));
+
+  --ohmlet-shadow-press: 0 5px 0 rgb(var(--ohmlet-plate-rgb));
+  --ohmlet-shadow-press-sm: 0 3px 0 rgb(var(--ohmlet-plate-rgb));
+  --ohmlet-shadow-soft: 0 2px 4px rgb(var(--ohmlet-ink-rgb) / 0.04),
+                        0 8px 24px rgb(var(--ohmlet-ink-rgb) / 0.06);
 
   --ohmlet-font-display: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ── Dark, scoped to the WORKSPACE ────────────────────────────────────────
+ *
+ * Deliberately not on :root. The landing pages are the marketing face and are
+ * bold yellow on cream by design; a dark landing page is a different product,
+ * not a preference. Faith, 2026-09-01: "dark mode should also ONLY be in the
+ * workspace. not the landing pages."
+ *
+ * So the attribute lives on a wrapper around the workspace and account routes
+ * only, and everything outside it keeps :root's light palette no matter what
+ * the device or the learner has chosen.
+ *
+ * `data-ohmlet-theme` rather than `data-theme`, because a bare `data-theme`
+ * selector would also match the <html> element and cascade back over the whole
+ * site, which is the exact bug this scoping exists to prevent.
+ *
+ * Only the channels are redefined. Everything derived from them follows.
+ *
+ * Two families invert their meaning rather than simply darkening, and getting
+ * that wrong is what makes a dark theme look like a bug:
+ *
+ *   `-deep`  means "more contrast than the base". On a light ground that is
+ *            darker; on a dark ground it is LIGHTER. gold-deep going darker on
+ *            dark would make the hover state disappear into the page.
+ *   `-soft`  is a tint wash behind content. On light it is a pale version of the
+ *            hue; on dark it has to be a DEEP version, or a "soft" background
+ *            becomes the brightest thing on the screen.
+ *
+ * The gold itself does not move. It is the brand, it was chosen against the
+ * mascot, and it reads correctly on both grounds. Everything around it moves.
+ */
+[data-ohmlet-theme='dark'] {
+  color-scheme: dark;
+
+  --ohmlet-gold-rgb: 250 204 46;
+  --ohmlet-gold-deep-rgb: 255 216 77;
+  --ohmlet-gold-soft-rgb: 42 36 16;
+  --ohmlet-gold-plate-rgb: 184 137 10;
+  --ohmlet-gold-text-rgb: 255 223 107;
+  --ohmlet-ink-rgb: 238 240 244;
+  --ohmlet-ink-soft-rgb: 179 185 196;
+  --ohmlet-ink-mute-rgb: 118 125 138;
+  --ohmlet-red-rgb: 255 133 119;
+  --ohmlet-blue-rgb: 111 173 245;
+  --ohmlet-blue-deep-rgb: 139 192 255;
+  --ohmlet-blue-soft-rgb: 22 35 58;
+  --ohmlet-green-rgb: 154 222 74;
+  --ohmlet-green-deep-rgb: 176 232 106;
+  /* Cream is the raised surface and canvas is the page behind it, so on dark
+     the raised one is LIGHTER than the page. On light it is the reverse. */
+  --ohmlet-cream-rgb: 23 27 36;
+  --ohmlet-line-rgb: 38 43 54;
+  --ohmlet-canvas-rgb: 15 18 25;
+  --ohmlet-surface-rgb: 23 27 36;
+  --ohmlet-on-ink-rgb: 15 18 25;
+  --ohmlet-panel-rgb: 10 14 22;
+  --ohmlet-tint-red-rgb: 45 22 20;
+  --ohmlet-tint-green-rgb: 24 35 18;
+  --ohmlet-tint-neutral-rgb: 21 25 33;
+  /* A hard ink shadow is invisible on a dark ground. The plate becomes the
+     darkest thing available so the pressable edge still reads. */
+  --ohmlet-plate-rgb: 5 7 11;
+  /* Ink is now near-white, so its foreground has to become near-black. */
+  --ohmlet-on-ink-rgb: 15 18 25;
+  /* Darker than the card it sits in (23 27 36), so the slab still separates. */
+  --ohmlet-slab-rgb: 12 15 21;
+  /* Restated, and deliberately identical: these two describe surfaces that are
+     dark in EVERY theme, so a "dark mode value" for them would be a bug. */
+  --ohmlet-on-dark-rgb: 255 255 255;
+  --ohmlet-scrim-rgb: 0 0 0;
+}
+
+/* System preference, and only inside the workspace. The wrapper writes the
+   chosen mode verbatim, so `system` is an explicit value here rather than the
+   absence of one: there is nothing to guard against, because a `light` or
+   `dark` wrapper simply never matches this selector. */
+@media (prefers-color-scheme: dark) {
+  [data-ohmlet-theme='system'] {
+    color-scheme: dark;
+
+    --ohmlet-gold-rgb: 250 204 46;
+    --ohmlet-gold-deep-rgb: 255 216 77;
+    --ohmlet-gold-soft-rgb: 42 36 16;
+    --ohmlet-gold-plate-rgb: 184 137 10;
+    --ohmlet-gold-text-rgb: 255 223 107;
+    --ohmlet-ink-rgb: 238 240 244;
+    --ohmlet-ink-soft-rgb: 179 185 196;
+    --ohmlet-ink-mute-rgb: 118 125 138;
+    --ohmlet-red-rgb: 255 133 119;
+    --ohmlet-blue-rgb: 111 173 245;
+    --ohmlet-blue-deep-rgb: 139 192 255;
+    --ohmlet-blue-soft-rgb: 22 35 58;
+    --ohmlet-green-rgb: 154 222 74;
+    --ohmlet-green-deep-rgb: 176 232 106;
+    --ohmlet-cream-rgb: 23 27 36;
+    --ohmlet-line-rgb: 38 43 54;
+    --ohmlet-canvas-rgb: 15 18 25;
+    --ohmlet-surface-rgb: 23 27 36;
+    --ohmlet-on-ink-rgb: 15 18 25;
+    --ohmlet-panel-rgb: 10 14 22;
+    --ohmlet-tint-red-rgb: 45 22 20;
+    --ohmlet-tint-green-rgb: 24 35 18;
+    --ohmlet-tint-neutral-rgb: 21 25 33;
+  --ohmlet-tint-red-rgb: 45 22 20;
+  --ohmlet-tint-green-rgb: 24 35 18;
+  --ohmlet-tint-neutral-rgb: 21 25 33;
+    --ohmlet-plate-rgb: 5 7 11;
+    --ohmlet-on-ink-rgb: 15 18 25;
+    --ohmlet-slab-rgb: 12 15 21;
+    --ohmlet-on-dark-rgb: 255 255 255;
+    --ohmlet-scrim-rgb: 0 0 0;
+  }
 }
 
 html,
@@ -58,8 +259,8 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 @keyframes ohmlet-pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 229, 21, 0.5); }
-  50% { box-shadow: 0 0 0 8px rgba(243, 229, 21, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--ohmlet-gold-rgb) / 0.5); }
+  50% { box-shadow: 0 0 0 8px rgb(var(--ohmlet-gold-rgb) / 0); }
 }
 @keyframes ohmlet-streak-flame {
   0%, 100% { transform: scale(1) rotate(0deg); }
@@ -138,7 +339,7 @@ body {
 /* Chat scrollbar */
 .ohmlet-chat-scroll::-webkit-scrollbar { width: 4px; }
 .ohmlet-chat-scroll::-webkit-scrollbar-track { background: transparent; }
-.ohmlet-chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.ohmlet-chat-scroll::-webkit-scrollbar-thumb { background: rgb(var(--ohmlet-ink-mute-rgb)); border-radius: 4px; }
 
 /* Active nav pill */
 .ohmlet-nav-active {
@@ -327,7 +528,7 @@ body {
   animation: circuit-pulse-ring 1.5s ease-in-out infinite;
 }
 .circuit-highlight {
-  filter: drop-shadow(0 0 4px rgba(243, 229, 21, 0.5));
+  filter: drop-shadow(0 0 4px rgb(var(--ohmlet-gold-rgb) / 0.5));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -347,13 +548,13 @@ body {
 /* A consistent, visible keyboard focus ring on dark or busy surfaces where the
    default UA outline can be hard to see. WCAG 2.4.7 Focus Visible. */
 .ohmlet-focus-ring:focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid rgb(var(--ohmlet-on-dark-rgb));
   outline-offset: 2px;
 }
 /* Global: never remove focus visibility without a replacement. A clear ring in
    the brand ink/gold, only for keyboard users (focus-visible). */
 :focus-visible {
-  outline: 3px solid var(--ohmlet-ink, #14181f);
+  outline: 3px solid var(--ohmlet-ink);
   outline-offset: 2px;
 }
 /* Skip link — visually hidden until focused, then pinned top-left. */
@@ -364,12 +565,26 @@ body {
   z-index: 200;
   transform: translateY(-150%);
   transition: transform 0.15s ease;
-  background: var(--ohmlet-ink, #14181f);
-  color: #fff;
+  background: var(--ohmlet-ink);
+  color: rgb(var(--ohmlet-on-ink-rgb));
   padding: 0.6rem 1rem;
   border-radius: 0.6rem;
   font-weight: 800;
 }
 .ohmlet-skip-link:focus {
   transform: translateY(0);
+}
+
+/* ── Sandbox workbench ground ──────────────────────────────────────────────
+   The 3D bench sat on a hardcoded light gradient baked into a Tailwind
+   arbitrary value, so it stayed daylight-white on a dark page and the board
+   floated in a glowing rectangle. Built from the palette it dims with the room
+   while keeping the same top-left key light. */
+.ohmlet-workbench {
+  background-image: radial-gradient(
+    circle at top left,
+    rgb(var(--ohmlet-surface-rgb) / 0.98),
+    rgb(var(--ohmlet-cream-rgb) / 0.94) 42%,
+    rgb(var(--ohmlet-line-rgb) / 0.92)
+  );
 }

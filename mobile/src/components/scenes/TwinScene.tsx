@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import Animated, {
   Easing, useAnimatedProps, useSharedValue, withRepeat, withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../../theme/tokens';
+import { useColors } from '../../theme/theme';
 
 const APath = Animated.createAnimatedComponent(Path);
 
@@ -32,11 +32,12 @@ const BOARD: P3[] = [
   [-BOARD_W, BOARD_T, -BOARD_D], [BOARD_W, BOARD_T, -BOARD_D], [BOARD_W, BOARD_T, BOARD_D], [-BOARD_W, BOARD_T, BOARD_D],
 ];
 
-/** Components standing on the board: [centre, width, height, depth, colour]. */
-const PARTS: Array<{ at: P3; w: number; h: number; d: number; fill: string }> = [
-  { at: [-40, 0, -16], w: 26, h: 12, d: 9, fill: colors.goldSoft },
-  { at: [6, 0, 10], w: 12, h: 18, d: 12, fill: colors.gold },
-  { at: [46, 0, -6], w: 20, h: 9, d: 9, fill: colors.blueSoft },
+/** Components standing on the board: [centre, width, height, depth]. They are
+ *  all painted with one fill at the draw call, so no colour is carried here. */
+const PARTS: Array<{ at: P3; w: number; h: number; d: number }> = [
+  { at: [-40, 0, -16], w: 26, h: 12, d: 9 },
+  { at: [6, 0, 10], w: 12, h: 18, d: 12 },
+  { at: [46, 0, -6], w: 20, h: 9, d: 9 },
 ];
 
 /** Half the sway, in radians (32 degrees). */
@@ -90,6 +91,7 @@ function boxPaths(at: P3, w: number, h: number, d: number, angle: number): strin
  * matches the flat-colour language the rest of the app uses.
  */
 export const TwinScene: React.FC = () => {
+  const colors = useColors();
   const t = useSharedValue(0);
 
   useEffect(() => {
@@ -142,7 +144,7 @@ export const TwinScene: React.FC = () => {
       <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
         <APath animatedProps={sides} fill={colors.line} stroke={colors.ink}
                strokeWidth={2.4} strokeLinejoin="round" />
-        <APath animatedProps={topFace} fill={colors.white} stroke={colors.ink}
+        <APath animatedProps={topFace} fill={colors.surface} stroke={colors.ink}
                strokeWidth={2.4} strokeLinejoin="round" />
         <APath animatedProps={parts} fill={colors.gold} fillOpacity={0.9} stroke={colors.ink}
                strokeWidth={2.2} strokeLinejoin="round" />

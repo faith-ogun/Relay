@@ -1,7 +1,7 @@
 import React from 'react';
 import { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
-import { colors } from '../../theme/tokens';
 import type { PartKind } from './circuitModel';
+import { useColors } from '../../theme/theme';
 
 // ── Symbols for the free-form builder ──
 //
@@ -39,18 +39,21 @@ const Mark: React.FC<{ x: number; y: number; text: string; fill: string }> = ({ 
   <SvgText x={x} y={y} fontSize={11} fontWeight="800" fill={fill} textAnchor="middle">{text}</SvgText>
 );
 
-const Battery: React.FC<GlyphProps> = ({ stroke }) => (
-  <G>
-    {lead(-LEAD, 0, -7, 0, stroke)}
-    {lead(7, 0, LEAD, 0, stroke)}
-    {/* Long thin plate is positive, short thick plate is negative. That pairing
-        is the only thing that tells you which way round a cell goes, so it is
-        drawn to the convention and never mirrored. */}
-    <Line x1={-7} y1={-15} x2={-7} y2={15} stroke={stroke} strokeWidth={STROKE} strokeLinecap="round" />
-    <Line x1={7} y1={-8} x2={7} y2={8} stroke={stroke} strokeWidth={STROKE * 1.8} strokeLinecap="round" />
-    <Mark x={-17} y={-8} text="+" fill={colors.inkSoft} />
-  </G>
-);
+const Battery: React.FC<GlyphProps> = ({ stroke }) => {
+  const colors = useColors();
+  return (
+    <G>
+      {lead(-LEAD, 0, -7, 0, stroke)}
+      {lead(7, 0, LEAD, 0, stroke)}
+      {/* Long thin plate is positive, short thick plate is negative. That pairing
+          is the only thing that tells you which way round a cell goes, so it is
+          drawn to the convention and never mirrored. */}
+      <Line x1={-7} y1={-15} x2={-7} y2={15} stroke={stroke} strokeWidth={STROKE} strokeLinecap="round" />
+      <Line x1={7} y1={-8} x2={7} y2={8} stroke={stroke} strokeWidth={STROKE * 1.8} strokeLinecap="round" />
+      <Mark x={-17} y={-8} text="+" fill={colors.inkSoft} />
+    </G>
+  );
+};
 
 const Resistor: React.FC<GlyphProps> = ({ stroke }) => (
   <G>
@@ -64,6 +67,7 @@ const Resistor: React.FC<GlyphProps> = ({ stroke }) => (
 );
 
 const Led: React.FC<GlyphProps> = ({ stroke, brightness = 0, over }) => {
+  const colors = useColors();
   const b = Math.max(0, Math.min(1, brightness));
   const glow = over ? colors.red : colors.gold;
   return (
@@ -126,22 +130,25 @@ const Switch: React.FC<GlyphProps> = ({ stroke, closed }) => (
   </G>
 );
 
-const Npn: React.FC<GlyphProps> = ({ stroke }) => (
-  <G>
-    <Circle cx={0} cy={0} r={21} fill={colors.white} stroke={stroke} strokeWidth={STROKE} />
-    {lead(-LEAD, 0, -7, 0, stroke)}
-    <Line x1={-7} y1={-13} x2={-7} y2={13} stroke={stroke} strokeWidth={STROKE * 1.5} strokeLinecap="round" />
-    {/* Collector up, emitter down, and the arrow on the emitter pointing out:
-        that arrow is the whole difference between an NPN and a PNP. */}
-    {lead(-7, -6, 14, -27, stroke)}
-    {lead(14, -27, 14, -38, stroke)}
-    {lead(-7, 6, 14, 27, stroke)}
-    {lead(14, 27, 14, 38, stroke)}
-    <Path d="M5 15 l9 4 l-4 8 z" fill={stroke} />
-    <Mark x={-1} y={-24} text="C" fill={colors.inkMute} />
-    <Mark x={-1} y={32} text="E" fill={colors.inkMute} />
-  </G>
-);
+const Npn: React.FC<GlyphProps> = ({ stroke }) => {
+  const colors = useColors();
+  return (
+    <G>
+      <Circle cx={0} cy={0} r={21} fill={colors.surface} stroke={stroke} strokeWidth={STROKE} />
+      {lead(-LEAD, 0, -7, 0, stroke)}
+      <Line x1={-7} y1={-13} x2={-7} y2={13} stroke={stroke} strokeWidth={STROKE * 1.5} strokeLinecap="round" />
+      {/* Collector up, emitter down, and the arrow on the emitter pointing out:
+          that arrow is the whole difference between an NPN and a PNP. */}
+      {lead(-7, -6, 14, -27, stroke)}
+      {lead(14, -27, 14, -38, stroke)}
+      {lead(-7, 6, 14, 27, stroke)}
+      {lead(14, 27, 14, 38, stroke)}
+      <Path d="M5 15 l9 4 l-4 8 z" fill={stroke} />
+      <Mark x={-1} y={-24} text="C" fill={colors.inkMute} />
+      <Mark x={-1} y={32} text="E" fill={colors.inkMute} />
+    </G>
+  );
+};
 
 const Ground: React.FC<GlyphProps> = ({ stroke }) => (
   <G>

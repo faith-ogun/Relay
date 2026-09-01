@@ -33,7 +33,7 @@ export const PLAN_META: Record<Plan, {
   priceMonthly: number | null;
   /** Per month when paying yearly, and the total that is actually charged.
    *  Apple sells only at fixed price points, so the total is NOT twelve times
-   *  the per-month figure: 11.99 x 12 is 143.88 and Apple's nearest is 143.99.
+   *  the per-month figure: 6.50 x 12 is 78.00 and Apple's nearest is 77.99.
    *  Kept in step with frontend/components/PricingPage.tsx by check-prices.mjs. */
   priceAnnualPerMonth: number | null;
   priceAnnualTotal: number | null;
@@ -56,33 +56,33 @@ export const PLAN_META: Record<Plan, {
   },
   pro: {
     label: 'Pro',
-    priceMonthly: 15.99,
-    priceAnnualPerMonth: 11.99,
-    priceAnnualTotal: 143.99,
+    priceMonthly: 12.99,
+    priceAnnualPerMonth: 6.50,
+    priceAnnualTotal: 77.99,
     tagline: 'The full bench tutor',
     blurb: 'Real bench time, every week.',
     perks: [
       'Everything in Free',
       'Unlimited hearts, so a wrong answer never stops you',
-      '4 hours of live tutoring a month',
+      '2.5 hours of live tutoring a month',
       'Every 3D twin kept for good',
       'Priority models',
     ],
   },
   max: {
     label: 'Max',
-    priceMonthly: 34.99,
-    priceAnnualPerMonth: 27.08,
-    priceAnnualTotal: 324.99,
+    priceMonthly: 24.99,
+    priceAnnualPerMonth: 12.50,
+    priceAnnualTotal: 149.99,
     tagline: 'Prove what you have built',
     blurb: 'A record of your bench work that an employer can trust.',
     perks: [
       'Everything in Pro',
-      'A verified build record, proven not claimed',
+      'A verified record of your bench work, proven not claimed',
       'Career coaching built on that record',
       'Interview Mode, with every gap routed to a lesson',
       'Early access to Ohmlet Labs',
-      '9 hours of live tutoring a month',
+      '5 hours of live tutoring a month',
     ],
   },
 };

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from './Button';
 import type { InterviewReport as Report } from '../services/interview';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, radius, space, tabular, type, type Colors } from '../theme/tokens';
+import { makeStyles, useColors, withAlpha } from '../theme/theme';
 
 /**
  * The post-interview report.
@@ -27,24 +27,29 @@ import { elevation } from '../theme/elevation';
  *   is not written yet.
  */
 
-const bandColor = (n: number) => (n >= 4 ? colors.greenDeep : n >= 3 ? colors.goldDeep : colors.red);
+const bandColor = (n: number, colors: Colors) =>
+  (n >= 4 ? colors.greenDeep : n >= 3 ? colors.goldDeep : colors.red);
 
-const Bar: React.FC<{ label: string; score: number }> = ({ label, score }) => (
-  <View style={s.bar}>
-    <View style={s.barHead}>
-      <Text style={s.barLabel} numberOfLines={1}>{label}</Text>
-      <Text style={[s.barScore, tabular]}>{score}/5</Text>
+const Bar: React.FC<{ label: string; score: number }> = ({ label, score }) => {
+  const colors = useColors();
+  const s = useS();
+  return (
+    <View style={s.bar}>
+      <View style={s.barHead}>
+        <Text style={s.barLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[s.barScore, tabular]}>{score}/5</Text>
+      </View>
+      <View style={s.barTrack}>
+        <View
+          style={[
+            s.barFill,
+            { width: `${Math.max(0, Math.min(5, score)) * 20}%`, backgroundColor: bandColor(score, colors) },
+          ]}
+        />
+      </View>
     </View>
-    <View style={s.barTrack}>
-      <View
-        style={[
-          s.barFill,
-          { width: `${Math.max(0, Math.min(5, score)) * 20}%`, backgroundColor: bandColor(score) },
-        ]}
-      />
-    </View>
-  </View>
-);
+  );
+};
 
 interface Props {
   report: Report;
@@ -54,6 +59,7 @@ interface Props {
 }
 
 export const InterviewReport: React.FC<Props> = ({ report: r, onRetry, onOpenPath }) => {
+  const s = useS();
   const topics = r.recommendedTopics ?? [];
   const covered = topics.filter((t) => t.covered && t.skillId);
   const uncovered = [
@@ -193,17 +199,17 @@ export const InterviewReport: React.FC<Props> = ({ report: r, onRetry, onOpenPat
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   scroll: { padding: space.lg, paddingBottom: space.xxl, gap: space.md },
 
   hero: {
-    backgroundColor: colors.ink, borderRadius: radius.lg, ...curve,
-    padding: space.lg, gap: space.xs, ...elevation.lifted,
+    backgroundColor: colors.slab, borderRadius: radius.lg, ...curve,
+    padding: space.lg, gap: space.xs, ...th.elevation.lifted,
   },
   heroHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroKicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2, color: 'rgba(255,255,255,0.6)' },
   heroPill: { backgroundColor: colors.gold, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  heroPillText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 0.6, color: colors.ink, textTransform: 'uppercase' },
+  heroPillText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 0.6, color: colors.onGold, textTransform: 'uppercase' },
   heroLabel: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.4, color: colors.gold, marginTop: space.sm },
   heroHeadline: { fontFamily: font.black, fontSize: type.heading, color: colors.white, lineHeight: 26, letterSpacing: -0.4 },
   heroSummary: { fontFamily: font.semibold, fontSize: type.label, color: 'rgba(255,255,255,0.78)', lineHeight: 21, marginTop: space.xs },
@@ -225,12 +231,12 @@ const s = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10, backgroundColor: colors.ink,
     alignItems: 'center', justifyContent: 'center', marginTop: 1,
   },
-  actionNumText: { fontFamily: font.black, fontSize: type.meta, color: colors.white },
+  actionNumText: { fontFamily: font.black, fontSize: type.meta, color: colors.onInk },
   actionText: { flex: 1, fontFamily: font.semibold, fontSize: type.label, color: colors.ink, lineHeight: 21 },
 
   section: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.8, color: colors.inkMute, marginTop: space.sm },
   card: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.lg, gap: space.sm,
   },
   body: { fontFamily: font.semibold, fontSize: type.label, color: colors.inkSoft, lineHeight: 21 },
@@ -252,7 +258,7 @@ const s = StyleSheet.create({
   bars: { marginTop: space.sm, gap: 2 },
 
   answer: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2, borderColor: colors.line, overflow: 'hidden',
   },
   answerQ: { backgroundColor: colors.cream, borderBottomWidth: 1, borderBottomColor: colors.line, padding: space.md },
@@ -262,14 +268,14 @@ const s = StyleSheet.create({
   quoteText: { fontFamily: font.semibold, fontSize: type.small, fontStyle: 'italic', color: colors.inkSoft, lineHeight: 19 },
   why: { fontFamily: font.semibold, fontSize: type.label, color: colors.ink, lineHeight: 21 },
   stronger: {
-    borderRadius: radius.md, borderWidth: 2, borderColor: 'rgba(132,204,48,0.45)',
-    backgroundColor: '#f2fae4', padding: space.sm, gap: 3,
+    borderRadius: radius.md, borderWidth: 2, borderColor: withAlpha(colors.green, 0.45),
+    backgroundColor: colors.greenSoft, padding: space.sm, gap: 3,
   },
   strongerLabel: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.2, color: colors.greenDeep },
   strongerText: { fontFamily: font.semibold, fontSize: type.small, color: colors.ink, lineHeight: 19 },
 
   topic: {
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.ink, padding: space.md, gap: 2,
   },
   topicDown: { transform: [{ translateY: 1 }] },
@@ -285,4 +291,4 @@ const s = StyleSheet.create({
   gapText: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, lineHeight: 18 },
 
   footer: { gap: space.sm, marginTop: space.md },
-});
+}));

@@ -5,7 +5,8 @@ import { Renderer } from 'expo-three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import Svg, { Path } from 'react-native-svg';
-import { colors, font, type, curve } from '../theme/tokens';
+import { font, type, curve } from '../theme/tokens';
+import { makeStyles, useColors, withAlpha } from '../theme/theme';
 
 interface Props {
   /** Raw GLB bytes. Fetched with auth by the caller. */
@@ -21,6 +22,8 @@ interface Props {
  * it also auto-rotates so a still screenshot still reads as 3D.
  */
 export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
+  const colors = useColors();
+  const s = useS();
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const spin = useRef({ x: 0.4, y: 0 });
@@ -127,7 +130,7 @@ export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
             <Path d="M19 3 L34 11.5 L34 26.5 L19 35 L4 26.5 L4 11.5 Z"
                   fill="none" stroke={colors.gold} strokeWidth={2.2} strokeLinejoin="round" />
             <Path d="M4 11.5 L19 20 L34 11.5 M19 20 L19 35"
-                  fill="none" stroke="rgba(250,204,46,0.45)" strokeWidth={2.2} strokeLinejoin="round" />
+                  fill="none" stroke={withAlpha(colors.gold, 0.45)} strokeWidth={2.2} strokeLinejoin="round" />
           </Svg>
         </View>
         <Text style={s.emptyTitle}>No twin yet</Text>
@@ -161,11 +164,11 @@ export const TwinViewer: React.FC<Props> = ({ model, height = 320 }) => {
   );
 };
 
-const s = StyleSheet.create({
-  wrap: { backgroundColor: colors.ink, borderRadius: 18, ...curve, overflow: 'hidden', borderWidth: 2.5, borderColor: colors.ink },
+const useS = makeStyles((colors) => ({
+  wrap: { backgroundColor: colors.slab, borderRadius: 18, ...curve, overflow: 'hidden', borderWidth: 2.5, borderColor: colors.ink },
   loading: { alignItems: 'center', justifyContent: 'center' },
   fallback: {
-    backgroundColor: colors.ink, borderRadius: 18, ...curve, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.slab, borderRadius: 18, ...curve, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 28, gap: 6,
   },
   emptyMark: { marginBottom: 4, opacity: 0.9 },
@@ -180,4 +183,4 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
   },
   hintText: { fontFamily: font.black, fontSize: 9, color: colors.white, letterSpacing: 1 },
-});
+}));

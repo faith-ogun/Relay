@@ -946,7 +946,7 @@ const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 
 type SimMode = 'library' | 'build' | 'code';
 const MODE_LABEL: Record<SimMode, string> = { library: 'Circuit library', build: 'Build your own', code: 'Arduino code' };
 const ModeBar: React.FC<{ mode: SimMode; setMode: (m: SimMode) => void }> = ({ mode, setMode }) => (
-  <div className="mb-4 inline-flex rounded-2xl border-2 border-ohmlet-ink bg-white p-1 shadow-press-sm">
+  <div className="mb-4 inline-flex rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-1 shadow-press-sm">
     {(['library', 'build', 'code'] as const).map((m) => (
       <button key={m} onClick={() => setMode(m)}
         className={`rounded-xl px-4 py-1.5 text-sm font-black transition-all ${mode === m ? 'bg-ohmlet-gold text-ohmlet-ink' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'}`}>
@@ -997,7 +997,7 @@ export const SimulatorView: React.FC = () => {
           const on = c === cat;
           return (
             <button key={c} onClick={() => setCat(c)}
-              className={`rounded-2xl border-2 px-4 py-2 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
+              className={`rounded-2xl border-2 px-4 py-2 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
               {c}
             </button>
           );
@@ -1010,13 +1010,13 @@ export const SimulatorView: React.FC = () => {
           const on = c.id === circuitId;
           return (
             <button key={c.id} onClick={() => selectCircuit(c)}
-              className={`group flex flex-col items-start rounded-2xl border-2 p-3.5 text-left transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-white hover:border-ohmlet-ink hover:-translate-y-0.5'}`}>
+              className={`group flex flex-col items-start rounded-2xl border-2 p-3.5 text-left transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink hover:-translate-y-0.5'}`}>
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="text-sm font-black text-ohmlet-ink">{c.name}</span>
                 <LevelDots level={c.level} />
               </div>
               <span className="mt-1 text-[11px] font-semibold leading-snug text-ohmlet-ink-soft">{c.blurb}</span>
-              {c.transient && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-ohmlet-ink px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white"><Play className="h-2.5 w-2.5" /> Time</span>}
+              {c.transient && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-ohmlet-ink px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-ohmlet-on-ink"><Play className="h-2.5 w-2.5" /> Time</span>}
             </button>
           );
         })}
@@ -1024,16 +1024,16 @@ export const SimulatorView: React.FC = () => {
 
       {/* bench */}
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
           <div className="relative">
             <Schematic scene={circuit.scene(params, res)} res={res} running={sim.playing} heat={heatOn} />
             <div className="absolute right-3 top-3 flex items-center gap-2">
               <button onClick={() => setHeatOn((h) => !h)} aria-pressed={heatOn}
-                className={`inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${heatOn ? 'bg-ohmlet-ink text-white' : 'bg-white text-ohmlet-ink'}`}>
+                className={`inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${heatOn ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'bg-ohmlet-surface text-ohmlet-ink'}`}>
                 <Flame className="h-4 w-4" /> Heat map
               </button>
               <button onClick={() => sim.setPlaying((r) => !r)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none">
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none">
                 {sim.playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />} {sim.playing ? 'Pause' : 'Run'}
               </button>
             </div>
@@ -1044,7 +1044,7 @@ export const SimulatorView: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Components</h3>
               <div className="flex items-center gap-3">
@@ -1135,7 +1135,7 @@ const Control: React.FC<{ def: ParamDef; value: number; onChange: (v: number) =>
         <button onClick={() => onChange(on ? 0 : 1)} aria-pressed={on}
           className={`mt-1.5 flex w-full items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-cream text-ohmlet-ink-soft hover:border-ohmlet-ink'}`}>
           <span>{on ? (d.onLabel ?? 'On') : (d.offLabel ?? 'Off')}</span>
-          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-all ${on ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`h-4 w-4 rounded-full bg-white transition-all ${on ? 'translate-x-4' : ''}`} /></span>
+          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-all ${on ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`h-4 w-4 rounded-full bg-ohmlet-surface transition-all ${on ? 'translate-x-4' : ''}`} /></span>
         </button>
       </div>
     );
@@ -1157,16 +1157,16 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
   const totalPower = powered.reduce((s, r) => s + (r.power ?? 0), 0);
   const hottest = powered.length ? powered.reduce((a, b) => ((b.power ?? 0) > (a.power ?? 0) ? b : a)).label : undefined;
   return (
-    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
       <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live readings</h3>
       {warning && (
-        <div className="mt-3 flex items-start gap-2 rounded-xl border-2 border-ohmlet-red bg-[#fff1ee] px-3 py-2 text-xs font-bold text-ohmlet-red">
+        <div className="mt-3 flex items-start gap-2 rounded-xl border-2 border-ohmlet-red bg-ohmlet-tint-red px-3 py-2 text-xs font-bold text-ohmlet-red">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {warning}
         </div>
       )}
       <div className="mt-3 space-y-2">
         {rows.map((r) => (
-          <div key={r.label} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${r.over ? 'border-ohmlet-red/40 bg-[#fff1ee]' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
+          <div key={r.label} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${r.over ? 'border-ohmlet-red/40 bg-ohmlet-tint-red' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
             <span className="flex items-center gap-1.5 text-sm font-bold text-ohmlet-ink">
               {r.label}
               {r.label === hottest && totalPower > 0.02 && <Flame className="h-3.5 w-3.5 text-ohmlet-red" />}
@@ -1178,7 +1178,7 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
         ))}
       </div>
       {totalPower > 0 && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-ohmlet-ink bg-ohmlet-ink px-3 py-2.5 text-white">
+        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-ohmlet-ink bg-ohmlet-ink px-3 py-2.5 text-ohmlet-on-ink">
           <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide"><Flame className="h-4 w-4 text-ohmlet-gold" /> Total power (heat)</span>
           <span className="text-base font-black tabular-nums">{fmtP(totalPower)}</span>
         </div>
@@ -1188,7 +1188,7 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
 };
 
 const Tutor: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-4 text-white">
+  <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-4 text-ohmlet-on-ink">
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-5 w-5 text-ohmlet-ink" /></span>
     <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">{children}</p>
   </div>
@@ -1201,7 +1201,7 @@ const LevelDots: React.FC<{ level: number }> = ({ level }) => (
 );
 
 const HeatLegend: React.FC = () => (
-  <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-press-sm backdrop-blur">
+  <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-press-sm backdrop-blur">
     <span className="text-ohmlet-ink-soft">Cool</span>
     <span className="h-2.5 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${heatRGB(0)}, ${heatRGB(0.5)}, ${heatRGB(1)})` }} />
     <span className="text-ohmlet-red">Hot</span>
@@ -1216,7 +1216,7 @@ const Scope: React.FC<{ trace: [number, number][]; duration: number; vmax: numbe
     : '';
   const last = trace.length ? trace[trace.length - 1][1] : 0;
   return (
-    <div className="pointer-events-none absolute bottom-3 right-3 rounded-2xl border-2 border-ohmlet-ink bg-white/95 p-2 shadow-press-sm backdrop-blur">
+    <div className="pointer-events-none absolute bottom-3 right-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface/95 p-2 shadow-press-sm backdrop-blur">
       <svg width={W} height={H} className="block">
         <line x1={8} y1={H - 8} x2={W - 8} y2={H - 8} stroke="#ece7db" strokeWidth={1.5} />
         <line x1={8} y1={8} x2={8} y2={H - 8} stroke="#ece7db" strokeWidth={1.5} />

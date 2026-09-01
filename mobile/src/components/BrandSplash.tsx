@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { makeStyles } from '../theme/theme';
 
 // The exact ground the launch artwork is painted on, sampled from the file
 // rather than taken from the brand tokens. `colors.cream` is a yellower cream
@@ -18,6 +19,7 @@ const GROUND = '#fcf8f5';
  * still image, so motion would announce the seam rather than cover it.
  */
 export const BrandSplash: React.FC = () => {
+  const s = useS();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -28,23 +30,23 @@ export const BrandSplash: React.FC = () => {
   // status bar lower than it did a frame earlier, and the strip above it would
   // be the shell's cream rather than the artwork's.
   return (
-    <View style={[s.screen, { top: -insets.top, width, height }]}>
-      <Image
-        source={require('../../assets/brand/splash-screen.png')}
-        style={s.art}
-        // scaleAspectFit, matching the storyboard. The artwork's own ground runs
-        // to all four edges and GROUND matches it exactly, so the fitted bands
-        // read as more of the same cream rather than as letterboxing, and the
-        // face and the wordmark survive every screen shape uncropped.
-        resizeMode="contain"
-        accessibilityRole="image"
-        accessibilityLabel="Ohmlet"
-      />
-    </View>
-  );
+      <View style={[s.screen, { top: -insets.top, width, height }]}>
+        <Image
+          source={require('../../assets/brand/splash-screen.png')}
+          style={s.art}
+          // scaleAspectFit, matching the storyboard. The artwork's own ground runs
+          // to all four edges and GROUND matches it exactly, so the fitted bands
+          // read as more of the same cream rather than as letterboxing, and the
+          // face and the wordmark survive every screen shape uncropped.
+          resizeMode="contain"
+          accessibilityRole="image"
+          accessibilityLabel="Ohmlet"
+        />
+      </View>
+    );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { position: 'absolute', left: 0, backgroundColor: GROUND },
   art: { width: '100%', height: '100%' },
-});
+}));

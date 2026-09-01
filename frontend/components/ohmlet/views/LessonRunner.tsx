@@ -120,7 +120,7 @@ const NoticeScreen: React.FC<{
   <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
     <div
       role="alert"
-      className="ohmlet-rise w-full max-w-lg rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-8 shadow-soft"
+      className="ohmlet-rise w-full max-w-lg rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-8 shadow-soft"
     >
       <span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft">
         <CircleAlert className="h-5 w-5 text-ohmlet-ink" strokeWidth={2.5} />
@@ -141,7 +141,7 @@ const NoticeScreen: React.FC<{
         <button
           type="button"
           onClick={onExit}
-          className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-5 py-3 text-sm font-black transition-colors hover:bg-ohmlet-cream"
+          className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-3 text-sm font-black transition-colors hover:bg-ohmlet-cream"
         >
           Back to the path
           <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
@@ -378,17 +378,17 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
       <div className="flex min-h-screen flex-col bg-ohmlet-cream" aria-busy="true">
         <div className="flex items-center gap-3 px-5 py-4" aria-hidden>
           <span className="h-7 w-7 rounded-lg bg-ohmlet-line" />
-          <span className="h-3.5 flex-1 rounded-full border-2 border-ohmlet-ink/15 bg-white" />
+          <span className="h-3.5 flex-1 rounded-full border-2 border-ohmlet-ink/15 bg-ohmlet-surface" />
           <span className="h-7 w-16 rounded-full bg-ohmlet-line" />
         </div>
         <div className="flex flex-1 items-start justify-center px-5 pt-6">
           <div className="w-full max-w-2xl animate-pulse motion-reduce:animate-none">
             <div className="h-5 w-40 rounded-full bg-ohmlet-line" />
-            <div className="mt-4 h-48 rounded-[1.6rem] border-2 border-ohmlet-line bg-white" />
+            <div className="mt-4 h-48 rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface" />
             <div className="mt-5 space-y-3">
-              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
-              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
-              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-white" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
             </div>
           </div>
         </div>
@@ -580,7 +580,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
   if (done) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
-        <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
+        <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface p-10 text-center shadow-press">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ohmlet-ink shadow-press-sm" style={{ background: levelMeta.color }}>
             <img src="/mascot/celebrate.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
           </div>
@@ -602,7 +602,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
               <span className="text-lg font-black">+{levelXp} XP</span>
             </div>
           ) : (
-            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-5 py-3 shadow-press-sm">
+            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-3 shadow-press-sm">
               <Flame className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
               <span className="text-lg font-black">Streak kept</span>
             </div>
@@ -728,7 +728,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
       {/* Footer: feedback + action */}
       <div
         className={`border-t-2 px-5 py-5 transition-colors md:px-8 ${
-          checked ? (correct ? 'border-ohmlet-green bg-[#f1f9e6]' : 'border-ohmlet-red bg-[#fdece8]') : 'border-ohmlet-line bg-white'
+          checked ? (correct ? 'border-ohmlet-green bg-ohmlet-tint-green' : 'border-ohmlet-red bg-ohmlet-tint-red') : 'border-ohmlet-line bg-ohmlet-surface'
         }`}
       >
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4">
@@ -862,7 +862,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
           <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
           <p className="mt-4 whitespace-pre-line text-lg font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
           {step.circuitDiagram && (
-            <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={step.showCurrentFlow} className="mx-auto w-full max-w-xl" />
             </div>
           )}
@@ -897,7 +897,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
             onChange={(e) => p.setFill(e.target.value)}
             disabled={checked}
             placeholder="Type your answer"
-            className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-5 py-4 text-lg font-black text-ohmlet-ink shadow-press-sm outline-none focus:border-ohmlet-gold-deep disabled:opacity-70"
+            className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-5 py-4 text-lg font-black text-ohmlet-ink shadow-press-sm outline-none focus:border-ohmlet-gold-deep disabled:opacity-70"
           />
           {/* Hints are disabled for now: the authored ones gave the answer away.
               Re-enable here once they're rewritten as method nudges. */}
@@ -915,7 +915,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
       return (
         <div className="ohmlet-rise">
           <Prompt>{'question' in step ? step.question : ''}</Prompt>
-          <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <CircuitDiagram
               circuit={step.circuitDiagram}
               clickable={!checked}
@@ -958,7 +958,7 @@ const Prompt: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Diagram: React.FC<{ circuit: string; showCurrentFlow?: boolean }> = ({ circuit, showCurrentFlow }) => (
-  <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+  <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
     <CircuitDiagram circuit={circuit} showCurrentFlow={showCurrentFlow} className="mx-auto w-full max-w-xl" />
   </div>
 );
@@ -972,9 +972,9 @@ const Option: React.FC<{
   center?: boolean;
   onClick: () => void;
 }> = ({ children, selected, reveal, wrong, disabled, center, onClick }) => {
-  let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
-  if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
-  else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
+  let look = 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
+  if (reveal) look = 'border-ohmlet-green bg-ohmlet-tint-green';
+  else if (wrong) look = 'border-ohmlet-red bg-ohmlet-tint-red';
   else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
   return (
     <button
@@ -1051,9 +1051,9 @@ const ImageChoice: React.FC<{
   onClick: () => void;
 }> = ({ src, label, showLabel, selected, reveal, wrong, disabled, onClick }) => {
   const [broken, setBroken] = useState(false);
-  let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
-  if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
-  else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
+  let look = 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
+  if (reveal) look = 'border-ohmlet-green bg-ohmlet-tint-green';
+  else if (wrong) look = 'border-ohmlet-red bg-ohmlet-tint-red';
   else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
   // The label is the answer, so it stays hidden until checked (kept for screen
   // readers via aria-label). If the image is missing, fall back to showing the name.
@@ -1096,7 +1096,7 @@ const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & S
     <div className="ohmlet-rise">
       <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
       <p className="mt-3 whitespace-pre-line text-base font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
-      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <CircuitDiagram circuit={step.circuitDiagram!} clickable onRegionClick={show} highlightRegion={selected} className="mx-auto w-full max-w-xl" />
       </div>
       {current ? (
@@ -1121,8 +1121,8 @@ const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & S
                 active
                   ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink'
                   : explored
-                  ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
-                  : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+                  ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green-deep'
+                  : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
               }`}
             >
               {h.label}
@@ -1167,13 +1167,13 @@ const TrueFalseStep: React.FC<{ step: Extract<LessonStep, { type: 'true_false' }
   };
   const tint = checked
     ? correct
-      ? 'border-ohmlet-green bg-[#f1f9e6]'
-      : 'border-ohmlet-red bg-[#fdece8]'
+      ? 'border-ohmlet-green bg-ohmlet-tint-green'
+      : 'border-ohmlet-red bg-ohmlet-tint-red'
     : dx > 24 || tf === true
-    ? 'border-ohmlet-green bg-[#f1f9e6]'
+    ? 'border-ohmlet-green bg-ohmlet-tint-green'
     : dx < -24 || tf === false
-    ? 'border-ohmlet-red bg-[#fdece8]'
-    : 'border-ohmlet-ink bg-white';
+    ? 'border-ohmlet-red bg-ohmlet-tint-red'
+    : 'border-ohmlet-ink bg-ohmlet-surface';
   return (
     <div className="ohmlet-rise">
       <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Swipe or tap — true or false?</p>
@@ -1252,12 +1252,12 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
 
   const cls = (on: boolean, sel: boolean, isWrong: boolean) =>
     on
-      ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
+      ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green-deep'
       : isWrong
-      ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red'
+      ? 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-red'
       : sel
       ? 'border-ohmlet-ink bg-ohmlet-gold-soft'
-      : 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
+      : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
 
   return (
     <div className="ohmlet-rise">
@@ -1336,10 +1336,10 @@ const OrderStep: React.FC<{ step: Extract<LessonStep, { type: 'drag_order' }> } 
             <li
               key={itemIdx}
               className={`flex items-center gap-3 rounded-2xl border-2 px-4 py-3 shadow-soft transition-colors ${
-                correctHere ? 'border-ohmlet-green bg-[#f1f9e6]' : wrongHere ? 'border-ohmlet-red bg-[#fdece8]' : 'border-ohmlet-line bg-white'
+                correctHere ? 'border-ohmlet-green bg-ohmlet-tint-green' : wrongHere ? 'border-ohmlet-red bg-ohmlet-tint-red' : 'border-ohmlet-line bg-ohmlet-surface'
               }`}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-xs font-black text-white">{pos + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-xs font-black text-ohmlet-on-ink">{pos + 1}</span>
               <span className="flex-1 text-sm font-bold text-ohmlet-ink">{step.items[itemIdx]}</span>
               {!checked && (
                 <span className="flex flex-col">
@@ -1374,7 +1374,7 @@ const FillTileStep: React.FC<{ step: Extract<LessonStep, { type: 'fill_blank' }>
       <Prompt>{step.prompt}</Prompt>
       {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
       {/* Assembled answer */}
-      <div className="mt-6 flex min-h-[60px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-line bg-white px-3 py-3">
+      <div className="mt-6 flex min-h-[60px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-line bg-ohmlet-surface px-3 py-3">
         {tileSeq.length === 0 ? (
           <span className="px-1 text-sm font-semibold text-ohmlet-ink-soft">Tap tiles to build your answer</span>
         ) : (
@@ -1402,7 +1402,7 @@ const FillTileStep: React.FC<{ step: Extract<LessonStep, { type: 'fill_blank' }>
               disabled={checked || used}
               onClick={() => place(i)}
               className={`rounded-xl border-2 px-3.5 py-2 text-sm font-bold shadow-soft transition-all ${
-                used ? 'border-ohmlet-line bg-ohmlet-line/30 text-transparent' : 'border-ohmlet-ink bg-white text-ohmlet-ink hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft'
+                used ? 'border-ohmlet-line bg-ohmlet-line/30 text-transparent' : 'border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft'
               }`}
             >
               {tiles[i]}
@@ -1446,7 +1446,7 @@ const DrawStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_connection' }
   return (
     <div className="ohmlet-rise">
       <Prompt>{step.instruction}</Prompt>
-      <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full max-w-md">
           {drawn.map(([a, b], i) => {
             const ta = term(a);
@@ -1493,7 +1493,7 @@ const TraceStep: React.FC<{ step: Extract<LessonStep, { type: 'trace_current' }>
   return (
     <div className="ohmlet-rise">
       <Prompt>{step.question}</Prompt>
-      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <CircuitDiagram
           circuit={step.circuitDiagram}
           clickable={!checked}
@@ -1510,7 +1510,7 @@ const TraceStep: React.FC<{ step: Extract<LessonStep, { type: 'trace_current' }>
             <React.Fragment key={`${id}-${i}`}>
               {i > 0 && <span className="text-ohmlet-ink-soft">→</span>}
               <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-3 py-1 text-sm font-black text-ohmlet-ink">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ohmlet-ink text-[10px] text-white">{i + 1}</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ohmlet-ink text-[10px] text-ohmlet-on-ink">{i + 1}</span>
                 {id}
               </span>
             </React.Fragment>
@@ -1535,7 +1535,7 @@ const FixStep: React.FC<{ step: Extract<LessonStep, { type: 'fix_the_circuit' }>
 }) => (
   <div className="ohmlet-rise">
     <Prompt>{step.question}</Prompt>
-    <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+    <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
       <CircuitDiagram
         circuit={step.circuitDiagram}
         clickable={!checked}
@@ -1597,9 +1597,9 @@ const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }>
           const filled = pi !== undefined;
           const correctHere = checked && filled && pi === step.correct[i];
           const wrongHere = checked && filled && pi !== step.correct[i];
-          let look = 'border-dashed border-ohmlet-line bg-white text-ohmlet-ink-soft';
-          if (correctHere) look = 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-ink';
-          else if (wrongHere) look = 'border-ohmlet-red bg-[#fdece8] text-ohmlet-ink';
+          let look = 'border-dashed border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft';
+          if (correctHere) look = 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-ink';
+          else if (wrongHere) look = 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-ink';
           else if (filled) look = 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink';
           return (
             <React.Fragment key={i}>
@@ -1627,7 +1627,7 @@ const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }>
                   type="button"
                   disabled={placed.length >= step.slots}
                   onClick={() => addPart(i)}
-                  className="rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-bold text-ohmlet-ink shadow-soft transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-bold text-ohmlet-ink shadow-soft transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {part}
                 </button>
@@ -1752,7 +1752,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
 
   const toolBtn = (on: boolean) =>
     `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
-      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
     }`;
 
   return (
@@ -1760,7 +1760,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw it yourself</p>
       <Prompt>{step.instruction}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
-      <div className="mt-5 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+      <div className="mt-5 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
         <canvas
           ref={canvasRef}
           className={`block h-[300px] w-full touch-none ${checked ? 'pointer-events-none opacity-90' : 'cursor-crosshair'}`}
@@ -1801,7 +1801,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
         <button
           type="button"
           onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
-          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-white px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
         >
           Carry on without checking this one
         </button>
@@ -1925,7 +1925,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
 
   const toolBtn = (on: boolean) =>
     `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
-      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
     }`;
 
   return (
@@ -1933,7 +1933,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw the fix</p>
       <Prompt>{step.instruction}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
-      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <div ref={boxRef} className="relative mx-auto w-full max-w-xl">
           <CircuitDiagram circuit={step.circuitDiagram} className="w-full" />
           <canvas
@@ -1977,7 +1977,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
         <button
           type="button"
           onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
-          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-white px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
         >
           Carry on without checking this one
         </button>
@@ -2003,7 +2003,7 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
   const angT = Math.PI * (1 - (m.target - m.min) / (m.max - m.min));
   const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14181f';
   const gauge = (
-    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
       <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={10} strokeLinecap="round" />
         {Array.from({ length: 5 }).map((_, i) => {
@@ -2042,7 +2042,7 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
       {step.circuitDiagram ? (
         // Circuit and gauge side by side on wider screens (no scroll); stacked on mobile.
         <div className="mt-5 grid items-center gap-4 md:grid-cols-2">
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={checked} className="mx-auto w-full" />
           </div>
           {gauge}
@@ -2086,7 +2086,7 @@ const ResistorBandStep: React.FC<{ step: Extract<LessonStep, { type: 'choose_res
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Set the colour bands</p>
       <Prompt>{step.question}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">Tap a band to change its colour, until the value matches {fmtOhms(target)}.</p>
-      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
         <svg viewBox="0 0 220 90" className="mx-auto w-full max-w-sm">
           <line x1={6} y1={45} x2={48} y2={45} stroke="#94a3b8" strokeWidth={3} />
           <line x1={172} y1={45} x2={214} y2={45} stroke="#94a3b8" strokeWidth={3} />

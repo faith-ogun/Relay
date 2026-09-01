@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Close } from '../../components/icons';
 import { goBack } from '../../services/nav';
@@ -18,10 +18,13 @@ import { authoredLessonAlreadyCleared, corpusLessonIds } from '../../services/ac
 import { applyCompletion, bumpMetric, loadProgress, saveProgress, type Progress } from '../../services/progress';
 import { LEVEL_META, nextAttemptLevel } from '../../lesson/levels';
 import { useAuth } from '../../hooks/useAuth';
-import { colors, font, pressSmall, radius, space, type, curve } from '../../theme/tokens';
+import { font, space, type, curve } from '../../theme/tokens';
 import { duration } from '../../theme/motion';
+import { makeStyles, useColors } from '../../theme/theme';
 
 export default function LessonScreen() {
+  const colors = useColors();
+  const s = useS();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -347,11 +350,14 @@ export default function LessonScreen() {
   );
 }
 
-const Center: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <View style={s.center}>{children}</View>
-);
+const Center: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const s = useS();
+  return (
+    <View style={s.center}>{children}</View>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   center: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -363,7 +369,7 @@ const s = StyleSheet.create({
   },
   close: { fontFamily: font.black, fontSize: type.heading, color: colors.inkSoft },
   track: {
-    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
+    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   fill: { height: '100%', width: '100%', backgroundColor: colors.gold },
@@ -379,8 +385,8 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg, paddingVertical: space.md,
     borderTopWidth: 2.5,
   },
-  bannerGood: { backgroundColor: '#eef7e0', borderTopColor: colors.greenDeep },
-  bannerBad: { backgroundColor: '#fdece8', borderTopColor: colors.red },
+  bannerGood: { backgroundColor: colors.greenSoft, borderTopColor: colors.greenDeep },
+  bannerBad: { backgroundColor: colors.redSoft, borderTopColor: colors.red },
   bannerTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   bannerBody: {
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
@@ -401,4 +407,4 @@ const s = StyleSheet.create({
   },
   quiet: { marginTop: space.md, paddingVertical: space.sm },
   quietText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

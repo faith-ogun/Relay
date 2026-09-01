@@ -9,7 +9,7 @@
       "ohmlet",
       "com.googleusercontent.apps.182102811288-7s9pk39kbo8tjt1sf4flou49jim43o4b"
     ],
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "org.ohmlet.app",

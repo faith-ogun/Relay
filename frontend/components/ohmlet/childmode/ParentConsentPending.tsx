@@ -89,7 +89,7 @@ export const ParentConsentPending: React.FC<Props> = ({ profile, onConsented }) 
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-12">
-      <header className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-white p-8 shadow-press">
+      <header className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-8 shadow-press">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft">
           <ShieldCheck className="h-7 w-7 text-ohmlet-ink" strokeWidth={2.4} />
         </div>

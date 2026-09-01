@@ -625,7 +625,7 @@ export function CircuitDrawingCanvas({
         <button
           type="button"
           onClick={() => { setLines([]); setCompletedConnections(new Set()); }}
-          className={`mt-2 text-xs font-semibold ${dark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600'} transition-colors`}
+          className={`mt-2 text-xs font-semibold ${dark ? 'text-white/40 hover:text-white/60' : 'text-ohmlet-ink-mute hover:text-ohmlet-ink-soft'} transition-colors`}
         >
           Clear all wires
         </button>

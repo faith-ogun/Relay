@@ -130,9 +130,9 @@ export const CodeLabView: React.FC = () => {
               {status === 'compiling' ? <Loader2 className="h-4 w-4 animate-spin" /> : running ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               {status === 'compiling' ? 'Compiling…' : running ? 'Stop' : 'Compile & Run'}
             </button>
-            <span className="font-mono text-xs font-bold text-slate-400">sketch.ino</span>
+            <span className="font-mono text-xs font-bold text-ohmlet-ink-mute">sketch.ino</span>
           </div>
-          <Suspense fallback={<div className="flex h-[360px] items-center justify-center text-slate-500"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+          <Suspense fallback={<div className="flex h-[360px] items-center justify-center text-ohmlet-ink-mute"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
             <MonacoEditor height="360px" defaultLanguage="cpp" value={code} onChange={(v) => setCode(v ?? '')} theme="vs-dark"
               options={{ minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false, tabSize: 2, padding: { top: 12 } }} />
           </Suspense>
@@ -146,7 +146,7 @@ export const CodeLabView: React.FC = () => {
 
         {/* board + serial */}
         <div className="flex flex-col gap-4">
-          <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+          <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
             <ArduinoScene
               led13={led13} bright9={bright9} pressed={pressed} onPress={setPressed} pot={pot}
               powered={running} serialActive={running && serial.length > 0}
@@ -156,7 +156,7 @@ export const CodeLabView: React.FC = () => {
               <input type="range" min={0} max={1023} value={pot} onChange={(e) => setPot(+e.target.value)} className="w-full accent-ohmlet-gold-deep" />
               <span className="w-10 text-right text-xs font-black tabular-nums text-ohmlet-ink">{pot}</span>
             </div>
-            <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-white">
+            <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-ohmlet-on-ink">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-4 w-4 text-ohmlet-ink" /></span>
               <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">
                 {running ? <>Live. Pin 13 {led13 ? <>is <b>HIGH</b> ({ledMa.toFixed(1)} mA)</> : 'is LOW'}; pin 9 sits at <b>{Math.round(bright9 * 100)}%</b> brightness from the knob. Hold the button for pin 2.</>
@@ -164,7 +164,7 @@ export const CodeLabView: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Serial monitor</h3>
             <pre className="mt-2 h-28 overflow-auto whitespace-pre-wrap rounded-xl bg-ohmlet-ink px-3 py-2 font-mono text-xs leading-relaxed text-[#84cc30]">{serial || (running ? '' : '— nothing yet —')}</pre>
           </div>

@@ -7,7 +7,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { Battery, Led, Resistor, Wire } from '../circuits/primitives';
-import { colors } from '../../theme/tokens';
+import { useColors } from '../../theme/theme';
 
 const ACircle = Animated.createAnimatedComponent(Circle);
 
@@ -94,6 +94,7 @@ export const CurrentLoopScene: React.FC = () => {
 
 /** One moving charge. Split out so each gets its own animated props worklet. */
 const Charge: React.FC<{ t: SharedValue<number>; offset: number }> = ({ t, offset }) => {
+  const colors = useColors();
   const props = useAnimatedProps(() => {
     const p = at(t.value + offset);
     return { cx: p.x, cy: p.y };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,9 +7,9 @@ import { Button } from '../Button';
 import { Close } from '../icons';
 import type { KitCheckPhase } from '../../hooks/useKitCheck';
 import type { IdentifiedComponent, InventoryResult, PartStatus } from '../../services/visionVerifier';
-import { colors, curve, font, leading, radius, space, tabular, tracking, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, leading, radius, space, tabular, tracking, type } from '../../theme/tokens';
 import { stagger } from '../../theme/motion';
+import { makeStyles, useColors } from '../../theme/theme';
 
 /**
  * The result of pointing the camera at the bench: step 2 of the learning loop.
@@ -53,6 +53,8 @@ export const KitCheckSheet: React.FC<Props> = ({
   visible, phase, intent, inventory, component, error, retryable, buildTitle,
   toldTutor, onRetry, onClose,
 }) => {
+  const colors = useColors();
+  const s = useS();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   // 'idle' is in here so the sheet can never be blank: a caller that opens it
@@ -151,6 +153,8 @@ const InventoryReport: React.FC<{
   onRetry: () => void;
   onClose: () => void;
 }> = ({ result, reduced, toldTutor, onRetry, onClose }) => {
+  const colors = useColors();
+  const s = useS();
   const found = result.parts.filter((p) => p.status === 'present').length;
   const missing = result.parts.filter((p) => p.status === 'missing').length;
   const unsure = result.parts.filter((p) => p.status === 'unsure').length;
@@ -217,14 +221,18 @@ const InventoryReport: React.FC<{
   );
 };
 
-const Tally: React.FC<{ count: number; label: string; tint: string }> = ({ count, label, tint }) => (
-  <View style={[s.tallyPill, { borderColor: tint }]}>
-    <Text style={[s.tallyCount, { color: tint }]}>{count}</Text>
-    <Text style={s.tallyLabel}>{label.toUpperCase()}</Text>
-  </View>
-);
+const Tally: React.FC<{ count: number; label: string; tint: string }> = ({ count, label, tint }) => {
+  const s = useS();
+  return (
+    <View style={[s.tallyPill, { borderColor: tint }]}>
+      <Text style={[s.tallyCount, { color: tint }]}>{count}</Text>
+      <Text style={s.tallyLabel}>{label.toUpperCase()}</Text>
+    </View>
+  );
+};
 
 const StatusMark: React.FC<{ status: PartStatus['status'] }> = ({ status }) => {
+  const colors = useColors();
   const tint =
     status === 'present' ? colors.greenDeep : status === 'missing' ? colors.red : colors.blueDeep;
   return (
@@ -251,6 +259,8 @@ const StatusMark: React.FC<{ status: PartStatus['status'] }> = ({ status }) => {
 const PartRow: React.FC<{ part: PartStatus; index: number; reduced: boolean }> = ({
   part, index, reduced,
 }) => {
+  const colors = useColors();
+  const s = useS();
   const tint =
     part.status === 'present' ? colors.line
       : part.status === 'missing' ? colors.red : colors.blue;
@@ -279,55 +289,58 @@ const ComponentReport: React.FC<{
   toldTutor: boolean;
   onRetry: () => void;
   onClose: () => void;
-}> = ({ result, toldTutor, onRetry, onClose }) => (
-  <View>
-    <Text style={s.eyebrow}>WHAT THIS IS</Text>
-    <View style={s.idHead}>
-      <Text style={s.verdictTitle}>{result.name}</Text>
-      {!!result.value && (
-        <View style={s.valueChip}>
-          <Text style={s.valueChipText}>{result.value}</Text>
+}> = ({ result, toldTutor, onRetry, onClose }) => {
+  const s = useS();
+  return (
+    <View>
+      <Text style={s.eyebrow}>WHAT THIS IS</Text>
+      <View style={s.idHead}>
+        <Text style={s.verdictTitle}>{result.name}</Text>
+        {!!result.value && (
+          <View style={s.valueChip}>
+            <Text style={s.valueChipText}>{result.value}</Text>
+          </View>
+        )}
+      </View>
+
+      <Text style={s.body}>{result.purpose}</Text>
+
+      <View style={s.tip}>
+        <View style={s.tipBand} />
+        <View style={s.tipBody}>
+          <Text style={s.sectionLabel}>ON THE BENCH</Text>
+          <Text style={s.tipText}>{result.tip}</Text>
         </View>
+      </View>
+
+      {result.confidence < LOW_CONFIDENCE && (
+        <Text style={s.caveat}>
+          That was a hard one to read. Hold it closer, with the markings facing the camera.
+        </Text>
       )}
-    </View>
 
-    <Text style={s.body}>{result.purpose}</Text>
+      {toldTutor && <Text style={s.told}>The tutor has this, so you can just ask about it.</Text>}
 
-    <View style={s.tip}>
-      <View style={s.tipBand} />
-      <View style={s.tipBody}>
-        <Text style={s.sectionLabel}>ON THE BENCH</Text>
-        <Text style={s.tipText}>{result.tip}</Text>
+      <View style={s.actions}>
+        <View style={s.action}>
+          <Button label="Scan another" variant="secondary" onPress={onRetry} />
+        </View>
+        <View style={s.action}>
+          <Button label="Done" onPress={onClose} />
+        </View>
       </View>
     </View>
+  );
+};
 
-    {result.confidence < LOW_CONFIDENCE && (
-      <Text style={s.caveat}>
-        That was a hard one to read. Hold it closer, with the markings facing the camera.
-      </Text>
-    )}
-
-    {toldTutor && <Text style={s.told}>The tutor has this, so you can just ask about it.</Text>}
-
-    <View style={s.actions}>
-      <View style={s.action}>
-        <Button label="Scan another" variant="secondary" onPress={onRetry} />
-      </View>
-      <View style={s.action}>
-        <Button label="Done" onPress={onClose} />
-      </View>
-    </View>
-  </View>
-);
-
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   backdrop: { flex: 1, backgroundColor: 'rgba(20,24,31,0.5)', justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '88%',
     backgroundColor: colors.cream,
     borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, ...curve,
     borderTopWidth: 2.5, borderColor: colors.ink,
-    ...elevation.overlay,
+    ...th.elevation.overlay,
   },
   grabber: {
     width: 44, height: 5, borderRadius: 3, backgroundColor: colors.inkFaint,
@@ -336,7 +349,7 @@ const s = StyleSheet.create({
   close: {
     position: 'absolute', top: space.md, right: space.md, zIndex: 2,
     width: 34, height: 34, borderRadius: radius.sm, ...curve,
-    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
   inner: { padding: space.lg, paddingTop: space.md },
@@ -375,7 +388,7 @@ const s = StyleSheet.create({
   tallyPill: {
     flexDirection: 'row', alignItems: 'baseline', gap: 5,
     paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, ...curve,
-    borderWidth: 2, backgroundColor: colors.white,
+    borderWidth: 2, backgroundColor: colors.surface,
   },
   tallyCount: { fontFamily: font.black, fontSize: type.label, ...tabular },
   tallyLabel: { fontFamily: font.black, fontSize: 9, letterSpacing: 1, color: colors.inkSoft },
@@ -383,12 +396,12 @@ const s = StyleSheet.create({
   partList: { marginTop: space.md, gap: 6 },
   partRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderRadius: radius.sm, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.sm, ...curve,
     borderWidth: 1.5, borderColor: colors.line, borderLeftWidth: 5,
     paddingVertical: 10, paddingHorizontal: 12,
   },
   // A gap is worth more of the eye than something already ticked off.
-  partRowFlagged: { ...elevation.card },
+  partRowFlagged: { ...th.elevation.card },
   partText: { flex: 1 },
   partName: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   partNameMissing: { fontFamily: font.black },
@@ -425,11 +438,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, ...curve,
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.goldPlate,
   },
-  valueChipText: { fontFamily: font.black, fontSize: type.small, color: colors.goldText, ...tabular },
+  valueChipText: { fontFamily: font.black, fontSize: type.small, color: colors.onGold, ...tabular },
 
   tip: {
     flexDirection: 'row', marginTop: space.lg,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, overflow: 'hidden',
   },
   tipBand: { width: 6, backgroundColor: colors.gold },
@@ -438,4 +451,4 @@ const s = StyleSheet.create({
     fontFamily: font.bold, fontSize: type.small, lineHeight: leading.small,
     color: colors.ink, marginTop: 6,
   },
-});
+}));

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
-import { colors, curve, font, pressSmall, radius, space, tabular, type } from '../theme/tokens';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
 import type { BossStatus } from '../services/bosses';
+import { makeStyles, useColors, useTheme } from '../theme/theme';
 
 /**
  * The boss that closes a unit.
@@ -18,17 +19,21 @@ import type { BossStatus } from '../services/bosses';
  *   cleared  - it is done, so it leads with the score and offers a re-sit.
  */
 
-const Shield: React.FC<{ size?: number; color?: string }> = ({ size = 26, color = colors.white }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    {/* A shield with a resistor across it: the unit's components, defended. */}
-    <Path
-      d="M12 2.6 4.7 5.4v6.1c0 4.4 3.1 8.1 7.3 9.9 4.2-1.8 7.3-5.5 7.3-9.9V5.4z"
-      fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round"
-    />
-    <Path d="M6.9 12h2.2M14.9 12h2.2" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    <Rect x={9.1} y={9.6} width={5.8} height={4.8} rx={1.2} fill="none" stroke={color} strokeWidth={2} />
-  </Svg>
-);
+const Shield: React.FC<{ size?: number; color?: string }> = ({ size = 26, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.white;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* A shield with a resistor across it: the unit's components, defended. */}
+      <Path
+        d="M12 2.6 4.7 5.4v6.1c0 4.4 3.1 8.1 7.3 9.9 4.2-1.8 7.3-5.5 7.3-9.9V5.4z"
+        fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round"
+      />
+      <Path d="M6.9 12h2.2M14.9 12h2.2" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Rect x={9.1} y={9.6} width={5.8} height={4.8} rx={1.2} fill="none" stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+};
 
 export const BossCard: React.FC<{
   unitTitle: string;
@@ -39,6 +44,9 @@ export const BossCard: React.FC<{
   lessonsRemaining: number;
   onStart: () => void;
 }> = ({ unitTitle, status, passRatio, lessonsRemaining, onStart }) => {
+  const colors = useColors();
+  const { pressSmall } = useTheme();
+  const card = useCard();
   const cleared = !!status?.cleared;
   const locked = lessonsRemaining > 0 || !status?.ready;
   const best = status?.bestRatio ?? 0;
@@ -102,9 +110,9 @@ export const BossCard: React.FC<{
   );
 };
 
-const card = StyleSheet.create({
+const useCard = makeStyles((colors) => ({
   plate: {
-    backgroundColor: colors.ink, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.slab, borderRadius: radius.lg, ...curve,
     padding: space.lg, marginTop: space.md,
     borderWidth: 3, borderColor: colors.red,
   },
@@ -128,7 +136,7 @@ const card = StyleSheet.create({
   },
 
   blurb: {
-    fontFamily: font.semibold, fontSize: type.small, color: '#c9ccd2',
+    fontFamily: font.semibold, fontSize: type.small, color: colors.inkMute,
     marginTop: space.md, lineHeight: 20,
   },
 
@@ -140,8 +148,8 @@ const card = StyleSheet.create({
     marginTop: space.md, backgroundColor: colors.red,
     borderRadius: radius.md, ...curve, paddingVertical: 14, alignItems: 'center',
   },
-  ctaCleared: { backgroundColor: colors.white },
+  ctaCleared: { backgroundColor: colors.surface },
   ctaDown: { transform: [{ translateY: 3 }] },
   ctaText: { fontFamily: font.black, fontSize: type.body, color: colors.white, letterSpacing: 0.2 },
   ctaTextCleared: { color: colors.ink },
-});
+}));

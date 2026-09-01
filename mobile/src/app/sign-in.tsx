@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '../services/nav';
 import { Button } from '../components/Button';
@@ -10,11 +8,13 @@ import { authErrorMessage, useAuth } from '../hooks/useAuth';
 import {
   appleAvailable, googleConfigured, signInWithApple, signInWithGoogle,
 } from '../services/socialAuth';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 type Busy = null | 'apple' | 'google' | 'email';
 
 export default function SignIn() {
+  const s = useS();
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [showEmail, setShowEmail] = useState(false);
@@ -164,14 +164,18 @@ export default function SignIn() {
   );
 }
 
-const Field: React.FC<{ label: string } & React.ComponentProps<typeof TextInput>> = ({ label, ...rest }) => (
-  <View style={{ marginBottom: space.md }}>
-    <Text style={s.label}>{label}</Text>
-    <TextInput style={s.input} placeholderTextColor={colors.inkSoft} accessibilityLabel={label} {...rest} />
-  </View>
-);
+const Field: React.FC<{ label: string } & React.ComponentProps<typeof TextInput>> = ({ label, ...rest }) => {
+  const colors = useColors();
+  const s = useS();
+  return (
+    <View style={{ marginBottom: space.md }}>
+      <Text style={s.label}>{label}</Text>
+      <TextInput style={s.input} placeholderTextColor={colors.inkSoft} accessibilityLabel={label} {...rest} />
+    </View>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingTop: space.sm, flexGrow: 1 },
   back: { paddingVertical: space.sm, alignSelf: 'flex-start' },
@@ -185,7 +189,7 @@ const s = StyleSheet.create({
   dividerText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
   label: { fontFamily: font.extrabold, fontSize: type.small, color: colors.ink, marginBottom: 6 },
   input: {
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.surface,
     paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   error: { fontFamily: font.bold, fontSize: type.small, color: colors.red, marginTop: space.xs },
@@ -195,4 +199,4 @@ const s = StyleSheet.create({
     fontFamily: font.regular, fontSize: type.meta, color: colors.inkSoft,
     textAlign: 'center', marginTop: 'auto', paddingTop: space.lg, lineHeight: 16,
   },
-});
+}));

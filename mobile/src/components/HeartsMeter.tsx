@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { Heart, InfinityMark } from './icons';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
-import { colors, curve, font, type } from '../theme/tokens';
+import { curve, font, type } from '../theme/tokens';
 import { motion } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * The heart balance, as discrete glyphs rather than a number.
@@ -20,6 +21,7 @@ import { motion } from '../theme/motion';
  */
 
 const Pip: React.FC<{ filled: boolean }> = ({ filled }) => {
+  const colors = useColors();
   const scale = useSharedValue(1);
   const first = useRef(true);
 
@@ -49,6 +51,8 @@ const Pip: React.FC<{ filled: boolean }> = ({ filled }) => {
 };
 
 export const HeartsMeter: React.FC<{ onPress?: () => void }> = ({ onPress: requested }) => {
+  const colors = useColors();
+  const s = useS();
   const { hearts, max, unlimited, loaded, nextIn, empty } = useHeartsCountdown();
   const { childSafe } = useChildSafe();
   // A minor cannot self-purchase (#96), so the meter must not be a doorway to
@@ -102,11 +106,11 @@ export const HeartsMeter: React.FC<{ onPress?: () => void }> = ({ onPress: reque
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 9, paddingVertical: 3,
+    backgroundColor: colors.surface, paddingHorizontal: 9, paddingVertical: 3,
   },
   pillGold: { backgroundColor: colors.goldSoft, borderColor: colors.goldPlate, gap: 4 },
   pillEmpty: { backgroundColor: colors.inkFaint, borderColor: colors.inkMute, gap: 5 },
@@ -115,4 +119,4 @@ const s = StyleSheet.create({
     fontFamily: font.black, fontSize: type.meta, color: colors.inkSoft,
     letterSpacing: 0.3, fontVariant: ['tabular-nums'],
   },
-});
+}));

@@ -68,7 +68,7 @@ import { useOhmletUserState } from '../hooks/useOhmletUserState';
 import { useAchievementMetrics } from '../hooks/useAchievementMetrics';
 import { PLAN_META, type Plan } from './ohmlet/entitlements';
 import { LEVEL_META, nextAttemptLevel } from './ohmlet/data/levels';
-import { applyCompletion, isoDay } from '../services/completion';
+import { applyCompletion, completedTodayNow, currentStreak, isoDay } from '../services/completion';
 import {
   claimCheckpoints, fetchCheckpoints, foldCheckpointXp, foldClaim,
   type CheckpointGrant, type CheckpointStatus, type FailReason,
@@ -181,7 +181,11 @@ const NAV: Array<{ id: ViewId; label: string; icon: React.ComponentType<{ classN
   { id: 'path', label: 'Learning path', icon: MapIcon },
   { id: 'live', label: 'Live tutor', icon: Video },
   { id: 'interview', label: 'Interview mode', icon: Briefcase },
-  { id: 'career', label: 'Build record', icon: BadgeCheck },
+  // "Build record" read like a settings row or a data-provenance page rather
+  // than something a learner would open. The view holds the evidence AND the
+  // entry point to a coaching session, so the coaching half is what makes it
+  // sound like a place to go. Renamed 2026-09-01 at Faith's call.
+  { id: 'career', label: 'Career coaching', icon: BadgeCheck },
   { id: 'simulator', label: 'Simulator', icon: CircuitBoard },
   { id: 'sandbox', label: 'Sandbox', icon: Boxes, beta: true },
   { id: 'community', label: 'Community', icon: Users },
@@ -217,11 +221,11 @@ interface Way {
 }
 
 const WAYS: Way[] = [
-  { id: 'path', title: 'Continue the path', sub: 'Guided lessons', icon: MapIcon, tone: 'gold', chip: 'border-2 border-ohmlet-ink bg-white text-ohmlet-ink' },
+  { id: 'path', title: 'Continue the path', sub: 'Guided lessons', icon: MapIcon, tone: 'gold', chip: 'border-2 border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink' },
   { id: 'live', title: 'Go live', sub: 'Voice + camera', icon: Radio, tone: 'ink', chip: 'bg-ohmlet-gold text-ohmlet-ink' },
   { id: 'simulator', title: 'Open simulator', sub: 'See current flow', icon: CircuitBoard, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-ohmlet-blue-soft text-ohmlet-blue-deep' },
-  { id: 'sandbox', title: 'Open sandbox', sub: '3D breadboard', icon: Boxes, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-[#eef7e0] text-ohmlet-green-deep', beta: true },
-  { id: 'community', title: 'See community', sub: 'Builds + challenges', icon: Users, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-[#fdece8] text-ohmlet-red' },
+  { id: 'sandbox', title: 'Open sandbox', sub: '3D breadboard', icon: Boxes, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-ohmlet-tint-green text-ohmlet-green-deep', beta: true },
+  { id: 'community', title: 'See community', sub: 'Builds + challenges', icon: Users, tone: 'quiet', chip: 'border-2 border-ohmlet-ink bg-ohmlet-tint-red text-ohmlet-red' },
 ];
 
 /**
@@ -231,8 +235,8 @@ const WAYS: Way[] = [
  */
 const WAY_SURFACE: Record<WayTone, string> = {
   gold: 'border-[2.5px] border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink shadow-press hover:shadow-[0_8px_0_#14181f]',
-  ink: 'border-[2.5px] border-ohmlet-ink bg-ohmlet-ink text-white shadow-press hover:shadow-[0_8px_0_#14181f]',
-  quiet: 'border-2 border-ohmlet-line bg-white text-ohmlet-ink shadow-soft hover:border-ohmlet-ink hover:shadow-press-sm',
+  ink: 'border-[2.5px] border-ohmlet-ink bg-ohmlet-ink text-ohmlet-on-ink shadow-press hover:shadow-[0_8px_0_#14181f]',
+  quiet: 'border-2 border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink shadow-soft hover:border-ohmlet-ink hover:shadow-press-sm',
 };
 
 const WAY_SUB: Record<WayTone, string> = {
@@ -263,7 +267,7 @@ const PortalReturnNote: React.FC<{ plan: Plan; onSeePlans?: () => void }> = ({ p
 
   return (
     <div className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
-      <div className="ohmlet-rise flex items-start gap-3 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white p-4 shadow-press">
+      <div className="ohmlet-rise flex items-start gap-3 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-4 shadow-press">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ohmlet-gold">
           <Sparkles className="h-4 w-4 text-ohmlet-ink" />
         </span>
@@ -367,7 +371,7 @@ const CheckpointBand: React.FC<{
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0"
+          className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0"
         >
           <RotateCw className="h-3 w-3" strokeWidth={3} />
           Try again
@@ -484,7 +488,7 @@ const CheckpointCeremony: React.FC<{ grant: CheckpointGrant; onClose: () => void
       onClick={onClose}
     >
       <div
-        className="ohmlet-scale-in relative w-full max-w-sm overflow-hidden rounded-[28px] border-[3px] border-ohmlet-ink bg-white p-7 text-center shadow-press"
+        className="ohmlet-scale-in relative w-full max-w-sm overflow-hidden rounded-[28px] border-[3px] border-ohmlet-ink bg-ohmlet-surface p-7 text-center shadow-press"
         onClick={(e) => e.stopPropagation()}
       >
         {/* The glow behind the chest, not a border on it. */}
@@ -618,7 +622,12 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
     [lessonLevels],
   );
   const xp = progress.xp;
-  const streak = progress.streak;
+  // The streak as it stands NOW, not the number last written. It is the one
+  // counter that decays with time rather than with an action, so a learner who
+  // missed a day and merely opened the page used to see the streak they had
+  // lost. Everything downstream (the flame row, the achievements, the heading)
+  // reads this, so the correction lands everywhere at once.
+  const streak = currentStreak(progress);
   // Units and lessons completed, counted in AUTHORED lessons rather than in the
   // sessions they were packaged into. Both drive achievement families, and both
   // used to move when the packaging did: cutting the 142 authored lessons into
@@ -721,10 +730,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
   // Today's goal, from the same UTC day the completion rule stamps the record
   // with. The local-time helper this used to call disagreed with it across a
   // clock change, which showed a goal as unstarted on a day it had been met.
-  const goalDone = Math.min(
-    GOAL_TARGET,
-    progress.lastActiveDate === isoDay(new Date()) ? progress.completedToday : 0,
-  );
+  const goalDone = Math.min(GOAL_TARGET, completedTodayNow(progress));
   const goalPct = Math.round((goalDone / GOAL_TARGET) * 100);
   const week = useMemo(() => {
     const lit = Math.min(streak, 7);
@@ -910,7 +916,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
       <div className="flex">
         {/* ── Left rail ── */}
         <aside
-          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ohmlet-line bg-white py-6 transition-[width] duration-200 lg:flex ${
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ohmlet-line bg-ohmlet-surface py-6 transition-[width] duration-200 lg:flex ${
             navCollapsed ? 'w-[76px] px-2' : 'w-64 px-4'
           }`}
         >
@@ -918,7 +924,17 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
           <div className={`mb-6 flex items-center ${navCollapsed ? 'flex-col gap-3' : 'justify-between'}`}>
             {!navCollapsed && (
               <button type="button" onClick={onBack} className="flex items-center px-1" aria-label="Ohmlet home">
-                <img src="/brand/ohmlet-logo.png" alt="Ohmlet" className="h-9 w-auto" draggable={false} />
+                {/* The mascot as art, the wordmark as TEXT.
+                    `ohmlet-logo.png` bakes the wordmark in as dark lettering, so
+                    in dark mode the name simply disappeared and the sidebar
+                    showed a floating chick. Splitting them means the wordmark
+                    takes `text-ohmlet-ink`, which inverts, and no second asset
+                    has to be drawn and kept in sync. The mascot is colourful and
+                    reads on either ground, so it is unchanged. */}
+                <img src="/brand/ohmlet-mascot.png" alt="" aria-hidden className="h-9 w-auto" draggable={false} />
+                <span className="ml-1.5 font-display text-[26px] font-black lowercase tracking-[-0.04em] text-ohmlet-ink">
+                  ohmlet
+                </span>
               </button>
             )}
             <button
@@ -997,7 +1013,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
             </button>
           ) : (
             <>
-              <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white p-3 shadow-press-sm">
+              <div className="mt-auto flex items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-3 shadow-press-sm">
                 <OhmletAvatar config={avatar} size={40} ring />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-ohmlet-ink">{displayName}</p>
@@ -1025,7 +1041,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                         key={p}
                         onClick={() => setPlan(p)}
                         className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wide transition-colors ${
-                          plan === p ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
+                          plan === p ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'
                         }`}
                       >
                         {PLAN_META[p].label}
@@ -1062,7 +1078,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   <button
                     type="button"
                     onClick={retrySync}
-                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
                   >
                     <RotateCw className="h-3 w-3" strokeWidth={3} />
                     Get them
@@ -1151,7 +1167,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
               {/* Hero row: continue + live session */}
               <div className="mt-5 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
-                <div className="flex flex-col justify-between rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white p-6 shadow-press">
+                <div className="flex flex-col justify-between rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-6 shadow-press">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">Pick up where you left off</p>
                     <h2 className="mt-2 text-2xl font-black tracking-tight">{next.title}</h2>
@@ -1169,7 +1185,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   </button>
                 </div>
 
-                <div className="relative overflow-hidden rounded-[1.6rem] border-[2.5px] border-ohmlet-gold bg-ohmlet-ink p-6 text-white shadow-[0_0_34px_rgba(250,204,46,0.22)]">
+                <div className="relative overflow-hidden rounded-[1.6rem] border-[2.5px] border-ohmlet-gold bg-ohmlet-ink p-6 text-ohmlet-on-ink shadow-[0_0_34px_rgba(250,204,46,0.22)]">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-ohmlet-gold/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-ohmlet-gold">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ohmlet-gold" /> Live
                   </span>
@@ -1240,7 +1256,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
               {/* Path preview + right rail */}
               <div className="mt-7 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
-                <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+                <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-black tracking-tight">Your path</h3>
                     <button onClick={() => setActive('path')} className="inline-flex items-center gap-1 text-sm font-black text-ohmlet-blue-deep">
@@ -1261,7 +1277,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                           >
                             <span
                               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ohmlet-ink text-xs font-black"
-                              style={medal ? { background: medal.color, color: '#fff' } : undefined}
+                              style={medal ? { background: medal.color } : undefined}
                             >
                               {isDone ? <Check className="h-4 w-4" strokeWidth={3.5} /> : isNext ? <Play className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4 text-ohmlet-ink-soft" fill="currentColor" />}
                             </span>
@@ -1282,7 +1298,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
                 <div className="space-y-5">
                   {/* Streak week */}
-                  <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
                     <div className="flex items-center gap-2">
                       <Flame className="h-5 w-5 text-ohmlet-red" />
                       <h3 className="text-base font-black tracking-tight">{streak}-day streak</h3>
@@ -1300,7 +1316,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
 
                   {/* League (hidden for minors: it is public + competitive) */}
                   {!childSafe && league && (
-                  <section className="flex items-center gap-3 rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+                  <section className="flex items-center gap-3 rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
                     <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ohmlet-gold to-ohmlet-gold-deep text-ohmlet-ink">
                       <Trophy className="h-6 w-6" />
                     </span>
@@ -1321,7 +1337,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onBack, onUpgrade,
                   )}
 
                   {/* Achievements */}
-                  <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-ohmlet-gold-deep" />

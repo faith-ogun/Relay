@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
   interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming,
@@ -7,9 +7,9 @@ import Animated, {
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Lock } from './icons';
 import { TIER_COLOR, TIER_LABEL, type Achievement, type Tier } from '../services/achievements';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, radius, space, type } from '../theme/tokens';
 import { duration, motion } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * One achievement as a collectible card, and it moves like one.
@@ -38,6 +38,8 @@ export const AchievementCard: React.FC<{
   progress: number;
   progressLabel: string;
 }> = ({ achievement: a, earned, progress, progressLabel }) => {
+  const colors = useColors();
+  const s = useS();
   const flip = useSharedValue(0);
   // Finger position over the card, 0..1 on each axis, centred when untouched.
   const px = useSharedValue(0.5);
@@ -141,9 +143,9 @@ export const AchievementCard: React.FC<{
             <Svg width={CARD_W * 0.7} height={CARD_H}>
               <Defs>
                 <LinearGradient id="g" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset="0%" stopColor="#fff" stopOpacity="0" />
-                  <Stop offset="50%" stopColor="#fff" stopOpacity="0.75" />
-                  <Stop offset="100%" stopColor="#fff" stopOpacity="0" />
+                  <Stop offset="0%" stopColor={colors.white} stopOpacity="0" />
+                  <Stop offset="50%" stopColor={colors.white} stopOpacity="0.75" />
+                  <Stop offset="100%" stopColor={colors.white} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               <Rect width={CARD_W * 0.7} height={CARD_H} fill="url(#g)" />
@@ -186,13 +188,13 @@ export const AchievementCard: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   wrap: { alignItems: 'center' },
   stage: { width: CARD_W, height: CARD_H },
   face: {
     position: 'absolute', width: CARD_W, height: CARD_H,
     borderRadius: radius.lg, ...curve, overflow: 'hidden',
-    backgroundColor: colors.ink, ...elevation.overlay,
+    backgroundColor: colors.slab, ...th.elevation.overlay,
     backfaceVisibility: 'hidden',
   },
   faceBack: { padding: space.lg, paddingTop: space.xl, alignItems: 'center' },
@@ -206,8 +208,8 @@ const s = StyleSheet.create({
   tierText: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.8, color: colors.white },
   lockBadge: {
     position: 'absolute', top: 12, right: 12,
-    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.white,
-    alignItems: 'center', justifyContent: 'center', ...elevation.card,
+    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center', ...th.elevation.card,
   },
   nameplate: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -241,4 +243,4 @@ const s = StyleSheet.create({
     fontFamily: font.black, fontSize: type.meta, letterSpacing: 2,
     color: 'rgba(255,255,255,0.55)', marginTop: space.md,
   },
-});
+}));

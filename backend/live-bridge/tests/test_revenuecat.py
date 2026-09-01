@@ -15,13 +15,31 @@ from fastapi import HTTPException
 import revenuecat
 
 
+class Plans(dict):
+    """uid -> plan, with the full argument list of every write kept alongside.
+
+    A plain dict was enough until the write grew a `setBy` stamp. Provenance that
+    is only tolerated by a test fixture is provenance nothing checks, and this one
+    exists precisely because a stale `setBy: admin-console` survived a merge and
+    misattributed a RevenueCat grant in production Firestore on 2026-08-30.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.writes: list[dict] = []
+
+
 @pytest.fixture
 def rc(monkeypatch):
     """A configured webhook with the plan writes and idempotency captured."""
     monkeypatch.setattr(revenuecat, "WEBHOOK_SECRET", "shhh")
-    plans: dict[str, str] = {}
-    monkeypatch.setattr(revenuecat.entitlements, "set_plan",
-                        lambda uid, plan, environment="PRODUCTION": plans.__setitem__(uid, plan))
+    plans = Plans()
+
+    def set_plan(uid, plan, environment="PRODUCTION", source="system"):
+        plans[uid] = plan
+        plans.writes.append({"uid": uid, "plan": plan, "environment": environment, "source": source})
+
+    monkeypatch.setattr(revenuecat.entitlements, "set_plan", set_plan)
     # Production by default. The sandbox tests flip it deliberately, so a test
     # that forgets is testing the shipped posture rather than a lucky one.
     monkeypatch.setattr(revenuecat, "ACCEPT_SANDBOX", False)
@@ -197,3 +215,30 @@ def test_holding_both_tiers_keeps_the_higher_one(rc):
                       "app_user_id": "uid-b", "entitlement_ids": ["ohmlet_pro", "ohmlet_max"]}}
     asyncio.run(revenuecat.webhook(FakeRequest(body)))
     assert rc.get("uid-b") == "max"
+
+
+# ── Provenance ──────────────────────────────────────────────────────────────
+
+def test_every_grant_names_revenuecat_as_its_source(rc):
+    """The plan document merges, so a `setBy` nobody rewrites outlives the truth.
+
+    On 2026-08-30 a document read `setBy: admin-console` from a manual edit five
+    days earlier while RevenueCat was the one granting Max. The pre-launch sweep
+    for test grants reads this field, so a wrong value there is not cosmetic.
+    """
+    call(event())
+    call(event(id="evt_x", type="EXPIRATION"))
+    assert rc.writes, "no plan write was recorded"
+    sources = {w["source"] for w in rc.writes}
+    assert sources == {"revenuecat"}, (
+        f"grants and revokes must both be stamped 'revenuecat', got {sources}. "
+        "A default of 'system' leaves whatever the document said before."
+    )
+
+
+def test_transfer_stamps_the_losing_account_too(rc):
+    """The losing side of a transfer is a plan write like any other."""
+    call(event(type="TRANSFER", transferred_from=["uid_old"]))
+    losing = [w for w in rc.writes if w["uid"] == "uid_old"]
+    assert losing, "the losing account was never downgraded"
+    assert losing[0]["source"] == "revenuecat"

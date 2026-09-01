@@ -36,6 +36,7 @@ import pytest
 
 import achievements
 import curriculum
+from datetime import datetime, timedelta, timezone
 
 
 # ── Firestore stand-in ───────────────────────────────────────────────────────
@@ -219,8 +220,17 @@ def complete(client, uid: str, *lesson_ids: str) -> None:
 
 
 def set_progress(client, uid: str, **fields) -> None:
+    """Write progress fields, defaulting a streak to a LIVE one.
+
+    A streak is only real if the learner was active today or yesterday, so
+    `streak=10` on its own describes a streak that has already lapsed and reads
+    as 0. Every test that passes a streak means a live one, so the last-active
+    day is stamped to today unless the test sets it deliberately.
+    """
     key = f"{achievements.STATE_COLLECTION}/{uid}"
     doc = client.store.setdefault(key, {"data": {"lessonLevels": {}}})
+    if "streak" in fields and "lastActiveDate" not in fields:
+        fields = {**fields, "lastActiveDate": datetime.now(timezone.utc).date().isoformat()}
     doc["data"].update(fields)
 
 
@@ -443,6 +453,38 @@ def test_a_broken_streak_keeps_the_medal(fake):
     assert "streak-3" in achievements.sync("learner")["earned"]
     set_progress(fake, "learner", streak=1)
     assert "streak-3" in achievements.sync("learner")["earned"]
+
+
+# ── A streak dies by the clock, not by an action ─────────────────────────────
+
+def test_a_lapsed_streak_reads_as_zero(fake):
+    """Reported 2026-08-30: a 2 day streak survived a full day off.
+
+    The stored number is written by a completion, so nothing writes on the day a
+    streak dies. Read raw, it stays up forever.
+    """
+    stale = (datetime.now(timezone.utc).date() - timedelta(days=3)).isoformat()
+    set_progress(fake, "learner", streak=12, lastActiveDate=stale)
+    assert achievements.sync("learner")["stats"]["streak"] == 0
+
+
+def test_yesterday_still_counts(fake):
+    """Missing TODAY breaks nothing while today is still running."""
+    yesterday = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    set_progress(fake, "learner", streak=12, lastActiveDate=yesterday)
+    assert achievements.sync("learner")["stats"]["streak"] == 12
+
+
+def test_a_lapsed_streak_cannot_mint_a_NEW_medal(fake):
+    """The half that matters. Medals are permanent, so one minted on a streak the
+    learner no longer holds can never be taken back."""
+    stale = (datetime.now(timezone.utc).date() - timedelta(days=30)).isoformat()
+    set_progress(fake, "learner", streak=30, lastActiveDate=stale)
+    earned = achievements.sync("learner")["earned"]
+    assert "streak-3" not in earned, (
+        "a 30 day streak abandoned a month ago minted a streak medal. "
+        "The learner can see the app reporting no streak while the medal says otherwise."
+    )
 
 
 # ── Idempotency ──────────────────────────────────────────────────────────────

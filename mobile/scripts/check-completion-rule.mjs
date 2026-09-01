@@ -26,6 +26,8 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -34,6 +36,7 @@ const MOBILE_RULE = new URL('../src/services/completion.ts', import.meta.url);
 const WEB_RULE = new URL('../../frontend/services/completion.ts', import.meta.url);
 const WEB_HOME = new URL('../../frontend/components/WorkspaceHome.tsx', import.meta.url);
 const MOBILE_SCREEN = new URL('../src/app/lesson/[id].tsx', import.meta.url);
+const BACKEND_APP = fileURLToPath(new URL('../../backend/live-bridge/app', import.meta.url));
 
 const failures = [];
 function scenario(name, fn) {
@@ -125,7 +128,7 @@ const copies = [
 const both = (name, fn) => scenario(name, () => {
   for (const [surface, mod] of copies) {
     try {
-      fn(mod.applyCompletion);
+      fn(mod.applyCompletion, mod);
     } catch (err) {
       throw new Error(`[${surface}] ${err.message}`);
     }
@@ -310,6 +313,172 @@ scenario('the phone reward screen is never handed a streak it does not know', ()
     'screen and the record start disagreeing about what a completion does.',
   );
 });
+
+// ---------------------------------------------------------------------------
+// 4. The streak BREAKS. It is the only counter that decays with time.
+//
+// The bug this guards, reported 2026-08-30: "I had a 2-day streak, then I went a
+// full day without doing a lesson, but the 2-day streak still persists."
+//
+// The write rule above was already correct. `applyCompletion` resets to 1 when
+// the last active day is neither today nor yesterday. But it can only run ON a
+// completion, and on the day a streak dies there is no completion to run it. So
+// every surface displayed the number last written, which meant a streak could
+// not be broken by not showing up, only corrected days later at the moment the
+// learner finally did some work, downward, as their reward for coming back.
+
+const STREAK_TABLE = [
+  { last: '2026-03-10', streak: 2, want: 2, why: 'worked today' },
+  { last: '2026-03-09', streak: 2, want: 2, why: 'worked yesterday: alive, at risk until midnight' },
+  { last: '2026-03-08', streak: 2, want: 0, why: 'MISSED A FULL DAY: this is the reported bug' },
+  { last: '2026-01-01', streak: 40, want: 0, why: 'gone for months' },
+  { last: '2026-03-10', streak: 0, want: 0, why: 'no streak to keep' },
+  { last: '', streak: 3, want: 0, why: 'never active, so nothing to carry' },
+];
+const NOW = day('2026-03-10');
+
+for (const { last, streak, want, why } of STREAK_TABLE) {
+  both(`streak ${streak} last active ${last || '(never)'} reads as ${want}: ${why}`, (_apply, mod) => {
+    const got = mod.currentStreak({ streak, lastActiveDate: last }, NOW);
+    assert.equal(got, want,
+      `currentStreak returned ${got}, wanted ${want}. ` +
+      'A streak that cannot be broken is a counter with a flame on it.');
+  });
+}
+
+both('at-risk is true only on the day after the last completion', (_apply, mod) => {
+  assert.equal(mod.streakAtRisk({ streak: 5, lastActiveDate: '2026-03-09' }, NOW), true,
+    'a learner who worked yesterday and not yet today is exactly who a nudge is for');
+  assert.equal(mod.streakAtRisk({ streak: 5, lastActiveDate: '2026-03-10' }, NOW), false,
+    'already worked today, nothing at risk');
+  assert.equal(mod.streakAtRisk({ streak: 5, lastActiveDate: '2026-03-08' }, NOW), false,
+    'a streak that is already gone cannot be at risk; that would promise a rescue that is not available');
+});
+
+// ---------------------------------------------------------------------------
+// 5. Every surface that SHOWS a streak must show the live one.
+//
+// The rule existing is not the fix. Three places rendered `progress.streak`
+// directly, and any one of them left alone reproduces the bug in full.
+
+const RENDER_SITES = [
+  ['../src/app/home.tsx', 'the phone stat strip'],
+  ['../src/app/profile.tsx', 'the phone profile'],
+  ['../../frontend/components/WorkspaceHome.tsx', 'the web workspace'],
+];
+
+for (const [rel, label] of RENDER_SITES) {
+  scenario(`${label} reads the live streak, not the stored one`, () => {
+    const src = readFileSync(new URL(rel, import.meta.url), 'utf8');
+    const raw = src.match(/progress\.streak/g) ?? [];
+    assert.equal(raw.length, 0,
+      `${label} still reads progress.streak directly (${raw.length} time(s)). ` +
+      'The stored number is only correct on a day the learner completed something; ' +
+      'every other day it overstates the streak. Use currentStreak(progress).');
+    assert.match(src, /currentStreak\(/,
+      `${label} does not call currentStreak, so whatever it shows cannot decay.`);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 6. The SERVER agrees, because it mints the medals.
+//
+// achievements.py stamps a medal permanently the first time a condition is met.
+// If its streak reading disagreed with the clients', a learner could be minted a
+// 7-day-streak medal on a streak the app had already shown as broken. Run the
+// two languages over one table and compare.
+
+scenario('the Python rule agrees with the TypeScript rule, case for case', () => {
+  const cases = STREAK_TABLE.map(({ last, streak }) => ({ streak, lastActiveDate: last }));
+  const py = spawnSync('python3', ['-c', `
+import json, sys
+from datetime import datetime, timezone
+sys.path.insert(0, ${JSON.stringify(BACKEND_APP)})
+from achievements import current_streak
+now = datetime(2026, 3, 10, 9, 0, tzinfo=timezone.utc)
+print(json.dumps([current_streak(c, now) for c in json.loads(sys.argv[1])]))
+`, JSON.stringify(cases)], { encoding: 'utf8' });
+  assert.equal(py.status, 0, `python3 could not run the server rule:\n${py.stderr}`);
+  const fromPython = JSON.parse(py.stdout.trim());
+  const fromTs = cases.map((c) => copies[0][1].currentStreak(c, NOW));
+  assert.deepEqual(fromPython, fromTs,
+    `the server and the clients disagree about live streaks.\n` +
+    `  python: ${JSON.stringify(fromPython)}\n` +
+    `  ts:     ${JSON.stringify(fromTs)}\n` +
+    'achievements.py stamps medals permanently, so a disagreement mints a medal ' +
+    'for a streak the learner can see is broken.');
+});
+
+// ---------------------------------------------------------------------------
+// 7. The DAILY GOAL resets when the day turns, on both surfaces.
+//
+// Reported 2026-09-01, alongside the streak: "daily goal, again, just like the
+// streaks, doesn't reset after each day."
+//
+// Identical shape to the streak defect and shipped in the same place. The write
+// rule already clears `todayLessonIds` when the day turns, but it only runs ON a
+// completion, and a new day begins with no completion to run it. So the stored
+// count stood: three lessons on Saturday, and Monday opened with the goal
+// already showing 3 of 3.
+//
+// Worse than the streak in one respect. A stale streak flatters the learner; a
+// stale goal DELETES the thing they were meant to do today. The ring is already
+// full, so there is nothing left to close and the clearest single reason to open
+// the app has quietly gone.
+//
+// The web guarded this inline and the phone did not, which is exactly the split
+// the shared rule exists to prevent, and exactly how the streak bug survived too.
+
+const GOAL_TABLE = [
+  { last: '2026-03-10', ids: ['a', 'b'], want: 2, why: 'two done today' },
+  { last: '2026-03-09', ids: ['a', 'b'], want: 0, why: 'YESTERDAY: the day turned, the goal is fresh' },
+  { last: '2026-03-08', ids: ['a', 'b', 'c'], want: 0, why: 'the reported bug, days later' },
+  { last: '2026-03-10', ids: [], want: 0, why: 'active today but nothing counted yet' },
+  { last: '', ids: ['a'], want: 0, why: 'never active' },
+];
+
+for (const { last, ids, want, why } of GOAL_TABLE) {
+  both(`goal ${ids.length} last active ${last || '(never)'} reads as ${want}: ${why}`, (_apply, mod) => {
+    const rec = { completedToday: ids.length, todayLessonIds: ids, lastActiveDate: last };
+    assert.equal(mod.completedTodayNow(rec, NOW), want,
+      'a goal that does not reset removes the one thing the learner was meant to do today');
+    assert.equal(mod.todayLessonIdsNow(rec, NOW).length, want,
+      'the id list and the count must agree, or a lesson done yesterday still blocks today');
+  });
+}
+
+both('a record written before todayLessonIds existed still resets', (_apply, mod) => {
+  assert.equal(mod.completedTodayNow({ completedToday: 3, lastActiveDate: '2026-03-08' }, NOW), 0);
+  assert.equal(mod.completedTodayNow({ completedToday: 3, lastActiveDate: '2026-03-10' }, NOW), 3,
+    'an older record with no id list must still report its count on the day it was written');
+});
+
+// Unlike the streak, YESTERDAY is not alive here. A streak survives the night
+// because the learner has until midnight to keep it; a daily goal is the work of
+// one calendar day and starts empty.
+both('yesterday counts for the streak but NOT for the goal', (_apply, mod) => {
+  const rec = { streak: 4, completedToday: 2, todayLessonIds: ['a', 'b'], lastActiveDate: '2026-03-09' };
+  assert.equal(mod.currentStreak(rec, NOW), 4, 'the streak is still alive until midnight');
+  assert.equal(mod.completedTodayNow(rec, NOW), 0, "today's goal has not been started");
+});
+
+const GOAL_SITES = [
+  ['../src/app/home.tsx', 'the phone stat strip'],
+  ['../../frontend/components/WorkspaceHome.tsx', 'the web workspace'],
+];
+
+for (const [rel, label] of GOAL_SITES) {
+  scenario(`${label} reads today's goal through the shared rule`, () => {
+    const src = readFileSync(new URL(rel, import.meta.url), 'utf8');
+    const raw = src.match(/progress\.completedToday/g) ?? [];
+    assert.equal(raw.length, 0,
+      `${label} still reads progress.completedToday directly (${raw.length} time(s)). ` +
+      'That number is only correct on a day the learner completed something. ' +
+      'Use completedTodayNow(progress).');
+    assert.match(src, /completedTodayNow\(/,
+      `${label} does not call completedTodayNow, so its daily goal cannot reset.`);
+  });
+}
 
 console.log('');
 if (failures.length) {

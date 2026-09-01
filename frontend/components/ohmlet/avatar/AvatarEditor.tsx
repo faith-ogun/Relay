@@ -42,13 +42,13 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, onSave, onC
           role="dialog"
           aria-modal="true"
           aria-labelledby="avatar-editor-title"
-          className="relative w-full max-w-2xl overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-white shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
+          className="relative w-full max-w-2xl overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
         >
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="ohmlet-focus-ring absolute right-3 top-3 z-10 rounded-full bg-white/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-white hover:text-ohmlet-ink"
+            className="ohmlet-focus-ring absolute right-3 top-3 z-10 rounded-full bg-ohmlet-surface/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-ohmlet-surface hover:text-ohmlet-ink"
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
           </button>
@@ -61,7 +61,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, onSave, onC
               <button
                 type="button"
                 onClick={() => set(defaultAvatar(`${Math.random()}`))}
-                className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-line bg-white px-3 py-1.5 text-xs font-black text-ohmlet-ink transition-colors hover:border-ohmlet-ink"
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-1.5 text-xs font-black text-ohmlet-ink transition-colors hover:border-ohmlet-ink"
               >
                 <Shuffle className="h-3.5 w-3.5" /> Surprise me
               </button>
@@ -132,7 +132,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({ initial, onSave, onC
               </div>
 
               <div className="flex gap-2.5 border-t-2 border-ohmlet-line p-4">
-                <button type="button" onClick={onClose} className="flex-1 rounded-xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0">
+                <button type="button" onClick={onClose} className="flex-1 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0">
                   Cancel
                 </button>
                 <button type="button" onClick={() => onSave(cfg)} className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold px-4 py-2.5 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-deep active:translate-y-0 active:shadow-none">

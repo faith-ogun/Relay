@@ -43,7 +43,7 @@ const Section: React.FC<{ section: NoticeSection }> = ({ section }) => {
 };
 
 export const ParentNotice: React.FC = () => (
-  <div className="rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white p-6 shadow-press sm:p-7">
+  <div className="rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-6 shadow-press sm:p-7">
     <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-ohmlet-blue-deep">{PARENT_NOTICE.title}</p>
     <p className="mt-3 text-[0.95rem] font-semibold leading-relaxed text-ohmlet-ink-soft">{PARENT_NOTICE.intro}</p>
     <div className="mt-6 space-y-5">

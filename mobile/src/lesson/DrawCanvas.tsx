@@ -1,7 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, radius, curve } from '../theme/tokens';
+import { radius, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 export interface DrawCanvasHandle {
   clear: () => void;
@@ -28,6 +29,8 @@ interface Props {
  * move events at full rate, and nothing here competes for the gesture.
  */
 export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, onDrawingChange, height = 300 }, ref) => {
+  const colors = useColors();
+  const s = useS();
   const [paths, setPaths] = useState<string[]>([]);
   const current = useRef<string>('');
   const [live, setLive] = useState<string>('');
@@ -119,12 +122,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ onInkChange, on
 
 DrawCanvas.displayName = 'DrawCanvas';
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   canvas: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 2.5,
     borderColor: colors.ink,
     borderRadius: radius.md, ...curve,
     overflow: 'hidden',
   },
-});
+}));

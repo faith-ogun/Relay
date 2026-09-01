@@ -1,9 +1,9 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from './Button';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 // The live tutor pairs AI-generated guidance with real electronics, so this is
 // shown once before a learner's first live session. The wording is copied from
@@ -22,50 +22,54 @@ interface Props {
   onCancel: () => void;
 }
 
-export const SafetyAck: React.FC<Props> = ({ visible, onAccept, onCancel }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-    <View style={s.backdrop}>
-      <View style={s.sheet}>
-        <View style={s.badge}>
-          <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path
-              d="M12 2.5 4.5 5.8v5.4c0 4.6 3.1 8.6 7.5 9.8 4.4-1.2 7.5-5.2 7.5-9.8V5.8Z"
-              fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinejoin="round"
-            />
-            <Path d="m8.6 12 2.4 2.4 4.4-4.6" fill="none" stroke={colors.ink}
-                  strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+export const SafetyAck: React.FC<Props> = ({ visible, onAccept, onCancel }) => {
+  const colors = useColors();
+  const s = useS();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={s.backdrop}>
+        <View style={s.sheet}>
+          <View style={s.badge}>
+            <Svg width={26} height={26} viewBox="0 0 24 24">
+              <Path
+                d="M12 2.5 4.5 5.8v5.4c0 4.6 3.1 8.6 7.5 9.8 4.4-1.2 7.5-5.2 7.5-9.8V5.8Z"
+                fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinejoin="round"
+              />
+              <Path d="m8.6 12 2.4 2.4 4.4-4.6" fill="none" stroke={colors.ink}
+                    strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </View>
+
+          <Text style={s.title}>A quick safety check</Text>
+
+          <View style={s.points}>
+            {POINTS.map((p) => (
+              <View key={p} style={s.point}>
+                <View style={s.dot} />
+                <Text style={s.pointText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Button label="I understand" onPress={onAccept} style={{ marginTop: space.lg }} />
+          <Pressable onPress={onCancel} style={s.cancel} accessibilityRole="button">
+            <Text style={s.cancelText}>Not now</Text>
+          </Pressable>
         </View>
-
-        <Text style={s.title}>A quick safety check</Text>
-
-        <View style={s.points}>
-          {POINTS.map((p) => (
-            <View key={p} style={s.point}>
-              <View style={s.dot} />
-              <Text style={s.pointText}>{p}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Button label="I understand" onPress={onAccept} style={{ marginTop: space.lg }} />
-        <Pressable onPress={onCancel} style={s.cancel} accessibilityRole="button">
-          <Text style={s.cancelText}>Not now</Text>
-        </Pressable>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   backdrop: {
     flex: 1, backgroundColor: 'rgba(20,24,31,0.45)',
     alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
   sheet: {
-    width: '100%', maxWidth: 420, backgroundColor: colors.white,
+    width: '100%', maxWidth: 420, backgroundColor: colors.surface,
     borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
-    padding: space.lg, ...elevation.card,
+    padding: space.lg, ...th.elevation.card,
   },
   badge: {
     width: 54, height: 54, borderRadius: radius.md, ...curve, borderWidth: 2.5, borderColor: colors.ink,
@@ -83,4 +87,4 @@ const s = StyleSheet.create({
   },
   cancel: { alignSelf: 'center', paddingVertical: space.md },
   cancelText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

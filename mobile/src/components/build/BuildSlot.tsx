@@ -1,10 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { BuildGlyph } from './BuildGlyph';
 import { SkeletonBlock } from '../Skeleton';
 import type { Build } from '../../services/builds';
-import { colors, curve, font, leading, radius, space, tracking, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, leading, radius, space, tracking, type } from '../../theme/tokens';
+import { makeStyles } from '../../theme/theme';
 
 /**
  * What the learner is building, on the screen before the session starts.
@@ -30,6 +30,7 @@ interface Props {
 }
 
 export const BuildSlot: React.FC<Props> = ({ build, loading, unreachable, onOpen }) => {
+  const s = useS();
   if (loading) {
     return (
       <View style={s.loading} accessibilityLabel="Loading the build library">
@@ -100,15 +101,15 @@ export const BuildSlot: React.FC<Props> = ({ build, loading, unreachable, onOpen
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   loading: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.md,
   },
 
   card: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
-    borderWidth: 2.5, borderColor: colors.ink, overflow: 'hidden', ...elevation.card,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
+    borderWidth: 2.5, borderColor: colors.ink, overflow: 'hidden', ...th.elevation.card,
   },
   band: { height: 7 },
   cardInner: { padding: space.md },
@@ -144,8 +145,8 @@ const s = StyleSheet.create({
 
   invite: {
     flexDirection: 'row', gap: space.sm, alignItems: 'flex-start',
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
-    borderWidth: 2.5, borderColor: colors.ink, padding: space.md, ...elevation.card,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
+    borderWidth: 2.5, borderColor: colors.ink, padding: space.md, ...th.elevation.card,
   },
   inviteMark: {
     width: 46, height: 46, borderRadius: radius.sm, ...curve,
@@ -161,4 +162,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, lineHeight: leading.small,
     color: colors.inkSoft, marginTop: 4,
   },
-});
+}));

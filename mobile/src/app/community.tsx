@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, RefreshControl,
-  ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing, FadeIn, FadeInDown, useAnimatedProps, useAnimatedStyle, useDerivedValue,
   useReducedMotion, useSharedValue, withDelay, withSequence, withSpring, withTiming,
@@ -28,9 +25,9 @@ import {
   type Leaderboard, type MyChallenges, type Post, type StandingRow,
 } from '../services/community';
 import { bumpMetric, creditLeagueWin, loadProgress, saveProgress } from '../services/progress';
-import { colors, font, leading, radius, space, tabular, tracking, type, curve } from '../theme/tokens';
-import { elevation, innerLight } from '../theme/elevation';
+import { font, leading, radius, space, tabular, tracking, type, curve } from '../theme/tokens';
 import { duration, motion, stagger } from '../theme/motion';
+import { makeStyles, useColors, withAlpha } from '../theme/theme';
 
 type Tab = 'feed' | 'challenges' | 'league';
 type LoadState = 'loading' | 'ready' | 'offline' | 'forbidden';
@@ -74,16 +71,44 @@ const FAILURE_COPY: Record<FailReason, { title: string; body: string }> = {
   },
 };
 
+/**
+ * Last loaded feed state, kept at module scope for the same reason Learn keeps
+ * one: the tab bar navigates with `router.replace`, so leaving Community
+ * UNMOUNTS it and every piece of state goes with it. Coming back re-ran four
+ * requests behind a loading state, which is the latency reported 2026-09-01.
+ *
+ * A render cache, not storage. Per-process, dies with the app, and refreshed
+ * behind whatever it paints, so a stale post is on screen for one network
+ * round trip rather than a blank screen being on screen for the same time.
+ *
+ * Keyed by uid: a shared phone must not flash the previous person's league
+ * position while the new one loads.
+ */
+type FeedSnapshot = {
+  uid: string | undefined;
+  posts: Post[];
+  challenges: Challenge[];
+  unclaimedCount: number;
+  mine: MyChallenges | null;
+  league: Leaderboard | null;
+};
+let feedSnapshot: FeedSnapshot | null = null;
+
 export default function Community() {
+  const colors = useColors();
+  const s = useS();
   const { childSafe, resolved: childResolved } = useChildSafe();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('feed');
-  const [state, setState] = useState<LoadState>('loading');
+  // Painted from the last visit when there is one, so a tab switch is instant
+  // and the refresh happens behind it.
+  const warm = feedSnapshot && feedSnapshot.uid === user?.uid ? feedSnapshot : null;
+  const [state, setState] = useState<LoadState>(warm ? 'ready' : 'loading');
   // Kept separately from `state` so the screen can name the failure instead of
   // blaming the learner's connection for a server error or an expired session.
   const [failure, setFailure] = useState<FailReason>('offline');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [posts, setPosts] = useState<Post[]>(warm?.posts ?? []);
+  const [challenges, setChallenges] = useState<Challenge[]>(warm?.challenges ?? []);
   // A challenge list that failed is not an empty challenge list. Kept apart so
   // an outage does not render "no live challenges", which reads as the product
   // having nothing to offer.
@@ -92,9 +117,9 @@ export default function Community() {
   // own `endsInSeconds` instead of trusting the phone's clock against a UTC
   // deadline it has no business knowing about.
   const [challengesAt, setChallengesAt] = useState(() => Date.now());
-  const [unclaimedCount, setUnclaimedCount] = useState(0);
-  const [mine, setMine] = useState<MyChallenges | null>(null);
-  const [league, setLeague] = useState<Leaderboard | null>(null);
+  const [unclaimedCount, setUnclaimedCount] = useState(warm?.unclaimedCount ?? 0);
+  const [mine, setMine] = useState<MyChallenges | null>(warm?.mine ?? null);
+  const [league, setLeague] = useState<Leaderboard | null>(warm?.league ?? null);
   const [refreshing, setRefreshing] = useState(false);
   const [composing, setComposing] = useState(false);
   // Overlays live beside the ScrollView, never inside it: an absolutely
@@ -109,8 +134,14 @@ export default function Community() {
     ]);
     if (!feed.ok) {
       if (feed.reason === 'forbidden') { setState('forbidden'); return; }
-      setFailure(feed.reason);
-      setState('offline');
+      // A failed REFRESH must not blank a screen that is already showing posts.
+      // Dropping to the offline state here would replace a warm feed with an
+      // error the moment a tab switch happened on a weak connection, which is
+      // worse than showing slightly old posts.
+      if (!feedSnapshot || feedSnapshot.uid !== user?.uid) {
+        setFailure(feed.reason);
+        setState('offline');
+      }
       return;
     }
     setPosts(feed.data.posts ?? []);
@@ -129,6 +160,15 @@ export default function Community() {
     // appearing, so every visit waited on a progress read and sometimes a write
     // before showing a feed that was already in hand.
     setState('ready');
+
+    feedSnapshot = {
+      uid: user?.uid,
+      posts: feed.data.posts ?? [],
+      challenges: chal.ok ? (chal.data.challenges ?? []) : [],
+      unclaimedCount: chal.ok ? (chal.data.unclaimedResults ?? 0) : 0,
+      mine: own.ok ? own.data : null,
+      league: board.ok ? board.data : null,
+    };
 
     // A top-three finish is worth an achievement, credited once per week.
     if (board.ok && user?.uid && board.data.me.rank && board.data.me.rank <= 3) {
@@ -151,21 +191,31 @@ export default function Community() {
   // Home is not a control, and the server refuses this too.
   if (childResolved && childSafe) {
     return (
-      <ClosedForNow
-        title="Community is for older builders"
-        body="Ohmlet keeps the public feed, challenges and the league closed while an account belongs to someone under the age of digital consent. Everything else in the app is open to you."
-      />
+      <AppTabs active="community">
+        <ClosedForNow
+          title="Community is for older builders"
+          body="Ohmlet keeps the public feed, challenges and the league closed while an account belongs to someone under the age of digital consent. Everything else in the app is open to you."
+        />
+      </AppTabs>
     );
   }
 
   if (state === 'loading') {
-    return <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>;
+    return (
+      <AppTabs active="community">
+      {/* The bar stays. A tab root that drops it while loading or refusing
+          takes navigation away at the exact moment the learner most wants to
+          go somewhere else. */}
+        <View style={s.center}><ActivityIndicator color={colors.goldDeep} /></View>
+      </AppTabs>
+    );
   }
 
   // Child accounts are refused server-side; say so plainly rather than showing
   // an empty feed that looks broken.
   if (state === 'forbidden') {
     return (
+      <AppTabs active="community">
       <View style={s.center}>
         <Text style={s.emptyTitle}>Community is off for this account</Text>
         <Text style={s.emptyBody}>
@@ -173,17 +223,20 @@ export default function Community() {
         </Text>
         <Button label="Go back" onPress={() => goBack('/home')} style={{ marginTop: space.lg }} />
       </View>
+      </AppTabs>
     );
   }
 
   if (state === 'offline') {
     const copy = FAILURE_COPY[failure] ?? FAILURE_COPY.offline;
     return (
+      <AppTabs active="community">
       <View style={s.center}>
         <Text style={s.emptyTitle}>{copy.title}</Text>
         <Text style={s.emptyBody}>{copy.body}</Text>
         <Button label="Try again" onPress={() => void load()} style={{ marginTop: space.lg }} />
       </View>
+      </AppTabs>
     );
   }
 
@@ -273,6 +326,8 @@ export default function Community() {
 const Feed: React.FC<{ posts: Post[]; onChanged: () => Promise<void>; onCompose: () => void; uid?: string }> = ({
   posts, onChanged, onCompose, uid,
 }) => {
+  const colors = useColors();
+  const s = useS();
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [reported, setReported] = useState<Set<string>>(new Set());
   const [openComments, setOpenComments] = useState<string | null>(null);
@@ -362,6 +417,8 @@ const Feed: React.FC<{ posts: Post[]; onChanged: () => Promise<void>; onCompose:
 };
 
 const Comments: React.FC<{ postId: string; onChanged: () => Promise<void>; uid?: string }> = ({ postId, onChanged, uid }) => {
+  const colors = useColors();
+  const s = useS();
   const [items, setItems] = useState<Comment[] | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -510,6 +567,7 @@ interface ChallengesProps {
 const Challenges: React.FC<ChallengesProps> = ({
   items, fail, fetchedAt, unclaimed, unclaimedCount, mineFailed, onChanged, onOpenResults, onOpenClaim, uid,
 }) => {
+  const s = useS();
   // The deadlines advance from the server's own count, not from the phone's
   // clock: the boundary is anchored to UTC and the learner should never have to
   // know that, so a device an hour out still sees the right countdown. Each one
@@ -587,6 +645,8 @@ const ResultsWaiting: React.FC<{
   onOpen: () => void;
   onRetry: () => Promise<void>;
 }> = ({ awards, count, stale, onOpen, onRetry }) => {
+  const colors = useColors();
+  const s = useS();
   const reduced = useReducedMotion();
   const xp = awards.reduce((sum, a) => sum + (a.xp ?? 0), 0);
   return (
@@ -627,6 +687,8 @@ const ChallengeCard: React.FC<{
   onOpenResults: () => void;
   uid?: string;
 }> = ({ challenge: c, elapsed, index, onChanged, onOpenResults, uid }) => {
+  const colors = useColors();
+  const s = useS();
   const reduced = useReducedMotion();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -716,7 +778,7 @@ const ChallengeCard: React.FC<{
         </View>
         {c.completed && (
           <View style={s.clearedFlag}>
-            <CheckGlyph size={12} color={colors.goldText} />
+            <CheckGlyph size={12} color={colors.onGold} />
             <Text style={s.clearedText}>GOAL CLEARED</Text>
           </View>
         )}
@@ -805,15 +867,18 @@ const ChallengeCard: React.FC<{
 
 const MetaCell: React.FC<{
   icon: React.ReactNode; label: string; value: string; tint: string; ink: string;
-}> = ({ icon, label, value, tint, ink }) => (
-  <View style={[s.metaCell, { backgroundColor: tint }]}>
-    {icon}
-    <View style={{ flex: 1 }}>
-      <Text style={s.metaLabel}>{label.toUpperCase()}</Text>
-      <Text style={[s.metaValue, { color: ink }]} numberOfLines={1}>{value}</Text>
+}> = ({ icon, label, value, tint, ink }) => {
+  const s = useS();
+  return (
+    <View style={[s.metaCell, { backgroundColor: tint }]}>
+      {icon}
+      <View style={{ flex: 1 }}>
+        <Text style={s.metaLabel}>{label.toUpperCase()}</Text>
+        <Text style={[s.metaValue, { color: ink }]} numberOfLines={1}>{value}</Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 /**
  * Progress against the goal.
@@ -831,6 +896,8 @@ const GoalTrack: React.FC<{
   waiting: boolean;
   palette: ChallengePalette;
 }> = ({ progress, target, goal, completed, waiting, palette }) => {
+  const colors = useColors();
+  const s = useS();
   const reduced = useReducedMotion();
   const safeTarget = Math.max(1, target);
   const done = Math.min(progress, safeTarget);
@@ -899,6 +966,7 @@ const GoalTrack: React.FC<{
 
 // ── League ─────────────────────────────────────────────────────────────────
 const League: React.FC<{ board: Leaderboard | null }> = ({ board }) => {
+  const s = useS();
   if (!board) {
     return <View style={s.emptyBlock}><Text style={s.emptyTitle}>League unavailable</Text>
       <Text style={s.emptyBody}>Pull down to try again.</Text></View>;
@@ -932,6 +1000,8 @@ const League: React.FC<{ board: Leaderboard | null }> = ({ board }) => {
 // the card, which is what the design decision asked for.
 
 const ResultsSheet: React.FC<{ challenge: Challenge; onClose: () => void }> = ({ challenge: c, onClose }) => {
+  const colors = useColors();
+  const s = useS();
   const [results, setResults] = useState<ChallengeResults | null>(null);
   // The order in the round running RIGHT NOW, fetched only when there is no
   // finished round to show. A series in its first week would otherwise open on
@@ -1141,21 +1211,25 @@ const PodiumStep: React.FC<{
   row: { rank: number; name: string; progress: number; completed: boolean; isMe: boolean };
   tall: boolean;
   palette: ChallengePalette;
-}> = ({ row, tall, palette }) => (
-  <View style={s.podiumCol}>
-    <Text style={[s.podiumName, row.isMe && s.podiumNameMe]} numberOfLines={1}>{row.name}</Text>
-    <Text style={s.podiumScore}>{row.progress}</Text>
-    <View
-      style={[
-        s.podiumStep,
-        { height: tall ? 74 : 54, backgroundColor: tall ? palette.c1 : palette.tint },
-        row.isMe && s.podiumStepMe,
-      ]}
-    >
-      <Text style={[s.podiumRank, { color: tall ? colors.ink : palette.ink }]}>{row.rank}</Text>
+}> = ({ row, tall, palette }) => {
+  const colors = useColors();
+  const s = useS();
+  return (
+    <View style={s.podiumCol}>
+      <Text style={[s.podiumName, row.isMe && s.podiumNameMe]} numberOfLines={1}>{row.name}</Text>
+      <Text style={s.podiumScore}>{row.progress}</Text>
+      <View
+        style={[
+          s.podiumStep,
+          { height: tall ? 74 : 54, backgroundColor: tall ? palette.c1 : palette.tint },
+          row.isMe && s.podiumStepMe,
+        ]}
+      >
+        <Text style={[s.podiumRank, { color: tall ? colors.ink : palette.ink }]}>{row.rank}</Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 // ── Claiming a result ──────────────────────────────────────────────────────
 //
@@ -1174,6 +1248,7 @@ const ClaimSheet: React.FC<{
   onClose: () => void;
   onClaimed: () => Promise<void>;
 }> = ({ awards, challenges, uid, onClose, onClaimed }) => {
+  const s = useS();
   const [phase, setPhase] = useState<'review' | 'busy' | 'granted'>('review');
   const [granted, setGranted] = useState<ChallengeAward[]>([]);
   const [earned, setEarned] = useState(0);
@@ -1276,6 +1351,7 @@ const ClaimSheet: React.FC<{
  * number is otherwise clipped.
  */
 const XpLanding: React.FC<{ value: number }> = ({ value }) => {
+  const s = useS();
   const reduced = useReducedMotion();
   const n = useSharedValue(reduced ? value : 0);
   const pop = useSharedValue(1);
@@ -1303,29 +1379,31 @@ const XpLanding: React.FC<{ value: number }> = ({ value }) => {
 };
 
 const AwardRow: React.FC<{ award: ChallengeAward; badge: string | null; index: number }> = ({ award: a, badge, index }) => {
+  const colors = useColors();
+  const s = useS();
   const reduced = useReducedMotion();
   return (
-    <Animated.View
-      entering={reduced ? undefined : FadeInDown.delay(stagger(index + 1)).duration(300)}
-      style={s.awardRow}
-    >
-      <View style={[s.awardRank, a.completed && s.awardRankDone]}>
-        {a.rank === null
-          ? <CheckGlyph size={13} color={a.completed ? colors.goldText : colors.inkSoft} />
-          : <Text style={[s.awardRankText, a.completed && { color: colors.goldText }]}>{a.rank}</Text>}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={s.awardTitle}>{a.title}</Text>
-        <Text style={s.awardMeta}>
-          {a.completed ? 'Goal cleared' : 'Goal missed'} · {a.progress} of {a.target}
-          {a.rank !== null ? ` · finished ${ordinal(a.rank)}` : ''}
-        </Text>
-        {a.podiumBonus > 0 && <Text style={s.awardBonus}>Podium bonus +{a.podiumBonus} XP</Text>}
-        {!!badge && a.completed && <Text style={s.awardBonus}>{badge}</Text>}
-      </View>
-      {a.xp > 0 && <Text style={s.awardXp}>+{a.xp}</Text>}
-    </Animated.View>
-  );
+      <Animated.View
+        entering={reduced ? undefined : FadeInDown.delay(stagger(index + 1)).duration(300)}
+        style={s.awardRow}
+      >
+        <View style={[s.awardRank, a.completed && s.awardRankDone]}>
+          {a.rank === null
+            ? <CheckGlyph size={13} color={a.completed ? colors.goldText : colors.inkSoft} />
+            : <Text style={[s.awardRankText, a.completed && { color: colors.goldText }]}>{a.rank}</Text>}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.awardTitle}>{a.title}</Text>
+          <Text style={s.awardMeta}>
+            {a.completed ? 'Goal cleared' : 'Goal missed'} · {a.progress} of {a.target}
+            {a.rank !== null ? ` · finished ${ordinal(a.rank)}` : ''}
+          </Text>
+          {a.podiumBonus > 0 && <Text style={s.awardBonus}>Podium bonus +{a.podiumBonus} XP</Text>}
+          {!!badge && a.completed && <Text style={s.awardBonus}>{badge}</Text>}
+        </View>
+        {a.xp > 0 && <Text style={s.awardXp}>+{a.xp}</Text>}
+      </Animated.View>
+    );
 };
 
 /** 1st, 2nd, 3rd, 4th. Used only for a rank, so it never sees a negative. */
@@ -1338,6 +1416,8 @@ function ordinal(n: number): string {
 
 // ── Composer ───────────────────────────────────────────────────────────────
 const Composer: React.FC<{ onClose: () => void; onPosted: () => Promise<void>; uid?: string }> = ({ onClose, onPosted, uid }) => {
+  const colors = useColors();
+  const s = useS();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1379,7 +1459,7 @@ const Composer: React.FC<{ onClose: () => void; onPosted: () => Promise<void>; u
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream, padding: space.xl },
   scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
@@ -1388,10 +1468,10 @@ const s = StyleSheet.create({
   eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4, marginBottom: space.md },
   tabs: { flexDirection: 'row', gap: 6, marginBottom: space.md },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: 999, ...curve, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white, alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 9, borderRadius: 999, ...curve, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface, alignItems: 'center' },
   tabActive: { borderColor: colors.ink, backgroundColor: colors.gold },
   tabText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
-  tabTextActive: { color: colors.ink },
+  tabTextActive: { color: colors.onGold },
   // Sits on the pill's shoulder rather than in the row: three pills share the
   // width evenly and "Challenges" already fills its own, so an inline count
   // would squeeze the label on a small phone. The cream ring keeps it legible
@@ -1403,8 +1483,8 @@ const s = StyleSheet.create({
   },
   tabBadgeText: { fontFamily: font.black, fontSize: 10, color: colors.white, ...tabular },
   post: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md, ...elevation.card,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.md, ...th.elevation.card,
   },
   postTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   avatar: {
@@ -1443,9 +1523,9 @@ const s = StyleSheet.create({
   // Deliberately NOT s.post. The art runs to the border, so the card clips its
   // children and carries no padding of its own; the padding lives on the body.
   challenge: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
     borderRadius: radius.lg, ...curve, overflow: 'hidden', marginBottom: space.lg,
-    ...elevation.lifted,
+    ...th.elevation.lifted,
   },
   art: { borderBottomWidth: 2.5, borderBottomColor: colors.ink },
   artRow: {
@@ -1462,16 +1542,16 @@ const s = StyleSheet.create({
   },
   clockChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: colors.ink, borderRadius: 999, ...curve,
+    backgroundColor: colors.slab, borderRadius: 999, ...curve,
     paddingHorizontal: 10, paddingVertical: 4,
   },
   clockText: { fontFamily: font.black, fontSize: type.meta, color: colors.white, ...tabular },
   clearedFlag: {
     position: 'absolute', top: space.sm, right: space.sm, flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    paddingHorizontal: 8, paddingVertical: 3, ...innerLight,
+    paddingHorizontal: 8, paddingVertical: 3, ...th.innerLight,
   },
-  clearedText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: tracking.meta, color: colors.goldText },
+  clearedText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: tracking.meta, color: colors.onGold },
   challengeBody: { padding: space.md },
   challengeTitle: {
     fontFamily: font.black, fontSize: type.title, lineHeight: leading.title,
@@ -1526,27 +1606,27 @@ const s = StyleSheet.create({
   // ── The results banner ──
   claimBanner: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.ink, borderRadius: radius.lg, ...curve,
-    padding: space.md, marginBottom: space.lg, ...elevation.lifted,
+    backgroundColor: colors.slab, borderRadius: radius.lg, ...curve,
+    padding: space.md, marginBottom: space.lg, ...th.elevation.lifted,
   },
   claimBadge: {
     width: 40, height: 40, borderRadius: 20, ...curve,
-    backgroundColor: 'rgba(250,204,46,0.16)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.gold, 0.16), alignItems: 'center', justifyContent: 'center',
   },
   claimBannerTitle: { fontFamily: font.black, fontSize: type.body, color: colors.white },
   claimBannerBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkMute, marginTop: 1 },
   claimCta: {
     backgroundColor: colors.gold, borderRadius: radius.sm, ...curve,
-    paddingHorizontal: 14, paddingVertical: 9, ...innerLight,
+    paddingHorizontal: 14, paddingVertical: 9, ...th.innerLight,
   },
   claimCtaPressed: { backgroundColor: colors.goldDeep },
-  claimCtaText: { fontFamily: font.black, fontSize: type.small, color: colors.goldText },
+  claimCtaText: { fontFamily: font.black, fontSize: type.small, color: colors.onGold },
 
   // ── Results sheet ──
   resultSheet: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
     borderRadius: radius.lg, ...curve, width: '100%', maxHeight: '86%', overflow: 'hidden',
-    ...elevation.overlay,
+    ...th.elevation.overlay,
   },
   resultHead: { borderBottomWidth: 2.5, borderBottomColor: colors.ink },
   sheetX: {
@@ -1591,8 +1671,8 @@ const s = StyleSheet.create({
 
   // ── Claim sheet ──
   claimSheet: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%', ...elevation.overlay,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%', ...th.elevation.overlay,
   },
   claimEyebrow: {
     fontFamily: font.black, fontSize: type.meta, letterSpacing: tracking.meta,
@@ -1637,14 +1717,14 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(20,24,31,0.5)', alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
-  sheet: { backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%' },
+  sheet: { backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve, padding: space.lg, width: '100%' },
   sheetTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginBottom: space.md },
   input: {
-    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, borderRadius: radius.sm, ...curve, backgroundColor: colors.surface,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: space.sm,
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   error: { fontFamily: font.bold, fontSize: type.small, color: colors.red },
   sheetClose: { marginTop: space.sm, alignItems: 'center', paddingVertical: space.sm },
   sheetCloseText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

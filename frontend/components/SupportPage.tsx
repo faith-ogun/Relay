@@ -45,7 +45,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 const FaqItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
   const [open, setOpen] = useState(false);
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft">
+    <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -96,7 +96,7 @@ export const SupportPage: React.FC<SupportPageProps> = ({ onNavigate }) => {
           {CATEGORIES.map((c) => {
             const Icon = c.icon;
             return (
-              <div key={c.title} className="rounded-2xl border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+              <div key={c.title} className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink">
                   <Icon className="h-5 w-5" />
                 </span>

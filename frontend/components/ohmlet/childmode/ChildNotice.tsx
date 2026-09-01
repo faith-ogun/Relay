@@ -11,7 +11,7 @@ interface Props {
 
 export const ChildNotice: React.FC<Props> = ({ onAcknowledge }) => (
   <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center px-6 py-12">
-    <div className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-white p-8 shadow-press">
+    <div className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-8 shadow-press">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold">
         <Zap className="h-7 w-7 text-ohmlet-ink" strokeWidth={2.6} fill="currentColor" />
       </div>

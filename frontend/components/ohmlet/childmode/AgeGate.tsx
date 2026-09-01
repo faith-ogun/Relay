@@ -90,7 +90,7 @@ export const AgeGate: React.FC<AgeGateProps> = ({ userId, onResolved }) => {
 
   return (
     <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center px-6 py-12">
-      <div className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-white p-8 shadow-press">
+      <div className="rounded-[1.8rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-8 shadow-press">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-ohmlet-blue-deep">Welcome to Ohmlet</p>
         <h1 className="mt-3 text-3xl font-black leading-tight tracking-[-0.02em] text-ohmlet-ink">
           One quick thing before you build.
@@ -107,7 +107,7 @@ export const AgeGate: React.FC<AgeGateProps> = ({ userId, onResolved }) => {
           id="ag-year"
           value={birthYear === '' ? '' : String(birthYear)}
           onChange={(e) => setBirthYear(e.target.value === '' ? '' : Number(e.target.value))}
-          className="mt-2 w-full rounded-2xl border-2 border-ohmlet-line bg-white px-4 py-3 text-base font-bold text-ohmlet-ink focus:border-ohmlet-ink focus:outline-none"
+          className="mt-2 w-full rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-3 text-base font-bold text-ohmlet-ink focus:border-ohmlet-ink focus:outline-none"
         >
           <option value="">Choose a year</option>
           {years.map((y) => (
@@ -122,7 +122,7 @@ export const AgeGate: React.FC<AgeGateProps> = ({ userId, onResolved }) => {
           id="ag-country"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
-          className="mt-2 w-full rounded-2xl border-2 border-ohmlet-line bg-white px-4 py-3 text-base font-bold text-ohmlet-ink focus:border-ohmlet-ink focus:outline-none"
+          className="mt-2 w-full rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-3 text-base font-bold text-ohmlet-ink focus:border-ohmlet-ink focus:outline-none"
         >
           <option value="">Choose a country</option>
           {COUNTRIES.map((c) => (

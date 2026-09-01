@@ -26,6 +26,12 @@ def test_live_cap_matches_pricing_page():
     Caps were cut on 2026-08-28 (600 -> 240, 1800 -> 540) because Pro and Max
     lost money at full utilisation. This test is what made that a two-file change
     instead of a silent lie on the pricing page.
+
+    Cut again on 2026-09-01 (240 -> 150, 540 -> 300) alongside a reprice that
+    split monthly and annual arithmetic apart. See
+    test_caps_do_not_lose_money_at_full_utilisation_monthly and
+    test_annual_is_deliberately_underwater_at_full_utilisation below for why a
+    single cap number no longer tells the whole profitability story.
     """
     page = (
         pathlib.Path(__file__).resolve().parents[3]
@@ -33,7 +39,14 @@ def test_live_cap_matches_pricing_page():
     ).read_text()
 
     # 'Live tutor sessions, up to N hours a month' / 'Voice tutor, N minutes a month'
-    hours = [int(h) for h in re.findall(r"up to (\d+) hours a month", page)]
+    #
+    # The hours group must accept a decimal (\.\d+)? — 150 min is 2.5 hours, not
+    # a whole number. This used to be int-only and it worked by coincidence for
+    # as long as every plan's minutes happened to divide evenly by 60. The
+    # 2026-09-01 reprice broke that coincidence (Pro: 150 min = 2.5h) and the
+    # int-only pattern silently dropped the Pro line instead of comparing it,
+    # which is worse than a loud failure: a wrong page would have passed.
+    hours = [float(h) for h in re.findall(r"up to (\d+(?:\.\d+)?) hours a month", page)]
     minutes = [int(m) for m in re.findall(r"Voice tutor, (\d+) minutes a month", page)]
     assert len(minutes) == 1, f"expected one free minutes line, found {minutes}"
     assert len(hours) == 2, f"expected a Pro and a Max hours line, found {hours}"
@@ -44,28 +57,85 @@ def test_live_cap_matches_pricing_page():
     assert entitlements.live_cap_minutes("bogus") == minutes[0]  # safe default
 
 
-def test_caps_do_not_lose_money_at_full_utilisation():
-    """The reason the caps were cut. A learner who burns their whole budget must
-    not cost more than they paid.
+# Shared cost model for the three tests below: audio + video + amortised
+# Pro-routed tokens, from usage_meter's own rates. Net revenue is after Apple's
+# 15% under the Small Business Programme, the generous reading; off-programme
+# is 30% and tightens all three further.
+_COST_PER_MIN = 0.037 + 0.012 + 0.004
+_APPLE_NET = 0.85
+# The utilisation the annual tiers are actually priced against (see the
+# arithmetic above LIVE_MINUTES_PER_MONTH in entitlements.py). Modelled, not
+# measured — there is no production live_seconds history yet.
+_EXPECTED_UTILISATION = 0.375
 
-    Cost per minute is audio + video + amortised Pro-routed tokens, from
-    usage_meter's own rates. Net revenue is after Apple's 15% under the Small
-    Business Programme, which is the generous reading; off-programme is 30% and
-    tightens this further.
 
-    If someone raises a cap without re-doing this arithmetic, this fails and
-    tells them what the ceiling is.
+def test_caps_do_not_lose_money_at_full_utilisation_monthly():
+    """Monthly must clear its OWN cap. A learner on the monthly plan who burns
+    their whole budget must not cost more than they paid — monthly carries no
+    discount to cushion it, so it is the plan this arithmetic protects hardest.
+
+    If someone raises a cap or drops the monthly price without re-doing this
+    arithmetic, this fails and tells them what the new ceiling is.
     """
-    COST_PER_MIN = 0.037 + 0.012 + 0.004   # audio, video, tokens
-    APPLE_NET = 0.85
-    prices = {"pro": 15.99, "max": 34.99}
+    monthly_prices = {"pro": 12.99, "max": 24.99}
 
-    for plan, price in prices.items():
-        net = price * APPLE_NET
-        cost = entitlements.live_cap_minutes(plan) * COST_PER_MIN
+    for plan, price in monthly_prices.items():
+        net = price * _APPLE_NET
+        cost = entitlements.live_cap_minutes(plan) * _COST_PER_MIN
         assert cost <= net, (
-            f"{plan}: {entitlements.live_cap_minutes(plan):.0f} min costs ${cost:.2f} "
-            f"against ${net:.2f} net. Cap must be at most {net / COST_PER_MIN:.0f} min."
+            f"{plan} monthly: {entitlements.live_cap_minutes(plan):.0f} min costs "
+            f"${cost:.2f} against ${net:.2f} net. Cap must be at most "
+            f"{net / _COST_PER_MIN:.0f} min."
+        )
+
+
+def test_annual_is_deliberately_underwater_at_full_utilisation():
+    """Annual does NOT clear full cap, on purpose, and this test exists to keep
+    that a decision instead of a drift.
+
+    The previous version of this test (and of the comment above
+    LIVE_MINUTES_PER_MONTH) checked break-even against the MONTHLY price only,
+    so annual silently ran a loss at full cap the entire time the code claimed
+    "everyone below the cap is profitable," and nothing caught it. This test
+    pins the opposite claim, so a future change that makes annual profitable at
+    100% utilisation again (e.g. the annual price drifting back up toward
+    monthly) gets flagged too — that would mean the 50%-off annual discount had
+    quietly stopped being real.
+
+    Running annual underwater at the ceiling is only safe because the hard
+    server-side minute cap bounds the loss to exactly this number per user
+    rather than leaving it open-ended. See the arithmetic in entitlements.py
+    above LIVE_MINUTES_PER_MONTH for why expected-utilisation pricing was
+    chosen over ceiling pricing for the annual tiers.
+    """
+    annual_totals = {"pro": 77.99, "max": 149.99}
+
+    for plan, annual_total in annual_totals.items():
+        net_per_month = (annual_total / 12) * _APPLE_NET
+        cost = entitlements.live_cap_minutes(plan) * _COST_PER_MIN
+        assert cost > net_per_month, (
+            f"{plan} annual: {entitlements.live_cap_minutes(plan):.0f} min costs "
+            f"${cost:.2f} against ${net_per_month:.2f} net/mo, which no longer runs "
+            f"a deliberate loss at full cap. Check whether the annual discount is "
+            f"still real and update the arithmetic comment in entitlements.py."
+        )
+
+
+def test_annual_is_profitable_at_expected_utilisation():
+    """The other half of the annual story: it is priced to the EXPECTED case,
+    not the ceiling. If this fails, the reprice no longer matches the
+    utilisation assumption it was justified by, and the annual margin numbers
+    in the entitlements.py comment need re-deriving.
+    """
+    annual_totals = {"pro": 77.99, "max": 149.99}
+
+    for plan, annual_total in annual_totals.items():
+        net_per_month = (annual_total / 12) * _APPLE_NET
+        used_min = entitlements.live_cap_minutes(plan) * _EXPECTED_UTILISATION
+        cost = used_min * _COST_PER_MIN
+        assert cost <= net_per_month, (
+            f"{plan} annual at expected utilisation: {used_min:.1f} min costs "
+            f"${cost:.2f} against ${net_per_month:.2f} net/mo."
         )
 
 

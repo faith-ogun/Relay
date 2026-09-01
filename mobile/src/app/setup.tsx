@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
@@ -8,8 +8,8 @@ import {
   BENCH_NOTE, DEFAULT_PROFILE, saveProfile,
   type Bench, type DailyGoal, type Experience, type Goal, type LearnerProfile,
 } from '../services/learnerProfile';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * Setup: four questions between the tour and the account.
@@ -55,6 +55,7 @@ const DAILY: Choice<DailyGoal>[] = [
 const STEPS = 5;   // intro + four questions
 
 export default function Setup() {
+  const s = useS();
   const [step, setStep] = useState(0);
   // Deliberately partial. Filling this with defaults made an option look chosen
   // while Continue stayed grey, so the screen said "this is selected" and the
@@ -187,22 +188,25 @@ export default function Setup() {
   );
 }
 
-const Intro: React.FC = () => (
-  <View style={s.intro}>
-    <Image
-      source={require('../../assets/brand/mascot-point.png')}
-      style={s.mascot}
-      resizeMode="contain"
-      accessibilityRole="image"
-      accessibilityLabel=""
-    />
-    <View style={s.bubble}>
-      <Text style={s.bubbleText}>
-        Four quick questions and I will set your path up.
-      </Text>
+const Intro: React.FC = () => {
+  const s = useS();
+  return (
+    <View style={s.intro}>
+      <Image
+        source={require('../../assets/brand/mascot-point.png')}
+        style={s.mascot}
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel=""
+      />
+      <View style={s.bubble}>
+        <Text style={s.bubbleText}>
+          Four quick questions and I will set your path up.
+        </Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 interface QuestionProps<T> {
   title: string;
@@ -216,6 +220,7 @@ interface QuestionProps<T> {
 function Question<T extends string | number>({
   title, sub, options, selected, onSelect, footnote,
 }: QuestionProps<T>) {
+  const s = useS();
   return (
     <View style={s.question}>
       <Text style={s.qTitle}>{title}</Text>
@@ -249,7 +254,7 @@ function Question<T extends string | number>({
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
@@ -268,8 +273,8 @@ const s = StyleSheet.create({
   mascot: { width: 150, height: 150 },
   bubble: {
     borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: space.lg, paddingVertical: space.md,
-    maxWidth: 320, ...elevation.card,
+    backgroundColor: colors.surface, paddingHorizontal: space.lg, paddingVertical: space.md,
+    maxWidth: 320, ...th.elevation.card,
   },
   bubbleText: {
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
@@ -289,9 +294,9 @@ const s = StyleSheet.create({
   option: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 14, paddingHorizontal: space.md,
+    backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: space.md,
   },
-  optionOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...elevation.card },
+  optionOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...th.elevation.card },
   radio: {
     width: 22, height: 22, borderRadius: 11, ...curve, borderWidth: 2.5, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center',
@@ -306,4 +311,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
     marginTop: space.md, lineHeight: 19,
   },
-});
+}));

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import Svg, {
   Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop,
 } from 'react-native-svg';
-import { colors } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 // ── Live-challenge hero art, on the phone ──
 //
@@ -620,6 +620,7 @@ interface ChallengeArtProps {
  * hidden from the accessibility tree rather than described twice.
  */
 export const ChallengeArt: React.FC<ChallengeArtProps> = ({ art, id, theme, height, style }) => {
+  const s = useS();
   const palette = themeFor(theme);
   const scene = sceneFor(art, id);
   const Scene = SCENES[scene];
@@ -684,55 +685,79 @@ interface GlyphProps {
 }
 
 /** Participants. */
-export const UsersGlyph: React.FC<GlyphProps> = ({ size = 14, color = colors.inkSoft }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Circle cx={9} cy={8} r={3.5} fill="none" stroke={color} strokeWidth={2.2} />
-    <Path d="M3 19.5c0-3.3 2.7-5 6-5s6 1.7 6 5" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    <Path d="M16.5 6.2a3.3 3.3 0 0 1 0 6.4M17.5 14.9c2.2.6 3.5 2.2 3.5 4.6" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-  </Svg>
-);
+export const UsersGlyph: React.FC<GlyphProps> = ({ size = 14, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.inkSoft;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={9} cy={8} r={3.5} fill="none" stroke={color} strokeWidth={2.2} />
+      <Path d="M3 19.5c0-3.3 2.7-5 6-5s6 1.7 6 5" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Path d="M16.5 6.2a3.3 3.3 0 0 1 0 6.4M17.5 14.9c2.2.6 3.5 2.2 3.5 4.6" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+};
 
 /** Time remaining. */
-export const ClockGlyph: React.FC<GlyphProps> = ({ size = 14, color = colors.inkSoft }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Circle cx={12} cy={12} r={8.5} fill="none" stroke={color} strokeWidth={2.2} />
-    <Path d="M12 7.2V12l3.2 2.2" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
+export const ClockGlyph: React.FC<GlyphProps> = ({ size = 14, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.inkSoft;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={12} cy={12} r={8.5} fill="none" stroke={color} strokeWidth={2.2} />
+      <Path d="M12 7.2V12l3.2 2.2" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
 
 /** The goal. */
-export const TargetGlyph: React.FC<GlyphProps> = ({ size = 14, color = colors.inkSoft }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Circle cx={12} cy={12} r={8.5} fill="none" stroke={color} strokeWidth={2.2} />
-    <Circle cx={12} cy={12} r={3.6} fill="none" stroke={color} strokeWidth={2.2} />
-  </Svg>
-);
+export const TargetGlyph: React.FC<GlyphProps> = ({ size = 14, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.inkSoft;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={12} cy={12} r={8.5} fill="none" stroke={color} strokeWidth={2.2} />
+      <Circle cx={12} cy={12} r={3.6} fill="none" stroke={color} strokeWidth={2.2} />
+    </Svg>
+  );
+};
 
 /** What finishing pays. */
-export const RewardGlyph: React.FC<GlyphProps> = ({ size = 14, color = colors.inkSoft }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path d="M4 10.5h16V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-    <Rect x={2.8} y={6.5} width={18.4} height={4} rx={1.4} fill="none" stroke={color} strokeWidth={2.2} />
-    <Path d="M12 6.5v14M12 6.5C10.6 3.4 8.9 2.6 7.6 3.3c-1.3.7-1.2 3.2 4.4 3.2Zm0 0c1.4-3.1 3.1-3.9 4.4-3.2 1.3.7 1.2 3.2-4.4 3.2Z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-  </Svg>
-);
+export const RewardGlyph: React.FC<GlyphProps> = ({ size = 14, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.inkSoft;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M4 10.5h16V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Rect x={2.8} y={6.5} width={18.4} height={4} rx={1.4} fill="none" stroke={color} strokeWidth={2.2} />
+      <Path d="M12 6.5v14M12 6.5C10.6 3.4 8.9 2.6 7.6 3.3c-1.3.7-1.2 3.2 4.4 3.2Zm0 0c1.4-3.1 3.1-3.9 4.4-3.2 1.3.7 1.2 3.2-4.4 3.2Z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+    </Svg>
+  );
+};
 
 /** A finished round, ranked. */
-export const TrophyGlyph: React.FC<GlyphProps> = ({ size = 16, color = colors.goldText }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path d="M7 3.5h10v6a5 5 0 0 1-10 0z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-    <Path d="M7 5.2H4.2v1.6A3.6 3.6 0 0 0 7.4 10.3M17 5.2h2.8v1.6a3.6 3.6 0 0 1-3.2 3.5" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-    <Path d="M12 14.5v3.2M8.5 20.5h7" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-  </Svg>
-);
+export const TrophyGlyph: React.FC<GlyphProps> = ({ size = 16, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.goldText;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M7 3.5h10v6a5 5 0 0 1-10 0z" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Path d="M7 5.2H4.2v1.6A3.6 3.6 0 0 0 7.4 10.3M17 5.2h2.8v1.6a3.6 3.6 0 0 1-3.2 3.5" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Path d="M12 14.5v3.2M8.5 20.5h7" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+};
 
 /** Goal cleared. */
-export const CheckGlyph: React.FC<GlyphProps> = ({ size = 14, color = colors.white }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
+export const CheckGlyph: React.FC<GlyphProps> = ({ size = 14, color: colorProp }) => {
+  const colors = useColors();
+  const color = colorProp ?? colors.white;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   box: { width: '100%', overflow: 'hidden', backgroundColor: colors.goldSoft },
-});
+}));

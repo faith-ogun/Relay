@@ -7,8 +7,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Button } from './Button';
 import type { BossResult as Result } from '../services/bosses';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
 import { duration } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * The result of a unit exam.
@@ -36,6 +37,8 @@ export const BossResult: React.FC<{
   onDone: () => void;
   onRetry: () => void;
 }> = ({ unitTitle, result, onDone, onRetry }) => {
+  const colors = useColors();
+  const s = useS();
   const { passed, correct, total, ratio, xp, firstClear, skills, passRatio, attempts } = result;
   const accent = passed ? colors.greenDeep : colors.red;
 
@@ -136,6 +139,8 @@ const SkillRow: React.FC<{
   index: number;
   progress: SharedValue<number>;
 }> = ({ row, index, progress }) => {
+  const colors = useColors();
+  const s = useS();
   const share = row.asked ? row.correct / row.asked : 0;
   // Three bands rather than a gradient: a learner reads "fine / shaky / go back"
   // faster than they read a hue.
@@ -163,7 +168,7 @@ const SkillRow: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { padding: space.lg, paddingBottom: space.xl, alignItems: 'center' },
 
@@ -203,7 +208,7 @@ const s = StyleSheet.create({
 
   rows: { alignSelf: 'stretch', marginTop: space.md, gap: space.md },
   row: {
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line,
     paddingHorizontal: space.md, paddingVertical: space.sm,
   },
@@ -221,4 +226,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.meta, color: colors.inkMute,
     textAlign: 'center', marginTop: 2,
   },
-});
+}));

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { goBack } from '../services/nav';
@@ -17,8 +18,8 @@ import {
   unavailableReason, unavailableTitle, unshareTwin,
   type Twin, type TwinAvailability,
 } from '../services/twins';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /** Where the capture flow has got to. `idle` covers "not capturing". */
 type CapturePhase = 'idle' | 'shooting' | 'generating' | 'error' | 'quota';
@@ -30,6 +31,8 @@ interface PendingShot {
 }
 
 export default function Twins() {
+  const colors = useColors();
+  const s = useS();
   const { user } = useAuth();
   const [twins, setTwins] = useState<Twin[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -45,6 +48,9 @@ export default function Twins() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  // The camera lives in a Modal, which renders outside the root Shell and so
+  // inherits none of its safe-area padding. Read them here instead.
+  const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<PendingShot | null>(null);
   const [title, setTitle] = useState('');
   const [phase, setPhase] = useState<CapturePhase>('idle');
@@ -339,12 +345,16 @@ export default function Twins() {
       <Modal visible={cameraOpen} animationType="slide" onRequestClose={() => setCameraOpen(false)}>
         <View style={s.cameraRoot}>
           <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-          <View style={s.cameraHint} pointerEvents="none">
+          <View style={[s.cameraHint, { top: Math.max(insets.top, space.md) + space.md }]} pointerEvents="none">
             <Text style={s.cameraHintText}>
               Get the whole board in frame, lit from the front.
             </Text>
           </View>
-          <View style={s.cameraBar}>
+          {/* Same reason as FilmPlayer's header: a Modal renders outside the
+              root Shell, so the home-indicator inset has to be added here.
+              paddingBottom was 32 against a 34pt indicator, which put Cancel
+              and the shutter under it. */}
+          <View style={[s.cameraBar, { paddingBottom: Math.max(insets.bottom, space.md) + space.md }]}>
             <Pressable
               onPress={() => { setCameraOpen(false); setPhase('idle'); }}
               style={s.cameraCancel}
@@ -442,20 +452,23 @@ export default function Twins() {
 }
 
 /** A lens over a board: the capture affordance, drawn rather than borrowed. */
-const ScanIcon: React.FC = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24">
-    <Path
-      d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"
-      stroke={colors.ink}
-      strokeWidth={2.2}
-      strokeLinecap="round"
-      fill="none"
-    />
-    <Circle cx={12} cy={12} r={3.4} stroke={colors.ink} strokeWidth={2.2} fill="none" />
-  </Svg>
-);
+const ScanIcon: React.FC = () => {
+  const colors = useColors();
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      <Path
+        d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"
+        stroke={colors.ink}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Circle cx={12} cy={12} r={3.4} stroke={colors.ink} strokeWidth={2.2} fill="none" />
+    </Svg>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
@@ -465,7 +478,7 @@ const s = StyleSheet.create({
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
   sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg, lineHeight: 22 },
   viewerPlaceholder: {
-    height: 340, backgroundColor: colors.ink, borderRadius: 18, ...curve,
+    height: 340, backgroundColor: colors.slab, borderRadius: 18, ...curve,
     alignItems: 'center', justifyContent: 'center',
   },
   detailTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: space.md },
@@ -478,7 +491,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     backgroundColor: colors.gold, borderWidth: 3, borderColor: colors.ink,
     borderRadius: radius.lg, ...curve, padding: space.md, marginBottom: space.lg,
-    ...elevation.lifted,
+    ...th.elevation.lifted,
   },
   capturePressed: { transform: [{ translateY: 2 }] },
   captureIcon: {
@@ -486,13 +499,13 @@ const s = StyleSheet.create({
     backgroundColor: colors.goldSoft, borderWidth: 2, borderColor: colors.ink,
     alignItems: 'center', justifyContent: 'center',
   },
-  captureTitle: { fontFamily: font.black, fontSize: type.bodyLg, color: colors.goldText },
-  captureSub: { fontFamily: font.semibold, fontSize: type.small, color: colors.goldText, marginTop: 1 },
+  captureTitle: { fontFamily: font.black, fontSize: type.bodyLg, color: colors.onGold },
+  captureSub: { fontFamily: font.semibold, fontSize: type.small, color: colors.onGold, marginTop: 1 },
 
   card: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
-    padding: space.md, marginBottom: space.sm, ...elevation.card,
+    padding: space.md, marginBottom: space.sm, ...th.elevation.card,
   },
   cardTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   chevron: { fontFamily: font.black, fontSize: type.title, color: colors.inkSoft },
@@ -503,7 +516,7 @@ const s = StyleSheet.create({
   noticeTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
   errorBox: {
-    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.red,
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.red,
     borderRadius: radius.md, ...curve, padding: space.md, marginBottom: space.md,
   },
   errorText: { fontFamily: font.bold, fontSize: type.small, color: colors.red, lineHeight: 20, marginTop: space.sm },
@@ -512,8 +525,8 @@ const s = StyleSheet.create({
   quietText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
 
   // ── Viewfinder ──
-  cameraRoot: { flex: 1, backgroundColor: colors.ink },
-  cameraHint: { position: 'absolute', top: space.xxl, left: space.lg, right: space.lg, alignItems: 'center' },
+  cameraRoot: { flex: 1, backgroundColor: colors.slab },
+  cameraHint: { position: 'absolute', left: space.lg, right: space.lg, alignItems: 'center' },   // top is applied inline from the safe-area inset
   cameraHintText: {
     fontFamily: font.bold, fontSize: type.small, color: colors.white, textAlign: 'center',
     backgroundColor: 'rgba(20,24,31,0.55)', paddingHorizontal: 14, paddingVertical: 8,
@@ -522,7 +535,7 @@ const s = StyleSheet.create({
   cameraBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.xl,
+    paddingHorizontal: space.lg, paddingTop: space.md,   // paddingBottom is applied inline from the safe-area inset
     backgroundColor: 'rgba(20,24,31,0.55)',
   },
   cameraCancel: { width: 72, paddingVertical: space.sm },
@@ -540,11 +553,11 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', padding: space.lg,
   },
   sheet: {
-    width: '100%', maxWidth: 420, backgroundColor: colors.white,
+    width: '100%', maxWidth: 420, backgroundColor: colors.surface,
     borderWidth: 3, borderColor: colors.ink, borderRadius: radius.xl, ...curve,
-    overflow: 'hidden', ...elevation.overlay,
+    overflow: 'hidden', ...th.elevation.overlay,
   },
-  preview: { width: '100%', height: 200, backgroundColor: colors.ink },
+  preview: { width: '100%', height: 200, backgroundColor: colors.slab },
   sheetBody: { padding: space.lg },
   sheetTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   input: {
@@ -558,4 +571,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
     textAlign: 'center', lineHeight: 20,
   },
-});
+}));

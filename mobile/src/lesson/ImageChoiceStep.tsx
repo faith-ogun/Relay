@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CircuitDiagram } from '../components/circuits/CircuitDiagram';
 import { ComponentPhoto, isComponentImagePath, useAssetVersion, type PhotoPhase } from './componentArt';
 import { OptionList } from './optionList';
 import { shuffledOrder } from './optionOrder';
-import { stepText as t } from './stepText';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { useStepText } from './stepText';
+import { curve, font, radius, space, type } from '../theme/tokens';
 import type { StepChoice, StepProps as Props } from './types';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * A multiple_choice step whose options are photographs of real parts.
@@ -65,6 +65,8 @@ const SETTLE_DEADLINE_MS = 20000;
 export const ImageChoiceStep: React.FC<Props & { step: StepImageChoice }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
+  const s = useS();
   const [picked, setPicked] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [phases, setPhases] = useState<PhotoPhase[]>(() => step.optionImages.map(() => 'loading'));
@@ -208,31 +210,34 @@ export const ImageChoiceStep: React.FC<Props & { step: StepImageChoice }> = ({
  * as components/icons.tsx, so it sits beside the rest of the app's line work
  * rather than arriving from a different drawing.
  */
-const Mark: React.FC<{ good: boolean }> = ({ good }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24">
-    <Path
-      d={good ? 'M5 12.5 10 17.5 19 7' : 'M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5'}
-      fill="none"
-      stroke={good ? colors.greenDeep : colors.red}
-      strokeWidth={2.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
+const Mark: React.FC<{ good: boolean }> = ({ good }) => {
+  const colors = useColors();
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path
+        d={good ? 'M5 12.5 10 17.5 19 7' : 'M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5'}
+        fill="none"
+        stroke={good ? colors.greenDeep : colors.red}
+        strokeWidth={2.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   grid: {
     flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
     rowGap: space.sm, marginTop: space.md,
   },
   card: {
     width: '48.5%', borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.lg, ...curve,
-    backgroundColor: colors.white, padding: space.sm, ...elevation.card,
+    backgroundColor: colors.surface, padding: space.sm, ...th.elevation.card,
   },
   cardPicked: { borderColor: colors.ink, backgroundColor: colors.goldSoft },
-  cardRight: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  cardWrong: { borderColor: colors.red, backgroundColor: '#fdece8' },
+  cardRight: { borderColor: colors.greenDeep, backgroundColor: colors.greenSoft },
+  cardWrong: { borderColor: colors.red, backgroundColor: colors.redSoft },
   cardPressed: { transform: [{ scale: 0.97 }] },
   labelRow: {
     height: LABEL_H, marginTop: 6, flexDirection: 'row',
@@ -253,4 +258,4 @@ const s = StyleSheet.create({
   },
   retryPressed: { backgroundColor: colors.goldSoft },
   retryText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
-});
+}));

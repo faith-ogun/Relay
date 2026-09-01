@@ -86,7 +86,7 @@ export const SharedTwinPage: React.FC<SharedTwinPageProps> = ({ shareId, onStart
         ) : (
           <>
             <div className="mb-5 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-ohmlet-ink">
+              <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1 text-[11px] font-black uppercase tracking-wide text-ohmlet-ink">
                 <Eye className="h-3.5 w-3.5" strokeWidth={2.6} /> A real build
               </span>
               <span className="text-sm font-bold text-ohmlet-ink-soft">
@@ -110,7 +110,7 @@ export const SharedTwinPage: React.FC<SharedTwinPageProps> = ({ shareId, onStart
               </div>
 
               {/* Caption bar, welded to the stage rather than floating as its own card. */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-ohmlet-ink bg-white px-5 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-4 sm:px-6">
                 <div className="min-w-0">
                   <h1 className="truncate text-xl font-black tracking-[-0.01em] text-ohmlet-ink sm:text-2xl">
                     {twin?.title || 'A finished build'}
@@ -187,7 +187,7 @@ const Pitch: React.FC<{ onStart: () => void }> = ({ onStart }) => (
       ))}
     </ol>
 
-    <div className="mt-10 flex flex-col items-start gap-4 rounded-[1.5rem] border-2 border-ohmlet-ink bg-white px-6 py-7 shadow-soft sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <div className="mt-10 flex flex-col items-start gap-4 rounded-[1.5rem] border-2 border-ohmlet-ink bg-ohmlet-surface px-6 py-7 shadow-soft sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <div>
         <p className="text-xl font-black tracking-[-0.01em] text-ohmlet-ink sm:text-2xl">
           Build your first circuit today

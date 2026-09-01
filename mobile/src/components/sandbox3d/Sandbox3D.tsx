@@ -30,7 +30,7 @@ import {
 } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import * as Haptics from 'expo-haptics';
-import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
+import { curve, font, radius, space, tabular, type } from '../../theme/tokens';
 import { useScrollLock } from '../ScrollLock';
 import { ROW_LETTERS } from './boardSpec';
 import { RULER, type RulerLayout } from './ruler';
@@ -39,6 +39,7 @@ import type {
   CameraView, HoleId, HoleTap, PartKind, PerfSample, PlacedPart, Quality,
   SandboxSolution, SandboxTool, Wire,
 } from './types';
+import { makeStyles, useColors } from '../../theme/theme';
 
 export interface Sandbox3DHandle {
   /** Fly the camera to a named view. */
@@ -134,6 +135,8 @@ export function pinDriveFromDuty(duty: number[]): Record<string, number> {
 }
 
 export const Sandbox3D = forwardRef<Sandbox3DHandle, Sandbox3DProps>(function Sandbox3D(props, ref) {
+  const colors = useColors();
+  const s = useS();
   const {
     parts, wires, tool = 'select', pendingKind = null, selectedId = null,
     running = false, ambientLight = 0.5, temperature = 22, pinDrive,
@@ -807,7 +810,7 @@ const AIM_WIDTH = 108;
 /** How far the pill stands off the hole, so a fingertip cannot cover it. */
 const AIM_LIFT = 52;
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   frame: {
     borderRadius: radius.lg,
     ...curve,
@@ -857,7 +860,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
   },
   aimText: {
-    fontFamily: font.black, fontSize: type.small, color: colors.goldText,
+    fontFamily: font.black, fontSize: type.small, color: colors.onGold,
     letterSpacing: 1.2, ...tabular,
   },
   aimStem: { width: 2.5, height: 22, backgroundColor: colors.goldPlate, opacity: 0.9 },
@@ -880,7 +883,11 @@ const s = StyleSheet.create({
     fontFamily: font.black,
     fontSize: RULER.fontSize,
     lineHeight: RULER.fontSize + 3,
-    color: colors.cream,
+    // onSlab, not cream. The chip above is a FIXED dark wash that does not move
+    // between themes, so its text must not either: `cream` inverts, and in dark
+    // mode the row numbers and the F1 / A2 / GND names went dark on dark and
+    // vanished off a breadboard that is white in both themes.
+    color: colors.onSlab,
     letterSpacing: RULER.tracking,
     ...tabular,
   },
@@ -888,4 +895,4 @@ const s = StyleSheet.create({
   // ink as a row letter is exactly the ambiguity the report was about.
   rulerPlus: { color: colors.red },
   rulerMinus: { color: colors.blue },
-});
+}));

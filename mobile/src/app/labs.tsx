@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Close } from '../components/icons';
 import { Button } from '../components/Button';
@@ -7,8 +7,8 @@ import { FilmPlayer } from '../components/FilmPlayer';
 import { fetchLabs, type LabsStatus } from '../services/labs';
 import { getManifest, type Manifest } from '../services/curriculum';
 import { goBack } from '../services/nav';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, radius, space, type } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * Ohmlet Labs.
@@ -25,6 +25,8 @@ import { elevation } from '../theme/elevation';
  */
 
 export default function Labs() {
+  const colors = useColors();
+  const s = useS();
   const [status, setStatus] = useState<LabsStatus | null>(null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,7 @@ export default function Labs() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
   head: {
@@ -154,9 +156,9 @@ const s = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2.5, borderColor: colors.ink, padding: space.lg,
-    gap: space.sm, ...elevation.card,
+    gap: space.sm, ...th.elevation.card,
   },
   cardLocked: { borderColor: colors.line, backgroundColor: colors.cream },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
@@ -166,7 +168,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink,
   },
   badgeLocked: { backgroundColor: colors.inkFaint, borderColor: colors.inkMute },
-  badgeText: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.2, color: colors.ink },
+  badgeText: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.2, color: colors.onGold },
   cardBlurb: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, lineHeight: 20 },
 
   rough: {
@@ -184,12 +186,12 @@ const s = StyleSheet.create({
   unitTitle: { fontFamily: font.black, fontSize: type.label, color: colors.ink, marginTop: space.sm },
   film: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, paddingHorizontal: space.md, paddingVertical: 12,
   },
   filmDown: { transform: [{ translateY: 2 }], borderColor: colors.ink },
   play: {
-    width: 30, height: 30, borderRadius: 999, backgroundColor: colors.ink,
+    width: 30, height: 30, borderRadius: 999, backgroundColor: colors.slab,
     alignItems: 'center', justifyContent: 'center',
   },
   // A drawn triangle, not a glyph: a text play symbol inherits the font and
@@ -200,4 +202,4 @@ const s = StyleSheet.create({
     borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: colors.white,
   },
   filmTitle: { flex: 1, fontFamily: font.bold, fontSize: type.label, color: colors.ink },
-});
+}));

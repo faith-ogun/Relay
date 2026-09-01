@@ -1,8 +1,5 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated, Dimensions, Image, NativeScrollEvent, NativeSyntheticEvent,
-  Pressable, ScrollView, StyleSheet, Text, View,
-} from 'react-native';
+import { Animated, Dimensions, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
@@ -11,7 +8,8 @@ import { BoardScanScene } from '../components/scenes/BoardScanScene';
 import { TwinScene } from '../components/scenes/TwinScene';
 import { VoiceScene } from '../components/scenes/VoiceScene';
 import { markOnboardingSeen } from '../services/firstRun';
-import { colors, font, space, type, curve } from '../theme/tokens';
+import { font, space, type, curve } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +43,7 @@ const SLIDES = [
 ];
 
 export default function Onboarding() {
+  const s = useS();
   const [index, setIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scroller = useRef<ScrollView>(null);
@@ -133,7 +132,7 @@ export default function Onboarding() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   flex: { flex: 1 },
   topBar: {
@@ -159,4 +158,4 @@ const s = StyleSheet.create({
   },
   scene: { marginTop: space.lg, alignItems: 'center', justifyContent: 'center', flex: 1 },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.md },
-});
+}));

@@ -5,7 +5,7 @@ import Animated, {
   Easing, interpolate, useAnimatedProps, useSharedValue, withDelay, withRepeat, withSequence,
   withTiming, type SharedValue,
 } from 'react-native-reanimated';
-import { colors } from '../../theme/tokens';
+import { useColors } from '../../theme/theme';
 
 const ARect = Animated.createAnimatedComponent(Rect);
 const AG = Animated.createAnimatedComponent(G);
@@ -32,6 +32,7 @@ const FINDS = [
  * mechanic, and it reads as a camera rather than as a decorative bar sliding.
  */
 export const BoardScanScene: React.FC = () => {
+  const colors = useColors();
   const t = useSharedValue(0);
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export const BoardScanScene: React.FC = () => {
 
         {/* Board */}
         <Rect x={28} y={30} width={W - 56} height={H - 66} rx={12}
-              fill={colors.white} stroke={colors.ink} strokeWidth={2.5} />
+              fill={colors.surface} stroke={colors.ink} strokeWidth={2.5} />
         <Line x1={40} y1={H / 2 - 2} x2={W - 40} y2={H / 2 - 2}
               stroke={colors.ink} strokeWidth={1.4} opacity={0.2} />
         <G>{holes}</G>
@@ -104,6 +105,7 @@ export const BoardScanScene: React.FC = () => {
 
 /** One detection: a bracket that snaps on as the sweep passes, then holds. */
 const Detection: React.FC<{ t: SharedValue<number>; find: (typeof FINDS)[number] }> = ({ t, find }) => {
+  const colors = useColors();
   const props = useAnimatedProps(() => {
     // Ramps over a short window once the sweep reaches this component.
     const p = interpolate(t.value, [find.at, find.at + 0.09], [0, 1], 'clamp');

@@ -43,9 +43,9 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
   if (preview) {
     return (
       <div className="min-h-screen bg-ohmlet-cream">
-        <div className="flex items-center justify-between border-b border-ohmlet-line bg-white px-5 py-2.5">
+        <div className="flex items-center justify-between border-b border-ohmlet-line bg-ohmlet-surface px-5 py-2.5">
           <span className="text-sm font-black text-ohmlet-ink">Previewing: {preview.id}</span>
-          <button onClick={() => setPreview(null)} className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-white px-3 py-1.5 text-xs font-black shadow-press-sm">
+          <button onClick={() => setPreview(null)} className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1.5 text-xs font-black shadow-press-sm">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to list
           </button>
         </div>
@@ -65,7 +65,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-ohmlet-cream font-display text-ohmlet-ink">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-ohmlet-line bg-white/95 px-6 py-4 backdrop-blur">
+      <div className="sticky top-0 z-10 border-b border-ohmlet-line bg-ohmlet-surface/95 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Author · lesson QA</p>
@@ -76,7 +76,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
             <Stat label="errors" value={`${summary.errorCount}`} tone={summary.errorCount ? 'red' : 'green'} />
             <Stat label="warnings" value={`${summary.warnCount}`} tone={summary.warnCount ? 'amber' : 'green'} />
             {onBack && (
-              <button onClick={onBack} className="ml-2 inline-flex items-center gap-1.5 rounded-xl border-2 border-ohmlet-ink bg-white px-3 py-2 text-sm font-black shadow-press-sm">
+              <button onClick={onBack} className="ml-2 inline-flex items-center gap-1.5 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-2 text-sm font-black shadow-press-sm">
                 <ArrowLeft className="h-4 w-4" /> App
               </button>
             )}
@@ -86,11 +86,11 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
 
       <div className="mx-auto max-w-4xl px-6 py-8">
         {summary.ok ? (
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-green bg-[#f1f9e6] px-4 py-1.5 text-sm font-black text-ohmlet-green-deep">
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-green bg-ohmlet-tint-green px-4 py-1.5 text-sm font-black text-ohmlet-green-deep">
             <Check className="h-4 w-4" /> All lessons pass the linter
           </p>
         ) : (
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-red bg-[#fdece8] px-4 py-1.5 text-sm font-black text-ohmlet-red">
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-red bg-ohmlet-tint-red px-4 py-1.5 text-sm font-black text-ohmlet-red">
             <CircleAlert className="h-4 w-4" /> {summary.lessonsWithErrors} lesson(s) need fixing before they ship
           </p>
         )}
@@ -99,7 +99,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
           <section key={unit.id} className="mb-9">
             <div className="mb-3 flex items-center gap-3">
               <h2 className="text-lg font-black tracking-tight">{unit.title}</h2>
-              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide" style={{ background: `${ACCENT_HEX[unit.accent]}33`, color: '#474d57' }}>
+              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-ohmlet-ink-soft" style={{ background: `${ACCENT_HEX[unit.accent]}33` }}>
                 {unit.level}
               </span>
             </div>
@@ -107,7 +107,7 @@ export const AuthorPreview: React.FC<AuthorPreviewProps> = ({ onBack }) => {
               {unit.skills.map((skill) => (
                 <div key={skill.id}>
                   <p className="mb-1.5 text-xs font-black uppercase tracking-[0.14em] text-ohmlet-ink-soft">{skill.title}</p>
-                  <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white">
+                  <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface">
                     {skill.lessons.map((lesson, li) => {
                       const problems = byLesson.get(lesson.id) ?? [];
                       const hasContent = lesson.id in LESSON_CONTENT;
@@ -174,7 +174,7 @@ const StatusDot: React.FC<{ errors: number; warns: number; hasContent: boolean }
 const Stat: React.FC<{ label: string; value: string; tone: 'ink' | 'red' | 'amber' | 'green' }> = ({ label, value, tone }) => {
   const color = tone === 'red' ? 'text-ohmlet-red' : tone === 'amber' ? 'text-ohmlet-gold-deep' : tone === 'green' ? 'text-ohmlet-green-deep' : 'text-ohmlet-ink';
   return (
-    <div className="rounded-xl border-2 border-ohmlet-line bg-white px-3 py-1.5 text-center">
+    <div className="rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-1.5 text-center">
       <p className={`text-base font-black tabular-nums leading-none ${color}`}>{value}</p>
       <p className="text-[10px] font-bold uppercase tracking-wide text-ohmlet-ink-soft">{label}</p>
     </div>

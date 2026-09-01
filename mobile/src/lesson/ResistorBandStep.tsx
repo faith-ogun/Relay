@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Svg, { Line, Rect } from 'react-native-svg';
 import { CircuitDiagram } from '../components/circuits/CircuitDiagram';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
-import { stepText } from './stepText';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { useStepText } from './stepText';
 import {
   BAND_COLOURS, MULTIPLIER_LABELS, TOLERANCE_BAND, bandChoices, bandMeaning,
   decodeBands, encodeOhms, fmtOhms, type Bands,
 } from './resistorCode';
 import type { StepChooseResistor, StepProps } from './types';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * choose_resistor with a `bands` spec: build the part, do not pick it off a list.
@@ -37,41 +37,46 @@ const Resistor: React.FC<{
   selected: number;
   onPick: (index: number) => void;
   disabled: boolean;
-}> = ({ bands, selected, onPick, disabled }) => (
-  <Svg width="100%" height={VIEW_H} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
-    <Line x1={8} y1={48} x2={52} y2={48} stroke={colors.inkMute} strokeWidth={3} strokeLinecap="round" />
-    <Line x1={188} y1={48} x2={232} y2={48} stroke={colors.inkMute} strokeWidth={3} strokeLinecap="round" />
-    <Rect x={52} y={26} width={136} height={44} rx={14} fill="#d8b98c" stroke="#b08e63" strokeWidth={2} />
-    {BAND_X.map((x, i) => (
-      <Rect
-        key={`band-${i}`}
-        x={x - BAND_W / 2} y={22} width={BAND_W} height={52} rx={2}
-        fill={BAND_COLOURS[bands[i]].hex} stroke={colors.ink} strokeWidth={0.75}
-      />
-    ))}
-    <Rect x={168} y={26} width={10} height={44} rx={2} fill={TOLERANCE_BAND.hex} />
-    {BAND_X.map((x, i) => (
-      <Rect
-        key={`sel-${i}`}
-        x={x - 11} y={78} width={22} height={4} rx={2}
-        fill={selected === i ? colors.ink : 'transparent'}
-      />
-    ))}
-    {/* Wide, invisible targets: a 14pt band is not something a finger can hit. */}
-    {!disabled && BAND_X.map((x, i) => (
-      <Rect
-        key={`hit-${i}`}
-        x={x - 17} y={8} width={34} height={80} rx={6}
-        fill={colors.ink} fillOpacity={0.001}
-        onPress={() => onPick(i)}
-      />
-    ))}
-  </Svg>
-);
+}> = ({ bands, selected, onPick, disabled }) => {
+  const colors = useColors();
+  return (
+    <Svg width="100%" height={VIEW_H} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
+      <Line x1={8} y1={48} x2={52} y2={48} stroke={colors.inkMute} strokeWidth={3} strokeLinecap="round" />
+      <Line x1={188} y1={48} x2={232} y2={48} stroke={colors.inkMute} strokeWidth={3} strokeLinecap="round" />
+      <Rect x={52} y={26} width={136} height={44} rx={14} fill="#d8b98c" stroke="#b08e63" strokeWidth={2} />
+      {BAND_X.map((x, i) => (
+        <Rect
+          key={`band-${i}`}
+          x={x - BAND_W / 2} y={22} width={BAND_W} height={52} rx={2}
+          fill={BAND_COLOURS[bands[i]].hex} stroke={colors.ink} strokeWidth={0.75}
+        />
+      ))}
+      <Rect x={168} y={26} width={10} height={44} rx={2} fill={TOLERANCE_BAND.hex} />
+      {BAND_X.map((x, i) => (
+        <Rect
+          key={`sel-${i}`}
+          x={x - 11} y={78} width={22} height={4} rx={2}
+          fill={selected === i ? colors.ink : 'transparent'}
+        />
+      ))}
+      {/* Wide, invisible targets: a 14pt band is not something a finger can hit. */}
+      {!disabled && BAND_X.map((x, i) => (
+        <Rect
+          key={`hit-${i}`}
+          x={x - 17} y={8} width={34} height={80} rx={6}
+          fill={colors.ink} fillOpacity={0.001}
+          onPress={() => onPick(i)}
+        />
+      ))}
+    </Svg>
+  );
+};
 
 export const ResistorBandStep: React.FC<StepProps & { step: StepChooseResistor }> = ({
   step, checked, correct, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const stepText = useStepText();
+  const s = useS();
   const target = step.bands.targetOhms;
   const [bands, setBands] = useState<Bands>([0, 0, 0]);
   const [selected, setSelected] = useState(0);
@@ -198,11 +203,11 @@ export const ResistorBandStep: React.FC<StepProps & { step: StepChooseResistor }
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   part: {
-    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5,
+    marginTop: space.md, backgroundColor: colors.surface, borderWidth: 2.5,
     borderColor: colors.line, borderRadius: radius.lg, ...curve,
-    padding: space.md, ...elevation.card,
+    padding: space.md, ...th.elevation.card,
   },
   value: {
     fontFamily: font.black, fontSize: type.title, color: colors.ink,
@@ -213,7 +218,7 @@ const s = StyleSheet.create({
   bandRow: { flexDirection: 'row', gap: 8, marginTop: space.md },
   band: {
     flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    paddingVertical: 8, paddingHorizontal: 8, backgroundColor: colors.white,
+    paddingVertical: 8, paddingHorizontal: 8, backgroundColor: colors.surface,
   },
   bandOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft },
   bandPressed: { transform: [{ scale: 0.97 }] },
@@ -240,4 +245,4 @@ const s = StyleSheet.create({
   swatchPressed: { transform: [{ scale: 0.94 }] },
   swatchOff: { opacity: 0.5 },
   swatchText: { fontFamily: font.black, fontSize: type.meta, ...tabular },
-});
+}));

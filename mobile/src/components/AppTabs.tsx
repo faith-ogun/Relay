@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import { TabBar, type TabItem } from './TabBar';
 import { useChildSafe } from '../hooks/useChildSafe';
-import { colors } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * The tab shell every top-level screen sits inside.
@@ -18,6 +18,7 @@ export const AppTabs: React.FC<{
   active: 'learn' | 'practice' | 'live' | 'community' | 'plans' | 'profile';
   children: React.ReactNode;
 }> = ({ active, children }) => {
+  const s = useS();
   const { childSafe } = useChildSafe();
 
   const items: TabItem[] = [
@@ -42,7 +43,7 @@ export const AppTabs: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   shell: { flex: 1, backgroundColor: colors.cream },
   body: { flex: 1 },
-});
+}));

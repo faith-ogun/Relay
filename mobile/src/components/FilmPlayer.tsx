@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Close } from './icons';
 import { Button } from './Button';
 import { fetchFilm, type FilmUrls } from '../services/labs';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
+import { font, space, type } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * A lesson film, played from a signed URL.
@@ -23,6 +25,8 @@ export const FilmPlayer: React.FC<{
   title: string;
   onClose: () => void;
 }> = ({ skillId, title, onClose }) => {
+  const colors = useColors();
+  const s = useS();
   const [urls, setUrls] = useState<FilmUrls | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -92,25 +96,46 @@ export const FilmPlayer: React.FC<{
   );
 };
 
-const Header: React.FC<{ title: string; onClose: () => void }> = ({ title, onClose }) => (
-  <View style={s.head}>
-    <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close film">
-      <Close size={22} />
-    </Pressable>
-    <Text style={s.headTitle} numberOfLines={1}>{title}</Text>
-    <View style={{ width: 22 }} />
-  </View>
-);
+/**
+ * A film's own top bar, with its own safe-area padding.
+ *
+ * FilmPlayer is presented inside a <Modal>, and a Modal is a SEPARATE native
+ * view hierarchy: it renders outside the root Shell in `app/_layout.tsx` and
+ * therefore inherits none of that shell's `paddingTop: insets.top`. A fixed
+ * padding was standing in for it, and 32 is smaller than the 59 a Dynamic
+ * Island phone reserves, so the close button sat underneath the island and was
+ * very hard to hit. Reported 2026-09-01.
+ *
+ * The identical bug was fixed once already, for the back button, which is what
+ * the note in `_layout.tsx` is about. It came back here because a Modal escapes
+ * the fix. `mobile/scripts/check-modal-insets.mjs` now fails on the pattern.
+ *
+ * `space.md` is added on top of the inset so the button is not flush against the
+ * island, and a floor keeps it sane on a device that reports no inset at all.
+ */
+const Header: React.FC<{ title: string; onClose: () => void }> = ({ title, onClose }) => {
+  const s = useS();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[s.head, { paddingTop: Math.max(insets.top, space.md) + space.md }]}>
+      <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close film">
+        <Close size={22} />
+      </Pressable>
+      <Text style={s.headTitle} numberOfLines={1}>{title}</Text>
+      <View style={{ width: 22 }} />
+    </View>
+    );
+};
 
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.ink },
+const useS = makeStyles((colors) => ({
+  screen: { flex: 1, backgroundColor: colors.slab },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
-    paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.md,
+    paddingHorizontal: space.lg, paddingBottom: space.md,   // paddingTop is applied inline from the safe-area inset
     backgroundColor: colors.cream,
   },
   headTitle: { flex: 1, fontFamily: font.black, fontSize: type.label, color: colors.ink, textAlign: 'center' },
-  video: { flex: 1, backgroundColor: colors.ink },
+  video: { flex: 1, backgroundColor: colors.slab },
   caption: {
     fontFamily: font.semibold, fontSize: type.meta, color: colors.inkMute,
     textAlign: 'center', padding: space.md, backgroundColor: colors.cream,
@@ -121,4 +146,4 @@ const s = StyleSheet.create({
     fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', lineHeight: 22, maxWidth: 320,
   },
-});
+}));
