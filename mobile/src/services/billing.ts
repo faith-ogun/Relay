@@ -24,14 +24,36 @@ export type BillingState =
 
 let purchases: typeof import('react-native-purchases').default | null = null;
 let state: BillingState | null = null;
+/** The uid RevenueCat is currently configured against, or null while anonymous. */
+let identifiedAs: string | null = null;
+
+/** RevenueCat's prefix for an id it invented because we gave it none. */
+export const ANONYMOUS_PREFIX = '$RCAnonymousID:';
 
 /**
  * Initialise RevenueCat if it can possibly work here. Safe to call repeatedly;
  * never throws. Returns why it is unavailable when it is, so the UI can say
  * something true rather than silently showing a dead button.
+ *
+ * Pass the uid whenever it is known. `configure()` is ONE-SHOT: calling it again
+ * with an id does nothing, and this function memoises `state`, so an early call
+ * made before sign-in resolved would otherwise pin the session anonymous for its
+ * whole life. `logIn()` is the documented way to attach an identity afterwards,
+ * and it aliases any purchase already made under the anonymous id onto the real
+ * one, so nothing bought in that window is lost.
+ *
+ * This matters more than it looks. The webhook refuses an event whose
+ * `app_user_id` starts with `$RCAnonymousID:`, because a purchase it cannot
+ * attribute cannot be granted to anybody. Without the logIn below, the App Store
+ * charges the card and the learner stays on the free tier's 60 minutes.
  */
 export async function initBilling(appUserId?: string): Promise<BillingState> {
-  if (state) return state;
+  if (state) {
+    if (state.status === 'ready' && appUserId && appUserId !== identifiedAs) {
+      await identify(appUserId);
+    }
+    return state;
+  }
 
   if (isExpoGo) return (state = { status: 'expo-go' });
   if (!apiKey) return (state = { status: 'unconfigured' });
@@ -40,9 +62,25 @@ export async function initBilling(appUserId?: string): Promise<BillingState> {
     const mod = await import('react-native-purchases');
     purchases = mod.default;
     await purchases.configure({ apiKey, appUserID: appUserId ?? null });
+    identifiedAs = appUserId ?? null;
     return (state = { status: 'ready' });
   } catch (e) {
     return (state = { status: 'error', message: e instanceof Error ? e.message : 'unknown' });
+  }
+}
+
+/**
+ * Attach a uid to an already-configured session. Failure is not fatal here: the
+ * next call retries, and `purchasePackage` refuses to take money while the id is
+ * still anonymous, so a failure delays a purchase rather than losing one.
+ */
+async function identify(appUserId: string): Promise<void> {
+  if (!purchases) return;
+  try {
+    await purchases.logIn(appUserId);
+    identifiedAs = appUserId;
+  } catch {
+    // Left un-identified on purpose. The purchase guard is the backstop.
   }
 }
 
@@ -105,6 +143,24 @@ export async function purchasePackage(packageId: string): Promise<PurchaseResult
   if (s.status !== 'ready' || !purchases) {
     return { ok: false, cancelled: false, message: billingUnavailableReason(s) ?? 'Unavailable.' };
   }
+
+  // Refuse rather than take money that cannot be attributed. An anonymous id
+  // means the webhook will receive the purchase, fail to match it to an account
+  // and grant nothing, leaving a paying learner on the free cap with no error
+  // anywhere they can see. A blocked purchase is recoverable; that is not.
+  try {
+    const appUserId = await purchases.getAppUserID();
+    if (appUserId.startsWith(ANONYMOUS_PREFIX)) {
+      return {
+        ok: false,
+        cancelled: false,
+        message: 'Sign in first, so your plan lands on your account.',
+      };
+    }
+  } catch {
+    return { ok: false, cancelled: false, message: 'Plans could not be loaded. Please try again shortly.' };
+  }
+
   try {
     const offerings = await purchases.getOfferings();
     const pkg = offerings.current?.availablePackages.find((p) => p.identifier === packageId);

@@ -147,11 +147,11 @@ async def webhook(request: Request) -> dict:
                     "RevenueCat %s for %s carried no known entitlement: %s",
                     event_type, uid, event.get("entitlement_ids"),
                 )
-            entitlements.set_plan(uid, plan, environment=environment)
+            entitlements.set_plan(uid, plan, environment=environment, source="revenuecat")
             obs.audit("billing.plan_granted", uid=uid, plan=plan, source="revenuecat", eventType=event_type)
 
         elif event_type in REVOKING:
-            entitlements.set_plan(uid, "free", environment=environment)
+            entitlements.set_plan(uid, "free", environment=environment, source="revenuecat")
             obs.audit("billing.plan_revoked", uid=uid, source="revenuecat", eventType=event_type)
 
         elif event_type == "TRANSFER":
@@ -160,7 +160,7 @@ async def webhook(request: Request) -> dict:
             # shared login cannot leave a paid plan behind on both accounts.
             for lost in event.get("transferred_from") or []:
                 if not str(lost).startswith("$RCAnonymousID:"):
-                    entitlements.set_plan(str(lost), "free")
+                    entitlements.set_plan(str(lost), "free", source="revenuecat")
             obs.audit("billing.plan_transferred", uid=uid, source="revenuecat")
 
         else:
