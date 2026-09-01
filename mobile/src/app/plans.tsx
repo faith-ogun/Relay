@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { track } from '../services/analytics';
@@ -15,8 +15,8 @@ import {
 } from '../services/billing';
 import { PLAN_META, type Plan } from '../services/entitlements';
 import { packageFor, type Interval } from '../services/packageMatch';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve, type Colors } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 const ORDER: Plan[] = ['free', 'pro', 'max'];
 
@@ -49,12 +49,15 @@ const ART: Partial<Record<Plan, number>> = {
   max: require('../../assets/brand/plan-max.png'),
 };
 
-const TONE: Record<Plan, {
+/** Per-tier colour, resolved against the live palette rather than frozen at
+ *  import: Free and Pro follow the theme, and Max is a slab that is dark in
+ *  both because its gold and white were chosen against black. */
+const toneFor = (colors: Colors): Record<Plan, {
   card: object; strip: object; stripText: object;
   text: object; muted: object; tick: string;
-}> = {
+}> => ({
   free: {
-    card: { backgroundColor: colors.white, borderColor: colors.line },
+    card: { backgroundColor: colors.surface, borderColor: colors.line },
     strip: { backgroundColor: colors.inkFaint },
     stripText: { color: colors.inkSoft },
     text: { color: colors.ink },
@@ -64,20 +67,20 @@ const TONE: Record<Plan, {
   pro: {
     card: { backgroundColor: colors.goldSoft, borderColor: colors.ink },
     strip: { backgroundColor: colors.gold },
-    stripText: { color: colors.ink },
+    stripText: { color: colors.onGold },
     text: { color: colors.ink },
     muted: { color: colors.goldText },
     tick: colors.goldDeep,
   },
   max: {
-    card: { backgroundColor: colors.ink, borderColor: colors.ink },
+    card: { backgroundColor: colors.slab, borderColor: colors.slab },
     strip: { backgroundColor: colors.inkSoft },
     stripText: { color: colors.white },
     text: { color: colors.white },
     muted: { color: colors.inkMute },
     tick: colors.gold,
   },
-};
+});
 
 const Tick: React.FC<{ color: string }> = ({ color }) => (
   <Svg width={16} height={16} viewBox="0 0 24 24">
@@ -114,6 +117,8 @@ function priceLabel(
 }
 
 export default function Plans() {
+  const colors = useColors();
+  const s = useS();
   const { user } = useAuth();
   const { childSafe, resolved: childResolved } = useChildSafe();
   const { plan, minutesRemaining, unlimited, refresh } = usePlan();
@@ -142,10 +147,12 @@ export default function Plans() {
   // Home is not a control.
   if (childResolved && childSafe) {
     return (
-      <ClosedForNow
-        title="Plans are managed by a grown-up"
-        body="Ohmlet does not take payments from an account that belongs to a minor. A parent or guardian can manage a plan from their own account."
-      />
+      <AppTabs active="plans">
+        <ClosedForNow
+          title="Plans are managed by a grown-up"
+          body="Ohmlet does not take payments from an account that belongs to a minor. A parent or guardian can manage a plan from their own account."
+        />
+      </AppTabs>
     );
   }
 
@@ -181,7 +188,7 @@ export default function Plans() {
 
       {/* Monthly or annual. Not a nicety: Apple has four products and without a
           way to reach the annual two, half the catalogue is unpurchasable and a
-          reviewer looking for the $324.99 product cannot find where it is sold. */}
+          reviewer looking for the $149.99 product cannot find where it is sold. */}
       <View style={s.toggle} accessibilityRole="radiogroup">
         {(['monthly', 'annual'] as const).map((it) => {
           const on = interval === it;
@@ -197,7 +204,7 @@ export default function Plans() {
               <Text style={[s.toggleText, on && s.toggleTextOn]}>
                 {it === 'annual' ? 'Annual' : 'Monthly'}
               </Text>
-              {it === 'annual' && <View style={[s.saveTag, on && s.saveTagOn]}><Text style={s.saveText}>SAVE 25%</Text></View>}
+              {it === 'annual' && <View style={[s.saveTag, on && s.saveTagOn]}><Text style={s.saveText}>SAVE 50%</Text></View>}
             </Pressable>
           );
         })}
@@ -210,7 +217,7 @@ export default function Plans() {
       {ORDER.map((p) => {
         const meta = PLAN_META[p];
         const current = p === plan;
-        const tone = TONE[p];
+        const tone = toneFor(colors)[p];
         const pkg = packageFor(packages, p, interval);
         return (
           <View key={p} style={[s.card, tone.card, current && s.cardCurrent]}>
@@ -343,7 +350,7 @@ export default function Plans() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
   backLink: { paddingVertical: space.sm, alignSelf: 'flex-start' },
@@ -353,9 +360,9 @@ const s = StyleSheet.create({
   sub: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.sm, marginBottom: space.lg },
   card: {
     borderWidth: 2.5, borderRadius: radius.lg, ...curve,
-    marginBottom: space.lg, overflow: 'hidden', ...elevation.card,
+    marginBottom: space.lg, overflow: 'hidden', ...th.elevation.card,
   },
-  cardCurrent: { ...elevation.lifted },
+  cardCurrent: { ...th.elevation.lifted },
   strip: { paddingHorizontal: space.md, paddingVertical: 7 },
   stripText: { fontFamily: font.black, fontSize: 10, letterSpacing: 2 },
   cardBody: { padding: space.md },
@@ -379,10 +386,10 @@ const s = StyleSheet.create({
   toggleTabOn: { backgroundColor: colors.ink },
   toggleDown: { transform: [{ scale: 0.97 }] },
   toggleText: { fontFamily: font.extrabold, fontSize: type.label, color: colors.inkSoft },
-  toggleTextOn: { color: colors.white },
+  toggleTextOn: { color: colors.onInk },
   saveTag: { backgroundColor: colors.goldPlate, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   saveTagOn: { backgroundColor: colors.gold },
-  saveText: { fontFamily: font.black, fontSize: 9, letterSpacing: 0.4, color: colors.ink },
+  saveText: { fontFamily: font.black, fontSize: 9, letterSpacing: 0.4, color: colors.onGold },
   pricePer: { fontFamily: font.bold, fontSize: type.small, marginBottom: 2 },
   cardBlurb: { fontFamily: font.bold, fontSize: type.small, marginTop: 2 },
   cardNotice: { fontFamily: font.semibold, fontSize: type.small, marginTop: space.md, lineHeight: 18 },
@@ -413,4 +420,4 @@ const s = StyleSheet.create({
     fontFamily: font.regular, fontSize: type.meta, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.md, lineHeight: 16,
   },
-});
+}));

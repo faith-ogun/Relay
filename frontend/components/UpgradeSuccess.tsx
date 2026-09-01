@@ -14,7 +14,7 @@ const PLAN_COPY: Record<PaidPlan, { name: string; tagline: string; features: str
     name: 'Pro',
     tagline: "Your full bench tutor is unlocked. Let's build something.",
     features: [
-      'Live tutor sessions, up to 4 hours a month',
+      'Live tutor sessions, up to 2.5 hours a month',
       'All build paths & advanced lessons',
       'A 3D twin of every build, kept for good',
       'Progress tracking, streaks & XP',
@@ -25,12 +25,12 @@ const PLAN_COPY: Record<PaidPlan, { name: string; tagline: string; features: str
     tagline: "Everything's unlocked, including the career track. Time to get hired.",
     features: [
       'Everything in Pro',
-      'A verified build record: bench hours, exam scores and finished builds, proven not claimed',
+      'A verified record of your bench work: hours, exam scores and finished builds, proven not claimed',
       'Career coaching built on that record, not on what you say about yourself',
       'Interview Mode: AI mock interviews tuned to a job description',
       'Every weakness routed to the lesson that closes it',
       'Early access to Ohmlet Labs',
-      'Live tutor sessions, up to 9 hours a month',
+      'Live tutor sessions, up to 5 hours a month',
     ],
   },
 };
@@ -72,7 +72,7 @@ export const UpgradeSuccess: React.FC<UpgradeSuccessProps> = ({ onEnter, onHome 
 
       <div
         className={`relative w-full max-w-lg rounded-[2rem] border-[2.5px] border-ohmlet-ink p-9 shadow-press transition-all duration-500 ${
-          isMax ? 'bg-ohmlet-ink text-white' : 'bg-white text-ohmlet-ink'
+          isMax ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'bg-ohmlet-surface text-ohmlet-ink'
         } ${shown ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
       >
         <span

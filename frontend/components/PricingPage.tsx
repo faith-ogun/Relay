@@ -50,16 +50,16 @@ const tiers: Tier[] = [
     name: 'Pro',
     variant: 'pro',
     tagline: 'The full bench tutor.',
-    monthly: 15.99,
-    annual: 11.99,
-    // Apple's nearest price point to 11.99 x 12 = 143.88.
-    annualTotal: 143.99,
+    monthly: 12.99,
+    annual: 6.50,
+    // Apple's nearest price point to 6.50 x 12 = 78.00.
+    annualTotal: 77.99,
     cta: 'Go Pro',
     badge: 'Most popular',
     features: [
       'Everything in Free',
       'Unlimited hearts, so a wrong answer never stops you',
-      'Live tutor sessions, up to 4 hours a month',
+      'Live tutor sessions, up to 2.5 hours a month',
       'All build paths & advanced lessons',
       'A 3D twin of every build, kept for good',
       'Progress tracking, streaks & XP',
@@ -69,26 +69,29 @@ const tiers: Tier[] = [
     name: 'max',
     variant: 'max',
     tagline: 'Prove what you have actually built.',
-    monthly: 34.99,
-    // 324.99 / 12. Not the 26.99 this used to advertise: Apple sells only at
-    // fixed price points, 323.88 is not one, and Faith checked the whole list
-    // rather than assuming a .99 existed at every dollar the way it does lower
-    // down. The store sets the price and the page follows, never the reverse.
-    annual: 27.08,
-    annualTotal: 324.99,
+    monthly: 24.99,
+    // Apple's nearest price point to 12.50 x 12 = 150.00. The store sets the
+    // price and the page follows, never the reverse: the per-month figure is
+    // the total divided back, not a round number picked first and multiplied.
+    annual: 12.50,
+    annualTotal: 149.99,
     cta: 'Go Max',
     badge: 'Career',
     features: [
       'Everything in Pro',
-      'A verified build record: bench hours, exam scores and finished builds, proven not claimed',
+      'A verified record of your bench work: hours, exam scores and finished builds, proven not claimed',
       'Career coaching built on that record, not on what you say about yourself',
       'Interview Mode: AI mock interviews tuned to a job description',
       'Every weakness routed to the lesson that closes it',
       'Early access to Ohmlet Labs',
-      'Live tutor sessions, up to 9 hours a month',
+      'Live tutor sessions, up to 5 hours a month',
     ],
   },
 ];
+
+/** A price as money: "12.99", "6.50", and plain "0" for Free. Number literals
+ *  drop a trailing zero, so 6.50 reaches the DOM as 6.5 unless it is formatted. */
+const money = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
 const faqs: Array<{ q: string; a: string }> = [
   {
@@ -160,12 +163,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
           Start free. Go Pro when you’re hooked. Go Max when you’re ready to get hired.
         </p>
 
-        <div className="mt-8 inline-flex items-center gap-1 rounded-full border-2 border-ohmlet-ink bg-white p-1">
+        <div className="mt-8 inline-flex items-center gap-1 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface p-1">
           <button
             type="button"
             onClick={() => setAnnual(false)}
             className={`rounded-full px-5 py-2 text-sm font-black transition-all ${
-              !annual ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink'
+              !annual ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'text-ohmlet-ink'
             }`}
           >
             Monthly
@@ -174,12 +177,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
             type="button"
             onClick={() => setAnnual(true)}
             className={`rounded-full px-5 py-2 text-sm font-black transition-all ${
-              annual ? 'bg-ohmlet-ink text-white' : 'text-ohmlet-ink'
+              annual ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'text-ohmlet-ink'
             }`}
           >
             Annual
             <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] ${annual ? 'bg-ohmlet-gold text-ohmlet-ink' : 'bg-ohmlet-gold-soft text-ohmlet-ink-soft'}`}>
-              Save 25%
+              Save 50%
             </span>
           </button>
         </div>
@@ -193,16 +196,16 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
             const isMax = tier.variant === 'max';
             const isPro = tier.variant === 'pro';
             const cardClass = isMax
-              ? 'bg-ohmlet-ink text-white border-ohmlet-gold shadow-[0_0_34px_rgba(250,204,46,0.22)]'
+              ? 'bg-ohmlet-ink text-ohmlet-on-ink border-ohmlet-gold shadow-[0_0_34px_rgba(250,204,46,0.22)]'
               : isPro
               ? 'bg-ohmlet-gold text-ohmlet-ink border-ohmlet-ink shadow-press lg:-translate-y-3'
-              : 'bg-white text-ohmlet-ink border-ohmlet-ink shadow-press-sm';
+              : 'bg-ohmlet-surface text-ohmlet-ink border-ohmlet-ink shadow-press-sm';
             return (
               <article key={tier.name} className={`rounded-[1.8rem] border-[2.5px] p-7 ${cardClass}`}>
                 {tier.badge && (
                   <span
                     className={`mb-4 inline-block rounded-full border-2 px-3 py-1 text-xs font-black uppercase tracking-wide ${
-                      isMax ? 'border-ohmlet-gold text-ohmlet-gold' : 'border-ohmlet-ink bg-white text-ohmlet-ink'
+                      isMax ? 'border-ohmlet-gold text-ohmlet-gold' : 'border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink'
                     }`}
                   >
                     {tier.badge}
@@ -214,7 +217,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                 <p className={`mt-1 text-sm font-semibold ${isMax ? 'text-white/65' : 'text-ohmlet-ink-soft'}`}>{tier.tagline}</p>
 
                 <div className="mt-6 flex items-end gap-1">
-                  <span className={`text-5xl font-black tracking-tight ${isMax ? 'text-white' : 'text-ohmlet-ink'}`}>${price}</span>
+                  <span className={`text-5xl font-black tracking-tight ${isMax ? 'text-white' : 'text-ohmlet-ink'}`}>${money(price)}</span>
                   <span className={`mb-1.5 text-sm font-bold ${isMax ? 'text-white/55' : 'text-ohmlet-ink-soft'}`}>/month</span>
                 </div>
                 {price > 0 ? (
@@ -231,7 +234,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                     isMax
                       ? 'border-ohmlet-gold bg-ohmlet-gold text-ohmlet-ink'
                       : isPro
-                      ? 'border-ohmlet-ink bg-white text-ohmlet-ink'
+                      ? 'border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink'
                       : 'border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink'
                   }`}
                 >
@@ -277,7 +280,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
           </h2>
           <div className="mt-10 space-y-4">
             {faqs.map((faq) => (
-              <div key={faq.q} className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+              <div key={faq.q} className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
                 <h3 className="text-lg font-black text-ohmlet-ink">{faq.q}</h3>
                 <p className="mt-2 text-base font-semibold leading-relaxed text-ohmlet-ink-soft">{faq.a}</p>
               </div>
