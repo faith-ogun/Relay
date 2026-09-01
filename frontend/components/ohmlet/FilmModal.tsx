@@ -50,7 +50,7 @@ export const FilmModal: React.FC<{ skillId: string; title: string; onClose: () =
           </button>
         </div>
         {failure ? (
-          <p className="rounded-2xl bg-white px-5 py-6 text-center text-sm font-semibold text-ohmlet-ink-soft">{failure}</p>
+          <p className="rounded-2xl bg-ohmlet-surface px-5 py-6 text-center text-sm font-semibold text-ohmlet-ink-soft">{failure}</p>
         ) : urls ? (
           <video
             className="w-full rounded-2xl border-2 border-white/20 bg-black"

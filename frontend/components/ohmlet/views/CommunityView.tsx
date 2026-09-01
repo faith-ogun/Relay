@@ -187,7 +187,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
         {/* Feed */}
         <div className="space-y-5">
           {/* Composer */}
-          <div className="rounded-[1.6rem] border-2 border-ohmlet-ink bg-white p-4 shadow-press-sm">
+          <div className="rounded-[1.6rem] border-2 border-ohmlet-ink bg-ohmlet-surface p-4 shadow-press-sm">
             <input
               value={composerTitle}
               onChange={(e) => setComposerTitle(e.target.value)}
@@ -214,13 +214,13 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
           </div>
 
           {posts === null && (
-            <div className="flex items-center justify-center gap-2 rounded-[1.6rem] border-2 border-ohmlet-line bg-white py-12 text-ohmlet-ink-soft">
+            <div className="flex items-center justify-center gap-2 rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface py-12 text-ohmlet-ink-soft">
               <Loader2 className="h-5 w-5 animate-spin" /> <span className="text-sm font-bold">Loading the feed…</span>
             </div>
           )}
 
           {posts !== null && posts.length === 0 && (
-            <div className="rounded-[1.6rem] border-2 border-dashed border-ohmlet-line bg-white px-6 py-12 text-center">
+            <div className="rounded-[1.6rem] border-2 border-dashed border-ohmlet-line bg-ohmlet-surface px-6 py-12 text-center">
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ohmlet-gold-soft">
                 <Users className="h-7 w-7 text-ohmlet-gold-deep" />
               </span>
@@ -233,7 +233,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
             const isOpen = open[post.id];
             const thread = threads[post.id] || [];
             return (
-              <article key={post.id} className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-line bg-white shadow-soft transition-shadow hover:shadow-press-sm">
+              <article key={post.id} className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft transition-shadow hover:shadow-press-sm">
                 <div className="flex items-center gap-3 px-5 pt-5">
                   <span
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-ohmlet-ink text-base font-black text-ohmlet-ink"
@@ -258,7 +258,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                     {menuFor === post.id && (
-                      <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border-2 border-ohmlet-ink bg-white shadow-press-sm">
+                      <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press-sm">
                         <button
                           type="button"
                           onClick={() => onReport(post.id)}
@@ -314,7 +314,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-ohmlet-ink" style={{ background: avatarColor(r.authorName) }}>
                             {initial(r.authorName)}
                           </span>
-                          <div className="rounded-2xl rounded-tl-sm bg-white px-3.5 py-2 shadow-soft">
+                          <div className="rounded-2xl rounded-tl-sm bg-ohmlet-surface px-3.5 py-2 shadow-soft">
                             <p className="text-xs font-black text-ohmlet-ink">
                               {r.authorName} <span className="font-bold text-ohmlet-ink-soft/60">· {relativeTime(r.createdAt)}</span>
                             </p>
@@ -333,7 +333,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                           onChange={(e) => setDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && submitReply(post.id)}
                           placeholder="Add a reply"
-                          className="flex-1 rounded-full border-2 border-ohmlet-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ohmlet-ink"
+                          className="flex-1 rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-2 text-sm font-semibold outline-none focus:border-ohmlet-ink"
                         />
                         <button
                           onClick={() => submitReply(post.id)}
@@ -353,8 +353,8 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
 
         {/* Sidebar: weekly league + challenges */}
         <div className="space-y-6">
-          <section className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-ink bg-white shadow-press-sm">
-            <div className="flex items-center gap-2 bg-ohmlet-ink px-5 py-3.5 text-white">
+          <section className="overflow-hidden rounded-[1.6rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press-sm">
+            <div className="flex items-center gap-2 bg-ohmlet-ink px-5 py-3.5 text-ohmlet-on-ink">
               <Trophy className="h-5 w-5 text-ohmlet-gold" />
               <h3 className="text-sm font-black tracking-tight">Weekly League</h3>
               {league?.me?.rank && <span className="ml-auto text-xs font-bold text-white/70">You're #{league.me.rank}</span>}
@@ -401,7 +401,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                 return (
                   <div
                     key={c.id}
-                    className="group overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm"
+                    className="group overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm"
                   >
                     {/* Art strip with the icon + title overlaid */}
                     <button
@@ -413,7 +413,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ currentUser = 'You
                       <ChallengeArt art={c.art} theme={c.theme} className="absolute inset-0 h-full w-full" />
                       <div className="absolute inset-0 bg-gradient-to-t from-ohmlet-ink/55 to-transparent" />
                       <div className="absolute bottom-2.5 left-3 right-3 flex items-center gap-2">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-ohmlet-ink bg-white">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface">
                           <Icon className="h-4 w-4 text-ohmlet-ink" strokeWidth={2.5} />
                         </span>
                         <p className="truncate text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">{c.title}</p>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Close } from '../../components/icons';
@@ -13,8 +13,9 @@ import { track } from '../../services/analytics';
 import { fetchBossExam, submitBossResult, type BossExam, type BossResult as Result } from '../../services/bosses';
 import { loadProgress, saveProgress } from '../../services/progress';
 import { useAuth } from '../../hooks/useAuth';
-import { colors, curve, font, space, type } from '../../theme/tokens';
+import { curve, font, space, type } from '../../theme/tokens';
 import { duration } from '../../theme/motion';
+import { makeStyles, useColors } from '../../theme/theme';
 
 /**
  * The unit exam.
@@ -43,6 +44,8 @@ import { duration } from '../../theme/motion';
 type ExamStep = LessonStep & { bossIndex: number; skillTitle?: string };
 
 export default function BossScreen() {
+  const colors = useColors();
+  const s = useS();
   const { unitId } = useLocalSearchParams<{ unitId: string }>();
   const { user } = useAuth();
 
@@ -261,7 +264,7 @@ export default function BossScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   center: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -272,14 +275,14 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.md,
   },
   track: {
-    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
+    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   fill: { height: '100%', width: '100%', backgroundColor: colors.red, transformOrigin: 'left' },
   // Red rather than gold, and lettered rather than iconed: the one place in the
   // app where the bar is not the usual colour, so the screen announces itself.
   bossChip: {
-    borderWidth: 2, borderColor: colors.red, backgroundColor: '#fdece8',
+    borderWidth: 2, borderColor: colors.red, backgroundColor: colors.redSoft,
     borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3,
   },
   bossChipText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.5, color: colors.ink },
@@ -291,8 +294,8 @@ const s = StyleSheet.create({
   content: { padding: space.lg, paddingBottom: space.xxl * 2 },
   bottom: { backgroundColor: colors.cream },
   banner: { paddingHorizontal: space.lg, paddingVertical: space.md, borderTopWidth: 2.5 },
-  bannerGood: { backgroundColor: '#eef7e0', borderTopColor: colors.greenDeep },
-  bannerBad: { backgroundColor: '#fdece8', borderTopColor: colors.red },
+  bannerGood: { backgroundColor: colors.greenSoft, borderTopColor: colors.greenDeep },
+  bannerBad: { backgroundColor: colors.redSoft, borderTopColor: colors.red },
   bannerTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   bannerBody: {
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
@@ -307,4 +310,4 @@ const s = StyleSheet.create({
     fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.sm, lineHeight: 22, maxWidth: 320,
   },
-});
+}));

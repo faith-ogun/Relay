@@ -1,4 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import { ThemeScope } from './hooks/useTheme';
 import { Loader2 } from 'lucide-react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
@@ -291,13 +292,19 @@ const App: React.FC = () => {
   if (route === 'ohmlet-app' || route === 'workspace') {
     if (!user) return <AuthSplash />;
     return (
-      <Suspense fallback={<AuthSplash />}>
-        <WorkspaceHome
-          onBack={backToLanding}
-          onUpgrade={() => navigate('pricing')}
-          onAccount={() => navigate('account')}
-        />
-      </Suspense>
+      // ThemeScope only wraps the workspace and the account page. The landing
+      // routes below stay on the light marketing palette whatever the learner
+      // has chosen, because a dark landing page is a different product rather
+      // than a preference.
+      <ThemeScope>
+        <Suspense fallback={<AuthSplash />}>
+          <WorkspaceHome
+            onBack={backToLanding}
+            onUpgrade={() => navigate('pricing')}
+            onAccount={() => navigate('account')}
+          />
+        </Suspense>
+      </ThemeScope>
     );
   }
 
@@ -341,9 +348,11 @@ const App: React.FC = () => {
   if (route === 'account') {
     if (!user) return <AuthSplash />;
     return (
-      <Suspense fallback={<AuthSplash />}>
-        <AccountPage onBack={() => navigate('ohmlet-app')} onUpgrade={() => navigate('pricing')} />
-      </Suspense>
+      <ThemeScope>
+        <Suspense fallback={<AuthSplash />}>
+          <AccountPage onBack={() => navigate('ohmlet-app')} onUpgrade={() => navigate('pricing')} />
+        </Suspense>
+      </ThemeScope>
     );
   }
 
@@ -364,7 +373,7 @@ const App: React.FC = () => {
   const darkShell = false;
 
   return (
-    <div className="min-h-screen bg-white font-display text-ohmlet-ink selection:bg-ohmlet-gold selection:text-ohmlet-ink">
+    <div className="min-h-screen bg-ohmlet-surface font-display text-ohmlet-ink selection:bg-ohmlet-gold selection:text-ohmlet-ink">
       <a href="#main-content" className="ohmlet-skip-link">
         Skip to content
       </a>

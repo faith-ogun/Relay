@@ -6,9 +6,9 @@ import { Image } from 'expo-image';
 import { Lock } from '../icons';
 import { SkillGlyph } from './SkillGlyph';
 import type { CurriculumUnit } from '../../services/curriculum';
-import { colors, curve, font, radius, space, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, radius, space, type, type Colors } from '../../theme/tokens';
 import { stagger } from '../../theme/motion';
+import { makeStyles, useColors, useTheme } from '../../theme/theme';
 
 /**
  * A unit as a winding path rather than a list.
@@ -79,6 +79,7 @@ export const UnitPath: React.FC<{
   /** Width to lay out in. Defaults to the window minus the screen gutter. */
   width?: number;
 }> = ({ unit, completed, onStart, onPlayFilm, accent: accentProp, locked = false, width: widthProp }) => {
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const W = Math.max(240, widthProp ?? width - space.lg * 2);
   const CARD_W = Math.round(W * 0.68);
@@ -180,7 +181,7 @@ export const UnitPath: React.FC<{
           .filter((x) => x.kind === 'lesson' && x.skillId === it.skillId)
           .every((x) => completed.has(x.id));
 
-  const accent = accentProp ?? ACCENT[unit.accent] ?? colors.gold;
+  const accent = accentProp ?? accentFor(colors)[unit.accent] ?? colors.gold;
 
   // The manifest carries no step counts, so a session's steps are approximated
   // from the authored median (8). Only the label uses this; the server sends the
@@ -218,7 +219,7 @@ export const UnitPath: React.FC<{
               {/* A resistor on the wire, not a bead. */}
               <Rect
                 x={midX - 13} y={midY - 6.5} width={26} height={13} rx={3.5}
-                fill={colors.white} stroke={done ? colors.ink : colors.inkMute} strokeWidth={2}
+                fill={colors.surface} stroke={done ? colors.ink : colors.inkMute} strokeWidth={2}
               />
               <Rect x={midX - 7} y={midY - 6.5} width={3} height={13} fill={done ? colors.ink : colors.inkMute} />
               <Rect x={midX - 1.5} y={midY - 6.5} width={3} height={13} fill={done ? accent : colors.inkMute} />
@@ -262,21 +263,25 @@ export const UnitPath: React.FC<{
   );
 };
 
-const ACCENT: Record<string, string> = {
+/** The authored accents, resolved against the live palette. */
+const accentFor = (colors: Colors): Record<string, string> => ({
   gold: colors.gold,
   blue: colors.blue,
   green: colors.green,
   red: colors.red,
-};
+});
 
 const CHEST = require('../../../assets/brand/checkpoint-chest.png');
 const CHEST_OPEN = require('../../../assets/brand/checkpoint-chest-open.png');
 
-const Tick: React.FC<{ size?: number }> = ({ size = 13 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <SvgPath d="M4.5 12.5 9.5 17.5 19.5 6.5" fill="none" stroke={colors.white} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
+const Tick: React.FC<{ size?: number }> = ({ size = 13 }) => {
+  const colors = useColors();
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <SvgPath d="M4.5 12.5 9.5 17.5 19.5 6.5" fill="none" stroke={colors.white} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
 
 const LessonNode: React.FC<{
   item: Extract<Item, { kind: 'lesson' }>;
@@ -285,6 +290,9 @@ const LessonNode: React.FC<{
   accent: string;
   onPress: () => void;
 }> = ({ item, done, open, accent, onPress }) => {
+  const colors = useColors();
+  const { elevation } = useTheme();
+  const n = useN();
   const current = open && !done;
   return (
     <Pressable
@@ -312,35 +320,38 @@ const LessonNode: React.FC<{
   );
 };
 
-const Checkpoint: React.FC<{ title: string; done: boolean; xp: number }> = ({ title, done, xp }) => (
-  <View
-    style={[cp.card, done && cp.cardDone]}
-    accessibilityLabel={`Checkpoint: ${title}. ${done ? `Cleared, ${xp} XP` : `Worth ${xp} XP`}`}
-  >
-    <View style={[cp.chest, done && cp.chestDone]}>
-      {/* Closed until it is earned, open once it is. A fixed square with
-          contain normalises the two, which have different aspect ratios —
-          the open lid makes it taller. */}
-      <Image
-        source={done ? CHEST_OPEN : CHEST}
-        style={[cp.chestArt, !done && cp.chestArtLocked]}
-        contentFit="contain"
-        transition={done ? 260 : 0}
-        accessible={false}
-      />
+const Checkpoint: React.FC<{ title: string; done: boolean; xp: number }> = ({ title, done, xp }) => {
+  const cp = useCp();
+  return (
+    <View
+      style={[cp.card, done && cp.cardDone]}
+      accessibilityLabel={`Checkpoint: ${title}. ${done ? `Cleared, ${xp} XP` : `Worth ${xp} XP`}`}
+    >
+      <View style={[cp.chest, done && cp.chestDone]}>
+        {/* Closed until it is earned, open once it is. A fixed square with
+            contain normalises the two, which have different aspect ratios —
+            the open lid makes it taller. */}
+        <Image
+          source={done ? CHEST_OPEN : CHEST}
+          style={[cp.chestArt, !done && cp.chestArtLocked]}
+          contentFit="contain"
+          transition={done ? 260 : 0}
+          accessible={false}
+        />
+      </View>
+      <View style={cp.body}>
+        <Text style={cp.kicker}>{done ? 'CHECKPOINT CLEARED' : 'CHECKPOINT'}</Text>
+        <Text style={cp.title} numberOfLines={1}>{title}</Text>
+        <Text style={[cp.xp, done && cp.xpDone]}>+{xp} XP</Text>
+      </View>
+      {done ? (
+        <View style={cp.tick}><Tick size={16} /></View>
+      ) : (
+        <View style={cp.pending}><Lock size={14} /></View>
+      )}
     </View>
-    <View style={cp.body}>
-      <Text style={cp.kicker}>{done ? 'CHECKPOINT CLEARED' : 'CHECKPOINT'}</Text>
-      <Text style={cp.title} numberOfLines={1}>{title}</Text>
-      <Text style={[cp.xp, done && cp.xpDone]}>+{xp} XP</Text>
-    </View>
-    {done ? (
-      <View style={cp.tick}><Tick size={16} /></View>
-    ) : (
-      <View style={cp.pending}><Lock size={14} /></View>
-    )}
-  </View>
-);
+  );
+};
 
 /**
  * The film node.
@@ -365,6 +376,8 @@ const FilmNode: React.FC<{
   accent: string;
   onPress?: () => void;
 }> = ({ title, unlocked, accent, onPress }) => {
+  const colors = useColors();
+  const fm = useFm();
   const body = (
     <>
       <View style={[fm.screen, !unlocked && fm.screenLocked]}>
@@ -424,19 +437,19 @@ const FilmNode: React.FC<{
   );
 };
 
-const fm = StyleSheet.create({
+const useFm = makeStyles((colors, th) => ({
   card: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md,
-    backgroundColor: colors.ink, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, paddingHorizontal: space.md, ...elevation.card,
+    backgroundColor: colors.slab, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, ...curve, paddingHorizontal: space.md, ...th.elevation.card,
   },
   // Not the ink card drained: an unwatchable film should read as a thing you
   // have not got to, the same way a locked lesson does, rather than as a broken
   // version of the watchable one.
   cardLocked: {
-    backgroundColor: colors.cream, borderColor: colors.inkFaint, ...elevation.flush,
+    backgroundColor: colors.cream, borderColor: colors.inkFaint, ...th.elevation.flush,
   },
-  cardPressed: { transform: [{ translateY: 2 }], ...elevation.flush },
+  cardPressed: { transform: [{ translateY: 2 }], ...th.elevation.flush },
   screen: {
     width: 52, height: 44, borderRadius: radius.md, ...curve,
     alignItems: 'center', justifyContent: 'center',
@@ -457,16 +470,16 @@ const fm = StyleSheet.create({
     width: 26, height: 26, borderRadius: 13, backgroundColor: colors.inkFaint,
     alignItems: 'center', justifyContent: 'center',
   },
-});
+}));
 
-const n = StyleSheet.create({
+const useN = makeStyles((colors, th) => ({
   card: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.line,
-    borderRadius: radius.lg, ...curve, paddingHorizontal: 10, ...elevation.card,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.line,
+    borderRadius: radius.lg, ...curve, paddingHorizontal: 10, ...th.elevation.card,
   },
-  cardLocked: { backgroundColor: colors.cream, borderColor: colors.inkFaint, ...elevation.flush },
-  pressed: { transform: [{ translateY: 2 }], ...elevation.flush },
+  cardLocked: { backgroundColor: colors.cream, borderColor: colors.inkFaint, ...th.elevation.flush },
+  pressed: { transform: [{ translateY: 2 }], ...th.elevation.flush },
   tile: {
     width: TILE, height: TILE, borderRadius: radius.md, ...curve,
     backgroundColor: colors.goldSoft, borderWidth: 2, borderColor: colors.ink,
@@ -480,29 +493,29 @@ const n = StyleSheet.create({
   badge: {
     position: 'absolute', top: -8, right: -8,
     width: 24, height: 24, borderRadius: 12,
-    borderWidth: 2.5, borderColor: colors.white,
+    borderWidth: 2.5, borderColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
   badgeLocked: { backgroundColor: colors.inkFaint, borderColor: colors.cream },
-});
+}));
 
-const cp = StyleSheet.create({
+const useCp = makeStyles((colors, th) => ({
   card: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md,
     backgroundColor: colors.goldSoft,
     borderWidth: 3, borderColor: colors.inkMute,
     borderRadius: radius.lg, ...curve, paddingHorizontal: space.md,
     borderStyle: 'dashed',
-    ...elevation.card,
+    ...th.elevation.card,
   },
   // Cleared: solid border, full gold, no longer provisional.
   cardDone: {
     backgroundColor: colors.gold, borderColor: colors.ink, borderStyle: 'solid',
-    ...elevation.lifted,
+    ...th.elevation.lifted,
   },
   chest: {
     width: 56, height: 56, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.inkMute,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.inkMute,
     alignItems: 'center', justifyContent: 'center',
   },
   chestDone: { borderColor: colors.ink },
@@ -523,8 +536,8 @@ const cp = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pending: {
-    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.white,
+    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.inkMute,
     alignItems: 'center', justifyContent: 'center',
   },
-});
+}));

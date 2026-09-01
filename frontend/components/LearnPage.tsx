@@ -40,8 +40,8 @@ interface LearnPageProps {
 const UNIT_TINT: Record<CurriculumAccent, string> = {
   gold: 'bg-ohmlet-gold-soft',
   blue: 'bg-ohmlet-blue-soft',
-  green: 'bg-[#eef7e0]',
-  red: 'bg-[#fdece8]',
+  green: 'bg-ohmlet-tint-green',
+  red: 'bg-ohmlet-tint-red',
 };
 
 const topics: Array<{ title: string; icon: IconType; skills: string[] }> = [
@@ -125,13 +125,13 @@ export const LearnPage: React.FC<LearnPageProps> = ({ onNavigate }) => {
             {units.map((unit, i) => (
               <article
                 key={unit.id}
-                className={`${UNIT_TINT[unit.accent] ?? 'bg-white'} group rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 shadow-press transition-transform hover:-translate-y-1`}
+                className={`${UNIT_TINT[unit.accent] ?? 'bg-ohmlet-surface'} group rounded-[1.8rem] border-[2.5px] border-ohmlet-ink p-7 shadow-press transition-transform hover:-translate-y-1`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-white text-lg font-black text-ohmlet-ink">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface text-lg font-black text-ohmlet-ink">
                     {i + 1}
                   </span>
-                  <span className="rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
+                  <span className="rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink">
                     {unit.level}
                   </span>
                 </div>
@@ -157,7 +157,7 @@ export const LearnPage: React.FC<LearnPageProps> = ({ onNavigate }) => {
             {topics.map((topic) => {
               const Icon = topic.icon;
               return (
-                <article key={topic.title} className="rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+                <article key={topic.title} className="rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ohmlet-ink text-ohmlet-gold">
                     <Icon className="h-5 w-5" />
                   </div>

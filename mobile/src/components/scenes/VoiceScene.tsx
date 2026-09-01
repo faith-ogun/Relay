@@ -4,7 +4,7 @@ import Svg, { Rect } from 'react-native-svg';
 import Animated, {
   Easing, useAnimatedProps, useSharedValue, withDelay, withRepeat, withSequence, withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../../theme/tokens';
+import { useColors } from '../../theme/theme';
 
 const ARect = Animated.createAnimatedComponent(Rect);
 
@@ -15,6 +15,7 @@ const H = 150;
 const BARS = [0.30, 0.55, 0.85, 0.45, 1.0, 0.65, 0.35, 0.75, 0.5, 0.9, 0.4, 0.6, 0.25];
 
 const Bar: React.FC<{ index: number; peak: number }> = ({ index, peak }) => {
+  const colors = useColors();
   const level = useSharedValue(0.18);
 
   useEffect(() => {

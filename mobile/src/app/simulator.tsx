@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { AppTabs } from '../components/AppTabs';
 import { Button } from '../components/Button';
@@ -14,8 +12,8 @@ import { SimTabs, type SimTab } from '../components/sim/SimTabs';
 import { AVRRunner, UNO_PIN, measureThroughput, type Port } from '../sim/avr';
 import { compileSketch, compilerConfigured, type Diagnostic } from '../services/compiler';
 import { track } from '../services/analytics';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 const STARTER = `// Blink the on-board LED, then fade pin 9.
 void setup() {
@@ -50,6 +48,8 @@ const SAMPLE: Array<[Port, number]> = PINS.map((p) => UNO_PIN[p]).filter(Boolean
  * know why.
  */
 export default function Simulator() {
+  const colors = useColors();
+  const s = useS();
   // Three ways into the same idea: write the code, turn the circuit, build it
   // on a board. They were one screen showing a single Arduino, which made the
   // simulator look like a code runner rather than a bench.
@@ -249,7 +249,7 @@ export default function Simulator() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   scroll: { padding: space.lg, paddingBottom: space.xxl },
   backLink: { paddingVertical: space.sm, alignSelf: 'flex-start' },
@@ -270,7 +270,7 @@ const s = StyleSheet.create({
   note: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm, lineHeight: 19 },
   errors: {
     marginTop: space.md, borderWidth: 2.5, borderColor: colors.red, borderRadius: radius.md, ...curve,
-    backgroundColor: '#fdece8', padding: space.md, gap: 4,
+    backgroundColor: colors.redSoft, padding: space.md, gap: 4,
   },
   errorsTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   errorLine: { fontFamily: font.regular, fontSize: type.meta, color: colors.ink, lineHeight: 17 },
@@ -279,13 +279,13 @@ const s = StyleSheet.create({
     color: colors.inkSoft, marginTop: space.xl, marginBottom: space.sm,
   },
   editor: {
-    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.white,
+    borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve, backgroundColor: colors.surface,
     padding: space.md, minHeight: 240, textAlignVertical: 'top',
     fontFamily: 'Menlo', fontSize: 12, color: colors.ink, lineHeight: 18,
   },
   serial: {
     borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.ink, padding: space.md, minHeight: 90,
+    backgroundColor: colors.slab, padding: space.md, minHeight: 90,
   },
   serialText: { fontFamily: 'Menlo', fontSize: 11, color: '#9fe870', lineHeight: 16 },
-});
+}));

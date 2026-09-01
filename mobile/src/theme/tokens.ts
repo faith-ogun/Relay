@@ -25,45 +25,176 @@ export const inkRamp = {
   500: '#6b7280', 700: '#474d57', 800: '#262b33', 900: '#14181f',
 } as const;
 
-export const colors = {
+/**
+ * The palette, twice.
+ *
+ * Every key exists in both themes and `darkColors` is typed as `Colors`, so a
+ * token added to one and forgotten in the other is a compile error rather than a
+ * transparent hole on somebody's phone.
+ *
+ * Two families invert their MEANING rather than simply darkening, and getting
+ * that wrong is what makes a dark theme look like a bug:
+ *
+ *   `-deep`  means "more contrast than the base". On a light ground that is
+ *            darker; on a dark ground it is LIGHTER. `goldDeep` going darker on
+ *            dark would make every hover and pressed state vanish into the page.
+ *   `-soft`  is a tint wash behind content. On light it is a pale version of the
+ *            hue; on dark it has to be a DEEP version, or a "soft" background
+ *            becomes the brightest thing on the screen.
+ *
+ * The gold itself does not move. It is the brand, it was chosen against the
+ * mascot, and it reads on both grounds. Everything around it moves.
+ *
+ * The values match `frontend/styles.css` channel for channel, so the phone and
+ * the web read as the same product. One deliberate difference: on the web the
+ * page is `canvas` and `cream` is a tinted band on top of it, while here `cream`
+ * IS the page and `surface` is the raised card on top of it. So mobile `cream`
+ * takes the web's `canvas` values on dark, and the ordering that actually
+ * matters holds on both surfaces: the raised card is LIGHTER than the ground
+ * behind it on dark, and darker than it on light.
+ */
+export interface Colors {
+  gold: string;
+  goldDeep: string;
+  goldSoft: string;
+  /** The plate and the shadow for any gold surface. */
+  goldPlate: string;
+  /** Gold-voiced text on a NEUTRAL or gold-soft ground: an XP figure, an
+   *  eyebrow on a gold-tinted card. It follows the theme, because the ground
+   *  under it does. */
+  goldText: string;
+  /** Text and glyphs sitting ON the gold fill itself. Gold is the one colour
+   *  that does not move, so neither does this. Splitting it off `goldText` is
+   *  what stops a "SAVE 50%" tag going pale-gold-on-gold in dark mode. */
+  onGold: string;
+  ink: string;
+  inkSoft: string;
+  inkMute: string;
+  inkFaint: string;
+  red: string;
+  /** The wash behind a wrong answer or a destructive warning. */
+  redSoft: string;
+  /** Text on `redSoft`. */
+  redText: string;
+  blue: string;
+  blueDeep: string;
+  blueSoft: string;
+  green: string;
+  greenDeep: string;
+  /** The wash behind a right answer. */
+  greenSoft: string;
+  /** Text on `greenSoft`. */
+  greenText: string;
+  /** The page, and any well recessed INTO a card. */
+  cream: string;
+  line: string;
+
+  // ── The tokens that sort out what "white" and "ink" meant ──────────────
+  //
+  // 109 places wrote `backgroundColor: colors.surface` and 48 wrote
+  // `color: colors.white`, and they did not mean the same thing. The same is
+  // true of `colors.ink` as a fill. Sorting them is the difference between a
+  // dark theme and an unreadable one.
+
+  /** Literal white. Foreground on anything dark in EVERY theme: a saturated
+   *  brand fill, the camera stage, video, 3D. Never a background. */
+  white: string;
+  /** The raised card. White on light, so every `bg: white` that meant "a card"
+   *  changes nothing in light mode and is the whole fix in dark mode. */
+  surface: string;
+  /** A panel that is dark in BOTH themes: the camera stage, the serial console,
+   *  the video player, the Max tier card. They carry gold and green accents
+   *  chosen against black, and inverting them destroys what they are for. On
+   *  dark it goes DARKER than the card behind it so it still reads as inset. */
+  slab: string;
+  /** Foreground for a fill painted in `ink`. Ink INVERTS, so plain `white` on it
+   *  becomes white-on-white the instant the theme flips. This pair always
+   *  contrasts: active pills, numbered badges, solid buttons, radio dots. */
+  onInk: string;
+  /**
+   * Foreground on a `slab`, or on any surface that is dark in BOTH themes.
+   *
+   * Distinct from `onInk`, which INVERTS because `ink` inverts. A slab does not
+   * move, so its foreground must not either. The sandbox ruler chips are the
+   * case that found this: their background is a fixed dark wash and their text
+   * was `cream`, so in dark mode the row labels on the breadboard turned dark on
+   * dark and the F1 / A2 / GND names became unreadable. The board itself is a
+   * physical white breadboard and never changes; neither should anything printed
+   * on top of it.
+   */
+  onSlab: string;
+  /** The hard offset shadow under a pressable. Ink on light; it has to change on
+   *  dark or the plate disappears into the ground it is sitting on, and every
+   *  button in the app goes flat. */
+  plate: string;
+  /** The black wash under chrome floating on media. Fixed, same reason as
+   *  `white`: it is dark in every theme by definition. */
+  scrim: string;
+}
+
+export const lightColors: Colors = {
   gold: '#facc2e',
   goldDeep: '#f5b800',
   goldSoft: '#fff6d6',
-  /** The plate and the shadow for any gold surface. */
   goldPlate: '#c99a00',
-  /** Text on gold. Ink on gold is a hazard stripe; this is not. */
   goldText: '#8f6d00',
+  onGold: '#8f6d00',
   ink: '#14181f',
   inkSoft: '#474d57',
   inkMute: '#a8adb6',
   inkFaint: '#ebecee',
   red: '#ff6f5e',
+  redSoft: '#fdece8',
+  redText: '#a33122',
   blue: '#549cf0',
   blueDeep: '#3e86e8',
   blueSoft: '#eaf2fe',
   green: '#84cc30',
   greenDeep: '#6fb519',
+  greenSoft: '#eef7e0',
+  greenText: '#3f6b0d',
   cream: '#faf8f0',
   line: '#ece7db',
   white: '#ffffff',
-} as const;
+  surface: '#ffffff',
+  slab: '#14181f',
+  onInk: '#ffffff',
+  onSlab: '#ffffff',
+  plate: '#14181f',
+  scrim: '#000000',
+};
 
-// The web app uses a `shadow-press` treatment: a hard offset shadow with no blur,
-// which reads as a physical, pressable button. React Native has no direct
-// equivalent, so it is composed from a border plus an offset shadow.
-export const press = {
-  shadowColor: colors.ink,
-  shadowOffset: { width: 0, height: 5 },
-  shadowOpacity: 1,
-  shadowRadius: 0,
-  elevation: 5,
-} as const;
-
-export const pressSmall = {
-  ...press,
-  shadowOffset: { width: 0, height: 3 },
-  elevation: 3,
-} as const;
+export const darkColors: Colors = {
+  gold: '#facc2e',
+  goldDeep: '#ffd84d',
+  goldSoft: '#2a2410',
+  goldPlate: '#b8890a',
+  goldText: '#ffdf6b',
+  onGold: '#8f6d00',
+  ink: '#eef0f4',
+  inkSoft: '#b3b9c4',
+  inkMute: '#767d8a',
+  inkFaint: '#232833',
+  red: '#ff8577',
+  redSoft: '#3a1f1a',
+  redText: '#ffb3a8',
+  blue: '#6fadf5',
+  blueDeep: '#8bc0ff',
+  blueSoft: '#16233a',
+  green: '#9ade4a',
+  greenDeep: '#b0e86a',
+  greenSoft: '#1e2a12',
+  greenText: '#c3ef88',
+  cream: '#0f1219',
+  line: '#262b36',
+  white: '#ffffff',
+  surface: '#171b24',
+  slab: '#0c0f15',
+  onInk: '#0f1219',
+  onSlab: '#ffffff',
+  plate: '#05070b',
+  scrim: '#000000',
+};
 
 export const radius = { sm: 12, md: 16, lg: 22, xl: 28 } as const;
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;

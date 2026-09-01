@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Image } from 'expo-image';
@@ -9,9 +9,9 @@ import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { usePlan } from '../hooks/usePlan';
 import { track } from '../services/analytics';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, radius, space, type } from '../theme/tokens';
 import { motion } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * The wall a Free learner hits when the pool empties.
@@ -40,6 +40,8 @@ export const OutOfHearts: React.FC<{
   onLeave: () => void;
   leaveLabel?: string;
 }> = ({ onResume, resumeLabel = 'Try again', onLeave, leaveLabel = 'Leave lesson' }) => {
+  const colors = useColors();
+  const s = useS();
   const { nextIn, remainingFraction, empty, hearts } = useHeartsCountdown();
   const { childSafe } = useChildSafe();
   const { plan } = usePlan();
@@ -153,7 +155,7 @@ export const OutOfHearts: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: {
     flex: 1, backgroundColor: colors.cream,
     alignItems: 'center', justifyContent: 'center', padding: space.xl,
@@ -197,9 +199,9 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.goldPlate,
     borderRadius: radius.lg, ...curve,
     padding: space.lg,
-    ...elevation.card,
+    ...th.elevation.card,
   },
-  upsellPressed: { transform: [{ translateY: 2 }], ...elevation.flush },
+  upsellPressed: { transform: [{ translateY: 2 }], ...th.elevation.flush },
   upsellTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, letterSpacing: -0.4 },
   upsellBody: {
     fontFamily: font.semibold, fontSize: type.small, color: colors.goldText,
@@ -211,4 +213,4 @@ const s = StyleSheet.create({
   },
   quiet: { marginTop: space.md, paddingVertical: space.sm },
   quietText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

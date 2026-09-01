@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown, LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -8,9 +8,9 @@ import { Button } from '../Button';
 import { Close } from '../icons';
 import { SkeletonBlock } from '../Skeleton';
 import type { Build } from '../../services/builds';
-import { colors, curve, font, leading, radius, space, tracking, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, leading, radius, space, tracking, type } from '../../theme/tokens';
 import { stagger } from '../../theme/motion';
+import { makeStyles } from '../../theme/theme';
 
 /**
  * Step 1 of the learning loop: choosing what to build.
@@ -43,6 +43,7 @@ interface Props {
 export const BuildPicker: React.FC<Props> = ({
   visible, builds, loading, selectedId, ctaLabel, onChoose, onRetry, onClose,
 }) => {
+  const s = useS();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [openId, setOpenId] = useState<string | null>(selectedId ?? null);
@@ -117,19 +118,22 @@ export const BuildPicker: React.FC<Props> = ({
 };
 
 /** Occupies the shape the real rows will take, so the list does not jump. */
-const LoadingRows: React.FC = () => (
-  <View style={{ gap: space.sm }}>
-    {[0, 1, 2, 3].map((i) => (
-      <View key={i} style={s.skeletonRow}>
-        <SkeletonBlock width={46} height={46} radius={radius.sm} />
-        <View style={{ flex: 1, gap: 8 }}>
-          <SkeletonBlock width="72%" height={15} />
-          <SkeletonBlock width="46%" height={11} />
+const LoadingRows: React.FC = () => {
+  const s = useS();
+  return (
+    <View style={{ gap: space.sm }}>
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={s.skeletonRow}>
+          <SkeletonBlock width={46} height={46} radius={radius.sm} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <SkeletonBlock width="72%" height={15} />
+            <SkeletonBlock width="46%" height={11} />
+          </View>
         </View>
-      </View>
-    ))}
-  </View>
-);
+      ))}
+    </View>
+  );
+};
 
 const BuildRow: React.FC<{
   build: Build;
@@ -141,6 +145,7 @@ const BuildRow: React.FC<{
   onPress: () => void;
   onChoose: () => void;
 }> = ({ build, index, open, chosen, reduced, ctaLabel, onPress, onChoose }) => {
+  const s = useS();
   const meta = `${build.level} · ${build.est} · ${build.parts.length} parts`;
 
   return (
@@ -211,11 +216,11 @@ const BuildRow: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: space.lg },
   close: {
     width: 38, height: 38, borderRadius: radius.sm, ...curve,
-    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
   eyebrow: {
@@ -239,14 +244,14 @@ const s = StyleSheet.create({
   // a ruled line. Swapping one for the other should be obvious.
   cardRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line,
-    ...elevation.flush,
+    ...th.elevation.flush,
   },
   cardOpen: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2.5, borderColor: colors.ink, overflow: 'hidden',
-    ...elevation.lifted,
+    ...th.elevation.lifted,
   },
   band: { height: 6 },
 
@@ -302,13 +307,13 @@ const s = StyleSheet.create({
 
   skeletonRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.sm + 2,
   },
 
   empty: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
-    borderWidth: 2.5, borderColor: colors.ink, padding: space.lg, ...elevation.card,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
+    borderWidth: 2.5, borderColor: colors.ink, padding: space.lg, ...th.elevation.card,
   },
   emptyMark: {
     width: 52, height: 52, borderRadius: radius.md, ...curve,
@@ -323,4 +328,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, lineHeight: leading.small,
     color: colors.inkSoft, marginTop: 6,
   },
-});
+}));

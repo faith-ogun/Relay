@@ -18,7 +18,7 @@ interface Props {
 
 export const SafetyAck: React.FC<Props> = ({ onAccept, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-ohmlet-ink/40 p-4 backdrop-blur-sm">
-    <div className="ohmlet-rise relative w-full max-w-md rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-white p-8 shadow-press">
+    <div className="ohmlet-rise relative w-full max-w-md rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface p-8 shadow-press">
       <button
         type="button"
         onClick={onCancel}

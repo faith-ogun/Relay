@@ -10,20 +10,21 @@ import {
   gradeOrder, isChipTaken, isTilePlaced, matchChips, orderRowCorrect, placePart,
   tileAnswer, toggleTile, unlinkRow, type MatchLinks,
 } from './grading';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import { font, radius, space, type, curve } from '../theme/tokens';
 import { ComponentPhoto, isComponentImagePath } from './componentArt';
 import { ImageChoiceStep, hasOptionImages, type StepImageChoice } from './ImageChoiceStep';
 import { MeterStep } from './MeterStep';
-import { OptionList, optionStyles as o } from './optionList';
+import { OptionList, useOptionStyles } from './optionList';
 import { shuffledOrder } from './optionOrder';
 import { ResistorBandStep } from './ResistorBandStep';
-import { stepText as t } from './stepText';
+import { useStepText } from './stepText';
 import type {
   StepBuildToSpec, StepChoice, StepChooseResistor, StepConnect, StepDraw,
   StepDragOrder, StepFill, StepFixCircuit, StepIdentify, StepMatch, StepPredictReading,
   StepProps as Props, StepSpotError, StepTeach, StepTraceCurrent, StepTrueFalse,
 } from './types';
+import { makeStyles, useColors } from '../theme/theme';
 
 export const StepView: React.FC<Props> = (props) => {
   const { step } = props;
@@ -100,6 +101,9 @@ export const StepView: React.FC<Props> = (props) => {
 // back until every part has been opened, which is what the web does with the
 // same field.
 const TeachStep: React.FC<Props & { step: StepTeach }> = ({ step, onCanCheck, registerGrader, onSubmit }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
+  const s = useS();
   const hotspots = useMemo(() => step.hotspots ?? [], [step]);
   // Only an exploration if every part it names is actually tappable on the
   // diagram. Otherwise it reads as a card, rather than as a card with a
@@ -179,6 +183,7 @@ const TeachStep: React.FC<Props & { step: StepTeach }> = ({ step, onCanCheck, re
 const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
   const [picked, setPicked] = useState<number | null>(null);
 
   const options = step.options ?? [];
@@ -218,6 +223,8 @@ const ChoiceStep: React.FC<Props & { step: StepChoice }> = ({
 const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
   const [picked, setPicked] = useState<boolean | null>(null);
 
   useEffect(() => { setPicked(null); }, [step]);
@@ -280,6 +287,9 @@ const TrueFalseStep: React.FC<Props & { step: StepTrueFalse }> = ({
 const FillStep: React.FC<Props & { step: StepFill }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
+  const colors = useColors();
+  const s = useS();
   const [value, setValue] = useState('');
   const [placed, setPlaced] = useState<number[]>([]);
   const tiles = useMemo(() => step.tiles ?? [], [step]);
@@ -379,6 +389,9 @@ const FillStep: React.FC<Props & { step: StepFill }> = ({
 const MatchStep: React.FC<Props & { step: StepMatch }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
+  const s = useS();
   const lefts = useMemo(() => step.pairs.map((p) => p[0]), [step]);
   // Rotate rather than shuffle: deterministic, so the same question never
   // renders in an order that accidentally matches the answer key. The rotation
@@ -497,6 +510,9 @@ const MatchStep: React.FC<Props & { step: StepMatch }> = ({
 const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
+  const s = useS();
   const [order, setOrder] = useState<number[]>([]);
 
   useEffect(() => { setOrder([]); }, [step]);
@@ -570,6 +586,7 @@ const OrderStep: React.FC<Props & { step: StepDragOrder }> = ({
 const IdentifyStep: React.FC<Props & { step: StepIdentify }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
   const [picked, setPicked] = useState<string | null>(null);
 
   useEffect(() => { setPicked(null); }, [step]);
@@ -607,6 +624,7 @@ const IdentifyStep: React.FC<Props & { step: StepIdentify }> = ({
 const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
   const [picked, setPicked] = useState<string | null>(null);
 
   useEffect(() => { setPicked(null); }, [step]);
@@ -648,6 +666,9 @@ const SpotErrorStep: React.FC<Props & { step: StepSpotError }> = ({
 const FixCircuitStep: React.FC<Props & { step: StepFixCircuit }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
+  const s = useS();
   const [region, setRegion] = useState<string | null>(null);
   const [fix, setFix] = useState<number | null>(null);
 
@@ -704,6 +725,8 @@ const FixCircuitStep: React.FC<Props & { step: StepFixCircuit }> = ({
 const TraceCurrentStep: React.FC<Props & { step: StepTraceCurrent }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
+  const s = useS();
   const [path, setPath] = useState<string[]>([]);
 
   useEffect(() => { setPath([]); }, [step]);
@@ -755,6 +778,9 @@ const TraceCurrentStep: React.FC<Props & { step: StepTraceCurrent }> = ({
 const BuildToSpecStep: React.FC<Props & { step: StepBuildToSpec }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const o = useOptionStyles();
+  const t = useStepText();
+  const s = useS();
   const [placed, setPlaced] = useState<number[]>([]);
 
   useEffect(() => { setPlaced([]); }, [step]);
@@ -825,7 +851,7 @@ const BuildToSpecStep: React.FC<Props & { step: StepBuildToSpec }> = ({
 /** A match row's photograph. Square, so rows of mixed parts stay aligned. */
 const THUMB = 52;
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   title: { fontFamily: font.black, fontSize: type.title, color: colors.ink, marginTop: 6, letterSpacing: -0.5 },
   spotCard: {
     marginTop: space.md, borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.md, ...curve,
@@ -843,7 +869,7 @@ const s = StyleSheet.create({
   pathArrow: { fontFamily: font.black, fontSize: type.body, color: colors.inkSoft },
   pathSlot: {
     flex: 1, minHeight: 46, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    borderStyle: 'dashed', backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+    borderStyle: 'dashed', backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6,
   },
   pathSlotFilled: { borderStyle: 'solid', borderColor: colors.ink, backgroundColor: colors.goldSoft },
@@ -851,27 +877,27 @@ const s = StyleSheet.create({
   pathSlotTextFilled: { color: colors.ink },
   input: {
     marginTop: space.md, borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 14,
+    backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 14,
     fontFamily: font.bold, fontSize: type.body, color: colors.ink,
   },
   tileWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md },
   tile: {
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 9, maxWidth: '100%',
+    backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 9, maxWidth: '100%',
   },
   tileUsed: { backgroundColor: colors.line, borderColor: colors.line },
   tileText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   tileTextUsed: { color: colors.inkSoft },
   matchRow: {
     borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, padding: space.md,
+    backgroundColor: colors.surface, padding: space.md,
     flexDirection: 'row', alignItems: 'center', gap: space.md,
   },
   matchDone: { borderColor: colors.ink },
   matchLeft: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
   matchRight: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 3 },
   board: {
-    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5,
+    marginTop: space.md, backgroundColor: colors.surface, borderWidth: 2.5,
     borderColor: colors.ink, borderRadius: radius.md, ...curve, padding: space.sm,
   },
   undo: {
@@ -882,17 +908,20 @@ const s = StyleSheet.create({
   drawTools: { flexDirection: 'row', gap: space.sm },
   grading: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
   orderNum: {
-    fontFamily: font.black, fontSize: type.small, color: colors.ink,
+    fontFamily: font.black, fontSize: type.small, color: colors.onGold,
     width: 22, height: 22, borderRadius: 11, ...curve, backgroundColor: colors.gold,
     textAlign: 'center', lineHeight: 22, overflow: 'hidden',
   },
-});
+}));
 
 
 // ── Draw a connection (tap two terminals) ──────────────────────────────────
 const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
   step, checked, onSubmit, onCanCheck, registerGrader,
 }) => {
+  const t = useStepText();
+  const colors = useColors();
+  const s = useS();
   const [active, setActive] = useState<string | null>(null);
   const [wires, setWires] = useState<Array<[string, string]>>([]);
 
@@ -971,6 +1000,9 @@ const ConnectStep: React.FC<Props & { step: StepConnect }> = ({
 const DrawStep: React.FC<Props & { step: StepDraw }> = ({
   step, checked, onSubmit, onUnassessed, onCanCheck, registerGrader, onDrawingChange,
 }) => {
+  const t = useStepText();
+  const colors = useColors();
+  const s = useS();
   const canvasRef = useRef<DrawCanvasHandle>(null);
   const shotRef = useRef<View>(null);
   const [hasInk, setHasInk] = useState(false);

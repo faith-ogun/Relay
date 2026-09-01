@@ -1,5 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { colors, font, space, type } from '../theme/tokens';
+
+import { font, space, type } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * The three pieces of text every step shares: the eyebrow, the prompt, and the
@@ -9,7 +10,7 @@ import { colors, font, space, type } from '../theme/tokens';
  * ones still inside it. A meter step whose question sits at a different size to
  * a multiple-choice question reads as two different products.
  */
-export const stepText = StyleSheet.create({
+export const useStepText = makeStyles((colors) => ({
   kicker: {
     fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep,
   },
@@ -20,4 +21,4 @@ export const stepText = StyleSheet.create({
   hint: {
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm,
   },
-});
+}));

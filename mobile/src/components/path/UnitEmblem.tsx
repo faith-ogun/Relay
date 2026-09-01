@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, View } from 'react-native';
+import { makeStyles } from '../../theme/theme';
 
 /**
  * The painted emblem on a unit banner.
@@ -43,6 +44,7 @@ export const UNIT_ART_IDS = Object.keys(UNIT_ART);
 export const EMBLEM = 64;
 
 export const UnitEmblem: React.FC<{ unitId: string; dimmed?: boolean }> = ({ unitId, dimmed }) => {
+  const s = useS();
   const art = UNIT_ART[unitId];
   // A unit with no art renders nothing rather than a placeholder box. The check
   // script is what makes sure this branch is unreachable in a shipped build.
@@ -60,10 +62,10 @@ export const UnitEmblem: React.FC<{ unitId: string; dimmed?: boolean }> = ({ uni
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   slot: { width: EMBLEM, height: EMBLEM, alignItems: 'center', justifyContent: 'center' },
   img: { width: EMBLEM, height: EMBLEM },
   // A locked unit's emblem recedes rather than disappears, so the path still
   // shows what is coming without competing with the unit that is open.
   dim: { opacity: 0.4 },
-});
+}));

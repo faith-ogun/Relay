@@ -33,8 +33,8 @@ const SKILL_ICONS: Record<string, IconType> = {
 const ACCENT: Record<CurriculumAccent, { chip: string; ring: string; done: string }> = {
   gold: { chip: 'bg-ohmlet-gold-soft text-ohmlet-ink', ring: 'ring-ohmlet-gold', done: 'bg-ohmlet-gold' },
   blue: { chip: 'bg-ohmlet-blue-soft text-ohmlet-blue-deep', ring: 'ring-ohmlet-blue', done: 'bg-ohmlet-blue' },
-  green: { chip: 'bg-[#eef7e0] text-ohmlet-green-deep', ring: 'ring-ohmlet-green', done: 'bg-ohmlet-green' },
-  red: { chip: 'bg-[#fdece8] text-ohmlet-red', ring: 'ring-ohmlet-red', done: 'bg-ohmlet-red' },
+  green: { chip: 'bg-ohmlet-tint-green text-ohmlet-green-deep', ring: 'ring-ohmlet-green', done: 'bg-ohmlet-green' },
+  red: { chip: 'bg-ohmlet-tint-red text-ohmlet-red', ring: 'ring-ohmlet-red', done: 'bg-ohmlet-red' },
 };
 
 // Winding path: nudge each node left/center/right so it reads as a trail, not a list.
@@ -59,7 +59,7 @@ const LessonNode: React.FC<{
     state === 'done'
       ? 'text-white shadow-press-sm'
       : state === 'active'
-      ? `bg-white text-ohmlet-ink shadow-press ring-4 ring-offset-2 ${a.ring} ohmlet-pulse-glow`
+      ? `bg-ohmlet-surface text-ohmlet-ink shadow-press ring-4 ring-offset-2 ${a.ring} ohmlet-pulse-glow`
       : 'bg-ohmlet-line/60 text-ohmlet-ink/55 border-ohmlet-ink/30';
 
   return (
@@ -84,14 +84,14 @@ const LessonNode: React.FC<{
         {medal && (
           <span className="absolute -bottom-1 flex gap-0.5">
             {[1, 2, 3].map((p) => (
-              <span key={p} className={`h-1.5 w-1.5 rounded-full border border-ohmlet-ink ${p <= level ? 'bg-white' : 'bg-ohmlet-ink/20'}`} />
+              <span key={p} className={`h-1.5 w-1.5 rounded-full border border-ohmlet-ink ${p <= level ? 'bg-ohmlet-surface' : 'bg-ohmlet-ink/20'}`} />
             ))}
           </span>
         )}
         {/* rigor badge: this lesson involves real calculation (#42 difficulty signal) */}
         {rigor === 'calc' && state !== 'locked' && (
           <span
-            className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-white text-ohmlet-ink shadow-press-sm"
+            className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink shadow-press-sm"
             title="This lesson includes calculation"
           >
             <Calculator className="h-3 w-3" strokeWidth={2.5} />
@@ -163,7 +163,7 @@ export const LearnPath: React.FC<LearnPathProps> = ({ completedLessonIds = new S
               const filmReady = !!skill.hasFilm && skillDone && !!onPlayFilm;
               return (
                 <div key={skill.id} className="mb-10">
-                  <div className="mx-auto mb-6 flex max-w-md items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-3 shadow-press-sm">
+                  <div className="mx-auto mb-6 flex max-w-md items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-3 shadow-press-sm">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ohmlet-ink text-ohmlet-gold">
                       <SkillIcon className="h-5 w-5" />
                     </span>

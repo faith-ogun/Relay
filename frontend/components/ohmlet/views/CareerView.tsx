@@ -99,7 +99,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
       </p>
 
       {nothingYet ? (
-        <div className="mt-8 rounded-[1.75rem] border-2 border-ohmlet-ink bg-white p-8 text-center shadow-press">
+        <div className="mt-8 rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-surface p-8 text-center shadow-press">
           <Camera className="mx-auto h-9 w-9 text-ohmlet-gold-deep" strokeWidth={2.5} />
           <h2 className="mt-4 text-xl font-black tracking-tight">Nothing verified yet</h2>
           <p className="mx-auto mt-2 max-w-sm text-sm font-semibold leading-relaxed text-ohmlet-ink-soft">
@@ -117,7 +117,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
       ) : (
         <>
           {/* The headline, and the only figure a competitor cannot produce. */}
-          <div className="mt-8 overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-ink text-white shadow-press">
+          <div className="mt-8 overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-ink text-ohmlet-on-ink shadow-press">
             <div className="px-7 py-8">
               <p className="text-6xl font-black leading-none tabular-nums tracking-[-0.04em] text-ohmlet-gold md:text-7xl">
                 {ev.bench.cameraMinutes}
@@ -139,7 +139,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
           {ev.assessed.strongest.length > 0 && (
             <section className="mt-8">
               <h2 className="text-[11px] font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Strongest, by exam</h2>
-              <div className="mt-3 divide-y divide-ohmlet-line overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft">
+              <div className="mt-3 divide-y divide-ohmlet-line overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
                 {ev.assessed.strongest.map((u) => (
                   <div key={u.unitId} className="flex items-center gap-3 px-4 py-3">
                     <Award className="h-4 w-4 shrink-0 text-ohmlet-gold-deep" strokeWidth={2.5} />
@@ -163,7 +163,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
                     key={u.unitId}
                     type="button"
                     onClick={onOpenPath}
-                    className="flex w-full items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-3 text-left shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
+                    className="flex w-full items-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-3 text-left shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
                   >
                     <span className="flex-1 truncate text-sm font-extrabold">{u.title}</span>
                     <span className="text-sm font-black tabular-nums text-ohmlet-red">{u.score}%</span>
@@ -181,7 +181,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
             <button
               type="button"
               onClick={copy}
-              className="mt-3 inline-flex items-center gap-2 rounded-xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-black text-ohmlet-ink transition-all hover:-translate-y-0.5"
+              className="mt-3 inline-flex items-center gap-2 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-black text-ohmlet-ink transition-all hover:-translate-y-0.5"
             >
               {copied ? <Check className="h-4 w-4 text-ohmlet-green-deep" strokeWidth={2.5} /> : <Copy className="h-4 w-4" strokeWidth={2.5} />}
               {copied ? 'Copied' : 'Copy for a CV'}
@@ -191,7 +191,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
           {/* The record is the input to the conversation, not the end of it. Ash
               reads it back honestly, names the gap, and decides what to build
               next. */}
-          <section className="mt-8 rounded-2xl border-2 border-ohmlet-ink bg-white p-5 shadow-press-sm">
+          <section className="mt-8 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-5 shadow-press-sm">
             <h2 className="text-[11px] font-black uppercase tracking-[0.16em] text-ohmlet-ink-soft">Talk it through</h2>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-ohmlet-ink-soft">
               A coaching session opens on this record rather than on a blank page,
@@ -220,7 +220,7 @@ export const CareerView: React.FC<Props> = ({ onUpgrade, onOpenLive, onOpenPath 
 };
 
 const Cell: React.FC<{ value: string; label: string }> = ({ value, label }) => (
-  <div className="rounded-2xl border-2 border-ohmlet-line bg-white px-4 py-4 shadow-soft">
+  <div className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-4 shadow-soft">
     <p className="text-2xl font-black tabular-nums tracking-tight">{value}</p>
     <p className="mt-0.5 text-[11px] font-bold leading-snug text-ohmlet-ink-soft">{label}</p>
   </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { goBack } from '../../services/nav';
 import { getManifest, type CurriculumUnit } from '../../services/curriculum';
@@ -7,9 +7,12 @@ import { UnitPath } from '../../components/path/UnitPath';
 import { loadProgress } from '../../services/progress';
 import { useAuth } from '../../hooks/useAuth';
 import { track } from '../../services/analytics';
-import { colors, font, space, type, curve, tabular } from '../../theme/tokens';
+import { font, space, type, curve, tabular } from '../../theme/tokens';
+import { makeStyles, useColors } from '../../theme/theme';
 
 export default function UnitDetail() {
+  const colors = useColors();
+  const s = useS();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const [unit, setUnit] = useState<CurriculumUnit | null>(null);
@@ -96,7 +99,7 @@ export default function UnitDetail() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream, padding: space.xl },
   scroll: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
@@ -110,7 +113,7 @@ const s = StyleSheet.create({
     marginTop: space.md, marginBottom: space.xl,
   },
   progressTrack: {
-    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.white,
+    flex: 1, height: 14, borderRadius: 7, ...curve, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.ink, overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: colors.gold },
@@ -118,4 +121,4 @@ const s = StyleSheet.create({
   emptyTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   back: { marginTop: space.md, paddingVertical: space.sm },
   backText: { fontFamily: font.bold, fontSize: type.small, color: colors.blueDeep },
-});
+}));

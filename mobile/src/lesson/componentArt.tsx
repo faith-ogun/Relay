@@ -4,8 +4,9 @@ import { Image } from 'expo-image';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { getManifest } from '../services/curriculum';
 import { componentImageUrl } from './assetUrl';
-import { colors, radius, curve } from '../theme/tokens';
+import { radius, curve } from '../theme/tokens';
 import { duration } from '../theme/motion';
+import { makeStyles } from '../theme/theme';
 
 // ── The photographs of real parts that lessons point at ──
 //
@@ -127,6 +128,7 @@ export function useAssetVersion(): AssetVersion | undefined {
 export type PhotoPhase = 'loading' | 'ready' | 'failed';
 
 const Skeleton: React.FC = () => {
+  const s = useS();
   const pulse = useSharedValue(0.4);
   useEffect(() => {
     pulse.value = withRepeat(withTiming(0.85, { duration: duration.fill }), -1, true);
@@ -159,6 +161,7 @@ export const ComponentPhoto: React.FC<{
   attempt?: number;
   onPhase?: (phase: PhotoPhase) => void;
 }> = ({ path, height, width, attempt = 0, onPhase }) => {
+  const s = useS();
   const version = useAssetVersion();
   const url = version === undefined ? null : componentImageUrl(path, version);
   const [phase, setPhase] = useState<PhotoPhase>('loading');
@@ -192,7 +195,7 @@ export const ComponentPhoto: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   box: { width: '100%', overflow: 'hidden', borderRadius: radius.sm, ...curve },
   skeleton: { backgroundColor: colors.inkFaint, borderRadius: radius.sm, ...curve },
-});
+}));

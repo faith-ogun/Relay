@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, radius, space, tabular, type, type Colors } from '../../theme/tokens';
 import type { SolveResult } from '../../sim/engine';
 import type { CircuitState, DerivedRow, LiveCircuitDef } from '../../sim/circuits';
 import { LED_MAX_MA } from '../../sim/circuits';
+import { makeStyles, useColors } from '../../theme/theme';
 
 /**
  * What the solver actually found, shown as instrument readings.
@@ -56,6 +56,7 @@ export interface ChargeCycle {
  * whether the most common beginner circuit in the world is reported as fine.
  */
 export const LiveLed: React.FC<{ current: number; size?: number }> = ({ current, size = 56 }) => {
+  const colors = useColors();
   const mA = Math.max(0, current * 1000);
   const lit = mA >= 1;
   const glow = Math.min(1, mA / 20);
@@ -84,29 +85,32 @@ export const LiveLed: React.FC<{ current: number; size?: number }> = ({ current,
   );
 };
 
-const TONE = {
-  good: { bg: '#f2fae7', border: colors.greenDeep, text: '#3f6b0d' },
+const toneFor = (colors: Colors) => ({
+  good: { bg: colors.greenSoft, border: colors.greenDeep, text: colors.greenText },
   warn: { bg: colors.goldSoft, border: colors.goldPlate, text: colors.goldText },
-  bad: { bg: '#fdece8', border: colors.red, text: '#a33122' },
-} as const;
+  bad: { bg: colors.redSoft, border: colors.red, text: colors.redText },
+} as const);
 
 /** The capacitor filling, drawn as the thing it is. */
-const ChargeMeter: React.FC<{ charge: ChargeCycle }> = ({ charge }) => (
-  <View style={s.charge}>
-    <View style={s.chargeHead}>
-      <Text style={s.chargeLabel}>{charge.holding ? 'CHARGED' : 'CHARGING'}</Text>
-      <Text style={s.chargePct}>{Math.round(charge.fraction * 100)}%</Text>
+const ChargeMeter: React.FC<{ charge: ChargeCycle }> = ({ charge }) => {
+  const s = useS();
+  return (
+    <View style={s.charge}>
+      <View style={s.chargeHead}>
+        <Text style={s.chargeLabel}>{charge.holding ? 'CHARGED' : 'CHARGING'}</Text>
+        <Text style={s.chargePct}>{Math.round(charge.fraction * 100)}%</Text>
+      </View>
+      <View style={s.chargeTrack}>
+        <View style={[s.chargeFill, { width: `${Math.max(2, charge.fraction * 100)}%` }]} />
+      </View>
+      <Text style={s.chargeFoot}>
+        {charge.lastFullSeconds != null
+          ? `Last fill took ${charge.lastFullSeconds.toFixed(2)} s. Move the resistor and this number moves with it.`
+          : 'Filling for the first time.'}
+      </Text>
     </View>
-    <View style={s.chargeTrack}>
-      <View style={[s.chargeFill, { width: `${Math.max(2, charge.fraction * 100)}%` }]} />
-    </View>
-    <Text style={s.chargeFoot}>
-      {charge.lastFullSeconds != null
-        ? `Last fill took ${charge.lastFullSeconds.toFixed(2)} s. Move the resistor and this number moves with it.`
-        : 'Filling for the first time.'}
-    </Text>
-  </View>
-);
+  );
+};
 
 export const LiveReadout: React.FC<{
   circuit: LiveCircuitDef;
@@ -120,10 +124,12 @@ export const LiveReadout: React.FC<{
   /** Only the RC circuit supplies this. */
   charge?: ChargeCycle | null;
 }> = ({ circuit, result, fault, derived = [], state = null, charge = null }) => {
+  const colors = useColors();
+  const s = useS();
   const ledCurrent = circuit.ledId && result ? Math.abs(result.I[circuit.ledId] ?? 0) : 0;
   const lead = derived.filter((d) => d.lead);
   const rest = derived.filter((d) => !d.lead);
-  const tone = state ? TONE[state.tone] : null;
+  const tone = state ? toneFor(colors)[state.tone] : null;
 
   return (
     <View style={s.card}>
@@ -200,10 +206,10 @@ export const LiveReadout: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   card: {
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
-    borderRadius: radius.lg, ...curve, padding: space.md, ...elevation.card,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
+    borderRadius: radius.lg, ...curve, padding: space.md, ...th.elevation.card,
   },
   state: {
     borderWidth: 2, borderRadius: radius.md, ...curve,
@@ -227,7 +233,7 @@ const s = StyleSheet.create({
   chargeLabel: { fontFamily: font.black, fontSize: 10, letterSpacing: 2, color: colors.blueDeep },
   chargePct: { fontFamily: font.black, fontSize: type.title, color: colors.ink, ...tabular, letterSpacing: -0.6 },
   chargeTrack: {
-    height: 12, borderRadius: 6, ...curve, backgroundColor: colors.white,
+    height: 12, borderRadius: 6, ...curve, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.ink, marginTop: 6, overflow: 'hidden',
   },
   chargeFill: { height: '100%', backgroundColor: colors.blue },
@@ -249,9 +255,9 @@ const s = StyleSheet.create({
   rowLabel: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, flex: 1 },
   rowValue: { fontFamily: font.black, fontSize: type.bodyLg, color: colors.ink, ...tabular },
   fault: {
-    backgroundColor: '#fdece8', borderWidth: 2, borderColor: colors.red,
+    backgroundColor: colors.redSoft, borderWidth: 2, borderColor: colors.red,
     borderRadius: radius.md, ...curve, padding: space.md, marginTop: space.sm,
   },
   faultTitle: { fontFamily: font.black, fontSize: type.body, color: colors.ink },
   faultBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 3, lineHeight: 19 },
-});
+}));

@@ -91,7 +91,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({ stats = {} }
           <button
             type="button"
             onClick={retry}
-            className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-1 text-xs font-black text-ohmlet-ink transition-transform hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
           >
             <RotateCw className="h-3 w-3" strokeWidth={3} />
             Try again
@@ -124,7 +124,7 @@ const SummaryStat: React.FC<{ icon: React.ComponentType<{ className?: string }>;
   value,
   label,
 }) => (
-  <div className="rounded-2xl border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+  <div className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
     <Icon className={`h-5 w-5 ${tint}`} />
     <p className="mt-2 text-2xl font-black tabular-nums text-ohmlet-ink">{value}</p>
     <p className="text-xs font-bold uppercase tracking-wide text-ohmlet-ink-soft">{label}</p>

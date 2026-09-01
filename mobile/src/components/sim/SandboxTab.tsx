@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   Sandbox3D, pinDriveFromDuty, starterBuild,
   type PartKind, type PlacedPart, type SandboxTool, type Wire,
 } from '../sandbox3d';
 import { LockableScrollView } from '../ScrollLock';
-import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, radius, space, tabular, type } from '../../theme/tokens';
+import { makeStyles } from '../../theme/theme';
 
 /**
  * The 3D breadboard.
@@ -28,6 +28,7 @@ const PALETTE: { kind: PartKind; label: string }[] = [
 ];
 
 export const SandboxTab: React.FC = () => {
+  const s = useS();
   const starter = useMemo(() => starterBuild(), []);
   const [parts, setParts] = useState<PlacedPart[]>(starter.parts);
   const [wires, setWires] = useState<Wire[]>(starter.wires);
@@ -163,7 +164,7 @@ export const SandboxTab: React.FC = () => {
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   scroll: { padding: space.lg, paddingBottom: space.xxl },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
@@ -180,17 +181,17 @@ const s = StyleSheet.create({
   body: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, marginTop: space.sm, lineHeight: 20 },
   stage: {
     marginTop: space.md, borderRadius: radius.lg, ...curve, overflow: 'hidden',
-    borderWidth: 2.5, borderColor: colors.ink, backgroundColor: colors.white, ...elevation.card,
+    borderWidth: 2.5, borderColor: colors.ink, backgroundColor: colors.surface, ...th.elevation.card,
   },
   chips: { gap: 8, paddingVertical: space.md, paddingRight: space.lg },
   chip: {
     borderWidth: 2, borderColor: colors.line, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 8,
   },
   chipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipPressed: { transform: [{ scale: 0.97 }] },
   chipText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
-  chipTextOn: { color: colors.white },
+  chipTextOn: { color: colors.onInk },
   controlCard: {
     backgroundColor: colors.goldSoft, borderWidth: 2.5, borderColor: colors.goldPlate,
     borderRadius: radius.lg, ...curve, padding: space.md,
@@ -201,12 +202,12 @@ const s = StyleSheet.create({
   lightRow: { flexDirection: 'row', gap: 6, marginTop: space.sm },
   step: {
     flex: 1, alignItems: 'center', paddingVertical: 9,
-    borderRadius: radius.sm, ...curve, backgroundColor: colors.white,
+    borderRadius: radius.sm, ...curve, backgroundColor: colors.surface,
     borderWidth: 2, borderColor: colors.goldPlate,
   },
   stepOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   stepText: { fontFamily: font.black, fontSize: type.meta, color: colors.goldText },
-  stepTextOn: { color: colors.white },
+  stepTextOn: { color: colors.onInk },
   reset: { marginTop: space.lg, alignSelf: 'center', paddingVertical: space.sm },
   resetText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

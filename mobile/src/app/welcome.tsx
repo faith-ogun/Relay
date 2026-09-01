@@ -1,9 +1,10 @@
 import React, { useCallback, useRef } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Button } from '../components/Button';
 import { CurrentLoopScene } from '../components/scenes/CurrentLoopScene';
-import { colors, font, space, type } from '../theme/tokens';
+import { font, space, type } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * The front door. Before this, the app opened straight onto a login form, which
@@ -13,6 +14,7 @@ import { colors, font, space, type } from '../theme/tokens';
  * One signature motion: a staggered rise, mascot first. Not twenty small wobbles.
  */
 export default function Welcome() {
+  const s = useS();
   const mascot = useRef(new Animated.Value(0)).current;
   const copy = useRef(new Animated.Value(0)).current;
   const scene = useRef(new Animated.Value(0)).current;
@@ -84,7 +86,7 @@ export default function Welcome() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: {
     flex: 1, backgroundColor: colors.cream,
     paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl,
@@ -112,4 +114,4 @@ const s = StyleSheet.create({
   actions: { gap: space.xs },
   secondary: { paddingVertical: space.md, alignItems: 'center' },
   secondaryText: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft },
-});
+}));

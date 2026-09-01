@@ -1,11 +1,12 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { InfinityMark } from './icons';
 import { formatWait, useHeartsCountdown } from '../hooks/useHearts';
 import { useChildSafe } from '../hooks/useChildSafe';
 import { track } from '../services/analytics';
-import { colors, font, tabular } from '../theme/tokens';
+import { font, tabular } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * The three numbers that say how you are doing, in a strip across the top.
@@ -46,7 +47,13 @@ import { colors, font, tabular } from '../theme/tokens';
  * explicit accessibilityLabel, which none of them but hearts had before, because
  * "2070" on its own is not a stat.
  */
-const STAT_ART = {
+/**
+ * Exported because Profile shows the same four numbers in a bigger form and has
+ * to draw the same four pictures. A second `require` of the same PNGs is how one
+ * surface ends up on last month's artwork, and scripts/check-stat-icons.mjs
+ * reads THIS file for the density ladder, so this is the registry it protects.
+ */
+export const STAT_ART = {
   xp: require('../../assets/stats/xp.png'),
   streak: require('../../assets/stats/streak.png'),
   hearts: require('../../assets/stats/hearts.png'),
@@ -57,6 +64,10 @@ const ICON = 32;
 
 /**
  * XP, short enough to fit beside a 32pt icon in a quarter of the bar.
+ *
+ * Exported, and used by the Profile stat plate for the same reason at a
+ * different size: there the number sits at 30pt in a quarter of a card, which
+ * is a wider box and a bigger digit, so the arithmetic lands in the same place.
  *
  * The arithmetic, because it is the whole reason this exists: on a 430pt phone
  * the strip has 398pt inside its padding, four stats share it evenly at ~99pt
@@ -69,7 +80,7 @@ const ICON = 32;
  * box, this was not a problem, which is exactly the kind of thing that makes a
  * purely cosmetic change stop being purely cosmetic.
  */
-const shortXp = (n: number): string => {
+export const shortXp = (n: number): string => {
   if (n < 10_000) return String(n);
   // 12.4K up to 99.9K, then 100K: three significant figures either way, so the
   // width never grows past five characters.
@@ -86,14 +97,17 @@ const StatIcon: React.FC<{
   name: keyof typeof STAT_ART;
   /** Drawn flat when the stat is at zero, so the strip still reads at a glance. */
   dim?: boolean;
-}> = ({ name, dim }) => (
-  <Image
-    source={STAT_ART[name]}
-    style={[s.icon, dim && s.iconDim]}
-    resizeMode="contain"
-    accessibilityIgnoresInvertColors
-  />
-);
+}> = ({ name, dim }) => {
+  const s = useS();
+  return (
+    <Image
+      source={STAT_ART[name]}
+      style={[s.icon, dim && s.iconDim]}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+    />
+  );
+};
 
 /**
  * Hearts in the strip are a single count, not the three glyphs the lesson shows.
@@ -101,6 +115,8 @@ const StatIcon: React.FC<{
  * the difference in treatment is the difference between context and content.
  */
 const HeartsStat: React.FC = () => {
+  const colors = useColors();
+  const s = useS();
   const { hearts, unlimited, loaded, nextIn, empty } = useHeartsCountdown();
   // A minor cannot self-purchase (#96): they get the count, not a doorway to
   // a paywall.
@@ -155,6 +171,8 @@ export const StatStrip: React.FC<{
   doneToday: number;
   dailyGoal: number;
 }> = ({ xp, streak, doneToday, dailyGoal }) => {
+  const colors = useColors();
+  const s = useS();
   const met = doneToday >= dailyGoal;
   const done = Math.min(doneToday, dailyGoal);
   return (
@@ -202,7 +220,7 @@ export const StatStrip: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   strip: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 2, paddingBottom: 12,
@@ -222,4 +240,4 @@ const s = StyleSheet.create({
   // The countdown can be as wide as "14m 30s", so it stays small enough to fit
   // beside a 32pt icon in a quarter of the bar.
   valueWait: { fontSize: 12, color: colors.inkSoft, letterSpacing: 0.2 },
-});
+}));

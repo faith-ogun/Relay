@@ -304,19 +304,19 @@ export const FreeFormEditor: React.FC = () => {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         {/* canvas */}
-        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
           {/* toolbar */}
           <div className="flex flex-wrap items-center gap-2 border-b-2 border-ohmlet-line bg-ohmlet-cream px-3 py-2.5">
             <ToolBtn on={tool === 'select'} onClick={() => { setTool('select'); setPending(null); }} icon={MousePointer2} label="Select" />
             <ToolBtn on={tool === 'place'} onClick={() => { setTool('place'); setPending(null); }} icon={Sparkles} label="Place" />
             <ToolBtn on={tool === 'wire'} onClick={() => { setTool('wire'); setSel(null); }} icon={Cable} label="Wire" />
             <div className="mx-1 h-6 w-px bg-ohmlet-line" />
-            <button onClick={() => setVertical((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-ohmlet-line bg-white px-2.5 text-xs font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink">
+            <button onClick={() => setVertical((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-ohmlet-line bg-ohmlet-surface px-2.5 text-xs font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink">
               <RotateCw className="h-3.5 w-3.5" /> {vertical ? 'Vertical' : 'Horizontal'}
             </button>
             <div className="flex-1" />
             <button onClick={() => reset([], [])} className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-black text-ohmlet-ink-soft hover:text-ohmlet-red">Clear</button>
-            <button onClick={() => reset(EXAMPLE.parts.map((p) => ({ ...p, id: nid(p.kind) })), EXAMPLE.wires.map((w) => ({ ...w, id: nid('w') })))} className="inline-flex h-8 items-center gap-1 rounded-lg border-2 border-ohmlet-ink bg-white px-2.5 text-xs font-black shadow-press-sm hover:translate-y-[2px] hover:shadow-none">Example</button>
+            <button onClick={() => reset(EXAMPLE.parts.map((p) => ({ ...p, id: nid(p.kind) })), EXAMPLE.wires.map((w) => ({ ...w, id: nid('w') })))} className="inline-flex h-8 items-center gap-1 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-2.5 text-xs font-black shadow-press-sm hover:translate-y-[2px] hover:shadow-none">Example</button>
           </div>
 
           {/* svg */}
@@ -348,7 +348,7 @@ export const FreeFormEditor: React.FC = () => {
           </svg>
 
           {/* tutor hint */}
-          <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-white">
+          <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-ohmlet-on-ink">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-4.5 w-4.5 text-ohmlet-ink" /></span>
             <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">
               {!hasBattery ? <>Add a <b>battery</b> and a <b>ground</b> so the circuit has a power source and a 0&nbsp;V reference.</>
@@ -374,12 +374,12 @@ export const FreeFormEditor: React.FC = () => {
           )}
 
           {tool === 'place' && (
-            <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Parts</h3>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {KINDS.map((k) => {
                   const on = k.kind === kind, Icon = k.icon;
-                  return <button key={k.kind} onClick={() => setKind(k.kind)} className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'}`}>
+                  return <button key={k.kind} onClick={() => setKind(k.kind)} className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'}`}>
                     <Icon className="h-4 w-4" /> {k.label}
                   </button>;
                 })}
@@ -388,7 +388,7 @@ export const FreeFormEditor: React.FC = () => {
           )}
 
           {selPart && (
-            <div className="rounded-[1.4rem] border-2 border-ohmlet-ink bg-white p-4 shadow-press-sm">
+            <div className="rounded-[1.4rem] border-2 border-ohmlet-ink bg-ohmlet-surface p-4 shadow-press-sm">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black capitalize">{labelOf(selPart.kind)}</h3>
                 <button onClick={delSel} className="inline-flex items-center gap-1 text-xs font-black text-ohmlet-red hover:underline"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
@@ -397,7 +397,7 @@ export const FreeFormEditor: React.FC = () => {
               {selPart.kind === 'res' && <ValueSlider label="Resistance" unit="Ω" min={10} max={2200} step={10} value={selPart.value} onChange={(v) => setPartVal(setParts, selPart.id, { value: v })} />}
               {selPart.kind === 'sw' && (
                 <button onClick={() => setPartVal(setParts, selPart.id, { closed: !selPart.closed })} className={`mt-3 flex w-full items-center justify-between rounded-xl border-2 px-3 py-2 text-sm font-black ${selPart.closed ? 'border-ohmlet-ink bg-ohmlet-gold' : 'border-ohmlet-line bg-ohmlet-cream text-ohmlet-ink-soft'}`}>
-                  {selPart.closed ? 'Closed' : 'Open'} <span className={`h-4 w-7 rounded-full p-0.5 ${selPart.closed ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`block h-3 w-3 rounded-full bg-white transition-all ${selPart.closed ? 'translate-x-3' : ''}`} /></span>
+                  {selPart.closed ? 'Closed' : 'Open'} <span className={`h-4 w-7 rounded-full p-0.5 ${selPart.closed ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`block h-3 w-3 rounded-full bg-ohmlet-surface transition-all ${selPart.closed ? 'translate-x-3' : ''}`} /></span>
                 </button>
               )}
               {selPart.kind === 'led' && (
@@ -408,12 +408,12 @@ export const FreeFormEditor: React.FC = () => {
             </div>
           )}
 
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live readings</h3>
             {rows.length === 0 && <p className="mt-3 text-xs font-semibold text-ohmlet-ink-soft">Nothing placed yet. Hit <b>Example</b> for a starter circuit, or <b>Place</b> a battery.</p>}
             <div className="mt-3 space-y-2">
               {rows.map(({ p, i, over }) => (
-                <button key={p.id} onClick={() => { setSel(p.id); setTool('select'); }} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${over ? 'border-ohmlet-red/40 bg-[#fff1ee]' : sel === p.id ? 'border-ohmlet-ink bg-ohmlet-gold-soft' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
+                <button key={p.id} onClick={() => { setSel(p.id); setTool('select'); }} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${over ? 'border-ohmlet-red/40 bg-ohmlet-tint-red' : sel === p.id ? 'border-ohmlet-ink bg-ohmlet-gold-soft' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
                   <span className="text-sm font-bold text-ohmlet-ink">{labelOf(p.kind)}{p.kind === 'res' ? ` ${fmtOhm(p.value)}` : p.kind === 'bat' ? ` ${fmt(p.value)}V` : ''}</span>
                   <span className="text-sm font-black tabular-nums text-ohmlet-ink">{fmt(toMA(i))} mA</span>
                 </button>
@@ -447,7 +447,7 @@ const OverCurrentCard: React.FC<{
     <section
       role="status"
       aria-live="polite"
-      className="ohmlet-rise overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-ink bg-white shadow-press-sm"
+      className="ohmlet-rise overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press-sm"
     >
       <div className={`flex items-center gap-2 px-4 py-2 ${over ? 'bg-ohmlet-red text-white' : 'bg-ohmlet-gold text-ohmlet-ink'}`}>
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -521,7 +521,7 @@ function nodePoints(parts: Part[], wires: Wire[]): Pt[] {
 }
 
 const ToolBtn: React.FC<{ on: boolean; onClick: () => void; icon: React.FC<{ className?: string }>; label: string }> = ({ on, onClick, icon: Icon, label }) => (
-  <button onClick={onClick} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border-2 px-2.5 text-xs font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
+  <button onClick={onClick} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border-2 px-2.5 text-xs font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
     <Icon className="h-3.5 w-3.5" /> {label}
   </button>
 );

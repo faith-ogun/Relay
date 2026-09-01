@@ -71,7 +71,7 @@ export const BuildPage: React.FC<BuildPageProps> = ({ onNavigate }) => {
                 onClick={() => setActive(lvl)}
                 aria-pressed={on}
                 className={`rounded-full border-2 border-ohmlet-ink px-4 py-2 text-sm font-black transition-all ${
-                  on ? 'bg-ohmlet-ink text-white' : 'bg-white text-ohmlet-ink hover:bg-ohmlet-gold-soft'
+                  on ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'bg-ohmlet-surface text-ohmlet-ink hover:bg-ohmlet-gold-soft'
                 }`}
               >
                 {lvl}
@@ -89,14 +89,14 @@ export const BuildPage: React.FC<BuildPageProps> = ({ onNavigate }) => {
             return (
               <article
                 key={b.title}
-                className="flex flex-col overflow-hidden rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white shadow-press transition-transform hover:-translate-y-1"
+                className="flex flex-col overflow-hidden rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface shadow-press transition-transform hover:-translate-y-1"
               >
                 <div
                   className="relative flex h-28 items-center justify-center"
                   style={{ background: `linear-gradient(135deg, ${b.color} 0%, ${b.color}cc 100%)` }}
                 >
                   <Icon className="h-10 w-10 text-ohmlet-ink" />
-                  <span className="absolute right-3 top-3 rounded-full border-2 border-ohmlet-ink bg-white/90 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ohmlet-ink">
+                  <span className="absolute right-3 top-3 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface/90 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ohmlet-ink">
                     {b.level}
                   </span>
                 </div>
@@ -145,7 +145,7 @@ export const BuildPage: React.FC<BuildPageProps> = ({ onNavigate }) => {
             {HOW.map((h, i) => {
               const Icon = h.icon;
               return (
-                <div key={h.title} className="flex flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-white p-7 shadow-soft">
+                <div key={h.title} className="flex flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-7 shadow-soft">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold text-ohmlet-ink shadow-press-sm">
                       <Icon className="h-5 w-5" />

@@ -1,9 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Close } from '../components/icons';
 import { Button } from '../components/Button';
 import { InterviewReport } from '../components/InterviewReport';
@@ -15,7 +12,8 @@ import {
 import { beginInterview, clearInterview, takeFinishedInterview, MIN_TURNS_TO_SCORE } from '../services/interviewSession';
 import { track } from '../services/analytics';
 import { goBack } from '../services/nav';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * Interview Mode.
@@ -43,7 +41,14 @@ const SENIORITY = [
 type Phase = 'setup' | 'scoring' | 'report' | 'failed';
 
 export default function Interview() {
+  const colors = useColors();
+  const s = useS();
   const plan = usePlan();
+  // `?report=<id>` opens straight onto one past report. The Live tab's Interview
+  // segment lists them, and a row that dropped the learner on a setup form next
+  // to a list they would have to find their report in again would be a row that
+  // lied about where it went.
+  const params = useLocalSearchParams<{ report?: string }>();
   const [phase, setPhase] = useState<Phase>('setup');
   const [role, setRole] = useState('');
   const [seniority, setSeniority] = useState<string>('mid');
@@ -54,6 +59,8 @@ export default function Interview() {
   const [failure, setFailure] = useState('');
   const [history, setHistory] = useState<ReportListItem[]>([]);
   const [openingPast, setOpeningPast] = useState(false);
+  /** Arrived on a `?report=` link, so the setup form must not flash first. */
+  const [booting, setBooting] = useState(!!params.report);
 
   const isMax = plan.plan === 'max';
 
@@ -120,9 +127,19 @@ export default function Interview() {
     setOpeningPast(true);
     void getReport(id).then((r) => {
       setOpeningPast(false);
+      setBooting(false);
       if (r.ok) { setReport(r.data.report); setPhase('report'); }
     });
   }, []);
+
+  // Fetched once. A re-render must not re-request the report, and a report that
+  // fails to load falls through to the setup form rather than to a dead screen.
+  const bootedReport = useRef(false);
+  useEffect(() => {
+    if (!isMax || !params.report || bootedReport.current) return;
+    bootedReport.current = true;
+    openPast(params.report);
+  }, [isMax, params.report, openPast]);
 
   const retry = useCallback(() => {
     clearInterview();
@@ -153,6 +170,10 @@ export default function Interview() {
         </ScrollView>
       </Shell>
     );
+  }
+
+  if (booting) {
+    return <Shell title="Your feedback report"><View style={s.centre}><ActivityIndicator color={colors.ink} /></View></Shell>;
   }
 
   if (phase === 'scoring') {
@@ -315,22 +336,30 @@ export default function Interview() {
   );
 }
 
-const Shell: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => (
-  <View style={s.screen}>
-    <View style={s.head}>
-      <Pressable onPress={() => goBack('/profile')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
-        <Close size={22} />
-      </Pressable>
-      <View style={{ flex: 1 }}>
-        <Text style={s.kicker}>MAX</Text>
-        <Text style={s.title}>{title ?? 'Interview Mode'}</Text>
+const Shell: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => {
+  const s = useS();
+  return (
+    <View style={s.screen}>
+      <View style={s.head}>
+        {/* Back to LIVE, not Profile. Interview Mode moved into the Live tab's
+            segmented control on 2026-09-01, so Profile is no longer where anyone
+            arrives from, and a back button that lands somewhere the learner has
+            not been is its own kind of dead end. `goBack` still prefers real
+            history when there is any; this is only the fallback. */}
+        <Pressable onPress={() => goBack('/live')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
+          <Close size={22} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={s.kicker}>MAX</Text>
+          <Text style={s.title}>{title ?? 'Interview Mode'}</Text>
+        </View>
       </View>
+      {children}
     </View>
-    {children}
-  </View>
-);
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
@@ -348,7 +377,7 @@ const s = StyleSheet.create({
   section: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1.8, color: colors.inkMute, marginTop: space.xl },
 
   input: {
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.md,
     fontFamily: font.semibold, fontSize: type.label, color: colors.ink,
   },
@@ -356,17 +385,17 @@ const s = StyleSheet.create({
 
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   chip: {
-    borderRadius: 999, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderRadius: 999, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
     paddingHorizontal: 14, paddingVertical: 7,
   },
   chipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipDown: { transform: [{ translateY: 1 }] },
   chipText: { fontFamily: font.extrabold, fontSize: type.small, color: colors.inkSoft },
-  chipTextOn: { color: colors.white },
+  chipTextOn: { color: colors.onInk },
 
   toggle: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.md,
   },
   toggleOn: { borderColor: colors.ink },
@@ -380,7 +409,7 @@ const s = StyleSheet.create({
   toggleSub: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 1 },
 
   gate: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2.5, borderColor: colors.ink, padding: space.lg, gap: space.sm,
   },
   gateTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, letterSpacing: -0.5 },
@@ -391,10 +420,10 @@ const s = StyleSheet.create({
 
   past: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, padding: space.md,
   },
   pastRole: { fontFamily: font.extrabold, fontSize: type.label, color: colors.ink },
   pastMeta: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkMute, marginTop: 1 },
   pastScore: { fontFamily: font.black, fontSize: type.heading, color: colors.goldText },
-});
+}));

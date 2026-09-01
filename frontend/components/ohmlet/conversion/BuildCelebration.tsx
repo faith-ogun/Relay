@@ -25,7 +25,7 @@ const PRO_PERKS: Array<{ icon: typeof Clock; label: string }> = [
 export const BuildCelebration: React.FC<Props> = ({ buildTitle, isPro, isFirstBuild, canUpgrade = true, onUpgrade, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ohmlet-ink/40 p-4 backdrop-blur-sm">
-      <div className="ohmlet-rise relative w-full max-w-md overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+      <div className="ohmlet-rise relative w-full max-w-md overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
         <button
           type="button"
           onClick={onClose}

@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import Animated, {
@@ -16,16 +14,19 @@ import {
   claimCheckpoints, fetchCheckpoints, foldCheckpointXp, foldClaim,
   type CheckpointGrant, type CheckpointStatus, type FailReason,
 } from '../services/checkpoints';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve, type Colors } from '../theme/tokens';
 import { duration, stagger } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
-const TINT: Record<CurriculumUnit['accent'], string> = {
+/** The wash behind a unit card, by its authored accent. A function of the
+ *  palette rather than a constant: on dark every one of these inverts from a
+ *  pale tint to a deep one. */
+const tintFor = (colors: Colors): Record<CurriculumUnit['accent'], string> => ({
   gold: colors.goldSoft,
   blue: colors.blueSoft,
-  green: '#eef7e0',
-  red: '#fdece8',
-};
+  green: colors.greenSoft,
+  red: colors.redSoft,
+});
 
 const CHEST = require('../../assets/brand/checkpoint-chest.png');
 const CHEST_OPEN = require('../../assets/brand/checkpoint-chest-open.png');
@@ -68,6 +69,8 @@ const FAIL_COPY: Record<FailReason, string> = {
 };
 
 export default function LearningPath() {
+  const colors = useColors();
+  const s = useS();
   const { user } = useAuth();
   const uid = user?.uid ?? null;
 
@@ -219,7 +222,7 @@ export default function LearningPath() {
           return (
             <Pressable
               key={unit.id}
-              style={[s.unit, { backgroundColor: TINT[unit.accent] ?? colors.white }]}
+              style={[s.unit, { backgroundColor: tintFor(colors)[unit.accent] ?? colors.surface }]}
               onPress={() => router.push({ pathname: '/unit/[id]', params: { id: unit.id } })}
               accessibilityRole="button"
               accessibilityLabel={`Unit ${i + 1}: ${unit.title}, ${lessonCount} lessons`}
@@ -259,6 +262,8 @@ const CheckpointBand: React.FC<{
   onCollect: () => void;
   onRetry: () => void;
 }> = ({ view, claiming, claimError, onCollect, onRetry }) => {
+  const colors = useColors();
+  const b = useB();
   if (view.phase === 'loading') {
     return (
       <View style={b.quiet}>
@@ -361,6 +366,7 @@ const CheckpointBand: React.FC<{
  * through runOnJS costs a full render per frame.
  */
 const CheckpointCeremony: React.FC<{ grant: CheckpointGrant; onClose: () => void }> = ({ grant, onClose }) => {
+  const c = useC();
   const reduced = useReducedMotion();
   const xp = useSharedValue(0);
 
@@ -427,7 +433,7 @@ const CheckpointCeremony: React.FC<{ grant: CheckpointGrant; onClose: () => void
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   flex: { flex: 1, backgroundColor: colors.cream },
   center: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -445,17 +451,17 @@ const s = StyleSheet.create({
   },
   unit: {
     borderWidth: 2.5, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
-    padding: space.lg, marginBottom: space.md, ...elevation.card,
+    padding: space.lg, marginBottom: space.md, ...th.elevation.card,
   },
   unitTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   number: {
     width: 44, height: 44, borderRadius: 22, ...curve, borderWidth: 2, borderColor: colors.ink,
-    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   numberText: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
   levelPill: {
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 3,
+    backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 3,
   },
   levelText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 1, color: colors.ink },
   unitTitle: {
@@ -474,38 +480,38 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
     textAlign: 'center', marginTop: space.sm, lineHeight: 20,
   },
-});
+}));
 
-const b = StyleSheet.create({
+const useB = makeStyles((colors, th) => ({
   // The collectable state: a full gold object with a plate under it, the only
   // thing on this screen that outranks a unit banner.
   panel: {
     backgroundColor: colors.gold,
     borderWidth: 3, borderColor: colors.ink, borderRadius: radius.lg, ...curve,
     padding: space.md, marginBottom: space.lg,
-    ...elevation.lifted,
+    ...th.elevation.lifted,
   },
   panelTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   chestWrap: {
     width: 64, height: 64, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, borderWidth: 2.5, borderColor: colors.ink,
+    backgroundColor: colors.surface, borderWidth: 2.5, borderColor: colors.ink,
     alignItems: 'center', justifyContent: 'center',
   },
   chestArt: { width: 48, height: 48 },
   panelCopy: { flex: 1, minWidth: 0 },
-  kicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 2.2, color: colors.goldText },
+  kicker: { fontFamily: font.black, fontSize: 10, letterSpacing: 2.2, color: colors.onGold },
   panelTitle: {
-    fontFamily: font.black, fontSize: type.heading, color: colors.ink,
+    fontFamily: font.black, fontSize: type.heading, color: colors.onGold,
     letterSpacing: -0.4, marginTop: 2,
   },
-  panelSub: { fontFamily: font.bold, fontSize: type.meta, color: colors.goldText, marginTop: 3 },
+  panelSub: { fontFamily: font.bold, fontSize: type.meta, color: colors.onGold, marginTop: 3 },
   panelError: {
-    fontFamily: font.black, fontSize: type.small, color: colors.ink,
+    fontFamily: font.black, fontSize: type.small, color: colors.onGold,
     marginTop: space.sm,
   },
   collect: {
     marginTop: space.md,
-    backgroundColor: colors.ink, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.slab, borderRadius: radius.md, ...curve,
     paddingVertical: 14, alignItems: 'center',
   },
   collectPressed: { transform: [{ translateY: 2 }], opacity: 0.92 },
@@ -523,24 +529,24 @@ const b = StyleSheet.create({
   quietXp: { fontFamily: font.black, fontSize: type.small, color: colors.goldText },
   retry: {
     borderWidth: 2, borderColor: colors.ink, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 4,
+    backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 4,
   },
   retryPressed: { transform: [{ translateY: 1 }], backgroundColor: colors.goldSoft },
   retryText: { fontFamily: font.black, fontSize: type.meta, color: colors.ink, letterSpacing: 0.6 },
-});
+}));
 
-const c = StyleSheet.create({
+const useC = makeStyles((colors, th) => ({
   scrim: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(20,24,31,0.62)', padding: space.lg,
   },
   card: {
     width: '100%', maxWidth: 380,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 3, borderColor: colors.ink, borderRadius: radius.xl, ...curve,
     paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.md,
     alignItems: 'center',
-    ...elevation.overlay,
+    ...th.elevation.overlay,
   },
   chest: { width: 112, height: 112 },
   kicker: {
@@ -571,5 +577,5 @@ const c = StyleSheet.create({
     borderRadius: radius.md, ...curve, paddingVertical: 13, alignItems: 'center',
   },
   donePressed: { transform: [{ translateY: 2 }], backgroundColor: colors.goldDeep },
-  doneText: { fontFamily: font.black, fontSize: type.bodyLg, color: colors.ink },
-});
+  doneText: { fontFamily: font.black, fontSize: type.bodyLg, color: colors.onGold },
+}));

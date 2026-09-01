@@ -5,7 +5,8 @@ import {
   Battery, Capacitor, Coil, Diode, Ground, Label, Ldr, Led, Node, OpAmp,
   Resistor, Spark, Transistor, Wire,
 } from './primitives';
-import { colors, font, radius, type, curve } from '../../theme/tokens';
+import { font, radius, type, curve, type Colors } from '../../theme/tokens';
+import { makeStyles, useColors } from '../../theme/theme';
 
 // The 14 circuits the authored lessons reference by key. 274 steps (11.6% of
 // all steps) carry a `circuitDiagram`, and until now mobile silently dropped
@@ -50,12 +51,15 @@ const HEIGHTS = {
 export const heightFor = (circuit?: string): number =>
   (circuit && (HEIGHTS as Record<string, number>)[circuit]) || H;
 
-const Frame: React.FC<{ children: React.ReactNode; h?: number }> = ({ children, h = H }) => (
-  <Svg width="100%" height={h} viewBox={`0 0 ${W} ${h}`}>
-    <Rect x={1} y={1} width={W - 2} height={h - 2} rx={12} fill={colors.white} stroke={colors.line} strokeWidth={2} />
-    <G>{children}</G>
-  </Svg>
-);
+const Frame: React.FC<{ children: React.ReactNode; h?: number }> = ({ children, h = H }) => {
+  const colors = useColors();
+  return (
+    <Svg width="100%" height={h} viewBox={`0 0 ${W} ${h}`}>
+      <Rect x={1} y={1} width={W - 2} height={h - 2} rx={12} fill={colors.surface} stroke={colors.line} strokeWidth={2} />
+      <G>{children}</G>
+    </Svg>
+  );
+};
 
 /**
  * A named terminal: an Arduino pin, or the labelled input/output of a block.
@@ -64,20 +68,32 @@ const Frame: React.FC<{ children: React.ReactNode; h?: number }> = ({ children, 
  * ("click the analog pin that reads the sensor"), so a bare text label is not
  * enough: a learner has to be able to see the thing before they can tap it.
  */
-const Pin: React.FC<{ x: number; y: number; label: string; w?: number }> = ({ x, y, label, w = 40 }) => (
-  <G>
-    <Rect x={x - w / 2} y={y - 10} width={w} height={20} rx={5}
-          fill={colors.white} stroke={colors.ink} strokeWidth={2.4} />
-    <SvgText x={x} y={y + 4} fontSize={10} fontWeight="800" fill={colors.ink} textAnchor="middle">
-      {label}
-    </SvgText>
-  </G>
-);
+const Pin: React.FC<{ x: number; y: number; label: string; w?: number }> = ({ x, y, label, w = 40 }) => {
+  const colors = useColors();
+  return (
+    <G>
+      <Rect x={x - w / 2} y={y - 10} width={w} height={20} rx={5}
+            fill={colors.surface} stroke={colors.ink} strokeWidth={2.4} />
+      <SvgText x={x} y={y + 4} fontSize={10} fontWeight="800" fill={colors.ink} textAnchor="middle">
+        {label}
+      </SvgText>
+    </G>
+  );
+};
 
 /** Hole columns on the breadboard, at the pitch the row_group hit area assumes. */
 const COLUMNS = [40, 70, 100, 130, 160, 190, 220, 250, 280];
 
-export const CIRCUITS: Record<string, React.FC> = {
+/**
+ * Every diagram in the set, keyed by the id the curriculum authors write.
+ *
+ * The palette arrives as a PROP rather than being read from a hook inside each
+ * one. The keys are authored ids, so these functions are named `ldr_alarm` and
+ * `h_bridge`, and a lowercase function holding a hook is something neither the
+ * lint rule nor the React Compiler can tell apart from a plain helper that got
+ * a hook by mistake. One prop, resolved once by the component that renders them.
+ */
+export const CIRCUITS: Record<string, React.FC<{ colors: Colors }>> = {
   // A single loop: battery, resistor, LED.
   series_circuit: () => (
     <Frame>
@@ -189,38 +205,38 @@ export const CIRCUITS: Record<string, React.FC> = {
   // 220 ohm resistor and lights the LED"), and the one the web draws. Mobile
   // used to draw an NPN driving a buzzer instead, which contradicted the lesson
   // text and left six identify_component steps with nothing to tap.
-  ldr_alarm: () => (
-    <Frame h={HEIGHTS.ldr_alarm}>
-      <Rect x={18} y={24} width={54} height={184} rx={8}
-            fill={colors.blueDeep} stroke={colors.ink} strokeWidth={2.4} />
-      <SvgText x={45} y={42} fontSize={9} fontWeight="800" fill={colors.white} textAnchor="middle">
-        ARDUINO
-      </SvgText>
-      <Pin x={92} y={52} label="5V" />
-      <Pin x={92} y={100} label="A0" />
-      <Pin x={92} y={148} label="D9" />
-      <Pin x={92} y={196} label="GND" />
-      {/* sense: 5V → LDR → midpoint → 10k → GND */}
-      <Wire x1={112} y1={52} x2={140} y2={52} />
-      <Ldr x={140} y={52} />
-      <Label x={160} y={72} text="LDR" />
-      <Wire x1={180} y1={52} x2={250} y2={52} />
-      <Wire x1={250} y1={52} x2={250} y2={118} />
-      <Node x={250} y={100} />
-      <Wire x1={250} y1={100} x2={112} y2={100} />
-      <Resistor x={250} y={118} w={40} vertical label="10kΩ" />
-      <Wire x1={250} y1={158} x2={250} y2={196} />
-      <Wire x1={250} y1={196} x2={112} y2={196} />
-      {/* act: D9 → 220Ω → LED → GND */}
-      <Wire x1={112} y1={148} x2={132} y2={148} />
-      <Resistor x={132} y={148} w={44} label="220Ω" />
-      <Wire x1={176} y1={148} x2={191} y2={148} />
-      <Led x={200} y={148} label="LED" />
-      <Wire x1={209} y1={148} x2={218} y2={148} />
-      <Wire x1={218} y1={148} x2={218} y2={196} />
-      <Node x={218} y={196} />
-      <Label x={160} y={224} text="Cover the LDR, the reading falls, the LED lights" />
-    </Frame>
+  ldr_alarm: ({ colors }) => (
+      <Frame h={HEIGHTS.ldr_alarm}>
+        <Rect x={18} y={24} width={54} height={184} rx={8}
+              fill={colors.blueDeep} stroke={colors.ink} strokeWidth={2.4} />
+        <SvgText x={45} y={42} fontSize={9} fontWeight="800" fill={colors.white} textAnchor="middle">
+          ARDUINO
+        </SvgText>
+        <Pin x={92} y={52} label="5V" />
+        <Pin x={92} y={100} label="A0" />
+        <Pin x={92} y={148} label="D9" />
+        <Pin x={92} y={196} label="GND" />
+        {/* sense: 5V → LDR → midpoint → 10k → GND */}
+        <Wire x1={112} y1={52} x2={140} y2={52} />
+        <Ldr x={140} y={52} />
+        <Label x={160} y={72} text="LDR" />
+        <Wire x1={180} y1={52} x2={250} y2={52} />
+        <Wire x1={250} y1={52} x2={250} y2={118} />
+        <Node x={250} y={100} />
+        <Wire x1={250} y1={100} x2={112} y2={100} />
+        <Resistor x={250} y={118} w={40} vertical label="10kΩ" />
+        <Wire x1={250} y1={158} x2={250} y2={196} />
+        <Wire x1={250} y1={196} x2={112} y2={196} />
+        {/* act: D9 → 220Ω → LED → GND */}
+        <Wire x1={112} y1={148} x2={132} y2={148} />
+        <Resistor x={132} y={148} w={44} label="220Ω" />
+        <Wire x1={176} y1={148} x2={191} y2={148} />
+        <Led x={200} y={148} label="LED" />
+        <Wire x1={209} y1={148} x2={218} y2={148} />
+        <Wire x1={218} y1={148} x2={218} y2={196} />
+        <Node x={218} y={196} />
+        <Label x={160} y={224} text="Cover the LDR, the reading falls, the LED lights" />
+      </Frame>
   ),
 
   transistor_switch: () => (
@@ -297,75 +313,75 @@ export const CIRCUITS: Record<string, React.FC> = {
     </Frame>
   ),
 
-  voltage_regulator: () => (
-    <Frame>
-      <Pin x={38} y={50} label="9V in" w={44} />
-      <Wire x1={60} y1={50} x2={100} y2={50} />
-      <Rect x={100} y={32} width={70} height={38} rx={5} fill={colors.white} stroke={colors.ink} strokeWidth={2.4} />
-      <Label x={135} y={55} text="7805" />
-      <Wire x1={170} y1={50} x2={254} y2={50} />
-      <Pin x={276} y={50} label="5V out" w={48} />
-      <Wire x1={135} y1={70} x2={135} y2={110} /><Ground x={135} y={114} />
-      <Capacitor x={76} y={90} label="Cin" />
-      <Wire x1={80} y1={78} x2={80} y2={50} /><Wire x1={80} y1={102} x2={80} y2={126} /><Ground x={80} y={130} />
-      <Capacitor x={210} y={90} label="Cout" />
-      <Wire x1={214} y1={78} x2={214} y2={50} /><Wire x1={214} y1={102} x2={214} y2={126} /><Ground x={214} y={130} />
-      <Label x={160} y={162} text="Turns a messy input into a steady rail" />
-    </Frame>
+  voltage_regulator: ({ colors }) => (
+      <Frame>
+        <Pin x={38} y={50} label="9V in" w={44} />
+        <Wire x1={60} y1={50} x2={100} y2={50} />
+        <Rect x={100} y={32} width={70} height={38} rx={5} fill={colors.surface} stroke={colors.ink} strokeWidth={2.4} />
+        <Label x={135} y={55} text="7805" />
+        <Wire x1={170} y1={50} x2={254} y2={50} />
+        <Pin x={276} y={50} label="5V out" w={48} />
+        <Wire x1={135} y1={70} x2={135} y2={110} /><Ground x={135} y={114} />
+        <Capacitor x={76} y={90} label="Cin" />
+        <Wire x1={80} y1={78} x2={80} y2={50} /><Wire x1={80} y1={102} x2={80} y2={126} /><Ground x={80} y={130} />
+        <Capacitor x={210} y={90} label="Cout" />
+        <Wire x1={214} y1={78} x2={214} y2={50} /><Wire x1={214} y1={102} x2={214} y2={126} /><Ground x={214} y={130} />
+        <Label x={160} y={162} text="Turns a messy input into a steady rail" />
+      </Frame>
   ),
 
-  h_bridge: () => (
-    <Frame>
-      <Label x={160} y={22} text="V+" /><Wire x1={70} y1={28} x2={250} y2={28} />
-      <Transistor x={80} y={54} /><Transistor x={240} y={54} />
-      <Transistor x={80} y={110} /><Transistor x={240} y={110} />
-      <Label x={50} y={50} text="Q1" anchor="end" /><Label x={272} y={50} text="Q2" anchor="start" />
-      <Label x={50} y={106} text="Q3" anchor="end" /><Label x={272} y={106} text="Q4" anchor="start" />
-      <Wire x1={90} y1={38} x2={90} y2={28} /><Wire x1={250} y1={38} x2={250} y2={28} />
-      <Wire x1={90} y1={70} x2={90} y2={94} /><Wire x1={250} y1={70} x2={250} y2={94} />
-      <Node x={90} y={82} /><Node x={250} y={82} />
-      <Wire x1={90} y1={82} x2={148} y2={82} /><Wire x1={192} y1={82} x2={250} y2={82} />
-      <Circle cx={170} cy={82} r={21} fill={colors.white} stroke={colors.ink} strokeWidth={2.4} />
-      <Label x={170} y={86} text="M" />
-      <Wire x1={90} y1={126} x2={90} y2={138} /><Wire x1={250} y1={126} x2={250} y2={138} />
-      <Wire x1={90} y1={138} x2={250} y2={138} /><Ground x={170} y={138} />
-      <Label x={160} y={164} text="Four switches reverse the motor" />
-    </Frame>
+  h_bridge: ({ colors }) => (
+      <Frame>
+        <Label x={160} y={22} text="V+" /><Wire x1={70} y1={28} x2={250} y2={28} />
+        <Transistor x={80} y={54} /><Transistor x={240} y={54} />
+        <Transistor x={80} y={110} /><Transistor x={240} y={110} />
+        <Label x={50} y={50} text="Q1" anchor="end" /><Label x={272} y={50} text="Q2" anchor="start" />
+        <Label x={50} y={106} text="Q3" anchor="end" /><Label x={272} y={106} text="Q4" anchor="start" />
+        <Wire x1={90} y1={38} x2={90} y2={28} /><Wire x1={250} y1={38} x2={250} y2={28} />
+        <Wire x1={90} y1={70} x2={90} y2={94} /><Wire x1={250} y1={70} x2={250} y2={94} />
+        <Node x={90} y={82} /><Node x={250} y={82} />
+        <Wire x1={90} y1={82} x2={148} y2={82} /><Wire x1={192} y1={82} x2={250} y2={82} />
+        <Circle cx={170} cy={82} r={21} fill={colors.surface} stroke={colors.ink} strokeWidth={2.4} />
+        <Label x={170} y={86} text="M" />
+        <Wire x1={90} y1={126} x2={90} y2={138} /><Wire x1={250} y1={126} x2={250} y2={138} />
+        <Wire x1={90} y1={138} x2={250} y2={138} /><Ground x={170} y={138} />
+        <Label x={160} y={164} text="Four switches reverse the motor" />
+      </Frame>
   ),
 
   // Rails along the top and bottom, terminal strips either side of the channel.
   // The pale capsule behind each column of holes IS the connection: five holes
   // in one capsule are one node, and the capsule stops at the channel because
   // the two halves are not joined. That is the whole lesson, drawn.
-  breadboard_layout: () => (
-    <Frame h={HEIGHTS.breadboard_layout}>
-      <Rect x={22} y={12} width={276} height={178} rx={8} fill={colors.cream} stroke={colors.ink} strokeWidth={2.4} />
-      <Rect x={28} y={22} width={264} height={18} rx={4} fill={colors.red} opacity={0.16} />
-      <SvgText x={38} y={35} fontSize={10} fontWeight="800" fill={colors.red} textAnchor="start">+ 5V</SvgText>
-      {COLUMNS.map((cx) => (
-        <G key={`u${cx}`}>
-          <Rect x={cx - 7} y={53} width={14} height={37} rx={7} fill={colors.ink} opacity={0.07} />
-          {[58, 67, 76, 85].map((cy) => (
-            <Circle key={cy} cx={cx} cy={cy} r={2.4} fill={colors.ink} opacity={0.32} />
-          ))}
-        </G>
-      ))}
-      <Rect x={28} y={96} width={264} height={12} fill={colors.line} />
-      <SvgText x={160} y={105} fontSize={8} fontWeight="700" fill={colors.inkMute} textAnchor="middle">
-        channel
-      </SvgText>
-      {COLUMNS.map((cx) => (
-        <G key={`l${cx}`}>
-          <Rect x={cx - 7} y={114} width={14} height={37} rx={7} fill={colors.ink} opacity={0.07} />
-          {[119, 128, 137, 146].map((cy) => (
-            <Circle key={cy} cx={cx} cy={cy} r={2.4} fill={colors.ink} opacity={0.32} />
-          ))}
-        </G>
-      ))}
-      <Rect x={28} y={164} width={264} height={18} rx={4} fill={colors.blueDeep} opacity={0.16} />
-      <SvgText x={38} y={177} fontSize={10} fontWeight="800" fill={colors.blueDeep} textAnchor="start">− GND</SvgText>
-      <Label x={160} y={203} text="Rails run along, rows run across the channel" />
-    </Frame>
+  breadboard_layout: ({ colors }) => (
+      <Frame h={HEIGHTS.breadboard_layout}>
+        <Rect x={22} y={12} width={276} height={178} rx={8} fill={colors.cream} stroke={colors.ink} strokeWidth={2.4} />
+        <Rect x={28} y={22} width={264} height={18} rx={4} fill={colors.red} opacity={0.16} />
+        <SvgText x={38} y={35} fontSize={10} fontWeight="800" fill={colors.red} textAnchor="start">+ 5V</SvgText>
+        {COLUMNS.map((cx) => (
+          <G key={`u${cx}`}>
+            <Rect x={cx - 7} y={53} width={14} height={37} rx={7} fill={colors.ink} opacity={0.07} />
+            {[58, 67, 76, 85].map((cy) => (
+              <Circle key={cy} cx={cx} cy={cy} r={2.4} fill={colors.ink} opacity={0.32} />
+            ))}
+          </G>
+        ))}
+        <Rect x={28} y={96} width={264} height={12} fill={colors.line} />
+        <SvgText x={160} y={105} fontSize={8} fontWeight="700" fill={colors.inkMute} textAnchor="middle">
+          channel
+        </SvgText>
+        {COLUMNS.map((cx) => (
+          <G key={`l${cx}`}>
+            <Rect x={cx - 7} y={114} width={14} height={37} rx={7} fill={colors.ink} opacity={0.07} />
+            {[119, 128, 137, 146].map((cy) => (
+              <Circle key={cy} cx={cx} cy={cy} r={2.4} fill={colors.ink} opacity={0.32} />
+            ))}
+          </G>
+        ))}
+        <Rect x={28} y={164} width={264} height={18} rx={4} fill={colors.blueDeep} opacity={0.16} />
+        <SvgText x={38} y={177} fontSize={10} fontWeight="800" fill={colors.blueDeep} textAnchor="start">− GND</SvgText>
+        <Label x={160} y={203} text="Rails run along, rows run across the channel" />
+      </Frame>
   ),
 };
 
@@ -520,6 +536,8 @@ export interface CircuitDiagramProps {
 export const CircuitDiagram: React.FC<CircuitDiagramProps> = ({
   circuit, onRegionPress, selected, correct, wrong,
 }) => {
+  const colors = useColors();
+  const s = useS();
   if (!circuit) return null;
   const Drawing = CIRCUITS[circuit];
   // An unknown key is stated rather than silently dropped, so a new authored
@@ -535,7 +553,7 @@ export const CircuitDiagram: React.FC<CircuitDiagramProps> = ({
   const regions = press ? regionsFor(circuit) : [];
   return (
     <View style={s.wrap}>
-      <Drawing />
+      <Drawing colors={colors} />
       {!!press && regions.length > 0 && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           {/* Same viewBox as the drawing underneath, so a rect lands on the part
@@ -563,11 +581,11 @@ export const CircuitDiagram: React.FC<CircuitDiagramProps> = ({
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   wrap: { marginTop: 14 },
   unknown: {
     marginTop: 14, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 22, alignItems: 'center',
+    backgroundColor: colors.surface, paddingVertical: 22, alignItems: 'center',
   },
   unknownText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
-});
+}));

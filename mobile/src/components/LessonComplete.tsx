@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing, FadeInDown, useAnimatedProps, useAnimatedStyle, useDerivedValue,
   useReducedMotion, useSharedValue, withDelay, withSequence, withSpring, withTiming,
@@ -8,9 +8,9 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { Button } from './Button';
 import { LEVEL_META, MAX_LEVEL } from '../lesson/levels';
-import { colors, curve, font, leading, press, tabular, tracking, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, leading, tabular, tracking, type } from '../theme/tokens';
 import { duration, motion, stagger } from '../theme/motion';
+import { makeStyles, useColors } from '../theme/theme';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -54,6 +54,8 @@ export const LessonComplete: React.FC<{
   streakExtended: boolean;
   onDone: () => void;
 }> = ({ earnedXp, paysXp, level, perfect, streak, streakExtended, onDone }) => {
+  const colors = useColors();
+  const s = useS();
   const reduced = useReducedMotion();
   const xp = useSharedValue(0);
   const pop = useSharedValue(1);
@@ -198,17 +200,20 @@ export const LessonComplete: React.FC<{
 
 const Stat: React.FC<{
   i: number; reduced: boolean; label: string; value: string; tint: string;
-}> = ({ i, reduced, label, value, tint }) => (
-  <Animated.View
-    entering={reduced ? undefined : FadeInDown.delay(stagger(i + 1)).duration(300)}
-    style={[s.stat, { borderColor: tint }]}
-  >
-    <Text style={[s.statValue, { color: tint }]} maxFontSizeMultiplier={1.2}>{value}</Text>
-    <Text style={s.statLabel}>{label}</Text>
-  </Animated.View>
-);
+}> = ({ i, reduced, label, value, tint }) => {
+  const s = useS();
+  return (
+    <Animated.View
+      entering={reduced ? undefined : FadeInDown.delay(stagger(i + 1)).duration(300)}
+      style={[s.stat, { borderColor: tint }]}
+    >
+      <Text style={[s.statValue, { color: tint }]} maxFontSizeMultiplier={1.2}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </Animated.View>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: {
     flex: 1, backgroundColor: colors.cream,
     alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8,
@@ -221,7 +226,7 @@ const s = StyleSheet.create({
     width: 92, height: 92, borderRadius: 46, ...curve,
     borderWidth: 3, borderColor: colors.ink,
     alignItems: 'center', justifyContent: 'center',
-    ...press,
+    ...th.press,
   },
   tierPill: {
     marginTop: 18, borderWidth: 2, borderRadius: 999,
@@ -271,8 +276,8 @@ const s = StyleSheet.create({
   stats: { flexDirection: 'row', gap: 12, marginTop: 24 },
   stat: {
     flex: 1, borderWidth: 3, borderRadius: 20, ...curve,
-    backgroundColor: colors.white, paddingVertical: 16, alignItems: 'center',
-    ...elevation.card,
+    backgroundColor: colors.surface, paddingVertical: 16, alignItems: 'center',
+    ...th.elevation.card,
   },
   statValue: { ...tabular, fontFamily: font.black, fontSize: type.heading },
   statLabel: {
@@ -280,4 +285,4 @@ const s = StyleSheet.create({
     marginTop: 2, letterSpacing: tracking.meta,
   },
   footer: { alignSelf: 'stretch', marginTop: 32 },
-});
+}));

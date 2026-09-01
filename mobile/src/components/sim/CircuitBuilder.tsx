@@ -12,8 +12,7 @@ import Animated, {
 import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useScrollLock } from '../ScrollLock';
-import { colors, curve, font, radius, space, tabular, tracking, type } from '../../theme/tokens';
-import { elevation, innerLight } from '../../theme/elevation';
+import { curve, font, radius, space, tabular, tracking, type, type Colors } from '../../theme/tokens';
 import { motion, stagger } from '../../theme/motion';
 import { PartGlyph } from './builderGlyphs';
 import {
@@ -25,6 +24,7 @@ import {
   type Analysis, type CircuitSnapshot, type Part, type PartKind, type PartReadout, type Severity,
 } from './circuitModel';
 import type { SolveResult } from '../../sim/engine';
+import { makeStyles, useColors } from '../../theme/theme';
 
 // ── The free-form circuit builder ──
 //
@@ -86,13 +86,13 @@ const Cross: React.FC<{ color: string }> = ({ color }) => (
   </Svg>
 );
 
-const SEVERITY_TINT: Record<Severity, string> = {
+const severityTint = (colors: Colors): Record<Severity, string> => ({
   danger: colors.red, warn: colors.gold, note: colors.blue, ok: colors.green,
-};
+});
 
 /** The verdict badge. Four shapes, so severity is legible without relying on colour alone. */
 const VerdictMark: React.FC<{ severity: Severity }> = ({ severity }) => {
-  const tint = SEVERITY_TINT[severity];
+  const tint = severityTint(useColors())[severity];
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24">
       {severity === 'ok' && (
@@ -130,6 +130,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
  * a static line cannot: which way round the loop goes, and roughly how hard.
  */
 const FlowWire: React.FC<{ d: string; amps: number; dim: boolean }> = ({ d, amps, dim }) => {
+  const colors = useColors();
   const phase = useSharedValue(0);
   const mag = Math.abs(amps);
   const moving = mag > FLOW_FLOOR && !dim;
@@ -173,6 +174,7 @@ const PinPad: React.FC<{
   label: string; hint: string;
   onPress: () => void;
 }> = ({ cx, cy, armed, wired, label, hint, onPress }) => {
+  const p = useP();
   const press = useSharedValue(0);
   const pulse = useSharedValue(0);
 
@@ -208,7 +210,7 @@ const PinPad: React.FC<{
   );
 };
 
-const p = StyleSheet.create({
+const useP = makeStyles((colors) => ({
   unwired: {
     position: 'absolute', top: -9, alignSelf: 'center',
     backgroundColor: colors.red, borderRadius: 999, ...curve,
@@ -218,12 +220,12 @@ const p = StyleSheet.create({
   target: { position: 'absolute', width: PIN_HIT, height: PIN_HIT, alignItems: 'center', justifyContent: 'center' },
   dot: {
     width: 19, height: 19, borderRadius: 10,
-    borderWidth: 2.6, borderColor: colors.ink, backgroundColor: colors.white,
+    borderWidth: 2.6, borderColor: colors.ink, backgroundColor: colors.surface,
   },
   dotWired: { backgroundColor: colors.ink },
   dotArmed: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.gold, borderColor: colors.ink },
   pulse: { position: 'absolute', width: 38, height: 38, borderRadius: 19, borderWidth: 3, borderColor: colors.goldDeep },
-});
+}));
 
 // ── Part touch layer ──
 
@@ -255,6 +257,7 @@ const PartLayer: React.FC<PartLayerProps> = ({
   part, index, selected, armedPin, isWired, voltageAt,
   onPin, onSelect, onDragStart, onDrag, onDragEnd,
 }) => {
+  const p = useP();
   const live = useRef({ part, onSelect, onDrag, onDragStart, onDragEnd });
   live.current = { part, onSelect, onDrag, onDragStart, onDragEnd };
   const origin = useRef({ x: 0, y: 0 });
@@ -367,6 +370,8 @@ const ToolButton: React.FC<{
   label: string; onPress: () => void; disabled?: boolean; tone?: 'ink' | 'red';
   icon: (color: string) => React.ReactNode;
 }> = ({ label, onPress, disabled, tone = 'ink', icon }) => {
+  const colors = useColors();
+  const t = useT();
   const press = useSharedValue(0);
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: press.value * 2 }] }));
   const color = disabled ? colors.inkMute : tone === 'red' ? colors.red : colors.inkSoft;
@@ -390,6 +395,8 @@ const ToolButton: React.FC<{
 };
 
 const PaletteTile: React.FC<{ kind: PartKind; onPress: () => void }> = ({ kind, onPress }) => {
+  const colors = useColors();
+  const t = useT();
   const press = useSharedValue(0);
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - press.value * 0.05 }, { translateY: press.value * 3 }],
@@ -414,47 +421,56 @@ const PaletteTile: React.FC<{ kind: PartKind; onPress: () => void }> = ({ kind, 
   );
 };
 
-const ValuePill: React.FC<{ text: string; on: boolean; onPress: () => void; label: string }> = ({ text, on, onPress, label }) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityLabel={label}
-    accessibilityState={{ selected: on }}
-    style={({ pressed }) => [t.pill, on && t.pillOn, pressed && !on && t.pillPressed]}
-  >
-    <Text style={[t.pillText, on && t.pillTextOn]}>{text}</Text>
-  </Pressable>
-);
+const ValuePill: React.FC<{ text: string; on: boolean; onPress: () => void; label: string }> = ({ text, on, onPress, label }) => {
+  const t = useT();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: on }}
+      style={({ pressed }) => [t.pill, on && t.pillOn, pressed && !on && t.pillPressed]}
+    >
+      <Text style={[t.pillText, on && t.pillTextOn]}>{text}</Text>
+    </Pressable>
+  );
+};
 
-const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View style={t.stat}>
-    <Text style={t.statLabel}>{label}</Text>
-    <Text style={t.statValue} numberOfLines={1}>{value}</Text>
-  </View>
-);
-
-const ReadingRow: React.FC<{ read: PartReadout; selected: boolean; onPress: () => void }> = ({ read, selected, onPress }) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityLabel={`${read.label}, ${SPECS[read.kind].label}${read.valueText ? `, ${read.valueText}` : ''}, ${read.amps === null ? 'no reading' : fmtAmps(read.amps)}`}
-    accessibilityState={{ selected }}
-    style={({ pressed }) => [t.row, selected && t.rowOn, pressed && t.rowPressed]}
-  >
-    <View style={[t.refdes, selected && t.refdesOn]}>
-      <Text style={[t.refdesText, selected && t.refdesTextOn]} numberOfLines={1}>{read.label}</Text>
+const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const t = useT();
+  return (
+    <View style={t.stat}>
+      <Text style={t.statLabel}>{label}</Text>
+      <Text style={t.statValue} numberOfLines={1}>{value}</Text>
     </View>
-    <View style={t.rowBody}>
-      <Text style={t.rowTitle} numberOfLines={1}>
-        {SPECS[read.kind].label}{read.valueText ? `  ${read.valueText}` : ''}
+  );
+};
+
+const ReadingRow: React.FC<{ read: PartReadout; selected: boolean; onPress: () => void }> = ({ read, selected, onPress }) => {
+  const t = useT();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${read.label}, ${SPECS[read.kind].label}${read.valueText ? `, ${read.valueText}` : ''}, ${read.amps === null ? 'no reading' : fmtAmps(read.amps)}`}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [t.row, selected && t.rowOn, pressed && t.rowPressed]}
+    >
+      <View style={[t.refdes, selected && t.refdesOn]}>
+        <Text style={[t.refdesText, selected && t.refdesTextOn]} numberOfLines={1}>{read.label}</Text>
+      </View>
+      <View style={t.rowBody}>
+        <Text style={t.rowTitle} numberOfLines={1}>
+          {SPECS[read.kind].label}{read.valueText ? `  ${read.valueText}` : ''}
+        </Text>
+        {!!read.state && <Text style={t.rowState} numberOfLines={1}>{read.state}</Text>}
+      </View>
+      <Text style={[t.rowAmps, read.amps === null && t.rowAmpsUnknown]} numberOfLines={1}>
+        {read.amps === null ? 'no reading' : fmtAmps(read.amps)}
       </Text>
-      {!!read.state && <Text style={t.rowState} numberOfLines={1}>{read.state}</Text>}
-    </View>
-    <Text style={[t.rowAmps, read.amps === null && t.rowAmpsUnknown]} numberOfLines={1}>
-      {read.amps === null ? 'no reading' : fmtAmps(read.amps)}
-    </Text>
-  </Pressable>
-);
+    </Pressable>
+  );
+};
 
 // ── The builder ──
 
@@ -484,6 +500,8 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
   { initial, canvasHeight = 420, palette, onChange, style },
   ref,
 ) {
+  const colors = useColors();
+  const t = useT();
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [snap, setSnap] = useState<CircuitSnapshot>(initial ?? EMPTY);
   const [past, setPast] = useState<CircuitSnapshot[]>([]);
@@ -862,7 +880,7 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
                         <G key={`n${n.id}`}>
                           <Rect
                             x={cx - 27} y={cy - 10} width={54} height={19} rx={9}
-                            fill={colors.white} stroke={n.id === 0 ? colors.inkFaint : colors.gold} strokeWidth={1.6}
+                            fill={colors.surface} stroke={n.id === 0 ? colors.inkFaint : colors.gold} strokeWidth={1.6}
                           />
                           <SvgText
                             x={cx} y={cy + 4} fontSize={10.5} fontWeight="800" textAnchor="middle"
@@ -931,7 +949,7 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
         accessibilityLiveRegion="polite"
         accessibilityLabel={`${coach.title} ${coach.detail}`}
       >
-        <View style={[t.coachMark, { borderColor: SEVERITY_TINT[coach.severity] }]}>
+        <View style={[t.coachMark, { borderColor: severityTint(colors)[coach.severity] }]}>
           <VerdictMark severity={coach.severity} />
         </View>
         <View style={t.coachBody}>
@@ -1090,7 +1108,7 @@ export const CircuitBuilder = forwardRef<CircuitBuilderHandle, CircuitBuilderPro
   );
 });
 
-const t = StyleSheet.create({
+const useT = makeStyles((colors, th) => ({
   spacer: { flex: 1 },
 
   bar: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm },
@@ -1098,7 +1116,7 @@ const t = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     height: 44, paddingHorizontal: 14,
     borderRadius: radius.sm, ...curve,
-    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
   },
   toolOff: { backgroundColor: colors.cream, borderColor: colors.inkFaint },
   toolLabel: { fontFamily: font.extrabold, fontSize: type.small, letterSpacing: tracking.small },
@@ -1108,11 +1126,11 @@ const t = StyleSheet.create({
   },
 
   canvas: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 2.5, borderColor: colors.ink,
     borderRadius: radius.lg, ...curve,
     overflow: 'hidden',
-    ...elevation.card,
+    ...th.elevation.card,
   },
 
   empty: {
@@ -1128,16 +1146,16 @@ const t = StyleSheet.create({
     marginTop: space.md, height: 44, paddingHorizontal: 20, justifyContent: 'center',
     borderRadius: radius.sm, ...curve,
     borderWidth: 2.5, borderColor: colors.ink, backgroundColor: colors.gold,
-    ...innerLight,
+    ...th.innerLight,
   },
   emptyCtaPressed: { backgroundColor: colors.goldDeep },
-  emptyCtaText: { fontFamily: font.extrabold, fontSize: type.body, color: colors.goldText },
+  emptyCtaText: { fontFamily: font.extrabold, fontSize: type.body, color: colors.onGold },
 
   coach: {
     flexDirection: 'row', alignItems: 'flex-start', gap: space.sm,
     marginTop: space.sm, padding: 14,
     borderRadius: radius.md, ...curve,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.slab,
   },
   coachMark: {
     width: 36, height: 36, borderRadius: 12, ...curve,
@@ -1157,15 +1175,15 @@ const t = StyleSheet.create({
   tile: {
     width: 82, alignItems: 'center', paddingTop: 8, paddingBottom: 10, gap: 2,
     borderRadius: radius.md, ...curve,
-    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
   },
   tileLabel: { fontFamily: font.extrabold, fontSize: type.meta, color: colors.inkSoft, letterSpacing: tracking.meta },
 
   inspector: {
     marginTop: space.lg, padding: space.md,
     borderRadius: radius.lg, ...curve,
-    borderWidth: 2.5, borderColor: colors.ink, backgroundColor: colors.white,
-    ...elevation.lifted,
+    borderWidth: 2.5, borderColor: colors.ink, backgroundColor: colors.surface,
+    ...th.elevation.lifted,
   },
   inspectorHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   inspectorTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, letterSpacing: tracking.heading },
@@ -1177,7 +1195,7 @@ const t = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.goldPlate,
   },
-  refdesLargeText: { fontFamily: font.black, fontSize: type.small, color: colors.goldText },
+  refdesLargeText: { fontFamily: font.black, fontSize: type.small, color: colors.onGold },
 
   fieldLabel: {
     fontFamily: font.black, fontSize: type.meta, letterSpacing: tracking.meta,
@@ -1207,7 +1225,7 @@ const t = StyleSheet.create({
   toggleTextOn: { color: colors.ink },
   toggleTrack: { width: 34, height: 20, borderRadius: 10, backgroundColor: colors.inkFaint, padding: 3 },
   toggleTrackOn: { backgroundColor: colors.ink },
-  toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.white },
+  toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.surface },
   toggleKnobOn: { transform: [{ translateX: 14 }] },
 
   wires: { marginTop: 2 },
@@ -1232,7 +1250,7 @@ const t = StyleSheet.create({
 
   readings: {
     borderRadius: radius.md, ...curve, overflow: 'hidden',
-    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.white,
+    borderWidth: 2, borderColor: colors.line, backgroundColor: colors.surface,
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -1248,7 +1266,7 @@ const t = StyleSheet.create({
   },
   refdesOn: { backgroundColor: colors.ink },
   refdesText: { fontFamily: font.black, fontSize: type.meta, color: colors.inkSoft },
-  refdesTextOn: { color: colors.white },
+  refdesTextOn: { color: colors.onInk },
   rowBody: { flex: 1 },
   rowTitle: { fontFamily: font.bold, fontSize: type.label, color: colors.ink },
   rowState: { fontFamily: font.semibold, fontSize: type.meta, color: colors.inkMute, marginTop: 1 },
@@ -1259,4 +1277,4 @@ const t = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.meta, color: colors.inkMute,
     lineHeight: 16, marginTop: space.sm,
   },
-});
+}));

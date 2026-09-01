@@ -197,7 +197,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
       <div className="ohmlet-rise flex min-h-[50vh] flex-col items-center justify-center text-center">
         <p className="text-lg font-black text-ohmlet-ink">We couldn't generate the report</p>
         <p className="mt-1 max-w-sm text-sm font-semibold text-ohmlet-ink-soft">Your interview happened, but scoring failed. Give it another go.</p>
-        <button type="button" onClick={() => setPhase('setup')} className="mt-5 rounded-xl border-2 border-ohmlet-ink bg-white px-5 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5">
+        <button type="button" onClick={() => setPhase('setup')} className="mt-5 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5">
           Back to setup
         </button>
       </div>
@@ -214,14 +214,14 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
             <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Interview in progress</p>
             <h1 className="mt-1 text-2xl font-black tracking-[-0.02em]">{role || 'Mock interview'}{warmup ? ' · Warmup' : ''}</h1>
           </div>
-          <span className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-black ${connected ? 'border-ohmlet-green bg-[#f2fae4] text-ohmlet-green-deep' : 'border-ohmlet-line text-ohmlet-ink-soft'}`}>
+          <span className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-black ${connected ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green-deep' : 'border-ohmlet-line text-ohmlet-ink-soft'}`}>
             <Radio className="h-3.5 w-3.5" /> {connected ? 'Live with Quinn' : 'Connecting…'}
           </span>
         </div>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
           {/* Presence + controls */}
-          <div className="rounded-[1.6rem] border-2 border-ohmlet-ink bg-ohmlet-slate-900 p-4 text-white shadow-press-sm">
+          <div className="rounded-[1.6rem] border-2 border-ohmlet-ink bg-ohmlet-panel p-4 text-white shadow-press-sm">
             <div className="relative aspect-video overflow-hidden rounded-xl bg-black/40">
               <video ref={videoRef} autoPlay playsInline muted className={`h-full w-full object-cover ${camOn ? '' : 'hidden'}`} />
               {!camOn && (
@@ -246,7 +246,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
           </div>
 
           {/* Transcript */}
-          <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-white shadow-soft">
+          <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
             <div className="flex items-center gap-2 border-b border-ohmlet-line px-5 py-3.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink"><Briefcase className="h-4 w-4 text-ohmlet-gold" /></span>
               <h3 className="text-sm font-black tracking-tight">Conversation</h3>
@@ -283,7 +283,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
         specific feedback. This builds reps and kills nerves; it is practice, not a guarantee.
       </p>
 
-      <div className="mt-6 space-y-5 rounded-[1.6rem] border-2 border-ohmlet-ink bg-white p-6 shadow-press-sm">
+      <div className="mt-6 space-y-5 rounded-[1.6rem] border-2 border-ohmlet-ink bg-ohmlet-surface p-6 shadow-press-sm">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">Target role</span>
@@ -291,7 +291,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
               value={role}
               onChange={(e) => setRole(e.target.value)}
               placeholder="e.g. Embedded Firmware Engineer"
-              className="mt-1.5 w-full rounded-xl border-2 border-ohmlet-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
+              className="mt-1.5 w-full rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
             />
           </label>
           <label className="block">
@@ -299,7 +299,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
             <select
               value={seniority}
               onChange={(e) => setSeniority(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border-2 border-ohmlet-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
+              className="mt-1.5 w-full rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
             >
               {SENIORITY.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
             </select>
@@ -313,7 +313,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
             onChange={(e) => setJd(e.target.value)}
             rows={5}
             placeholder="Paste the job description so Quinn can grill you on what the role actually needs."
-            className="mt-1.5 w-full resize-y rounded-xl border-2 border-ohmlet-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
+            className="mt-1.5 w-full resize-y rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
           />
         </label>
 
@@ -342,7 +342,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
             onChange={(e) => setCv(e.target.value)}
             rows={5}
             placeholder="Paste your CV, or upload a file above. Quinn will drill into your actual projects."
-            className="mt-1.5 w-full resize-y rounded-xl border-2 border-ohmlet-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
+            className="mt-1.5 w-full resize-y rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3.5 py-2.5 text-sm font-semibold text-ohmlet-ink outline-none transition-colors focus:border-ohmlet-ink"
           />
           <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-ohmlet-ink-soft">
             <FileText className="h-3 w-3" /> PDF, DOCX, or TXT. Files are validated for safety and used only to tailor your interview.
@@ -382,7 +382,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ onUpgrade, onOpenL
                 type="button"
                 onClick={() => openPast(h.id)}
                 disabled={openingPast}
-                className="group flex w-full items-center gap-3 rounded-2xl border-2 border-ohmlet-line bg-white px-4 py-3 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm disabled:opacity-60"
+                className="group flex w-full items-center gap-3 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-3 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink hover:shadow-press-sm disabled:opacity-60"
               >
                 <ScoreRing score={h.overall ?? 0} />
                 <div className="min-w-0 flex-1">
@@ -409,7 +409,7 @@ const TrendChip: React.FC<{ history: ReportListItem[] }> = ({ history }) => {
   if (delta === 0) return null;
   const up = delta > 0;
   return (
-    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${up ? 'bg-[#f2fae4] text-ohmlet-green-deep' : 'bg-[#fff1ef] text-ohmlet-red'}`}>
+    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${up ? 'bg-ohmlet-tint-green text-ohmlet-green-deep' : 'bg-ohmlet-tint-red text-ohmlet-red'}`}>
       {up ? '▲' : '▼'} {Math.abs(delta)} vs last
     </span>
   );
@@ -423,7 +423,7 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
       className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
       style={{ background: `conic-gradient(${color} ${pct * 360}deg, var(--ohmlet-line, #ece7db) 0deg)` }}
     >
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ohmlet-surface">
         <span className="text-xs font-black tabular-nums text-ohmlet-ink">{score || '–'}</span>
       </div>
     </div>

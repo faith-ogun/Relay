@@ -78,7 +78,7 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
 
       <div className="mt-8 space-y-4">
         {status?.labs.map((lab) => (
-          <section key={lab.id} className="overflow-hidden rounded-[1.5rem] border-2 border-ohmlet-ink bg-white shadow-press">
+          <section key={lab.id} className="overflow-hidden rounded-[1.5rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press">
             <div className="flex items-center gap-3 border-b-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
               <Beaker className="h-4 w-4 shrink-0 text-ohmlet-gold-deep" strokeWidth={2.5} />
               <h2 className="flex-1 text-base font-black tracking-tight">{lab.title}</h2>
@@ -105,7 +105,7 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
             <div className="flex items-center gap-2.5">
               <Lock className="h-4 w-4 shrink-0 text-ohmlet-ink-soft" strokeWidth={2.5} />
               <h2 className="flex-1 text-base font-black tracking-tight text-ohmlet-ink-soft">{lab.title}</h2>
-              <span className="rounded-full border-2 border-ohmlet-line bg-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-ohmlet-ink-soft">
+              <span className="rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-ohmlet-ink-soft">
                 Max
               </span>
             </div>
@@ -114,7 +114,7 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
               <button
                 type="button"
                 onClick={onUpgrade}
-                className="mt-3 rounded-xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink transition-all hover:-translate-y-0.5"
+                className="mt-3 rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink transition-all hover:-translate-y-0.5"
               >
                 See Max
               </button>
@@ -142,7 +142,7 @@ export const LabsView: React.FC<Props> = ({ onUpgrade }) => {
                         key={sk.id}
                         type="button"
                         onClick={() => setPlaying({ skillId: sk.id, title: sk.title })}
-                        className="group flex items-center gap-3 rounded-xl border-2 border-ohmlet-line bg-white px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink"
+                        className="group flex items-center gap-3 rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-ohmlet-ink"
                       >
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-ohmlet-gold transition-colors group-hover:bg-ohmlet-gold group-hover:text-ohmlet-ink">
                           <Play className="h-3.5 w-3.5 fill-current" strokeWidth={0} />

@@ -30,7 +30,7 @@ import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
 import { readAgeProfile } from '../childmode/useAgeProfile';
 import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
-import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
+import { liveHoursLabel, PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 import {
   verifyInventory,
@@ -255,14 +255,13 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     const atTopTier = plan === 'max';
     const canUpsell = !atTopTier && !under18;
     const upgradeTo = plan === 'free' ? PLAN_META.pro : PLAN_META.max;
-    const upgradeHours = Math.round(LIVE_MINUTES_PER_MONTH[upgradeTo.id] / 60);
-    const upgradeLine = `${upgradeHours} hours of live time a month`;
+    const upgradeLine = `${liveHoursLabel(upgradeTo.id)} of live time a month`;
     const [imgOk, setImgOk] = budgetImageState;
     return (
       <div className="ohmlet-rise mx-auto max-w-xl">
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">That is this month's bench time used.</h1>
-        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
           <div className="flex flex-col items-center gap-5 bg-ohmlet-gold-soft px-7 py-8 text-center">
             <img
               src="/errors/402.png"
@@ -274,7 +273,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
               draggable={false}
             />
             {!imgOk && (
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-white">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface">
                 <Lock className="h-7 w-7 text-ohmlet-gold-deep" />
               </span>
             )}
@@ -325,7 +324,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build with a tutor that sees your bench.</h1>
 
-        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-gold bg-ohmlet-ink text-white shadow-[0_0_40px_rgba(250,204,46,0.18)]">
+        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-gold bg-ohmlet-ink text-ohmlet-on-ink shadow-[0_0_40px_rgba(250,204,46,0.18)]">
           <div className="relative grid gap-6 p-8 md:grid-cols-[1.2fr_1fr]">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-ohmlet-gold/40 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-ohmlet-gold">
@@ -366,7 +365,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
         </div>
 
         {/* Parts checklist */}
-        <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+        <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
           <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">What you will need</h3>
           <div className="mt-4 flex flex-wrap gap-2">
             {build.parts.map((part) => (
@@ -400,7 +399,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-ohmlet-red px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> {connecting ? 'Connecting' : 'Live'}
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ohmlet-surface" /> {connecting ? 'Connecting' : 'Live'}
           </span>
           <h1 className="text-xl font-black tracking-tight">{build.title}</h1>
         </div>
@@ -408,7 +407,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           {!unlimited && (
             <span
               className={`rounded-full border-2 px-3 py-1.5 text-xs font-black ${
-                lowTime ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft'
+                lowTime ? 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-red' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft'
               }`}
             >
               {Math.floor(liveMinutesRemaining)} min left this month
@@ -424,7 +423,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           )}
           <button
             onClick={disconnect}
-            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
           >
             <PhoneOff className="h-4 w-4" /> End session
           </button>
@@ -463,7 +462,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                     onClick={snapNow}
                     aria-label="Show the tutor my board now"
                     className={`flex h-12 items-center gap-2 rounded-full border-2 px-4 text-sm font-black transition-all hover:scale-105 ${
-                      snapped ? 'border-ohmlet-green bg-ohmlet-green text-white' : 'border-white bg-white text-ohmlet-ink'
+                      snapped ? 'border-ohmlet-green bg-ohmlet-green text-white' : 'border-white bg-ohmlet-surface text-ohmlet-ink'
                     }`}
                   >
                     <Focus className="h-5 w-5" /> {snapped ? 'Sent' : 'Look now'}
@@ -491,7 +490,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                   key={s.id}
                   onClick={() => setStageAndNotify(s.id)}
                   className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-2 py-3 text-center transition-all ${
-                    on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'
+                    on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -511,7 +510,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
           {/* 3D twin (#31): the post-session artifact, captured from the finished build. */}
           {stage === 'test' && reporterConfigured() && (
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <div className="min-w-0">
                 <p className="text-sm font-black tracking-tight text-ohmlet-ink">Capture a 3D twin</p>
                 <p className="mt-0.5 text-xs font-semibold text-ohmlet-ink-soft">
@@ -532,7 +531,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
         </div>
 
         {/* Transcript + input */}
-        <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-white shadow-soft">
+        <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
           <div className="flex items-center gap-2 border-b border-ohmlet-line px-5 py-3.5">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink">
               <Zap className="h-4 w-4 text-ohmlet-gold" />
@@ -575,7 +574,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="rounded-full border-2 border-ohmlet-line bg-white px-3 py-1.5 text-xs font-bold text-ohmlet-ink-soft transition-colors hover:border-ohmlet-ink hover:text-ohmlet-ink"
+                className="rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-1.5 text-xs font-bold text-ohmlet-ink-soft transition-colors hover:border-ohmlet-ink hover:text-ohmlet-ink"
               >
                 {q}
               </button>
@@ -633,7 +632,7 @@ const ControlButton: React.FC<{
     onClick={onClick}
     aria-label={label}
     className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all hover:scale-105 ${
-      on ? 'border-white bg-white text-ohmlet-ink' : 'border-white/40 bg-black/40 text-white backdrop-blur'
+      on ? 'border-white bg-ohmlet-surface text-ohmlet-ink' : 'border-white/40 bg-black/40 text-white backdrop-blur'
     }`}
   >
     {on ? <OnIcon className="h-5 w-5" /> : <OffIcon className="h-5 w-5" />}
@@ -646,8 +645,8 @@ const ControlButton: React.FC<{
 // working interaction — not a static cue.
 
 const STATUS_META: Record<PartStatus['status'], { icon: React.ComponentType<{ className?: string }>; tint: string; ring: string }> = {
-  present: { icon: CheckCircle2, tint: 'text-ohmlet-green', ring: 'border-ohmlet-green/30 bg-[#eafaf0]' },
-  missing: { icon: XCircle, tint: 'text-ohmlet-red', ring: 'border-ohmlet-red/30 bg-[#fdece8]' },
+  present: { icon: CheckCircle2, tint: 'text-ohmlet-green', ring: 'border-ohmlet-green/30 bg-ohmlet-tint-green' },
+  missing: { icon: XCircle, tint: 'text-ohmlet-red', ring: 'border-ohmlet-red/30 bg-ohmlet-tint-red' },
   unsure: { icon: CircleHelp, tint: 'text-ohmlet-gold-deep', ring: 'border-ohmlet-gold/40 bg-ohmlet-gold-soft' },
 };
 
@@ -682,7 +681,7 @@ const KitCheck: React.FC<{
   const presentCount = result?.parts.filter((p) => p.status === 'present').length ?? 0;
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+    <div className="mt-4 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
       <div className="flex items-center justify-between gap-3 border-b border-ohmlet-line px-5 py-3.5">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink">
@@ -700,7 +699,7 @@ const KitCheck: React.FC<{
         {result && (
           <span
             className={`rounded-full border-2 px-3 py-1 text-[11px] font-black uppercase tracking-wide ${
-              result.ready ? 'border-ohmlet-green bg-[#eafaf0] text-ohmlet-green' : 'border-ohmlet-gold bg-ohmlet-gold-soft text-ohmlet-gold-deep'
+              result.ready ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green' : 'border-ohmlet-gold bg-ohmlet-gold-soft text-ohmlet-gold-deep'
             }`}
           >
             {result.ready ? 'Ready to wire' : 'Almost there'}
@@ -736,7 +735,7 @@ const KitCheck: React.FC<{
             <p className="text-sm font-semibold text-ohmlet-red">{error}</p>
             <button
               onClick={run}
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
             >
               <RefreshCw className="h-4 w-4" /> Try again
             </button>
@@ -773,7 +772,7 @@ const KitCheck: React.FC<{
             )}
             <button
               onClick={run}
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
             >
               <RefreshCw className="h-4 w-4" /> Scan again
             </button>

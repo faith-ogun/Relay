@@ -30,12 +30,12 @@ const BlockView: React.FC<{ block: LegalBlock }> = ({ block }) => {
       return (
         <div className="mt-4 overflow-hidden rounded-2xl border-2 border-ohmlet-ink">
           <table className="w-full text-left text-sm">
-            <thead className="bg-ohmlet-ink text-white">
+            <thead className="bg-ohmlet-ink text-ohmlet-on-ink">
               <tr>{block.head.map((h) => <th key={h} className="px-4 py-2.5 font-black">{h}</th>)}</tr>
             </thead>
             <tbody>
               {block.rows.map((row, i) => (
-                <tr key={i} className={i % 2 ? 'bg-ohmlet-gold-soft/40' : 'bg-white'}>
+                <tr key={i} className={i % 2 ? 'bg-ohmlet-gold-soft/40' : 'bg-ohmlet-surface'}>
                   {row.map((c, j) => (
                     <td key={j} className={`px-4 py-2.5 align-top font-semibold ${j === 0 ? 'text-ohmlet-ink' : 'text-ohmlet-ink-soft'}`}>{c}</td>
                   ))}
@@ -76,7 +76,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ slug, onNavigate }) => {
             </button>
             <h1 className="mt-4 text-4xl font-black leading-[1.05] tracking-[-0.03em] text-ohmlet-ink md:text-5xl">{doc.title}</h1>
             <p className="mt-3 max-w-xl text-lg font-semibold text-ohmlet-ink-soft">{doc.tagline}</p>
-            <p className="mt-4 inline-block rounded-full border-2 border-ohmlet-line bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">
+            <p className="mt-4 inline-block rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-1 text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">
               Last updated {POLICY_UPDATED}
             </p>
           </div>
@@ -120,7 +120,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ slug, onNavigate }) => {
                   key={s}
                   type="button"
                   onClick={() => onNavigate(s)}
-                  className="rounded-2xl border-2 border-ohmlet-line bg-white px-5 py-2.5 text-sm font-black text-ohmlet-ink shadow-soft transition-transform hover:-translate-y-0.5"
+                  className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-5 py-2.5 text-sm font-black text-ohmlet-ink shadow-soft transition-transform hover:-translate-y-0.5"
                 >
                   {LEGAL_DOCS[s].title}
                 </button>
@@ -128,7 +128,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ slug, onNavigate }) => {
             <button
               type="button"
               onClick={() => onNavigate('support')}
-              className="rounded-2xl border-2 border-ohmlet-line bg-white px-5 py-2.5 text-sm font-black text-ohmlet-ink shadow-soft transition-transform hover:-translate-y-0.5"
+              className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface px-5 py-2.5 text-sm font-black text-ohmlet-ink shadow-soft transition-transform hover:-translate-y-0.5"
             >
               Support
             </button>

@@ -40,7 +40,7 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
   return (
     <div className="ohmlet-rise mx-auto max-w-3xl">
       {/* Readiness headline */}
-      <div className="overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-ink text-white shadow-press">
+      <div className="overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-ink text-ohmlet-on-ink shadow-press">
         <div className="flex items-center gap-2 border-b border-white/10 px-6 py-3">
           <Target className="h-4 w-4 text-ohmlet-gold" />
           <span className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Interview readiness</span>
@@ -68,7 +68,7 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
           <ol className="mt-3 space-y-2">
             {r.actions.slice(0, 3).map((a, i) => (
               <li key={i} className="flex items-start gap-3 text-[15px] font-semibold leading-relaxed text-ohmlet-ink">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-[11px] font-black text-white">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-[11px] font-black text-ohmlet-on-ink">
                   {i + 1}
                 </span>
                 {a}
@@ -80,7 +80,7 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
 
       {/* Competencies vs the JD */}
       {r.competencies?.length > 0 && (
-        <section className="mt-6 rounded-2xl border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+        <section className="mt-6 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
           <h3 className="text-sm font-black uppercase tracking-wide text-ohmlet-ink-soft">Skills vs the role</h3>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {r.competencies.map((c, i) => (
@@ -107,7 +107,7 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
           <h3 className="px-1 text-sm font-black uppercase tracking-wide text-ohmlet-ink-soft">Answer by answer</h3>
           <div className="mt-3 space-y-4">
             {r.answers.map((a, i) => (
-              <div key={i} className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-white shadow-soft">
+              <div key={i} className="overflow-hidden rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
                 <div className="border-b border-ohmlet-line bg-ohmlet-cream px-4 py-3">
                   <p className="text-sm font-extrabold text-ohmlet-ink">{a.question}</p>
                 </div>
@@ -119,7 +119,7 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
                       </p>
                     )}
                     <p className="mt-3 text-sm font-semibold leading-relaxed text-ohmlet-ink">{a.why}</p>
-                    <div className="mt-3 rounded-xl border-2 border-ohmlet-green/40 bg-[#f2fae4] p-3">
+                    <div className="mt-3 rounded-xl border-2 border-ohmlet-green/40 bg-ohmlet-tint-green p-3">
                       <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-ohmlet-green-deep">
                         <TrendingUp className="h-3.5 w-3.5" /> A stronger answer
                       </p>
@@ -142,13 +142,13 @@ export const InterviewReportView: React.FC<Props> = ({ report, onRetry, onOpenLe
       {/* Delivery + study next */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {r.delivery?.notes && (
-          <section className="rounded-2xl border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+          <section className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
             <h3 className="text-sm font-black uppercase tracking-wide text-ohmlet-ink-soft">How you came across</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-ohmlet-ink">{r.delivery.notes}</p>
           </section>
         )}
         {(covered.length > 0 || uncovered.length > 0) && (
-          <section className="rounded-2xl border-2 border-ohmlet-ink bg-white p-5 shadow-press-sm">
+          <section className="rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-5 shadow-press-sm">
             <h3 className="text-sm font-black uppercase tracking-wide text-ohmlet-ink">Study these in Ohmlet</h3>
             {covered.length > 0 ? (
               <ul className="mt-3 space-y-2">

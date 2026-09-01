@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { CircuitDiagram } from '../components/circuits/CircuitDiagram';
 import { fracFromPageX, thumbLeft, valueFor } from '../components/sim/knobGeometry';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
-import { stepText } from './stepText';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { useStepText } from './stepText';
 import {
   fmtPlain, fmtReading, meterFraction, meterStep, withinTolerance, type MeterSpec,
 } from './meterScale';
 import type { StepPredictReading, StepProps } from './types';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * predict_reading with a `meter`: dial the needle to the reading.
@@ -60,6 +60,8 @@ function arcPath(r: number, fromFrac: number, toFrac: number): string {
 const Gauge: React.FC<{ m: MeterSpec; value: number; checked: boolean; correct: boolean | null }> = ({
   m, value, checked, correct,
 }) => {
+  const colors = useColors();
+  const d = useD();
   const frac = meterFraction(value, m);
   const needleColor = checked ? (correct ? colors.greenDeep : colors.red) : colors.ink;
   const tip = polar(angleFor(frac), R - 8);
@@ -111,6 +113,7 @@ const Dial: React.FC<{
   /** Raised for the length of the drag so the shell can hold its scroller still. */
   onGesture: (active: boolean) => void;
 }> = ({ m, value, disabled, onChange, onGesture }) => {
+  const d = useD();
   const [width, setWidth] = useState(0);
   const widthRef = useRef(0);
   // pageX, not locationX: locationX re-bases onto whichever view took the touch,
@@ -222,6 +225,8 @@ const Dial: React.FC<{
 export const MeterStep: React.FC<StepProps & { step: StepPredictReading }> = ({
   step, checked, correct, onSubmit, onCanCheck, registerGrader, onDrawingChange,
 }) => {
+  const stepText = useStepText();
+  const s = useS();
   const m = step.meter;
   const [value, setValue] = useState<number>(() => m.min);
   // The dial rests at the bottom of its scale until a finger moves it. Grading
@@ -293,11 +298,11 @@ export const MeterStep: React.FC<StepProps & { step: StepPredictReading }> = ({
   );
 };
 
-const d = StyleSheet.create({
+const useD = makeStyles((colors, th) => ({
   track: { height: 44, justifyContent: 'center', marginTop: space.sm },
   groove: {
     position: 'absolute', left: 0, right: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
-    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.ink,
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.ink,
   },
   fill: {
     position: 'absolute', left: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
@@ -305,19 +310,19 @@ const d = StyleSheet.create({
   },
   thumb: {
     position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2,
-    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.ink,
-    alignItems: 'center', justifyContent: 'center', ...elevation.card,
+    backgroundColor: colors.surface, borderWidth: 3, borderColor: colors.ink,
+    alignItems: 'center', justifyContent: 'center', ...th.elevation.card,
   },
   thumbOff: { borderColor: colors.inkMute },
   thumbCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.goldDeep },
-});
+}));
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   instrument: {
-    marginTop: space.md, backgroundColor: colors.white, borderWidth: 2.5,
+    marginTop: space.md, backgroundColor: colors.surface, borderWidth: 2.5,
     borderColor: colors.line, borderRadius: radius.lg, ...curve,
     paddingHorizontal: space.md, paddingTop: space.md, paddingBottom: space.sm,
-    ...elevation.card,
+    ...th.elevation.card,
   },
   readout: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6 },
   reading: {
@@ -330,4 +335,4 @@ const s = StyleSheet.create({
   unit: { fontFamily: font.black, fontSize: type.heading, color: colors.inkSoft },
   scale: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
   scaleEnd: { fontFamily: font.bold, fontSize: type.meta, color: colors.inkMute, ...tabular },
-});
+}));

@@ -1,7 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View,
-} from 'react-native';
+import { Animated, Easing, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import * as Localization from 'expo-localization';
 import { Button } from '../components/Button';
@@ -10,8 +8,8 @@ import {
   assessAge, CHILD_MODE_ENABLED, EARLIEST_BIRTH_YEAR, LATEST_BIRTH_YEAR, consentAgeFor,
 } from '../services/ageModel';
 import { submitAge } from '../services/gates';
-import { colors, font, radius, space, type, curve } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * Age assurance.
@@ -31,6 +29,7 @@ import { elevation } from '../theme/elevation';
  * screen can be edited to unlock it.
  */
 export default function AgeGate() {
+  const s = useS();
   const { user } = useAuth();
   const thisYear = new Date().getFullYear();
   const country = (Localization.getLocales()[0]?.regionCode ?? 'IE').toUpperCase();
@@ -140,7 +139,7 @@ export default function AgeGate() {
   );
 }
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: { flex: 1, backgroundColor: colors.cream, paddingTop: space.sm },
   head: { paddingHorizontal: space.lg },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 2.5, color: colors.blueDeep },
@@ -156,9 +155,9 @@ const s = StyleSheet.create({
   listInner: { paddingHorizontal: space.lg, paddingBottom: space.lg, gap: 8 },
   year: {
     borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: colors.surface, paddingVertical: 14, alignItems: 'center',
   },
-  yearOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...elevation.card },
+  yearOn: { borderColor: colors.ink, backgroundColor: colors.goldSoft, ...th.elevation.card },
   yearText: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
   yearTextOn: { fontFamily: font.black },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.xl, paddingTop: space.sm, gap: space.sm },
@@ -173,4 +172,4 @@ const s = StyleSheet.create({
     fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft,
     textAlign: 'center', lineHeight: 23,
   },
-});
+}));

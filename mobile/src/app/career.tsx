@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Close } from '../components/icons';
 import { Button } from '../components/Button';
 import { fetchCareer, type CareerEvidence } from '../services/labs';
 import { goBack } from '../services/nav';
-import { colors, curve, font, radius, space, tabular, type } from '../theme/tokens';
-import { elevation } from '../theme/elevation';
+import { curve, font, radius, space, tabular, type } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
 
 /**
  * The verified build record.
@@ -28,6 +28,8 @@ import { elevation } from '../theme/elevation';
  *   know the number.
  */
 export default function Career() {
+  const colors = useColors();
+  const s = useS();
   const [ev, setEv] = useState<CareerEvidence | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -173,26 +175,32 @@ export default function Career() {
   );
 }
 
-const Head: React.FC = () => (
-  <View style={s.head}>
-    <Pressable onPress={() => goBack('/profile')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
-      <Close size={22} />
-    </Pressable>
-    <View style={{ flex: 1 }}>
-      <Text style={s.kicker}>VERIFIED BY OHMLET</Text>
-      <Text style={s.title}>Your build record</Text>
+const Head: React.FC = () => {
+  const s = useS();
+  return (
+    <View style={s.head}>
+      <Pressable onPress={() => goBack('/profile')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
+        <Close size={22} />
+      </Pressable>
+      <View style={{ flex: 1 }}>
+        <Text style={s.kicker}>VERIFIED BY OHMLET</Text>
+        <Text style={s.title}>Your build record</Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
-const Cell: React.FC<{ value: string; label: string }> = ({ value, label }) => (
-  <View style={s.cell}>
-    <Text style={[s.cellValue, tabular]}>{value}</Text>
-    <Text style={s.cellLabel}>{label}</Text>
-  </View>
-);
+const Cell: React.FC<{ value: string; label: string }> = ({ value, label }) => {
+  const s = useS();
+  return (
+    <View style={s.cell}>
+      <Text style={[s.cellValue, tabular]}>{value}</Text>
+      <Text style={s.cellLabel}>{label}</Text>
+    </View>
+  );
+};
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors, th) => ({
   screen: { flex: 1, backgroundColor: colors.cream },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
@@ -208,14 +216,14 @@ const s = StyleSheet.create({
   failTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
 
   empty: {
-    backgroundColor: colors.white, borderRadius: radius.lg, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...curve,
     borderWidth: 2.5, borderColor: colors.ink, padding: space.lg, alignItems: 'center', gap: space.sm,
   },
   emptyTitle: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
 
   hero: {
-    backgroundColor: colors.ink, borderRadius: radius.lg, ...curve,
-    borderWidth: 3, borderColor: colors.gold, padding: space.lg, alignItems: 'center', ...elevation.card,
+    backgroundColor: colors.slab, borderRadius: radius.lg, ...curve,
+    borderWidth: 3, borderColor: colors.gold, padding: space.lg, alignItems: 'center', ...th.elevation.card,
   },
   heroValue: { fontFamily: font.black, fontSize: 64, color: colors.gold, letterSpacing: -2, ...tabular },
   heroUnit: { fontFamily: font.black, fontSize: type.body, color: colors.white, marginTop: -6 },
@@ -223,7 +231,7 @@ const s = StyleSheet.create({
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   cell: {
-    flexGrow: 1, flexBasis: '45%', backgroundColor: colors.white,
+    flexGrow: 1, flexBasis: '45%', backgroundColor: colors.surface,
     borderRadius: radius.md, ...curve, borderWidth: 2, borderColor: colors.line,
     padding: space.md, gap: 2,
   },
@@ -234,7 +242,7 @@ const s = StyleSheet.create({
   sectionNote: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: -6 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.white, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, borderRadius: radius.md, ...curve,
     borderWidth: 2, borderColor: colors.line, paddingHorizontal: space.md, paddingVertical: 12,
   },
   rowOpen: { borderColor: colors.ink },
@@ -253,4 +261,4 @@ const s = StyleSheet.create({
   },
   caveatLabel: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.4, color: colors.red },
   caveatText: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, lineHeight: 19 },
-});
+}));

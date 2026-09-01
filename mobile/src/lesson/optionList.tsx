@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, curve, font, radius, space, type } from '../theme/tokens';
+import { Pressable, Text, View } from 'react-native';
+import { curve, font, radius, space, type } from '../theme/tokens';
+import { makeStyles } from '../theme/theme';
 
 /**
  * The plain list of answer options, and the styles every option-shaped control
@@ -24,41 +25,44 @@ export const OptionList: React.FC<{
   correct: number;
   checked: boolean;
   onPick: (index: number) => void;
-}> = ({ options, order, picked, correct, checked, onPick }) => (
-  <View style={{ gap: space.sm, marginTop: space.md }}>
-    {order.map((originalIndex) => {
-      const opt = options[originalIndex];
-      const isPicked = picked === originalIndex;
-      const reveal = checked && (originalIndex === correct || isPicked);
-      const good = checked && originalIndex === correct;
-      return (
-        <Pressable
-          key={`${opt}-${originalIndex}`}
-          disabled={checked}
-          onPress={() => onPick(originalIndex)}
-          accessibilityRole="radio"
-          accessibilityState={{ selected: isPicked }}
-          style={[
-            optionStyles.option,
-            isPicked && !checked && optionStyles.optionPicked,
-            reveal && (good ? optionStyles.optionRight : optionStyles.optionWrong),
-          ]}
-        >
-          <Text style={[optionStyles.optionText, reveal && good && optionStyles.optionTextRight]}>{opt}</Text>
-        </Pressable>
-      );
-    })}
-  </View>
-);
+}> = ({ options, order, picked, correct, checked, onPick }) => {
+  const optionStyles = useOptionStyles();
+  return (
+    <View style={{ gap: space.sm, marginTop: space.md }}>
+      {order.map((originalIndex) => {
+        const opt = options[originalIndex];
+        const isPicked = picked === originalIndex;
+        const reveal = checked && (originalIndex === correct || isPicked);
+        const good = checked && originalIndex === correct;
+        return (
+          <Pressable
+            key={`${opt}-${originalIndex}`}
+            disabled={checked}
+            onPress={() => onPick(originalIndex)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: isPicked }}
+            style={[
+              optionStyles.option,
+              isPicked && !checked && optionStyles.optionPicked,
+              reveal && (good ? optionStyles.optionRight : optionStyles.optionWrong),
+            ]}
+          >
+            <Text style={[optionStyles.optionText, reveal && good && optionStyles.optionTextRight]}>{opt}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+};
 
-export const optionStyles = StyleSheet.create({
+export const useOptionStyles = makeStyles((colors) => ({
   option: {
     borderWidth: 2.5, borderColor: colors.line, borderRadius: radius.md, ...curve,
-    backgroundColor: colors.white, paddingVertical: 14, paddingHorizontal: space.md,
+    backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: space.md,
   },
   optionPicked: { borderColor: colors.ink, backgroundColor: colors.goldSoft },
-  optionRight: { borderColor: colors.greenDeep, backgroundColor: '#eef7e0' },
-  optionWrong: { borderColor: colors.red, backgroundColor: '#fdece8' },
+  optionRight: { borderColor: colors.greenDeep, backgroundColor: colors.greenSoft },
+  optionWrong: { borderColor: colors.red, backgroundColor: colors.redSoft },
   optionText: { fontFamily: font.bold, fontSize: type.body, color: colors.ink },
   optionTextRight: { color: colors.ink },
-});
+}));

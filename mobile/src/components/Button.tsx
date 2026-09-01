@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { colors, curve, font, tracking, type } from '../theme/tokens';
-import { innerLight, plateFor } from '../theme/elevation';
+import { curve, font, tracking, type } from '../theme/tokens';
+import { plateFor } from '../theme/elevation';
 import { motion } from '../theme/motion';
+import { makeStyles, useTheme } from '../theme/theme';
 
 type Variant = 'primary' | 'secondary';
 
@@ -40,6 +41,8 @@ const PLATE = plateFor(BORDER);
  * effect; firing it on release feels like a delayed echo.
  */
 export const Button: React.FC<Props> = ({ label, onPress, variant = 'primary', disabled, style }) => {
+  const s = useS();
+  const { innerLight } = useTheme();
   const depth = useSharedValue(0);
   const primary = variant === 'primary';
 
@@ -96,7 +99,7 @@ export const Button: React.FC<Props> = ({ label, onPress, variant = 'primary', d
   );
 };
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   plate: {
     borderRadius: 16, ...curve,
     borderWidth: BORDER,
@@ -121,7 +124,7 @@ const s = StyleSheet.create({
     ...curve,
   },
   facePrimary: { backgroundColor: colors.gold },
-  faceSecondary: { backgroundColor: colors.white },
+  faceSecondary: { backgroundColor: colors.surface },
   faceDisabled: { backgroundColor: colors.goldSoft },
 
   label: {
@@ -129,7 +132,7 @@ const s = StyleSheet.create({
     fontSize: type.bodyLg,
     letterSpacing: tracking.label,
   },
-  labelPrimary: { color: colors.goldText },
+  labelPrimary: { color: colors.onGold },
   labelSecondary: { color: colors.ink },
   labelDisabled: { color: colors.inkMute },
-});
+}));

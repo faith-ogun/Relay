@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Pressable, ScrollView, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LIVE_CIRCUITS, type LiveCircuitDef } from '../../sim/circuits';
 import { initTransient, solve, stepTransient, type SolveResult, type TransientState } from '../../sim/engine';
 import { LiveReadout, type ChargeCycle } from './LiveReadout';
 import { fracFromPageX, thumbLeft, tickCentre, valueFor } from './knobGeometry';
 import { useScrollLock, LockableScrollView } from '../ScrollLock';
-import { colors, curve, font, radius, space, tabular, type } from '../../theme/tokens';
-import { elevation } from '../../theme/elevation';
+import { curve, font, radius, space, tabular, type } from '../../theme/tokens';
+import { makeStyles } from '../../theme/theme';
 
 /**
  * The Circuit tab: a real solver behind a single knob.
@@ -45,6 +45,7 @@ const Knob: React.FC<{
   ticks?: { at: number; label: string; key?: boolean }[];
   onChange: (v: number) => void;
 }> = ({ min, max, step, value, ticks, onChange }) => {
+  const k = useK();
   // Refusing the responder is not enough: UIScrollView competes below the JS
   // responder system, so the page scrolled while the knob also moved.
   const { setLocked } = useScrollLock();
@@ -155,6 +156,7 @@ const Knob: React.FC<{
 };
 
 export const CircuitTab: React.FC = () => {
+  const s = useS();
   const [picked, setPicked] = useState<LiveCircuitDef>(LIVE_CIRCUITS[0]);
   const [value, setValue] = useState<number>(LIVE_CIRCUITS[0].control.initial);
 
@@ -317,12 +319,12 @@ function describe(err: unknown): string {
   return 'This circuit could not be solved. That usually means a piece is not connected to anything.';
 }
 
-const k = StyleSheet.create({
+const useK = makeStyles((colors, th) => ({
   wrap: { marginTop: space.sm },
   track: { height: 44, justifyContent: 'center' },
   groove: {
     position: 'absolute', left: 0, right: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
-    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.ink,
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.ink,
   },
   fill: {
     position: 'absolute', left: 0, height: GROOVE, borderRadius: GROOVE / 2, ...curve,
@@ -330,8 +332,8 @@ const k = StyleSheet.create({
   },
   thumb: {
     position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2,
-    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.ink,
-    alignItems: 'center', justifyContent: 'center', ...elevation.card,
+    backgroundColor: colors.surface, borderWidth: 3, borderColor: colors.ink,
+    alignItems: 'center', justifyContent: 'center', ...th.elevation.card,
   },
   thumbCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.goldDeep },
   ticks: { height: 26, marginTop: 2 },
@@ -340,9 +342,9 @@ const k = StyleSheet.create({
   tickMarkKey: { width: 3, height: 8, backgroundColor: colors.ink },
   tickLabel: { fontFamily: font.bold, fontSize: 10, color: colors.inkMute, marginTop: 2, ...tabular },
   tickLabelKey: { fontFamily: font.black, color: colors.ink },
-});
+}));
 
-const s = StyleSheet.create({
+const useS = makeStyles((colors) => ({
   scroll: { padding: space.lg, paddingBottom: space.xxl },
   kicker: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft },
   title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -1, marginTop: 4 },
@@ -353,12 +355,12 @@ const s = StyleSheet.create({
   chips: { gap: 8, paddingVertical: space.md, paddingRight: space.lg },
   chip: {
     borderWidth: 2, borderColor: colors.line, borderRadius: 999, ...curve,
-    backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 8,
   },
   chipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipPressed: { transform: [{ scale: 0.97 }] },
   chipText: { fontFamily: font.black, fontSize: type.small, color: colors.inkSoft },
-  chipTextOn: { color: colors.white },
+  chipTextOn: { color: colors.onInk },
   blurb: { fontFamily: font.bold, fontSize: type.body, color: colors.ink, marginBottom: space.md, lineHeight: 22 },
   controlCard: {
     backgroundColor: colors.goldSoft, borderWidth: 2.5, borderColor: colors.goldPlate,
@@ -371,4 +373,4 @@ const s = StyleSheet.create({
     fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
     marginTop: space.md, lineHeight: 20,
   },
-});
+}));
