@@ -23,9 +23,14 @@ import {
 } from 'lucide-react';
 import { useLiveBridge } from '../../../hooks/useLiveBridge';
 import { track } from '../../../services/analytics';
+import { trackBuildComplete, hasCompletedFirstBuild } from '../../../services/northstar';
+import { BuildCelebration } from '../conversion/BuildCelebration';
+import { SafetyAck } from './SafetyAck';
 import { usePlan } from '../../../hooks/usePlan';
 import { useIdentity } from '../../../hooks/useIdentity';
-import { LIVE_MINUTES_PER_MONTH, PLAN_META } from '../entitlements';
+import { readAgeProfile } from '../childmode/useAgeProfile';
+import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
+import { liveHoursLabel, PLAN_META } from '../entitlements';
 import { BUILD_LIBRARY } from '../data/library';
 import {
   verifyInventory,
@@ -35,6 +40,9 @@ import {
   type PartStatus,
 } from '../../../services/visionVerifier';
 import { reporterConfigured } from '../../../services/reporter';
+import { liveBridgeWsUrl } from '../../../services/liveBridgeUrl';
+import { recordMetric } from '../../../services/achievementEvents';
+import { readLocal, userKey, writeLocal } from '../../../services/localState';
 import { TwinStudio } from '../twin/TwinStudio';
 
 /**
@@ -50,6 +58,12 @@ interface LiveTutorViewProps {
   buildTitle?: string;
   /** Route the learner to the upgrade path (pricing now, Stripe Checkout via #30). */
   onUpgrade?: () => void;
+  /**
+   * `coach` opens the career coach on the same spine: same camera, microphone and
+   * socket, different persona, primed by the server from the verified build
+   * record. Max only, and the server enforces that rather than trusting this.
+   */
+  mode?: 'tutor' | 'coach';
 }
 
 type Stage = 'inventory' | 'wiring' | 'code' | 'test';
@@ -68,18 +82,23 @@ const QUICK = [
   'Why is my LED not lighting up?',
 ];
 
-export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgrade }) => {
+export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgrade, mode = 'tutor' }) => {
   const build = useMemo(
     () => BUILD_LIBRARY.find((b) => b.title === buildTitle) ?? BUILD_LIBRARY[0],
     [buildTitle],
   );
 
-  const wsUrl = useMemo(() => {
-    const raw = import.meta.env.VITE_OHMLET_WS_URL || 'ws://localhost:8082';
-    return raw.replace(/\/$/, '');
-  }, []);
+  const wsUrl = useMemo(() => liveBridgeWsUrl(), []);
   const { userId } = useIdentity();
   const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
+  // Child-safe runtime (#94): a verified minor's live session keeps camera + mic OFF
+  // until an explicit tap, locks out the front (face) camera, and gets a shorter cap.
+  const childSafe = useMemo(() => CHILD_MODE_ENABLED && !!readAgeProfile(userId)?.isMinor, [userId]);
+  // Payment age gate (#96): under-18s cannot self-purchase, so show no upsell.
+  const under18 = useMemo(() => {
+    const by = readAgeProfile(userId)?.birthYear;
+    return CHILD_MODE_ENABLED && !!by && new Date().getFullYear() - by < 18;
+  }, [userId]);
 
   const [stage, setStage] = useState<Stage>('inventory');
   const [draft, setDraft] = useState('');
@@ -87,6 +106,10 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // The captured build photo currently being turned into a 3D twin (#31).
   const [twinFrame, setTwinFrame] = useState<string | null>(null);
   const [twinBusy, setTwinBusy] = useState(false);
+  // The first-build conversion moment (#18): set when a build completes.
+  const [celebrate, setCelebrate] = useState<{ first: boolean } | null>(null);
+  // In-session AI safety acknowledgement (#98): gate the first live session.
+  const [showSafety, setShowSafety] = useState(false);
   const budgetImageState = useState(true); // [ok, setOk] for the 402 art fallback
 
   const { canGoLive, liveCapMinutes, liveMinutesRemaining, liveSecondsUsed, consumeLiveSeconds, plan } = usePlan(userId);
@@ -107,9 +130,19 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
     sendText,
     sendStageUpdate,
     videoRef,
-  } = useLiveBridge({ wsUrl, userId, sessionId });
+  } = useLiveBridge({ wsUrl, userId, sessionId, childSafe, mode });
 
   const live = state === 'connected';
+
+  // Once per connection, on the transition. The ref is what makes it once: a
+  // re-render while connected must not credit a second session.
+  const creditedRef = useRef(false);
+  useEffect(() => {
+    if (!live) { creditedRef.current = false; return; }
+    if (creditedRef.current) return;
+    creditedRef.current = true;
+    recordMetric('liveSessions');
+  }, [live, recordMetric]);
   const connecting = state === 'connecting';
   const unlimited = liveCapMinutes === Infinity;
   // Warn as the monthly budget runs low so running out is never a surprise.
@@ -143,11 +176,37 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
   // Start the session and request mic + camera in the same user gesture so the
   // browser shows the permission prompt right away.
-  const goLive = () => {
+  const sessionStartRef = useRef<number | null>(null);
+  const startSession = () => {
     track('live_session_start');
+    // liveSessions is credited on the `connected` transition below, NOT here.
+    // Pressing Start and then having the socket fail, or the learner change
+    // their mind before the tutor wakes, is not a live session, and counting it
+    // here made "Bench Regular, 10 live sessions" earnable without the tutor
+    // ever speaking. Mobile already credits on connect; this is the parity fix.
+    sessionStartRef.current = Date.now();
     connect();
-    if (!micOn) toggleMic();
-    if (!camOn) toggleCam();
+    // Child safety: never auto-open a minor's camera or mic. They (with a grown-up)
+    // turn each on deliberately using the controls. Everyone else stays voice-first.
+    if (!childSafe) {
+      if (!micOn) toggleMic();
+      if (!camOn) toggleCam();
+    }
+  };
+  // Show the AI safety acknowledgement once (#98), then start the session.
+  const goLive = () => {
+    try {
+      // Per-user: on a shared device this must not be inherited from whoever
+      // signed in last, or someone starts a live session never having seen the
+      // mains-power and AI-fallibility warning.
+      if (!readLocal(userKey('safetyAck.v1', userId))) {
+        setShowSafety(true);
+        return;
+      }
+    } catch {
+      /* storage blocked: proceed without the gate */
+    }
+    startSession();
   };
 
   const snapNow = () => {
@@ -162,12 +221,25 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   };
 
   // Capture a clean still of the finished build and hand it to the twin studio.
+  // Reaching this at the test stage is our "build complete" signal, so it also
+  // feeds the north-star FBC7 metric (#83).
+  const twinCaptured = useRef(false);
   const captureTwin = useCallback(async () => {
+    if (!twinCaptured.current) {
+      twinCaptured.current = true;
+      const start = sessionStartRef.current;
+      const wasFirst = !hasCompletedFirstBuild(userId);
+      trackBuildComplete({
+        source: 'live_tutor',
+        sessionSeconds: start ? Math.round((Date.now() - start) / 1000) : undefined,
+      });
+      setCelebrate({ first: wasFirst }); // #18 conversion moment
+    }
     setTwinBusy(true);
     const frame = await grabFrame(1024);
     setTwinBusy(false);
     if (frame) setTwinFrame(frame);
-  }, [grabFrame]);
+  }, [grabFrame, userId]);
 
   const send = (text: string) => {
     if (!text.trim() || !live) return;
@@ -177,15 +249,19 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
   // ── Out of live budget (the upgrade moment, a friendly 402) ──
   if (!live && !connecting && !canGoLive) {
+    // Max is the top tier: there is nothing to upgrade to, so never pitch a
+    // subscriber the plan they already pay for. Under-18s cannot self-purchase
+    // (#96), so they get no upsell either.
+    const atTopTier = plan === 'max';
+    const canUpsell = !atTopTier && !under18;
     const upgradeTo = plan === 'free' ? PLAN_META.pro : PLAN_META.max;
-    const upgradeHours = Math.round(LIVE_MINUTES_PER_MONTH[upgradeTo.id] / 60);
-    const upgradeLine = `${upgradeHours} hours of live time a month`;
+    const upgradeLine = `${liveHoursLabel(upgradeTo.id)} of live time a month`;
     const [imgOk, setImgOk] = budgetImageState;
     return (
       <div className="ohmlet-rise mx-auto max-w-xl">
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">That is this month's bench time used.</h1>
-        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
           <div className="flex flex-col items-center gap-5 bg-ohmlet-gold-soft px-7 py-8 text-center">
             <img
               src="/errors/402.png"
@@ -197,7 +273,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
               draggable={false}
             />
             {!imgOk && (
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-white">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface">
                 <Lock className="h-7 w-7 text-ohmlet-gold-deep" />
               </span>
             )}
@@ -206,19 +282,22 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                 You have used all {liveCapMinutes} live minutes on the {PLAN_META[plan].label} plan this month.
               </p>
               <p className="mt-1.5 text-sm font-semibold text-ohmlet-ink-soft">
-                Your lessons, sandbox, and community stay open, and live resets at the start of next month. Learners who
-                upgrade go hands-on far more often, which is where it really sticks.
+                {canUpsell
+                  ? 'Your lessons, sandbox, and community stay open, and live resets at the start of next month. Learners who upgrade go hands-on far more often, which is where it really sticks.'
+                  : 'Your lessons, sandbox, and community stay open, and your live time resets at the start of next month.'}
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-3 px-7 py-6 sm:flex-row sm:justify-center">
-            <button
-              onClick={onUpgrade}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
-            >
-              Upgrade to {upgradeTo.label} for {upgradeLine}
-            </button>
-          </div>
+          {canUpsell && (
+            <div className="flex flex-col items-center gap-3 px-7 py-6 sm:flex-row sm:justify-center">
+              <button
+                onClick={onUpgrade}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
+              >
+                Upgrade to {upgradeTo.label} for {upgradeLine}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -228,10 +307,24 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   if (!live && !connecting) {
     return (
       <div className="ohmlet-rise mx-auto max-w-3xl">
+        {showSafety && (
+          <SafetyAck
+            onAccept={() => {
+              try {
+                writeLocal(userKey('safetyAck.v1', userId), '1');
+              } catch {
+                /* ignore storage errors */
+              }
+              setShowSafety(false);
+              startSession();
+            }}
+            onCancel={() => setShowSafety(false)}
+          />
+        )}
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live tutor</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.02em] md:text-4xl">Build with a tutor that sees your bench.</h1>
 
-        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-gold bg-ohmlet-ink text-white shadow-[0_0_40px_rgba(250,204,46,0.18)]">
+        <div className="mt-6 overflow-hidden rounded-[1.8rem] border-[3px] border-ohmlet-gold bg-ohmlet-ink text-ohmlet-on-ink shadow-[0_0_40px_rgba(250,204,46,0.18)]">
           <div className="relative grid gap-6 p-8 md:grid-cols-[1.2fr_1fr]">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-ohmlet-gold/40 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-ohmlet-gold">
@@ -272,7 +365,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
         </div>
 
         {/* Parts checklist */}
-        <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+        <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
           <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">What you will need</h3>
           <div className="mt-4 flex flex-wrap gap-2">
             {build.parts.map((part) => (
@@ -290,10 +383,23 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
   // ── Live session ──
   return (
     <div className="ohmlet-rise">
+      {celebrate && (
+        <BuildCelebration
+          buildTitle={build.title}
+          isPro={plan !== 'free'}
+          isFirstBuild={celebrate.first}
+          canUpgrade={!under18}
+          onUpgrade={() => {
+            onUpgrade?.();
+            setCelebrate(null);
+          }}
+          onClose={() => setCelebrate(null)}
+        />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-ohmlet-red px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> {connecting ? 'Connecting' : 'Live'}
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ohmlet-surface" /> {connecting ? 'Connecting' : 'Live'}
           </span>
           <h1 className="text-xl font-black tracking-tight">{build.title}</h1>
         </div>
@@ -301,7 +407,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           {!unlimited && (
             <span
               className={`rounded-full border-2 px-3 py-1.5 text-xs font-black ${
-                lowTime ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft'
+                lowTime ? 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-red' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft'
               }`}
             >
               {Math.floor(liveMinutesRemaining)} min left this month
@@ -317,7 +423,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
           )}
           <button
             onClick={disconnect}
-            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
           >
             <PhoneOff className="h-4 w-4" /> End session
           </button>
@@ -356,7 +462,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                     onClick={snapNow}
                     aria-label="Show the tutor my board now"
                     className={`flex h-12 items-center gap-2 rounded-full border-2 px-4 text-sm font-black transition-all hover:scale-105 ${
-                      snapped ? 'border-ohmlet-green bg-ohmlet-green text-white' : 'border-white bg-white text-ohmlet-ink'
+                      snapped ? 'border-ohmlet-green bg-ohmlet-green text-white' : 'border-white bg-ohmlet-surface text-ohmlet-ink'
                     }`}
                   >
                     <Focus className="h-5 w-5" /> {snapped ? 'Sent' : 'Look now'}
@@ -384,7 +490,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
                   key={s.id}
                   onClick={() => setStageAndNotify(s.id)}
                   className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-2 py-3 text-center transition-all ${
-                    on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'
+                    on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -404,7 +510,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
 
           {/* 3D twin (#31): the post-session artifact, captured from the finished build. */}
           {stage === 'test' && reporterConfigured() && (
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <div className="min-w-0">
                 <p className="text-sm font-black tracking-tight text-ohmlet-ink">Capture a 3D twin</p>
                 <p className="mt-0.5 text-xs font-semibold text-ohmlet-ink-soft">
@@ -425,7 +531,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
         </div>
 
         {/* Transcript + input */}
-        <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-white shadow-soft">
+        <div className="flex h-[520px] flex-col rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
           <div className="flex items-center gap-2 border-b border-ohmlet-line px-5 py-3.5">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink">
               <Zap className="h-4 w-4 text-ohmlet-gold" />
@@ -468,7 +574,7 @@ export const LiveTutorView: React.FC<LiveTutorViewProps> = ({ buildTitle, onUpgr
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="rounded-full border-2 border-ohmlet-line bg-white px-3 py-1.5 text-xs font-bold text-ohmlet-ink-soft transition-colors hover:border-ohmlet-ink hover:text-ohmlet-ink"
+                className="rounded-full border-2 border-ohmlet-line bg-ohmlet-surface px-3 py-1.5 text-xs font-bold text-ohmlet-ink-soft transition-colors hover:border-ohmlet-ink hover:text-ohmlet-ink"
               >
                 {q}
               </button>
@@ -526,7 +632,7 @@ const ControlButton: React.FC<{
     onClick={onClick}
     aria-label={label}
     className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all hover:scale-105 ${
-      on ? 'border-white bg-white text-ohmlet-ink' : 'border-white/40 bg-black/40 text-white backdrop-blur'
+      on ? 'border-white bg-ohmlet-surface text-ohmlet-ink' : 'border-white/40 bg-black/40 text-white backdrop-blur'
     }`}
   >
     {on ? <OnIcon className="h-5 w-5" /> : <OffIcon className="h-5 w-5" />}
@@ -539,8 +645,8 @@ const ControlButton: React.FC<{
 // working interaction — not a static cue.
 
 const STATUS_META: Record<PartStatus['status'], { icon: React.ComponentType<{ className?: string }>; tint: string; ring: string }> = {
-  present: { icon: CheckCircle2, tint: 'text-ohmlet-green', ring: 'border-ohmlet-green/30 bg-[#eafaf0]' },
-  missing: { icon: XCircle, tint: 'text-ohmlet-red', ring: 'border-ohmlet-red/30 bg-[#fdece8]' },
+  present: { icon: CheckCircle2, tint: 'text-ohmlet-green', ring: 'border-ohmlet-green/30 bg-ohmlet-tint-green' },
+  missing: { icon: XCircle, tint: 'text-ohmlet-red', ring: 'border-ohmlet-red/30 bg-ohmlet-tint-red' },
   unsure: { icon: CircleHelp, tint: 'text-ohmlet-gold-deep', ring: 'border-ohmlet-gold/40 bg-ohmlet-gold-soft' },
 };
 
@@ -575,7 +681,7 @@ const KitCheck: React.FC<{
   const presentCount = result?.parts.filter((p) => p.status === 'present').length ?? 0;
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+    <div className="mt-4 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
       <div className="flex items-center justify-between gap-3 border-b border-ohmlet-line px-5 py-3.5">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ohmlet-ink">
@@ -593,7 +699,7 @@ const KitCheck: React.FC<{
         {result && (
           <span
             className={`rounded-full border-2 px-3 py-1 text-[11px] font-black uppercase tracking-wide ${
-              result.ready ? 'border-ohmlet-green bg-[#eafaf0] text-ohmlet-green' : 'border-ohmlet-gold bg-ohmlet-gold-soft text-ohmlet-gold-deep'
+              result.ready ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green' : 'border-ohmlet-gold bg-ohmlet-gold-soft text-ohmlet-gold-deep'
             }`}
           >
             {result.ready ? 'Ready to wire' : 'Almost there'}
@@ -629,7 +735,7 @@ const KitCheck: React.FC<{
             <p className="text-sm font-semibold text-ohmlet-red">{error}</p>
             <button
               onClick={run}
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
             >
               <RefreshCw className="h-4 w-4" /> Try again
             </button>
@@ -666,7 +772,7 @@ const KitCheck: React.FC<{
             )}
             <button
               onClick={run}
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
             >
               <RefreshCw className="h-4 w-4" /> Scan again
             </button>

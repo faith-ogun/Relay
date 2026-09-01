@@ -6,16 +6,34 @@ import { genConfig, type AvatarFullConfig } from 'react-nice-avatar';
 // store a small, versioned, values-only config per user. Colours are constrained
 // to a wide, inclusive palette, and gendered library values are surfaced with
 // neutral, descriptive labels (see LABELS).
+//
+// One field is ours rather than the library's: `faceShape`. The library models
+// head shape as `sex: 'man' | 'woman'`, which is both a bad way to describe a
+// jawline and, in the renderer, dead: only `genConfig` reads it. We store the
+// honest field, draw the two heads ourselves (see OhmletFace), and translate
+// back to the library's vocabulary at the render boundary in toLibraryProps.
 
-export interface OhmletAvatarConfig extends AvatarFullConfig {
-  v: 2;
+/** Round: full cheeks, wide jaw. Tapered: wide cranium narrowing to the chin. */
+export type FaceShape = 'round' | 'tapered';
+
+export const FACE_SHAPES = ['round', 'tapered'] as const satisfies readonly FaceShape[];
+
+export interface OhmletAvatarConfig extends Omit<AvatarFullConfig, 'sex'> {
+  v: 3;
+  faceShape: FaceShape;
 }
 
+/** v1 and v2 stored the library's `sex` and surfaced it as these two shapes. */
+const LEGACY_SEX_TO_FACE_SHAPE: Record<string, FaceShape> = { woman: 'round', man: 'tapered' };
+
 // Inclusive, descriptive labels for the library's (gendered) option values.
+// These have to describe what the learner actually sees. `upWoman` draws the
+// same two brow arcs as `up` plus six short lash strokes, so it is "Lashes",
+// not "Arched".
 export const LABELS = {
-  sex: { man: 'Tapered', woman: 'Round' } as Record<string, string>,
+  faceShape: { round: 'Round', tapered: 'Tapered' } as Record<string, string>,
   hairStyle: { normal: 'Cropped', thick: 'Thick', mohawk: 'Mohawk', womanLong: 'Long', womanShort: 'Bob' } as Record<string, string>,
-  eyeBrowStyle: { up: 'Natural', upWoman: 'Arched' } as Record<string, string>,
+  eyeBrowStyle: { up: 'Natural', upWoman: 'Lashes' } as Record<string, string>,
   earSize: { small: 'Small', big: 'Large' } as Record<string, string>,
   eyeStyle: { circle: 'Round', oval: 'Almond', smile: 'Happy' } as Record<string, string>,
   glassesStyle: { none: 'None', round: 'Round', square: 'Square' } as Record<string, string>,
@@ -36,7 +54,7 @@ export const HAIR_COLORS = [
   '#2bb673', '#f3e515', '#ff6f5e', '#ec4899',
 ];
 export const SHIRT_COLORS = [
-  '#f3e515', '#14201e', '#ff6f5e', '#549cf0', '#84cc30', '#7c5cff',
+  '#f3e515', '#14181f', '#ff6f5e', '#549cf0', '#84cc30', '#7c5cff',
   '#ec4899', '#f5b800', '#0f766e', '#faf8f0', '#334155', '#fb923c',
 ];
 export const BG_COLORS = [
@@ -44,14 +62,17 @@ export const BG_COLORS = [
   '#faf8f0', '#fde9d0', '#dcf2ef', '#fce7f3', '#e2e8f0', '#1f2937',
 ];
 
+export const DEFAULT_FACE_COLOR = SKIN_COLORS[2];
+export const DEFAULT_BG_COLOR = BG_COLORS[0];
+
 export const OPTIONS = {
-  sex: ['woman', 'man'] as const, // surfaced as face shape: Round / Tapered
+  faceShape: FACE_SHAPES,
   faceColor: SKIN_COLORS,
   earSize: ['small', 'big'] as const,
   hairStyle: ['normal', 'thick', 'mohawk', 'womanLong', 'womanShort'] as const,
   hairColor: HAIR_COLORS,
   hatStyle: ['none', 'beanie', 'turban'] as const,
-  hatColor: ['#14201e', '#ff6f5e', '#549cf0', '#84cc30', '#f3e515', '#7c5cff', '#faf8f0'],
+  hatColor: ['#14181f', '#ff6f5e', '#549cf0', '#84cc30', '#f3e515', '#7c5cff', '#faf8f0'],
   eyeStyle: ['circle', 'oval', 'smile'] as const,
   eyeBrowStyle: ['up', 'upWoman'] as const,
   glassesStyle: ['none', 'round', 'square'] as const,
@@ -63,26 +84,56 @@ export const OPTIONS = {
 };
 
 export function defaultAvatar(seed?: string): OhmletAvatarConfig {
-  const base = genConfig(seed || `ohmlet-${Math.random().toString(36).slice(2)}`);
+  const { sex, ...base } = genConfig(seed || `ohmlet-${Math.random().toString(36).slice(2)}`);
   return {
     ...base,
-    faceColor: SKIN_COLORS[2],
+    faceShape: LEGACY_SEX_TO_FACE_SHAPE[sex] ?? 'round',
+    faceColor: DEFAULT_FACE_COLOR,
     hairColor: HAIR_COLORS[2],
     shirtColor: '#f3e515',
-    bgColor: '#fff6d6',
+    bgColor: DEFAULT_BG_COLOR,
     isGradient: false,
     hatStyle: 'none',
     glassesStyle: 'none',
-    v: 2,
+    v: 3,
   };
 }
 
-/** Coerce stored data into a valid v2 config (defensive for old/partial data). */
+function readFaceShape(stored: Record<string, unknown>): FaceShape | undefined {
+  const current = stored.faceShape;
+  if (current === 'round' || current === 'tapered') return current;
+  // v1 / v2 wire format: the library's `sex`, surfaced in the editor as a shape.
+  const legacy = stored.sex;
+  return typeof legacy === 'string' ? LEGACY_SEX_TO_FACE_SHAPE[legacy] : undefined;
+}
+
+/** Coerce stored data into a valid v3 config (defensive for old/partial data). */
 export function normalizeAvatar(value: unknown): OhmletAvatarConfig {
   if (!value || typeof value !== 'object') return defaultAvatar();
-  const v = value as Record<string, unknown>;
-  const out = { ...defaultAvatar(), ...(v as Partial<OhmletAvatarConfig>), v: 2 as const };
-  // Drop retired lab-gear fields if present in older stored data.
-  for (const k of ['prop', 'headGear', 'eyeGear', 'faceGear', 'neckGear']) delete (out as Record<string, unknown>)[k];
+  const stored = value as Record<string, unknown>;
+  const fallback = defaultAvatar();
+  const out = {
+    ...fallback,
+    ...(stored as Partial<OhmletAvatarConfig>),
+    faceShape: readFaceShape(stored) ?? fallback.faceShape,
+    v: 3 as const,
+  };
+  // Drop the retired lab-gear fields, and the library's `sex`, which `faceShape`
+  // replaced. Leaving `sex` in place would let a stale value out-vote the shape
+  // the learner actually picked the next time this config is read.
+  for (const k of ['sex', 'prop', 'headGear', 'eyeGear', 'faceGear', 'neckGear']) {
+    delete (out as Record<string, unknown>)[k];
+  }
   return out;
+}
+
+/**
+ * Translate our config into the props react-nice-avatar understands. `sex` is
+ * passed back only to keep the library's own `genConfig` deterministic: it fills
+ * in any field we did not supply, and reads `sex` when it does. Nothing about
+ * the head we draw depends on it.
+ */
+export function toLibraryProps(config: OhmletAvatarConfig): AvatarFullConfig {
+  const { v, faceShape, ...rest } = config;
+  return { ...rest, sex: faceShape === 'round' ? 'woman' : 'man' };
 }

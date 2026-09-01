@@ -28,11 +28,22 @@ type UseLiveBridgeOptions = {
    * heartbeat entirely (pure on-demand snapshots).
    */
   visionIntervalMs?: number;
-  /** Session mode. 'interview' connects the Max-tier mock interviewer (#21). */
-  mode?: 'tutor' | 'interview';
+  /**
+   * Session mode. Both non-tutor personas are Max-tier and the server refuses
+   * them for anyone else, so this is a request rather than a grant: 'interview'
+   * connects the mock interviewer, 'coach' connects the career coach.
+   */
+  mode?: 'tutor' | 'interview' | 'coach';
   /** Fires once, right after the auth frame is sent, with a JSON sender. Use it
    *  to prime the session (e.g. send the interview context) in the correct order. */
   onReady?: (sendJson: (obj: unknown) => void) => void;
+  /** Child-safe mode (#94): locks the camera to the rear/environment facing so a
+   *  minor's face is never the subject, and applies a shorter session time cap.
+   *  (Full on-device face-detection suppression is a follow-up on top of this.) */
+  childSafe?: boolean;
+  /** Hard per-session time cap in ms (auto-disconnect). 0 = none. Defaults to a
+   *  30-minute cap when childSafe is set. */
+  sessionLimitMs?: number;
 };
 
 export type CameraFacing = 'user' | 'environment';
@@ -83,6 +94,8 @@ export function useLiveBridge({
   visionIntervalMs = 2500,
   mode = 'tutor',
   onReady,
+  childSafe = false,
+  sessionLimitMs = 0,
 }: UseLiveBridgeOptions): UseLiveBridgeReturn {
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -92,6 +105,10 @@ export function useLiveBridge({
   const [facing, setFacing] = useState<CameraFacing>('environment');
   const facingRef = useRef<CameraFacing>('environment');
   const [transcripts, setTranscripts] = useState<LiveTranscript[]>([]);
+
+  // Child-safe session cap (#94): a shorter hard limit on continuous live time for a
+  // minor's session, on top of the plan's monthly budget. 0 = no cap.
+  const effectiveSessionLimitMs = sessionLimitMs || (childSafe ? 30 * 60 * 1000 : 0);
 
   // Track whether we've received any audio data this session.
   // When true, we use outputTranscription for text display and skip content.parts text
@@ -104,6 +121,10 @@ export function useLiveBridge({
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const camIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // In-flight guards: a getUserMedia prompt can stay open for seconds, and the
+  // toggle buttons remain clickable the whole time.
+  const micBusyRef = useRef(false);
+  const camBusyRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null!);
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   const playbackCtxRef = useRef<AudioContext | null>(null);
@@ -222,7 +243,11 @@ export function useLiveBridge({
     intentionalCloseRef.current = false;
     setState('connecting');
 
-    const url = `${wsUrl}/ws/${userId}/${sessionId}${mode === 'interview' ? '?mode=interview' : ''}`;
+    // The path is built as its own literal so `/ws/{}/{}` stays greppable for
+    // scripts/check-api-coverage.mjs, which reads route templates out of both
+    // the server and its callers.
+    const path = `${wsUrl}/ws/${userId}/${sessionId}`;
+    const url = mode === 'tutor' ? path : `${path}?mode=${encodeURIComponent(mode)}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -235,6 +260,13 @@ export function useLiveBridge({
           ws.send(JSON.stringify({ type: 'auth', token }));
           // After auth, let the caller prime the session (e.g. interview context),
           // guaranteeing it arrives after the auth frame.
+          if (mode === 'coach') {
+            // Asks the SERVER to prime the coach from its own records. No
+            // payload, deliberately: the point of the feature is that the
+            // evidence was watched rather than claimed, and anything the client
+            // sent here would be exactly the self-report it exists to replace.
+            ws.send(JSON.stringify({ type: 'coach_context' }));
+          }
           onReadyRef.current?.((obj: unknown) => {
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
           });
@@ -322,22 +354,28 @@ export function useLiveBridge({
   // ── Mic toggle ──
 
   const toggleMic = useCallback(async () => {
-    if (micOn) {
-      // Stop mic
-      processorRef.current?.disconnect();
-      audioContextRef.current?.close();
-      micStreamRef.current?.getTracks().forEach((t) => t.stop());
-      micStreamRef.current = null;
-      audioContextRef.current = null;
-      processorRef.current = null;
-      setMicOn(false);
-      return;
-    }
-
+    // Same in-flight guard as the camera: `micOn` flips only after the prompt
+    // resolves, so a double tap would otherwise orphan the first mic stream and
+    // leave the microphone open with nothing holding a reference to it.
+    if (micBusyRef.current) return;
+    micBusyRef.current = true;
     try {
+      if (micOn) {
+        // Stop mic
+        processorRef.current?.disconnect();
+        audioContextRef.current?.close();
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+        audioContextRef.current = null;
+        processorRef.current = null;
+        setMicOn(false);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
       });
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
       micStreamRef.current = stream;
 
       const ctx = new AudioContext({ sampleRate: stream.getAudioTracks()[0].getSettings().sampleRate || 48000 });
@@ -359,7 +397,11 @@ export function useLiveBridge({
       processor.connect(ctx.destination);
       setMicOn(true);
     } catch (err) {
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
       pushTranscript('system', 'Microphone access denied or unavailable.');
+    } finally {
+      micBusyRef.current = false;
     }
   }, [micOn, pushTranscript]);
 
@@ -412,6 +454,10 @@ export function useLiveBridge({
         facingMode: { ideal: mode },
       },
     });
+    // Never leak a stream we are about to replace: whatever is in the ref loses
+    // its only reference here, so if its tracks are not stopped the OS camera
+    // light stays on with nothing able to turn it off.
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
     camStreamRef.current = stream;
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -421,30 +467,44 @@ export function useLiveBridge({
   }, []);
 
   const toggleCam = useCallback(async () => {
-    if (camOn) {
-      if (camIntervalRef.current) clearInterval(camIntervalRef.current);
-      camStreamRef.current?.getTracks().forEach((t) => t.stop());
-      camStreamRef.current = null;
-      setCamOn(false);
-      return;
-    }
-
+    // `camOn` only flips AFTER getUserMedia resolves, so without this guard a
+    // second tap while the permission prompt is open starts a second stream.
+    // The second one overwrote the ref and the interval id, so the first kept
+    // the camera live and kept uploading frames after the user turned it off.
+    if (camBusyRef.current) return;
+    camBusyRef.current = true;
     try {
+      if (camOn) {
+        if (camIntervalRef.current) clearInterval(camIntervalRef.current);
+        camIntervalRef.current = null;
+        camStreamRef.current?.getTracks().forEach((t) => t.stop());
+        camStreamRef.current = null;
+        setCamOn(false);
+        return;
+      }
+
       await startCameraStream(facingRef.current);
 
       // Snapshot vision: a slow heartbeat keeps the tutor loosely aware while the
       // preview stays full framerate. visionIntervalMs = 0 disables the heartbeat.
-      if (visionIntervalMs > 0) {
-        camIntervalRef.current = setInterval(sendFrame, visionIntervalMs);
-      }
+      if (camIntervalRef.current) clearInterval(camIntervalRef.current);
+      camIntervalRef.current = visionIntervalMs > 0 ? setInterval(sendFrame, visionIntervalMs) : null;
 
       setCamOn(true);
     } catch {
+      // Leave nothing half-open if the grant failed or was revoked mid-flight.
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      camStreamRef.current = null;
       pushTranscript('system', 'Camera access denied or unavailable.');
+    } finally {
+      camBusyRef.current = false;
     }
   }, [camOn, pushTranscript, startCameraStream, sendFrame, visionIntervalMs]);
 
   const switchCamera = useCallback(async () => {
+    // Child safety: a minor stays on the rear (bench) camera so their face is never
+    // the subject. The front/selfie camera is never activated for a child session.
+    if (childSafe) return;
     const next: CameraFacing = facingRef.current === 'environment' ? 'user' : 'environment';
     facingRef.current = next;
     setFacing(next);
@@ -456,7 +516,7 @@ export function useLiveBridge({
     } catch {
       pushTranscript('system', 'Could not switch camera.');
     }
-  }, [camOn, startCameraStream, pushTranscript]);
+  }, [camOn, childSafe, startCameraStream, pushTranscript]);
 
   const captureSnapshot = useCallback(() => {
     sendFrame();
@@ -529,6 +589,17 @@ export function useLiveBridge({
       disconnect();
     };
   }, [autoConnect, sessionId]);
+
+  // Child-safe session cap (#94): auto-end a minor's session after the limit with a
+  // gentle, kid-readable nudge to take a break.
+  useEffect(() => {
+    if (state !== 'connected' || effectiveSessionLimitMs <= 0) return;
+    const id = setTimeout(() => {
+      pushTranscript('system', "That's a good long session. Time for a break, ask a grown-up if you'd like to start again.");
+      disconnect();
+    }, effectiveSessionLimitMs);
+    return () => clearTimeout(id);
+  }, [state, effectiveSessionLimitMs, disconnect, pushTranscript]);
 
   return {
     state,

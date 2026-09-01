@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Clock, ImageIcon, Lightbulb, Video } from 'lucide-react';
 import { findPost, type Block } from './blog/posts';
+import { BLOG_ART } from './blog/blogArt';
 
 type Nav = (route: 'landing' | 'learn' | 'build' | 'blog' | 'pricing' | 'ohmlet-app') => void;
 
@@ -37,12 +38,12 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
       return (
         <div className="mt-6 overflow-hidden rounded-2xl border-2 border-ohmlet-ink">
           <table className="w-full text-left text-sm">
-            <thead className="bg-ohmlet-ink text-white">
+            <thead className="bg-ohmlet-ink text-ohmlet-on-ink">
               <tr>{block.head.map((h) => <th key={h} className="px-4 py-3 font-black">{h}</th>)}</tr>
             </thead>
             <tbody>
               {block.rows.map((row, i) => (
-                <tr key={i} className={i % 2 ? 'bg-ohmlet-gold-soft/40' : 'bg-white'}>
+                <tr key={i} className={i % 2 ? 'bg-ohmlet-gold-soft/40' : 'bg-ohmlet-surface'}>
                   {row.map((c, j) => (
                     <td key={j} className={`px-4 py-3 font-semibold ${j === 0 ? 'text-ohmlet-ink' : 'text-ohmlet-ink-soft'}`}>{c}</td>
                   ))}
@@ -81,7 +82,23 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
           {block.text}
         </p>
       );
-    case 'media':
+    case 'media': {
+      // Hand-authored SVG diagram when the block names one; otherwise the
+      // purposeful placeholder. Markup is static and in-repo (safe to inline).
+      const art = block.art ? BLOG_ART[block.art] : undefined;
+      if (art) {
+        return (
+          <figure className="mt-8">
+            <div
+              className="overflow-hidden rounded-[1.4rem] bg-ohmlet-surface p-3 shadow-soft ring-2 ring-ohmlet-line sm:p-4"
+              dangerouslySetInnerHTML={{ __html: art }}
+            />
+            <figcaption className="mt-3 px-2 text-center text-sm font-semibold text-ohmlet-ink-soft">
+              {block.note}
+            </figcaption>
+          </figure>
+        );
+      }
       return (
         <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-ink/30 bg-ohmlet-cream px-6 py-12 text-center">
           {block.kind === 'video' ? (
@@ -95,6 +112,7 @@ const BlockView: React.FC<{ block: Block }> = ({ block }) => {
           <p className="max-w-md text-sm font-semibold text-ohmlet-ink-soft">{block.note}</p>
         </div>
       );
+    }
     default:
       return null;
   }
@@ -192,7 +210,7 @@ export const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug, onNavigate, on
         </div>
 
         {/* Key takeaways: snippet-friendly summary up top */}
-        <div className="mt-8 rounded-2xl border-2 border-ohmlet-ink bg-white p-6 shadow-press-sm">
+        <div className="mt-8 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-6 shadow-press-sm">
           <p className="text-sm font-black uppercase tracking-wide text-ohmlet-ink">Key takeaways</p>
           <ul className="mt-3 space-y-2">
             {post.takeaways.map((t) => (
@@ -216,7 +234,7 @@ export const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug, onNavigate, on
           <h2 className="text-3xl font-black tracking-[-0.02em] text-ohmlet-ink">Frequently asked questions</h2>
           <div className="mt-6 space-y-4">
             {post.faqs.map((faq) => (
-              <div key={faq.q} className="rounded-2xl border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+              <div key={faq.q} className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
                 <h3 className="text-lg font-black text-ohmlet-ink">{faq.q}</h3>
                 <p className="mt-2 text-base font-semibold leading-relaxed text-ohmlet-ink-soft">{faq.a}</p>
               </div>
@@ -250,7 +268,7 @@ export const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug, onNavigate, on
                   key={r!.slug}
                   type="button"
                   onClick={() => onOpenPost(r!.slug)}
-                  className="rounded-2xl border-2 border-ohmlet-line bg-white p-5 text-left shadow-soft transition-transform hover:-translate-y-1"
+                  className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-5 text-left shadow-soft transition-transform hover:-translate-y-1"
                 >
                   <p className="text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">{r!.category}</p>
                   <p className="mt-1 font-black leading-tight text-ohmlet-ink">{r!.title}</p>

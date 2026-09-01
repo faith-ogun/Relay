@@ -1,0 +1,39 @@
+diff --git a/node_modules/react-native-audio-api/ios/audioapi/ios/system/AudioEngine.mm b/node_modules/react-native-audio-api/ios/audioapi/ios/system/AudioEngine.mm
+--- a/node_modules/react-native-audio-api/ios/audioapi/ios/system/AudioEngine.mm
++++ b/node_modules/react-native-audio-api/ios/audioapi/ios/system/AudioEngine.mm
+@@ -178,6 +178,35 @@
+     return NO;
+   }
+ 
++  // OHMLET PATCH: acoustic echo cancellation.
++  //
++  // Ohmlet is a hands-free bench tutor: the phone sits on a stand, the tutor
++  // answers out of the loudspeaker, and the microphone is a few inches away.
++  // Without cancellation the model hears itself, cuts its own sentence off, and
++  // its words arrive transcribed as the learner's.
++  //
++  // Apple's canceller lives in the voice-processing I/O unit, and
++  // setVoiceProcessingEnabled: is the supported switch for it. It works here
++  // because this class runs ONE AVAudioEngine for both directions: playback is
++  // an AVAudioSourceNode on the same engine, so the canceller has the render
++  // reference it needs to subtract. Enabled before the sink is attached,
++  // because the input node is reconfigured by the change.
++  //
++  // Failure is not fatal. If the unit refuses, capture still works and the app
++  // falls back to its half-duplex gate, which is what shipped before this.
++  if (@available(iOS 13.0, *)) {
++    NSError *voiceProcessingError = nil;
++    if (![self.audioEngine.inputNode setVoiceProcessingEnabled:YES error:&voiceProcessingError]) {
++      NSLog(@"[ohmlet] echo cancellation unavailable, staying half duplex: %@", voiceProcessingError);
++    } else {
++      NSLog(@"[ohmlet] echo cancellation enabled on the shared engine");
++      inputFormat = [self currentInputConnectionFormat];
++      if (inputFormat == nil) {
++        return NO;
++      }
++    }
++  }
++
+   self.inputNode =
+       [[AVAudioSinkNode alloc] initWithReceiverBlock:self.inputRegistration.receiverBlock];
+   [self.audioEngine attachNode:self.inputNode];

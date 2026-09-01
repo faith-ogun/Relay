@@ -33,6 +33,27 @@ export interface ReportAnswer {
   stronger: string;
 }
 
+/**
+ * A weakness the interviewer found, routed to the lesson that closes it.
+ *
+ * This USED to be typed `string[]`, and it was wrong: the server upgraded the
+ * field to objects when gap routing shipped, and the report view rendered each
+ * one straight into JSX. React does not render an object as a child, it throws,
+ * so any report that recommended anything took the whole view down. TypeScript
+ * could not catch it because the type was a claim about the wire, not a check of
+ * it. `scripts/check-interview-contract.mjs` now checks it.
+ */
+export interface RoutedTopic {
+  topic: string;
+  why?: string;
+  skillId: string | null;
+  skillTitle?: string;
+  unitId?: string;
+  unitTitle?: string;
+  /** False when no skill in the curriculum teaches it. */
+  covered: boolean;
+}
+
 export interface InterviewReport {
   overall: number;
   readiness: { level: string; headline: string; summary: string };
@@ -40,7 +61,12 @@ export interface InterviewReport {
   answers: ReportAnswer[];
   delivery: { notes: string };
   actions: string[];
-  recommendedTopics: string[];
+  recommendedTopics: RoutedTopic[];
+  /** Probed, and Ohmlet does not teach it yet. Shown rather than hidden: a
+   *  learner told they are weak on something deserves to know we have no lesson
+   *  for it, and pretending otherwise sends them looking for a lesson that is
+   *  not there. */
+  uncoveredTopics?: string[];
 }
 
 export interface ReportListItem {

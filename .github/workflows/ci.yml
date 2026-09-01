@@ -37,8 +37,45 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Lint lessons
         run: npm run lint:lessons
+      # Five guards that existed but were never run on push: price agreement
+      # across the three files that publish it, API route coverage, achievement
+      # durability, curriculum parity and fallback, and lesson solvability.
+      # A guard nobody runs is a comment.
+      - name: Guards
+        run: npm run check
       - name: Production build
         run: npm run build
+
+  # The phone app was not in CI at all: 21 check scripts and the typecheck ran
+  # only on a developer's machine. Every guard written to stop a mobile
+  # regression was therefore unenforced on push, which is most of the value of
+  # having written them.
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      # NOT `npm audit --audit-level=high` like the frontend job. Vite is a
+      # devDependency there so --omit=dev removes it; in an Expo app `expo` is a
+      # runtime dependency by necessity and drags @expo/cli and metro in with it.
+      # Every high advisory today is in that build toolchain, which never reaches
+      # a device. This gate fails on any critical, and on any high OUTSIDE a named
+      # build-toolchain list, so a real one in shipped code still stops the build.
+      - name: Vulnerability gate
+        run: node scripts/check-audit.mjs
+      # Typecheck plus every scripts/check-*.mjs. The checks read the served
+      # curriculum from backend/live-bridge/app/curriculum_data and some read the
+      # web source, so this job needs the whole checkout, not just mobile/.
+      - name: Checks
+        run: npm run check
 
   backend:
     runs-on: ubuntu-latest
@@ -85,6 +122,14 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    # gitleaks lists the PR's commits to scope its scan, which needs
+    # pull-requests: read. The workflow-level grant is contents: read only, and a
+    # Dependabot PR runs with a restricted token, so on those the API call came
+    # back 403 "Resource not accessible by integration" and the whole job failed.
+    # Every Dependabot PR mailed a CI failure that had nothing to do with secrets.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:

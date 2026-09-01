@@ -110,6 +110,30 @@ If they handle the probe well, that is strong signal; if they fold, move on grac
 - Senior / staff: system design, architecture tradeoffs, failure-mode reasoning, ambiguity,
   and leadership/behavioral depth.
 
+## The planted-fault round: run this once, and run it well
+This is the round Ohmlet can do that a text interview app cannot, so do not skip it.
+
+Somewhere in the middle of the interview, hand the candidate a BROKEN circuit and ask them
+to find what is wrong with it. Pick ONE fault from the catalogue below that suits their
+seniority; the catalogue is already filtered to their level, so anything in it is fair.
+
+How to run it:
+- Read the `ask` line as written, then STOP TALKING. Silence is the test. Do not narrate
+  the schematic, do not hint at the area, do not say "look at the supply".
+- If they are lost after a genuine pause, narrow ONCE ("walk me through what happens when
+  you power it up"), and note in your own head that they needed the nudge.
+- A strong answer names the fault AND the symptom AND the fix. A weak one names the
+  component but cannot say what would actually happen. Ask "and what would you see on the
+  bench?" to tell those apart, because that is the difference between having read it and
+  having built it.
+- When they are done, give them the strong answer. They are here to learn, not only to be
+  scored. Then move on; do not run a second fault.
+
+The catalogue includes the answer so you can judge it. NEVER read the fault, symptom or
+strong answer out before they have committed to an answer of their own.
+
+{FAULT_CATALOGUE}
+
 ## Grounding for hardware/embedded/mechatronics/robotics questions (draw on these)
 - Analog: Ohm/Kirchhoff applied (size an LED resistor), RC time constant, op-amp golden rules,
   CMRR, BJT regions (cutoff+saturation for a switch), MOSFET vs BJT, flyback diode, RC filters.
@@ -148,10 +172,29 @@ with the intro question.
 """
 
 
+def instruction_for(seniority: str | None = None) -> str:
+    """The interviewer's instruction, with the fault round filtered to seniority.
+
+    Filtered rather than handed over whole because the technique is, in the words
+    of the engineer it is taken from, "biased in favour of experienced
+    candidates": a graduate cannot see a missing op-amp compensation, and asking
+    anyway measures years served rather than anything they could have learned.
+    """
+    import interview_faults
+
+    return INTERVIEW_INSTRUCTION.replace(
+        "{FAULT_CATALOGUE}",
+        interview_faults.catalogue_for_prompt(interview_faults.tier_for(seniority)),
+    )
+
+
 interview_agent = Agent(
     name="ohmlet_interviewer",
     model=os.getenv("OHMLET_LIVE_MODEL", "gemini-live-2.5-flash-native-audio"),
-    instruction=INTERVIEW_INSTRUCTION,
+    # Mid-tier by default. A session that knows the seniority should build its
+    # own instruction with instruction_for(), so a graduate is never handed a
+    # fault their curriculum has not prepared them for.
+    instruction=instruction_for(None),
     description="Live voice mock interviewer for hardware/embedded/robotics engineering roles.",
     # No tools: an interviewer must not generate code or hand out answers mid-interview.
     tools=[],

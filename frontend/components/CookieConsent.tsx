@@ -128,7 +128,7 @@ export const CookieConsent: React.FC<CookieConsentProps> = ({ onOpenPolicy }) =>
             <button
               type="button"
               onClick={() => decide(false)}
-              className="flex-1 whitespace-nowrap rounded-xl border-2 border-ohmlet-ink bg-white px-5 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 hover:bg-ohmlet-cream active:translate-y-0 sm:flex-none"
+              className="flex-1 whitespace-nowrap rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 hover:bg-ohmlet-cream active:translate-y-0 sm:flex-none"
             >
               Reject non-essential
             </button>

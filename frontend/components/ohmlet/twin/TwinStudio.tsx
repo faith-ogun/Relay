@@ -1,7 +1,16 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Loader2, Rotate3d, Sparkles, X } from 'lucide-react';
-import { generateTwin, fetchTwinModelUrl, ReporterError, type Twin } from '../../../services/reporter';
+import { Box, Check, Link2, Loader2, Rotate3d, Sparkles, X } from 'lucide-react';
+import {
+  generateTwin,
+  fetchTwinModelUrl,
+  shareTwin,
+  unshareTwin,
+  shareLink,
+  ReporterError,
+  type Twin,
+} from '../../../services/reporter';
 import { track } from '../../../services/analytics';
+import { recordMetric } from '../../../services/achievementEvents';
 import { useDialog } from '../../../hooks/useDialog';
 
 // Three.js viewer is heavy — load it only when a twin is ready to show.
@@ -34,6 +43,10 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
   const [twin, setTwin] = useState<Twin | null>(null);
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
+  // Sharing (#79): publish the twin to a public page and hand back the link.
+  const [shareState, setShareState] = useState<'idle' | 'working' | 'shared' | 'failed'>('idle');
+  const [shareUrl, setShareUrl] = useState<string>('');
+  const [copied, setCopied] = useState(false);
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const startedRef = useRef(false);
   const urlRef = useRef<string | null>(null);
@@ -50,6 +63,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
       setModelUrl(url);
       setPhase('ready');
       track('twin_generated', { build_id: buildId });
+      recordMetric('twins');
     } catch (e) {
       const err = e as ReporterError;
       if (err.status === 402) {
@@ -72,6 +86,37 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
   }, []);
 
+  // Publish the twin, then put the public link on the clipboard. Copying can be
+  // refused (permissions, insecure context), so the link is always shown too.
+  const publish = useCallback(async () => {
+    if (!twin) return;
+    setShareState('working');
+    const id = await shareTwin(twin.id);
+    if (!id) {
+      setShareState('failed');
+      return;
+    }
+    const url = shareLink(id);
+    setShareUrl(url);
+    setShareState('shared');
+    track('twin_shared', { build_id: buildId });
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      /* clipboard denied — the link is on screen to copy by hand */
+    }
+  }, [twin, buildId]);
+
+  const stopSharing = useCallback(async () => {
+    if (!twin) return;
+    setShareState('working');
+    const ok = await unshareTwin(twin.id);
+    setShareState(ok ? 'idle' : 'failed');
+    if (ok) setShareUrl('');
+  }, [twin]);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-ohmlet-ink/55 backdrop-blur-sm" onClick={onClose} aria-hidden />
@@ -80,19 +125,19 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="twin-studio-title"
-        className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-white shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
+        className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press motion-safe:animate-[ohmlet-scale-in_220ms_cubic-bezier(0.34,1.56,0.64,1)]"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close 3D twin"
-          className="absolute right-3 top-3 z-10 rounded-full bg-white/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-white hover:text-ohmlet-ink"
+          className="absolute right-3 top-3 z-10 rounded-full bg-ohmlet-surface/85 p-1.5 text-ohmlet-ink/70 backdrop-blur transition-colors hover:bg-ohmlet-surface hover:text-ohmlet-ink"
         >
           <X className="h-4 w-4" strokeWidth={2.5} />
         </button>
 
         {/* Stage: viewer when ready, status panel otherwise */}
-        <div className="relative h-72 w-full border-b-2 border-ohmlet-ink bg-ohmlet-slate-900">
+        <div className="relative h-72 w-full border-b-2 border-ohmlet-ink bg-ohmlet-panel">
           {phase === 'ready' && modelUrl ? (
             <Suspense
               fallback={
@@ -118,6 +163,75 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
           )}
         </div>
 
+        {/* Share strip (#79): only once there is a real twin to publish. */}
+        {phase === 'ready' && (
+          <div className="border-b-2 border-ohmlet-line bg-ohmlet-cream px-5 py-3.5">
+            {shareState === 'shared' ? (
+              <div className="flex flex-wrap items-center gap-2.5">
+                <input
+                  readOnly
+                  value={shareUrl}
+                  aria-label="Public link to this build"
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="min-w-0 flex-1 rounded-lg border-2 border-ohmlet-ink/15 bg-ohmlet-surface px-3 py-2 text-xs font-bold text-ohmlet-ink-soft focus:border-ohmlet-ink focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(shareUrl)
+                      .then(() => {
+                        setCopied(true);
+                        window.setTimeout(() => setCopied(false), 2200);
+                      })
+                      .catch(() => undefined);
+                  }}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-3 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} /> Copied
+                    </>
+                  ) : (
+                    'Copy'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void stopSharing()}
+                  className="shrink-0 rounded-lg px-2 py-2 text-xs font-black text-ohmlet-ink-soft underline decoration-2 underline-offset-2 transition-colors hover:text-ohmlet-ink"
+                >
+                  Stop sharing
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <p className="text-xs font-bold text-ohmlet-ink-soft">
+                  {shareState === 'failed'
+                    ? "That didn't work. Try sharing again."
+                    : 'Show someone what you built.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void publish()}
+                  disabled={shareState === 'working'}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-ohmlet-ink bg-ohmlet-surface px-3.5 py-2 text-xs font-black text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {shareState === 'working' ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.6} /> Working
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-3.5 w-3.5" strokeWidth={2.6} /> Get a public link
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-5">
           <div className="min-w-0">
@@ -131,7 +245,7 @@ export const TwinStudio: React.FC<TwinStudioProps> = ({
               <button
                 type="button"
                 onClick={() => void run()}
-                className="rounded-xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
+                className="rounded-xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-extrabold text-ohmlet-ink transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 Try again
               </button>

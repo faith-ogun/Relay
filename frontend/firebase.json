@@ -5,6 +5,8 @@
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "//predeploy": "Always rebuild before shipping, so a bare `firebase deploy` can never publish a stale dist/ left on disk from an older branch. Hooks run with the working directory set to this file's directory.",
+    "predeploy": ["npm run build"],
     "headers": [
       {
         "//": "Default for the SPA shell (served at every non-asset path via the rewrite): always revalidate so a deploy reaches returning users immediately. Firebase applies the LAST matching rule, so the specific asset/media rules below override this for their paths.",

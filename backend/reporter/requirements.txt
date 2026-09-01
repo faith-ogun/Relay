@@ -4,4 +4,14 @@ pydantic==2.11.7
 httpx==0.27.2
 firebase-admin==6.5.0
 google-cloud-storage==2.18.2
+# Pinned because 2.35.0 breaks every Firestore call with
+# "400 Invalid database id %28default%29" — it URL-encodes the default database
+# id into the request path. Bisected 2026-08-25: 2.34.0 is fine, 2.35.0 is not.
+#
+# This is a TRANSITIVE dependency, which is how it reached production unnoticed:
+# the direct pins above held, a routine rebuild resolved a fresh google-api-core,
+# and every Firestore read in the service started failing — community 500s, state
+# 502s, plan and hearts lookups falling back to defaults. Pinning a direct
+# dependency is not enough when the thing that breaks is underneath it.
+google-api-core==2.34.0
 google-cloud-firestore==2.21.0

@@ -70,7 +70,7 @@ const features: Feature[] = [
     body: "Every session tracks what you've mastered and where you got stuck, then shapes a path from it, so you walk away knowing why the circuit works, not just that it does.",
     image: '/brand/feature-science.png',
     imageAlt: 'The Ohmlet beside a tablet showing a learning progress path and rising chart',
-    tint: 'bg-white',
+    tint: 'bg-ohmlet-surface',
     reverse: true,
   },
   {
@@ -155,7 +155,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={() => onNavigate('learn')}
-                className="inline-flex w-full items-center justify-center rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-7 py-4 text-lg font-black text-ohmlet-ink shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-7 py-4 text-lg font-black text-ohmlet-ink shadow-press transition-all hover:translate-y-[3px] hover:shadow-none sm:w-auto"
               >
                 See how it works
               </button>

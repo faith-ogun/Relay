@@ -1,0 +1,1349 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View,
+} from 'react-native';
+import Animated, {
+  Easing, cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue,
+  withRepeat, withTiming,
+} from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { router, useLocalSearchParams } from 'expo-router';
+import { flush, track } from '../services/analytics';
+import { AppTabs } from '../components/AppTabs';
+import { goBack } from '../services/nav';
+import { finishInterview, pendingInterview } from '../services/interviewSession';
+import { SafetyAck } from '../components/SafetyAck';
+import { Send } from '../components/icons';
+import { acceptSafety, hasAcceptedSafety } from '../services/gates';
+import { Button } from '../components/Button';
+import { useAuth } from '../hooks/useAuth';
+import { useChildSafe } from '../hooks/useChildSafe';
+import { useLiveBridge, type MicPermission, type Stage, type Transcript } from '../hooks/useLiveBridge';
+import { componentHandoff, inventoryHandoff, useKitCheck } from '../hooks/useKitCheck';
+import { usePlan } from '../hooks/usePlan';
+import { bumpMetric, loadProgress, saveProgress } from '../services/progress';
+import {
+  buildIntro, buildSwitch, getBuilds, rememberBuild, rememberedBuild, type Build,
+} from '../services/builds';
+import { BuildPicker } from '../components/build/BuildPicker';
+import { BuildSlot } from '../components/build/BuildSlot';
+import { KitCheckSheet } from '../components/build/KitCheckSheet';
+import { LiveModes, type LiveMode } from '../components/live/LiveModes';
+import { InterviewIntro, ModeLocked } from '../components/live/ModePanels';
+import { liveBridgeWsUrl } from '../services/config';
+import { font, radius, space, type, curve } from '../theme/tokens';
+import { makeStyles, useColors } from '../theme/theme';
+
+const STAGES: Array<{ id: Stage; label: string }> = [
+  { id: 'inventory', label: 'Parts' },
+  { id: 'wiring', label: 'Wiring' },
+  { id: 'code', label: 'Code' },
+  { id: 'test', label: 'Test' },
+];
+
+/**
+ * The pre-flight is one screen for all three modes; only the words change.
+ *
+ * Written out rather than branched inline because the three are genuinely
+ * different promises. "Put your bench in frame" said to someone about to be
+ * interviewed is not a small mistake, and that is exactly what shipped while
+ * `/interview` pushed learners into the tutor's own pre-flight.
+ */
+const PREFLIGHT: Record<'tutor' | 'interview' | 'coach', {
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+}> = {
+  tutor: {
+    eyebrow: 'BENCH',
+    title: 'Put your bench in frame.',
+    body: 'The tutor watches your board through the camera and talks you through the build. Prop your '
+      + 'phone where it can see the breadboard, then start.',
+    cta: 'Start the session',
+  },
+  interview: {
+    eyebrow: 'INTERVIEW MODE',
+    title: 'Ready when you are.',
+    body: 'The interviewer can see you and hear you, and it will interrupt, follow up and change tack '
+      + 'exactly as a person would. Everything you say is scored at the end.',
+    cta: 'Start the interview',
+  },
+  coach: {
+    eyebrow: 'CAREER COACHING',
+    title: 'Talk it through.',
+    body: 'The coach opens with what Ohmlet has actually watched you build, names the gap, and works '
+      + 'out what to make next. It never flatters, so nothing it hands you is a line you could not defend.',
+    cta: 'Start the coaching session',
+  },
+};
+
+/** How many lines the overlay draws. The hook keeps more; this is what fits. */
+const VISIBLE_LINES = 40;
+
+/**
+ * One line of the session transcript. Three roles, three different shapes: the
+ * tutor speaks in full-width lines against a gold rule, the learner's own turns
+ * are right-aligned gold chips, and status notes are quiet centred captions.
+ * Reading who said what has to be instant over a moving camera feed.
+ */
+function TranscriptLine({ entry }: { entry: Transcript }) {
+  const s = useS();
+  if (entry.role === 'system') {
+    return (
+      <Text style={s.lineSystem} accessibilityLabel={`Session status: ${entry.text}`}>
+        {entry.text}
+      </Text>
+    );
+  }
+  if (entry.role === 'user') {
+    return (
+      <Text style={s.lineUser} accessibilityLabel={`You said: ${entry.text}`}>
+        {entry.text}
+      </Text>
+    );
+  }
+  return (
+    <View style={s.agentRow}>
+      <View style={s.agentRule} />
+      <Text style={s.lineAgent} accessibilityLabel={`Tutor said: ${entry.text}`}>
+        {entry.text}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * The microphone glyph, drawn rather than borrowed: a capsule, the pickup arc
+ * under it and the stand, on the same 24 unit grid and 2.2 stroke as everything
+ * in components/icons.tsx, so it sits beside them without looking imported.
+ */
+function MicGlyph({ size = 22, color, muted = false }: { size?: number; color: string; muted?: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M12 2.9a2.9 2.9 0 0 1 2.9 2.9v5.4a2.9 2.9 0 0 1-5.8 0V5.8A2.9 2.9 0 0 1 12 2.9z"
+        fill={color}
+      />
+      <Path
+        d="M6.2 11.1a5.8 5.8 0 0 0 11.6 0"
+        fill="none"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+      />
+      <Path d="M12 16.9v4.2" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      {muted && (
+        <Path d="M4.4 3.6 19.6 20.4" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      )}
+    </Svg>
+  );
+}
+
+/**
+ * The voice control. Round where every other control on this screen is a
+ * rectangle, because it is the one the product is actually about: the learner
+ * talks, the tutor answers, and typing is the fallback underneath it.
+ *
+ * Three states, three readings. Off is an outline. Listening fills gold and
+ * breathes a ring outwards so a learner glancing up from the breadboard can
+ * tell at a distance that it is still hearing them. Refused is a struck-through
+ * mic that opens the settings page rather than a prompt the OS will not show
+ * again.
+ */
+function MicControl({
+  listening, armed, permission, speaking, speaker, onPress,
+}: {
+  /** Capture is running: the tutor can hear the room right now. */
+  listening: boolean;
+  /** The learner has turned it on. It may not be capturing yet, mid-connect. */
+  armed: boolean;
+  permission: MicPermission;
+  /**
+   * The tutor is talking, so the microphone is shut. There is no echo
+   * cancellation on this device path, so anything captured now would be the
+   * loudspeaker: the model would hear itself, cut its own sentence off, and its
+   * words would land on the learner's side of the transcript. Pressing while
+   * this is true interrupts rather than toggling.
+   */
+  speaking: boolean;
+  /**
+   * Who is on the other end, in the words a screen reader should say. The same
+   * button runs a tutoring session, a scored interview and a coaching call, and
+   * "Talk to the tutor" is wrong for two of the three.
+   */
+  speaker: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const s = useS();
+  const reduced = useReducedMotion();
+  const pulse = useSharedValue(0);
+  const denied = permission === 'denied';
+
+  useEffect(() => {
+    if (!listening || speaking || reduced) {
+      cancelAnimation(pulse);
+      pulse.value = 0;
+      return;
+    }
+    pulse.value = 0;
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(pulse);
+  }, [listening, speaking, reduced, pulse]);
+
+  const ring = useAnimatedStyle(() => ({
+    opacity: 0.5 * (1 - pulse.value),
+    transform: [{ scale: 1 + pulse.value * 0.6 }],
+  }));
+
+  const glyphColor = denied ? colors.red : speaking ? colors.inkMute : armed ? colors.onGold : colors.ink;
+
+  return (
+    <View style={s.micWrap}>
+      {listening && !speaking && <Animated.View pointerEvents="none" style={[s.micRing, ring]} />}
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          s.mic,
+          armed && s.micLive,
+          armed && !listening && s.micWaiting,
+          denied && s.micDenied,
+          pressed && s.micPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityState={{ selected: listening }}
+        accessibilityLabel={
+          denied
+            ? 'Microphone blocked. Open settings'
+            : speaking
+              ? `Interrupt the ${speaker}`
+              : listening
+                ? `Stop talking to the ${speaker}`
+                : armed
+                  ? `Microphone on, waiting for the ${speaker}`
+                  : `Talk to the ${speaker}`
+        }
+        accessibilityHint={
+          denied
+            ? 'Opens your phone settings so you can allow Ohmlet to use the microphone'
+            : speaking
+              ? `Stops the ${speaker} so you can speak. It cannot hear you while it is talking.`
+              : armed
+                ? 'Turns the microphone off. You can still type.'
+                : `Turns the microphone on so the ${speaker} can hear you`
+        }
+      >
+        <MicGlyph color={glyphColor} muted={denied} />
+      </Pressable>
+    </View>
+  );
+}
+
+export default function LiveTutor() {
+  const colors = useColors();
+  const s = useS();
+  // ── Which of the three live modes the tab is showing ──
+  //
+  // `?mode=coach` and `?mode=interview` still open the two Max personas, because
+  // /career and /interview both navigate here that way and a deep link has to
+  // keep working. But the param is an INBOUND channel only: once this screen is
+  // up, the segmented control owns the mode and switching is local state. That
+  // matters structurally as well as visually. `live` is a tab root, declared in
+  // _layout.tsx and protected by scripts/check-tab-roots.mjs, so a segment that
+  // navigated would either stack a second copy of a tab root or unwind past it.
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [segment, setSegment] = useState<LiveMode>(
+    params.mode === 'coach' ? 'coaching' : params.mode === 'interview' ? 'interview' : 'bench',
+  );
+  // A push that lands on an instance already mounted still has to be obeyed.
+  // Only the two paid modes are forced this way: someone who has moved
+  // themselves back to Bench must not be dragged out of it by a stale param.
+  useEffect(() => {
+    if (params.mode === 'coach') setSegment('coaching');
+    else if (params.mode === 'interview') setSegment('interview');
+  }, [params.mode]);
+
+  const { user, loading: authLoading } = useAuth();
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const transcriptRef = useRef<ScrollView>(null);
+  const sessionId = useRef(`live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).current;
+  const [stage, setStage] = useState<Stage>('inventory');
+  const [draft, setDraft] = useState('');
+  const { canGoLive, minutesRemaining, unlimited, plan, loading: planLoading } = usePlan();
+  const isMax = plan === 'max';
+
+  // Locked, not hidden. A learner without Max still sees both paid segments and
+  // still selects them; what they get is a panel saying what the mode is and a
+  // route to the plans tab. Nothing is locked while the entitlement is still in
+  // flight, because telling a Max learner for half a second that they cannot
+  // open Interview Mode is worse than a moment of spinner.
+  const lockedModes: LiveMode[] = !planLoading && !isMax ? ['interview', 'coaching'] : [];
+
+  // The persona the socket asks for, derived from the segment rather than from
+  // the URL, so an unknown or stale param can never silently become a paid one.
+  // The server refuses both for anyone but Max regardless, so this is a request.
+  const sessionMode =
+    !isMax ? 'tutor' as const
+      : segment === 'interview' ? 'interview' as const
+        : segment === 'coaching' ? 'coach' as const
+          : 'tutor' as const;
+
+  // Set by /interview immediately before it navigates here, and the thing that
+  // separates "the Interview segment" from "an interview about to run". An
+  // interview with no role, no advert and no CV is not a harder interview, it is
+  // a generic one that would be scored as though it were the real thing. Without
+  // it the segment shows its own front door instead of connecting, which is also
+  // what a deep link or a stale back-stack entry now lands on.
+  const interviewCtx = sessionMode === 'interview' ? pendingInterview() : null;
+
+  // Child mode is inert unless EXPO_PUBLIC_OHMLET_CHILD_MODE is on: useChildSafe
+  // returns false for everyone while the flag is off. `resolved` is the half
+  // that matters for the microphone: until the age question has an answer,
+  // nobody knows whether a minor is holding the phone, so nothing opens.
+  const { childSafe, resolved: childSafeResolved } = useChildSafe();
+
+  // Step 2 of the loop. Declared before the socket because the socket's
+  // background frame heartbeat has to stand down while the shutter is in use:
+  // two takePictureAsync calls at once on the same preview is one of them
+  // failing, and the one that fails would be the learner's kit check.
+  const kit = useKitCheck(cameraRef);
+  const kitBusy = kit.phase === 'capturing' || kit.phase === 'checking';
+
+  const live = useLiveBridge({
+    wsUrl: liveBridgeWsUrl(),
+    // Coaching reuses the entire live spine on a different persona. The server
+    // refuses it for anyone but Max, so this is a request rather than a grant.
+    mode: sessionMode,
+    interviewContext: interviewCtx ?? undefined,
+    userId: user?.uid ?? '',
+    sessionId,
+    childSafe,
+    childSafeResolved,
+    // undefined keeps the hook's own default rather than restating it here.
+    visionIntervalMs: kitBusy ? 0 : undefined,
+  });
+
+  /**
+   * The one way out of a session.
+   *
+   * A tutoring session just leaves. An interview has to carry its transcript
+   * back to /interview to be scored, and the roles have to be translated on the
+   * way: the hook speaks in `agent` and `user`, and a report is written about an
+   * `interviewer` and a `candidate`. System lines are dropped, because
+   * "Reconnecting" is not something the candidate said.
+   */
+  const endSession = useCallback(() => {
+    if (sessionMode === 'interview') {
+      finishInterview(
+        live.transcripts
+          .filter((t) => t.role === 'agent' || t.role === 'user')
+          .map((t) => ({ role: t.role === 'agent' ? 'interviewer' as const : 'candidate' as const, text: t.text })),
+      );
+      live.disconnect();
+      goBack('/interview');
+      return;
+    }
+    live.disconnect();
+    // A coaching session is started from the Live tab and belongs to it, so
+    // ending one lands back on its own segment rather than throwing the learner
+    // out to the path. The bench keeps its old exit: a build session that is
+    // over is over, and the next thing a learner wants is the next lesson.
+    if (sessionMode === 'coach') return;
+    goBack('/home');
+  }, [sessionMode, live]);
+
+  // ── Step 1 of the loop: what are we building ──
+  //
+  // The library is served, not bundled (services/builds.ts), so this screen has
+  // to be honest about all three states it can be in: still loading, loaded, and
+  // unreachable with nothing cached. The last one must not lock a learner out of
+  // a live session, because an open bench session is still a session; it only
+  // costs them the kit check, which has nothing to check against.
+  const [catalogue, setCatalogue] = useState<Build[]>([]);
+  const [build, setBuild] = useState<Build | null>(null);
+  const [buildsLoading, setBuildsLoading] = useState(true);
+  const [libraryUnreachable, setLibraryUnreachable] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const loadBuilds = useCallback(async () => {
+    setBuildsLoading(true);
+    // The refresh callback re-resolves the chosen build from the new copy, so a
+    // corrected parts list reaches a session that is already open.
+    const loaded = user?.uid
+      ? await getBuilds((fresh) => {
+          setCatalogue(fresh.builds);
+          setBuild((prev) => (prev ? fresh.builds.find((b) => b.id === prev.id) ?? prev : prev));
+        })
+      : null;
+    if (loaded) {
+      setCatalogue(loaded.builds);
+      const remembered = await rememberedBuild(loaded);
+      // A learner who came back to the same build should not have to pick it
+      // again, but a choice made while this was in flight wins.
+      setBuild((prev) => prev ?? remembered);
+    }
+    setLibraryUnreachable(!loaded);
+    setBuildsLoading(false);
+  }, [user?.uid]);
+
+  // Not while auth is still resolving. The request needs a token, and running it
+  // a moment early would answer "unreachable" and flash the empty state at a
+  // learner whose library is sitting on the device.
+  useEffect(() => {
+    if (authLoading) return;
+    void loadBuilds();
+  }, [authLoading, loadBuilds]);
+
+  // Step 1 is not optional while there is a library to choose from. When there
+  // is not one yet (first run with no signal) the session still starts; it just
+  // starts without a kit check, which would have nothing to check against.
+  //
+  // A build is a tutoring idea. An interview and a coaching conversation have
+  // nothing to wire, so neither waits on one.
+  const mustPickBuild = sessionMode === 'tutor' && !buildsLoading && catalogue.length > 0 && !build;
+
+  // Give the hook a way to pull one frame from the preview.
+  useEffect(() => {
+    live.registerFrameGrabber(async () => {
+      try {
+        const shot = await cameraRef.current?.takePictureAsync({
+          base64: true, quality: 0.5, skipProcessing: true, shutterSound: false,
+        });
+        return shot?.base64 ?? null;
+      } catch {
+        return null;   // a dropped frame must never end the session
+      }
+    });
+    return () => live.registerFrameGrabber(null);
+  }, [live]);
+
+  // The safety acknowledgement gates the FIRST live session, before the camera
+  // and microphone are asked for. Shown once per uid, not per device: on a
+  // shared phone the next person has not seen it.
+  const [safetyOpen, setSafetyOpen] = useState(false);
+  const pendingStart = useRef(false);
+
+  const beginSession = useCallback(async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) return;
+    }
+    // Both permission sheets belong to this one press. Asking for the
+    // microphone later, mid-build, puts a system dialog in front of a learner
+    // whose hands are on the board.
+    //
+    // Not for a minor. Child mode's rule is that a minor's microphone opens
+    // only under their own hand on the mic control, so a child-safe session
+    // starts camera-and-text and waits to be asked. Same rule while the age
+    // question is still resolving, because nobody knows yet which it is.
+    if (live.micSupported && childSafeResolved && !childSafe) {
+      await live.enableMic();
+    }
+    await live.connect();
+    live.setCamOn(true);
+  }, [permission, requestPermission, live, childSafe, childSafeResolved]);
+
+  const start = useCallback(async () => {
+    if (user?.uid && !(await hasAcceptedSafety(user.uid))) {
+      pendingStart.current = true;
+      setSafetyOpen(true);
+      return;
+    }
+    await beginSession();
+  }, [user?.uid, beginSession]);
+
+  const onAcceptSafety = useCallback(async () => {
+    if (user?.uid) await acceptSafety(user.uid);
+    setSafetyOpen(false);
+    if (pendingStart.current) {
+      pendingStart.current = false;
+      await beginSession();
+    }
+  }, [user?.uid, beginSession]);
+
+  const connected = live.state === 'connected';
+  const connecting = live.state === 'connecting';
+
+  // ── Changing segment ──
+  //
+  // Blocked outright while a session is up, rather than confirmed. A confirm
+  // sheet would be asking a learner mid-conversation to weigh something they
+  // cannot see the consequences of: an interview thrown away one answer from the
+  // end is unrecoverable, because the transcript is the report. The End control
+  // is on screen and says what it does, so refusing costs one tap and destroys
+  // nothing.
+  const [heldNote, setHeldNote] = useState<string | null>(null);
+
+  const switchSegment = useCallback((next: LiveMode) => {
+    if (next === segment) return;
+    if (connected || connecting) {
+      setHeldNote(
+        sessionMode === 'interview'
+          ? 'Your interview is still running. End and score it before you switch.'
+          : sessionMode === 'coach'
+            ? 'Your coaching session is still running. End it before you switch.'
+            : 'Your session is still live. End it before you switch.',
+      );
+      return;
+    }
+    setHeldNote(null);
+    setSegment(next);
+  }, [segment, connected, connecting, sessionMode]);
+
+  // The refusal is a message, not a mode. Left up it would read as a permanent
+  // warning about a session that is going perfectly well.
+  useEffect(() => {
+    if (!heldNote) return;
+    const t = setTimeout(() => setHeldNote(null), 4500);
+    return () => clearTimeout(t);
+  }, [heldNote]);
+
+  // Count a live session once it genuinely connects, not when the button is
+  // pressed — a refused or failed connection is not a session.
+  const counted = useRef(false);
+  useEffect(() => {
+    if (!connected || counted.current || !user?.uid) return;
+    counted.current = true;
+    // Fired here, not on the button, for the reason the counter is here: a
+    // refused or failed connection is not a session, and counting one would
+    // overstate activation.
+    track('live_session_start', { stage });
+    startedAt.current = Date.now();
+    void (async () => {
+      const p = await loadProgress(user.uid);
+      await saveProgress(user.uid, bumpMetric(p, 'liveSessions'));
+    })();
+  }, [connected, user?.uid, stage]);
+
+  // Length is the signal that separates "opened it" from "used it". Recorded on
+  // unmount so it covers leaving the screen as well as ending deliberately.
+  const startedAt = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (startedAt.current === null) return;
+    track('live_session_end', {
+      seconds: Math.round((Date.now() - startedAt.current) / 1000),
+    });
+    void flush();
+  }, []);
+
+  const changeStage = (next: Stage) => {
+    setStage(next);
+    live.sendStage(next);
+  };
+
+  // ── The build, and telling the tutor about it ──
+  //
+  // A build the tutor does not know about is a dropdown, not step 1. The choice
+  // opens the session, and changing it mid-session is said out loud too, so the
+  // guidance follows the learner rather than the other way round.
+  const introSent = useRef(false);
+
+  useEffect(() => {
+    // A dropped socket is a new agent session, not a pause in this one: the
+    // server rebuilds its stage from the default on every connection, and a
+    // reconnect can land on a different Cloud Run instance whose session store
+    // has never heard of this learner. useLiveBridge re-sends the stage for
+    // that reason; the build has to travel with it, or the tutor comes back
+    // confidently guiding a build nobody has told it about.
+    if (!connected) {
+      introSent.current = false;
+      return;
+    }
+    // Only the tutor is building anything. Opening an interview by announcing
+    // which breadboard project the candidate last chose would be nonsense, and
+    // the interviewer would take it as a topic.
+    if (sessionMode !== 'tutor' || introSent.current || !build) return;
+    introSent.current = true;
+    live.sendText(buildIntro(build), stage);
+  }, [connected, build, live, stage, sessionMode]);
+
+  const chooseBuild = useCallback((next: Build) => {
+    setPickerOpen(false);
+    const same = build?.id === next.id;
+    setBuild(next);
+    void rememberBuild(next.id);
+
+    if (!connected) return;                       // the effect above will open with it
+    if (same && introSent.current) return;        // nothing has changed to tell anyone
+    // A build chosen inside a session that began without one is still the
+    // opening line, not a change of plan.
+    const opening = !introSent.current;
+    introSent.current = true;
+    live.sendText(opening ? buildIntro(next) : buildSwitch(next), stage);
+  }, [build, connected, live, stage]);
+
+  // ── Step 2 of the loop: the camera kit check ──
+  // (the hook itself is declared above, with the socket that shares its camera)
+  const [kitOpen, setKitOpen] = useState(false);
+  const [toldTutor, setToldTutor] = useState(false);
+
+  const runKitCheck = useCallback(() => {
+    if (!build) return;
+    setToldTutor(false);
+    setKitOpen(true);
+    void kit.checkInventory(build.parts, build.title);
+  }, [build, kit]);
+
+  const runIdentify = useCallback(() => {
+    setToldTutor(false);
+    setKitOpen(true);
+    void kit.identify();
+  }, [kit]);
+
+  const retryKit = useCallback(() => {
+    setToldTutor(false);
+    void kit.retry();
+  }, [kit]);
+
+  const closeKit = useCallback(() => {
+    setKitOpen(false);
+    setToldTutor(false);
+    kit.reset();
+  }, [kit]);
+
+  // The check belongs to the Parts stage, and only while there is a picture to
+  // take. On the Wiring stage it would photograph a half-built board and report
+  // half the kit missing, which is worse than not offering it. It belongs to the
+  // tutor too: there is no kit to check in an interview.
+  const showKitActions = sessionMode === 'tutor' && stage === 'inventory' && live.camOn && kit.available;
+
+  // Hand the verdict to the tutor. This is the whole point of the check: the
+  // next thing the tutor says should be about the bench the learner has, not
+  // the bench the build assumes. Sent once per result, and only while the
+  // socket is up, so the sheet never claims something that did not happen.
+  const handedOff = useRef<object | null>(null);
+  useEffect(() => {
+    if (kit.phase !== 'done' || !connected) return;
+    const result = kit.inventory ?? kit.component;
+    if (!result || handedOff.current === result) return;
+    const message = kit.inventory
+      ? inventoryHandoff(kit.inventory, build?.title)
+      : kit.component
+        ? componentHandoff(kit.component)
+        : '';
+    if (!message) return;
+    handedOff.current = result;
+    live.sendText(message, stage);
+    setToldTutor(true);
+  }, [kit.phase, kit.inventory, kit.component, connected, build?.title, live, stage]);
+
+  // ── The Live tab's chrome ──
+  //
+  // One control, above whatever the tab is showing, in every state including a
+  // running session. A learner who cannot see which mode they are in cannot be
+  // certain they are not being recorded and scored, and a control that vanishes
+  // when it becomes inconvenient is worse than one that says no.
+  const modeBar = (
+    <LiveModes
+      value={segment}
+      onChange={switchSegment}
+      locked={lockedModes}
+      held={connected || connecting}
+      style={s.modeBar}
+    />
+  );
+
+  const copy = PREFLIGHT[sessionMode];
+  /** Who the learner is talking to, in every sentence that names them. */
+  const speaker =
+    sessionMode === 'interview' ? 'interviewer' : sessionMode === 'coach' ? 'coach' : 'tutor';
+
+  // ── Interview, before there is an interview ──
+  //
+  // The segment's front door, not the session. Setting one up needs the advert,
+  // the CV and the seniority, and reading it back needs the report, so /interview
+  // stays the single owner of a transcript that must be scored exactly once.
+  if (!connected && !connecting && segment === 'interview' && !interviewCtx) {
+    return (
+      <AppTabs active="live">
+        <View style={s.tab}>
+          {modeBar}
+          {/* The same "‹ Back" every other segment shows. Bench and Coaching
+              carry it in their pre-flight; these two paths render a panel
+              instead and were missing it, so Interview was the one segment with
+              no way out except the tab bar. Three segments in one control have
+              to behave the same way or the odd one reads as broken. */}
+          <Pressable onPress={() => goBack('/home')} style={s.backLink}>
+            <Text style={s.backText}>‹ Back</Text>
+          </Pressable>
+          {planLoading ? (
+            <View style={s.gatePending}><ActivityIndicator color={colors.inkMute} /></View>
+          ) : isMax ? (
+            <InterviewIntro />
+          ) : (
+            <ModeLocked mode="interview" />
+          )}
+        </View>
+      </AppTabs>
+    );
+  }
+
+  // ── Coaching, for someone whose plan does not include it ──
+  if (!connected && !connecting && segment === 'coaching' && !isMax) {
+    return (
+      <AppTabs active="live">
+        <View style={s.tab}>
+          {modeBar}
+          {/* The same "‹ Back" every other segment shows. Bench and Coaching
+              carry it in their pre-flight; these two paths render a panel
+              instead and were missing it, so Interview was the one segment with
+              no way out except the tab bar. Three segments in one control have
+              to behave the same way or the odd one reads as broken. */}
+          <Pressable onPress={() => goBack('/home')} style={s.backLink}>
+            <Text style={s.backText}>‹ Back</Text>
+          </Pressable>
+          {planLoading
+            ? <View style={s.gatePending}><ActivityIndicator color={colors.inkMute} /></View>
+            : <ModeLocked mode="coaching" />}
+        </View>
+      </AppTabs>
+    );
+  }
+
+  // ── Out of live budget ──
+  // The server enforces this at the socket too; showing it here means a learner
+  // finds out before the camera opens rather than after.
+  if (!connected && !connecting && !planLoading && !canGoLive) {
+    return (
+      <AppTabs active="live">
+      {/* The tab bar, which this screen went without until 2026-09-01.
+          
+          `live` is one of the six tab roots but was the ONLY one that never
+          rendered AppTabs, so its single exit was a "‹ Back" link that always
+          returned to Learn regardless of where the learner came from. The
+          interactive edge-swipe was quietly acting as the second way out, and
+          it was broken: it unwound past the tab root to the sign-in gate, which
+          is the bug reported that morning. Disabling that gesture closed the
+          trapdoor and left the room with one door.
+          
+          A tab without a tab bar is not a tab. The bar is here for the idle and
+          pre-flight states; the live session below stays full bleed on purpose,
+          because there the End button is the exit and the camera should own the
+          screen. `check-tab-roots.mjs` now fails a tab root that does not render
+          AppTabs. */}
+      <View style={s.tab}>
+        {modeBar}
+        <View style={[s.preflight, s.preflightInner]}>
+          <Pressable onPress={() => goBack('/home')} style={s.backLink}>
+            <Text style={s.backText}>‹ Back</Text>
+          </Pressable>
+          <Text style={s.eyebrow}>{copy.eyebrow}</Text>
+          <Text style={s.title}>That's this month's bench time.</Text>
+          <Text style={s.body}>
+            Your lessons, path and progress all stay open, and live time resets at the start of next
+            month. More time is available on a paid plan.
+          </Text>
+          <Button label="See plans" onPress={() => router.push('/plans')} style={{ marginTop: space.lg }} />
+        </View>
+      </View>
+      </AppTabs>
+    );
+  }
+
+  // ── Pre-flight ──
+  if (!connected && !connecting) {
+    return (
+      <AppTabs active="live">
+      <View style={s.tab}>
+        {modeBar}
+        <ScrollView
+          style={s.preflight}
+          contentContainerStyle={s.preflightInner}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Pressable onPress={() => goBack('/home')} style={s.backLink}>
+            <Text style={s.backText}>‹ Back</Text>
+          </Pressable>
+
+          <Text style={s.eyebrow}>{copy.eyebrow}</Text>
+          <Text style={s.title}>{copy.title}</Text>
+          <Text style={s.body}>{copy.body}</Text>
+
+          {/* What the interviewer was given, in the learner's own words, so nobody
+              starts a scored interview unsure which role it is for. */}
+          {sessionMode === 'interview' && !!interviewCtx && (
+            <View style={s.ctx}>
+              <Text style={s.ctxLabel}>INTERVIEWING FOR</Text>
+              <Text style={s.ctxValue} numberOfLines={2}>{interviewCtx.role || 'A hardware role'}</Text>
+              <Text style={s.ctxMeta}>
+                {[
+                  interviewCtx.seniority,
+                  interviewCtx.jobDescription ? 'advert given' : null,
+                  interviewCtx.resume ? 'CV given' : null,
+                  interviewCtx.warmup ? 'warmup round' : null,
+                ].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          )}
+
+          {/* The coach opens from the record rather than from a build, so the slot
+              is replaced by the way in to the record itself. */}
+          {sessionMode === 'coach' && (
+            <Pressable
+              onPress={() => router.push('/career')}
+              style={({ pressed }) => [s.recordLink, pressed && s.recordLinkDown]}
+              accessibilityRole="button"
+              accessibilityLabel="See your build record"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.recordTitle}>Your build record</Text>
+                <Text style={s.recordSub}>What Ohmlet can actually verify about you</Text>
+              </View>
+              <Text style={s.recordChevron}>›</Text>
+            </Pressable>
+          )}
+
+          {sessionMode === 'tutor' && (
+            <View style={s.slot}>
+              <BuildSlot
+                build={build}
+                loading={buildsLoading}
+                unreachable={libraryUnreachable}
+                // Tapping the slot while the library is unreachable tries again in
+                // front of the learner, so the picker opens onto a fresh attempt
+                // rather than onto the same emptiness.
+                onOpen={() => { setPickerOpen(true); if (libraryUnreachable) void loadBuilds(); }}
+              />
+            </View>
+          )}
+
+          {!live.micSupported ? (
+            <View style={s.notice}>
+              <Text style={s.noticeTitle}>Talking back needs the app</Text>
+              <Text style={s.noticeBody}>
+                In a browser the tutor still watches your bench and answers out loud. To talk to it,
+                open Ohmlet on your phone.
+              </Text>
+            </View>
+          ) : live.micPermission === 'denied' ? (
+            <View style={s.notice}>
+              <Text style={s.noticeTitle}>{"Ohmlet can't hear you"}</Text>
+              <Text style={s.noticeBody}>
+                Microphone access is turned off, so the session starts camera and text. Turn it on for
+                Ohmlet and it can hear you while the session runs.
+              </Text>
+              <Pressable
+                onPress={() => { void Linking.openSettings(); }}
+                style={({ pressed }) => [s.noticeAction, pressed && s.overlayPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Open settings to allow the microphone"
+              >
+                <Text style={s.noticeActionText}>Open settings</Text>
+              </Pressable>
+            </View>
+          ) : childSafe ? (
+            <View style={s.notice}>
+              <Text style={s.noticeTitle}>Tap the mic when you want to talk</Text>
+              <Text style={s.noticeBody}>
+                Ohmlet only listens when you press the microphone button, and it stops as soon as you
+                press it again.
+              </Text>
+            </View>
+          ) : null}
+
+          {!planLoading && (
+            <Text style={s.budget}>
+              {unlimited
+                ? 'Unlimited live time on your plan.'
+                : `${minutesRemaining ?? 0} minutes of live time left this month on ${plan === 'free' ? 'the Free plan' : `the ${plan} plan`}.`}
+            </Text>
+          )}
+
+          {!!live.error && <Text style={s.error}>{live.error}</Text>}
+
+          <Button
+            label={copy.cta}
+            onPress={start}
+            disabled={mustPickBuild}
+            style={{ marginTop: space.lg }}
+          />
+          {mustPickBuild && (
+            <Text style={s.startHint}>
+              Pick a build first, so the tutor knows what you are making and what to look for.
+            </Text>
+          )}
+
+          {/* Mounted here as well as in the live view: the start button lives in
+              this pre-flight return, which exits before the live render, so a modal
+              mounted only there would never appear. The same is true of the picker,
+              which a learner reaches from both. */}
+          <SafetyAck
+            visible={safetyOpen}
+            onAccept={onAcceptSafety}
+            onCancel={() => { pendingStart.current = false; setSafetyOpen(false); }}
+          />
+          <BuildPicker
+            visible={pickerOpen}
+            builds={catalogue}
+            loading={buildsLoading}
+            selectedId={build?.id ?? null}
+            ctaLabel="Use this build"
+            onChoose={chooseBuild}
+            onRetry={() => { void loadBuilds(); }}
+            onClose={() => setPickerOpen(false)}
+          />
+        </ScrollView>
+      </View>
+      </AppTabs>
+    );
+  }
+
+  // ── Live ──
+  return (
+    <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={s.stage}>
+        {live.camOn ? (
+          <>
+            <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+            {/* A scrim, not decoration: controls sit over a live camera feed
+                whose brightness is whatever the learner's bench happens to be,
+                so without it white text is legible over a dark board and
+                invisible over a lit one. This is the one gradient in the app
+                that is doing real work. */}
+            <LinearGradient
+              colors={['rgba(20,24,31,0.55)', 'transparent', 'rgba(20,24,31,0.75)'] as const}
+              locations={[0, 0.35, 1] as const}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          </>
+        ) : (
+          <View style={[StyleSheet.absoluteFill, s.camOff]}>
+            <Text style={s.camOffText}>Camera off</Text>
+          </View>
+        )}
+
+        {/* The tab's own control, over the feed rather than above it, so the
+            camera keeps the full height it had before the modes existed. */}
+        <LiveModes
+          value={segment}
+          onChange={switchSegment}
+          locked={lockedModes}
+          held
+          tone="dark"
+          style={s.modeBarLive}
+        />
+
+        {/* Stage selector floats over the feed rather than stealing space from it.
+            Only the tutor has stages: an interview has no Parts step, and a row
+            of them over a candidate's face would be four controls that do
+            nothing anyone would want. */}
+        {sessionMode === 'tutor' && (
+          <View style={s.stageBar}>
+            {STAGES.map((st) => {
+              const active = st.id === stage;
+              return (
+                <Pressable
+                  key={st.id}
+                  onPress={() => changeStage(st.id)}
+                  style={[s.chip, active && s.chipActive]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[s.chipText, active && s.chipTextActive]}>{st.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {connecting && !live.reconnecting && (
+          <View style={s.connecting}>
+            <ActivityIndicator color={colors.gold} />
+            <Text style={s.connectingText}>{`Waking the ${speaker}…`}</Text>
+          </View>
+        )}
+
+        {/* A dropped socket recovers in place, so it gets a quiet banner rather
+            than a full-screen takeover: the camera and the transcript stay put. */}
+        {live.reconnecting && (
+          <View style={s.reconnect} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.gold} size="small" />
+            <Text style={s.reconnectText}>Reconnecting…</Text>
+          </View>
+        )}
+
+        {/* Everything that sits over the bottom of the feed, in reading order:
+            what we are building, what to do about the parts, then what has been
+            said. The transcript used to be positioned absolutely on its own,
+            which left nowhere for the parts controls to go except on top of it. */}
+        <View style={s.bottomStack} pointerEvents="box-none">
+          {sessionMode === 'tutor' && !!build && (
+            <Pressable
+              onPress={() => setPickerOpen(true)}
+              style={({ pressed }) => [s.buildBar, pressed && s.overlayPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Building the ${build.title}. Change build`}
+            >
+              <View style={[s.buildDot, { backgroundColor: build.color }]} />
+              <Text style={s.buildBarText} numberOfLines={1}>{build.title}</Text>
+              <Text style={s.buildBarChange}>CHANGE</Text>
+            </Pressable>
+          )}
+
+          {showKitActions && (
+            <View style={s.kitRow}>
+              {!!build && (
+                <Pressable
+                  onPress={runKitCheck}
+                  style={({ pressed }) => [s.kitPrimary, pressed && s.overlayPressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Check your parts against the ${build.title}`}
+                >
+                  <Text style={s.kitPrimaryText}>Check my kit</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={runIdentify}
+                style={({ pressed }) => [s.kitGhost, pressed && s.overlayPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Identify the part you are holding up"
+              >
+                <Text style={s.kitGhostText}>What's this part?</Text>
+              </Pressable>
+            </View>
+          )}
+
+          <ScrollView
+            ref={transcriptRef}
+            style={s.transcript}
+            contentContainerStyle={s.transcriptInner}
+            onContentSizeChange={() => transcriptRef.current?.scrollToEnd({ animated: true })}
+            accessibilityLabel="Session transcript"
+          >
+            {live.transcripts.length === 0 ? (
+              <Text style={s.transcriptEmpty}>
+                {!connected
+                  ? `Getting the ${speaker} listening.`
+                  : sessionMode !== 'tutor'
+                    ? live.micOn
+                      ? `Speak, or type below. Everything you and the ${speaker} say shows up here.`
+                      : `Type below to answer. What the ${speaker} says shows up here.`
+                    : live.micOn
+                      ? 'Talk to the tutor while you build, or type below. Everything said shows up here.'
+                      : 'Point the camera at your board, or ask a question below. What the tutor says shows up here.'}
+              </Text>
+            ) : (
+              live.transcripts
+                .slice(-VISIBLE_LINES)
+                .map((t) => <TranscriptLine key={t.id} entry={t} />)
+            )}
+          </ScrollView>
+        </View>
+      </View>
+
+      <View style={s.controls}>
+        {/* Development builds only. A learner never sees a sample rate.
+            It stays available because reading the engine's source and reasoning
+            about what it ought to do was wrong six times running, and measuring
+            it was right the first time. See docs/live-audio.md.
+            A healthy session reads about 0.85x, not 1.00: onEnded fires late. */}
+        {__DEV__ && !!live.audioDiag && <Text style={s.diag}>{live.audioDiag}</Text>}
+        {/* Why the segment did not change. It sits here, beside the End control
+            it is asking the learner to press, rather than over the feed where it
+            would be one more thing floating on top of the conversation. */}
+        {!!heldNote && (
+          <Text style={s.heldNote} accessibilityLiveRegion="polite">{heldNote}</Text>
+        )}
+        {live.micOn && live.agentSpeaking && (
+          <Text style={s.floor} accessibilityLiveRegion="polite">
+            {`The ${speaker} is speaking. Tap the microphone to cut in.`}
+          </Text>
+        )}
+        <View style={s.askRow}>
+          {live.micSupported && (
+            <MicControl
+              listening={live.micOn}
+              armed={live.micIntent}
+              permission={live.micPermission}
+              speaking={live.agentSpeaking}
+              speaker={speaker}
+              onPress={() => {
+                if (live.micPermission === 'denied') { void Linking.openSettings(); return; }
+                // While the tutor is talking the microphone is shut, so a press
+                // means "stop, I want to say something" rather than "turn the
+                // microphone off". Speaking over it cannot interrupt any more.
+                if (live.agentSpeaking) { live.interrupt(); return; }
+                void live.toggleMic();
+              }}
+            />
+          )}
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={sessionMode === 'interview' ? 'Type your answer…' : `Ask the ${speaker}…`}
+            placeholderTextColor={colors.inkSoft}
+            style={s.input}
+            accessibilityLabel={sessionMode === 'interview' ? 'Type your answer' : `Ask the ${speaker}`}
+            onSubmitEditing={() => { live.sendText(draft, stage); setDraft(''); }}
+            returnKeyType="send"
+          />
+          <Pressable
+            onPress={() => { live.sendText(draft, stage); setDraft(''); }}
+            disabled={!draft.trim()}
+            style={[s.send, !draft.trim() && s.sendOff]}
+            accessibilityRole="button"
+            accessibilityLabel="Send"
+          >
+            <Send size={18} />
+          </Pressable>
+        </View>
+
+        <View style={s.buttonRow}>
+          <Pressable onPress={() => live.setCamOn(!live.camOn)} style={s.ctrl} accessibilityRole="button">
+            <Text style={s.ctrlText}>{live.camOn ? 'Camera off' : 'Camera on'}</Text>
+          </Pressable>
+          <Pressable onPress={() => void live.sendFrame()} style={s.ctrl} accessibilityRole="button">
+            <Text style={s.ctrlText}>Look now</Text>
+          </Pressable>
+          <Pressable
+            onPress={endSession}
+            style={[s.ctrl, s.ctrlEnd]}
+            accessibilityRole="button"
+          >
+            <Text style={[s.ctrlText, s.ctrlEndText]}>{sessionMode === 'interview' ? 'End and score' : 'End'}</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <SafetyAck
+        visible={safetyOpen}
+        onAccept={onAcceptSafety}
+        onCancel={() => { pendingStart.current = false; setSafetyOpen(false); }}
+      />
+
+      <BuildPicker
+        visible={pickerOpen}
+        builds={catalogue}
+        loading={buildsLoading}
+        selectedId={build?.id ?? null}
+        ctaLabel="Switch to this build"
+        onChoose={chooseBuild}
+        onRetry={() => { void loadBuilds(); }}
+        onClose={() => setPickerOpen(false)}
+      />
+
+      <KitCheckSheet
+        visible={kitOpen}
+        phase={kit.phase}
+        intent={kit.intent ?? 'inventory'}
+        inventory={kit.inventory}
+        component={kit.component}
+        error={kit.error}
+        retryable={kit.retryable}
+        buildTitle={build?.title}
+        toldTutor={toldTutor}
+        onRetry={retryKit}
+        onClose={closeKit}
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+const useS = makeStyles((colors) => ({
+  flex: { flex: 1, backgroundColor: colors.slab },
+  // Everything the Live tab can show sits under one control, so the frame is
+  // declared once here rather than repeated per state.
+  tab: { flex: 1, backgroundColor: colors.cream },
+  modeBar: { margin: space.lg, marginBottom: 0 },
+  modeBarLive: { position: 'absolute', top: space.md, left: space.md, right: space.md },
+  gatePending: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // The pre-flight scrolls now that it carries the build: on a small phone the
+  // card, the parts line and the plan notice together run past the fold, and a
+  // start button below the fold with no way to reach it is the worst outcome.
+  preflight: { flex: 1, backgroundColor: colors.cream },
+  preflightInner: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.xxl },
+  slot: { marginTop: space.lg },
+
+  // What the interviewer was told, before a scored session opens. A quiet slab
+  // rather than a card: it is the fact you check, not something you act on.
+  ctx: {
+    marginTop: space.lg, paddingLeft: space.md,
+    borderLeftWidth: 4, borderLeftColor: colors.gold,
+  },
+  ctxLabel: { fontFamily: font.black, fontSize: 9, letterSpacing: 1.6, color: colors.inkMute },
+  ctxValue: { fontFamily: font.black, fontSize: type.heading, color: colors.ink, marginTop: 2 },
+  ctxMeta: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 2 },
+
+  // The coach's way in to the evidence it is about to read back.
+  recordLink: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.lg,
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.line,
+    borderRadius: radius.md, ...curve, padding: space.md,
+  },
+  recordLinkDown: { transform: [{ translateY: 2 }], borderColor: colors.inkMute },
+  recordTitle: { fontFamily: font.extrabold, fontSize: type.label, color: colors.ink },
+  recordSub: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 1 },
+  recordChevron: { fontFamily: font.black, fontSize: type.heading, color: colors.inkMute },
+  startHint: {
+    fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft,
+    marginTop: space.sm, textAlign: 'center',
+  },
+  backLink: { paddingVertical: space.sm, alignSelf: 'flex-start' },
+  backText: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft },
+  eyebrow: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 3, color: colors.inkSoft, marginTop: space.md },
+  title: { fontFamily: font.black, fontSize: type.display, color: colors.ink, letterSpacing: -0.8, marginTop: 4 },
+  body: { fontFamily: font.bold, fontSize: type.body, color: colors.inkSoft, marginTop: space.md, lineHeight: 22 },
+  notice: {
+    marginTop: space.lg, backgroundColor: colors.blueSoft, borderWidth: 2,
+    borderColor: colors.blueDeep, borderRadius: radius.md, ...curve, padding: space.md,
+  },
+  noticeTitle: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
+  noticeBody: { fontFamily: font.semibold, fontSize: type.small, color: colors.inkSoft, marginTop: 4, lineHeight: 20 },
+  noticeAction: {
+    alignSelf: 'flex-start', marginTop: space.sm,
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.blueDeep,
+    borderRadius: radius.sm, ...curve,
+  },
+  noticeActionText: { fontFamily: font.black, fontSize: type.small, color: colors.blueDeep },
+  error: { fontFamily: font.bold, fontSize: type.small, color: colors.red, marginTop: space.md },
+  budget: { fontFamily: font.bold, fontSize: type.small, color: colors.inkSoft, marginTop: space.lg },
+
+  stage: { flex: 1, backgroundColor: colors.slab },
+  camOff: { alignItems: 'center', justifyContent: 'center' },
+  camOffText: { fontFamily: font.bold, fontSize: type.body, color: 'rgba(255,255,255,0.5)' },
+  // Over-camera chrome, top down: the mode bar, then the stage chips, then the
+  // reconnect banner. The three offsets are derived from each other rather than
+  // written independently, because the first two used to be the only things up
+  // there and the third was already tuned to clear them.
+  stageBar: {
+    position: 'absolute', top: space.xxl * 1.2 + 20, left: space.md, right: space.md,
+    flexDirection: 'row', gap: 6, justifyContent: 'center',
+  },
+  chip: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, ...curve,
+    backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
+  },
+  chipActive: { backgroundColor: colors.gold, borderColor: colors.ink },
+  chipText: { fontFamily: font.black, fontSize: type.meta, color: colors.white, letterSpacing: 0.5 },
+  chipTextActive: { color: colors.onGold },
+  connecting: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  connectingText: { fontFamily: font.bold, fontSize: type.small, color: colors.white },
+  reconnect: {
+    position: 'absolute', top: space.xxl * 1.2 + 66, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, ...curve,
+    backgroundColor: 'rgba(20,24,31,0.78)',
+  },
+  reconnectText: { fontFamily: font.black, fontSize: type.meta, letterSpacing: 0.6, color: colors.white },
+  bottomStack: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  overlayPressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
+
+  // Session context, not a control panel: it names the build and gets out of the
+  // way. Dark glass so it reads over whatever the bench happens to look like.
+  buildBar: {
+    alignSelf: 'flex-start', maxWidth: '86%',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginLeft: space.md, marginBottom: space.sm,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, ...curve,
+    backgroundColor: 'rgba(20,24,31,0.74)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)',
+  },
+  buildDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: colors.ink },
+  buildBarText: {
+    flexShrink: 1, fontFamily: font.black, fontSize: type.meta, color: colors.white, letterSpacing: 0.3,
+  },
+  buildBarChange: { fontFamily: font.black, fontSize: 9, letterSpacing: 1, color: colors.gold },
+
+  kitRow: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.md, marginBottom: space.sm },
+  kitPrimary: {
+    flex: 1, alignItems: 'center', paddingVertical: 12,
+    backgroundColor: colors.gold, borderWidth: 2, borderColor: colors.ink,
+    borderRadius: radius.md, ...curve,
+  },
+  kitPrimaryText: { fontFamily: font.black, fontSize: type.small, color: colors.onGold },
+  kitGhost: {
+    flex: 1, alignItems: 'center', paddingVertical: 12,
+    backgroundColor: 'rgba(20,24,31,0.66)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.34)',
+    borderRadius: radius.md, ...curve,
+  },
+  kitGhostText: { fontFamily: font.black, fontSize: type.small, color: colors.white },
+
+  transcript: { maxHeight: 190, backgroundColor: 'rgba(20,24,31,0.55)' },
+  transcriptInner: { padding: space.md, gap: 8 },
+  transcriptEmpty: {
+    fontFamily: font.semibold, fontSize: type.small, lineHeight: 20,
+    color: 'rgba(255,255,255,0.62)',
+  },
+  agentRow: { flexDirection: 'row', gap: 9 },
+  agentRule: { width: 3, borderRadius: 2, backgroundColor: colors.gold },
+  lineAgent: {
+    flex: 1, fontFamily: font.bold, fontSize: type.small, lineHeight: 20, color: colors.white,
+  },
+  lineUser: {
+    alignSelf: 'flex-end', maxWidth: '86%', textAlign: 'right',
+    fontFamily: font.bold, fontSize: type.small, lineHeight: 20, color: colors.onGold,
+    backgroundColor: colors.gold, borderRadius: radius.sm, ...curve,
+    paddingHorizontal: 11, paddingVertical: 6, overflow: 'hidden',
+  },
+  lineSystem: {
+    alignSelf: 'center', textAlign: 'center',
+    fontFamily: font.black, fontSize: type.meta, letterSpacing: 0.6, lineHeight: 16,
+    color: 'rgba(255,255,255,0.66)',
+  },
+
+  controls: { backgroundColor: colors.cream, padding: space.md, paddingBottom: space.xl, gap: space.sm },
+  askRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
+  diag: {
+    fontFamily: 'Menlo', fontSize: 11, color: colors.inkMute,
+    textAlign: 'center', marginBottom: 4,
+  },
+  floor: {
+    fontFamily: font.bold, fontSize: type.meta, color: colors.inkSoft,
+    textAlign: 'center', marginBottom: space.sm,
+  },
+  heldNote: {
+    fontFamily: font.black, fontSize: type.meta, color: colors.red,
+    textAlign: 'center', marginBottom: space.sm, lineHeight: 16,
+  },
+
+  // The voice control. Circular against the rounded rectangles either side of
+  // it, and the ring lives outside the button so the pulse can grow past the
+  // border without the button itself moving.
+  micWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  micRing: {
+    position: 'absolute', width: 46, height: 46, borderRadius: 23,
+    backgroundColor: colors.gold,
+  },
+  mic: {
+    width: 46, height: 46, borderRadius: 23,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.ink,
+  },
+  micLive: { backgroundColor: colors.gold, borderColor: colors.goldPlate },
+  // On, but the socket is not carrying it yet. Held back rather than pulsing,
+  // so "the tutor can hear you" and "in a moment it can" do not look the same.
+  micWaiting: { opacity: 0.55 },
+  micDenied: { borderColor: colors.red },
+  micPressed: { transform: [{ scale: 0.92 }] },
+  input: {
+    flex: 1, borderWidth: 2, borderColor: colors.line, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 11,
+    fontFamily: font.bold, fontSize: type.body, color: colors.ink,
+  },
+  send: {
+    width: 46, height: 46, borderRadius: radius.md, ...curve, backgroundColor: colors.gold,
+    borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center',
+  },
+  sendOff: { opacity: 0.4 },
+  sendText: { fontFamily: font.black, fontSize: type.heading, color: colors.ink },
+  buttonRow: { flexDirection: 'row', gap: space.sm },
+  ctrl: {
+    flex: 1, borderWidth: 2, borderColor: colors.ink, borderRadius: radius.md, ...curve,
+    backgroundColor: colors.surface, paddingVertical: 11, alignItems: 'center',
+  },
+  ctrlText: { fontFamily: font.black, fontSize: type.small, color: colors.ink },
+  ctrlEnd: { backgroundColor: colors.red, borderColor: colors.ink },
+  ctrlEndText: { color: colors.white },
+}));

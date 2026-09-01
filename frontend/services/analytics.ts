@@ -25,13 +25,27 @@ export type AnalyticsEvent =
   | 'lesson_complete'
   | 'live_session_start'
   | 'live_session_end'
+  // The north-star build events (#83). `build_complete` fires when a learner
+  // finishes a real bench build; `first_build_complete` fires once per learner
+  // and is the FBC7 (first-build-completed-in-7-days) numerator.
+  | 'build_complete'
+  | 'first_build_complete'
   // Engagement / retention
   | 'streak_extended'
+  // Fires only when the server actually granted a checkpoint, so a zero count
+  // here against a healthy `lesson_complete` count is the signal that the
+  // payout has stopped reaching people. It went unnoticed once already.
+  | 'checkpoint_claimed'
   | 'challenge_join'
   | 'challenge_leave'
   | 'simulator_open'
   | 'sketch_compile'
   | 'twin_generated'
+  // The 3D-twin share loop (#79): a learner publishes a twin, a visitor lands on
+  // the public page, and (the loop closing) that visitor clicks through to build.
+  | 'twin_shared'
+  | 'shared_twin_view'
+  | 'shared_twin_cta'
   | 'interview_start'
   | 'interview_complete'
   // Monetisation. The actual subscription cancel completes inside Stripe's

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, CreditCard, Pencil, ShieldCheck, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, CreditCard, Pencil, ShieldCheck, Trash2, Loader2, AlertTriangle, Palette, Sun, Moon, Monitor } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme, type ThemeMode } from '../hooks/useTheme';
 import { useIdentity } from '../hooks/useIdentity';
+import { clearUserState } from '../services/localState';
 import { usePlan } from '../hooks/usePlan';
 import { useAvatar } from '../hooks/useAvatar';
 import { PLAN_META } from './ohmlet/entitlements';
@@ -15,7 +17,16 @@ interface AccountPageProps {
   onUpgrade: () => void;
 }
 
+/** System first in meaning, but last in the row: it is the default, and a default
+ *  reads better as the resting end of a scale than as its opening term. */
+const THEME_CHOICES: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
+  { value: 'light', label: 'Light', Icon: Sun },
+  { value: 'dark', label: 'Dark', Icon: Moon },
+  { value: 'system', label: 'System', Icon: Monitor },
+];
+
 export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) => {
+  const { mode, resolved, setMode } = useTheme();
   const { user, signOut } = useAuth();
   const { userId } = useIdentity();
   const { plan } = usePlan(userId);
@@ -59,6 +70,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
       setDeleteError('We could not delete your account. Please contact hello@ohmlet.org.');
       return;
     }
+    // The page promises this deletes their personal data. signOut() clears local
+    // state too, but it is caught below, so clear explicitly first: a failed
+    // sign-out must not leave their birth year and progress on the device.
+    clearUserState(userId);
     await signOut().catch(() => {});
     window.location.assign('/');
   };
@@ -76,7 +91,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
         <h1 className="mt-6 text-4xl font-black tracking-[-0.03em]">Account</h1>
 
         {/* Profile + plan */}
-        <section className="mt-6 rounded-[1.4rem] border-[2.5px] border-ohmlet-ink bg-white p-6 shadow-press-sm">
+        <section className="mt-6 rounded-[1.4rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-6 shadow-press-sm">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -118,7 +133,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
               <button
                 onClick={handlePortal}
                 disabled={portalBusy}
-                className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-5 py-2.5 text-sm font-black shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-5 py-2.5 text-sm font-black shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-60"
               >
                 {portalBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                 Manage billing
@@ -127,8 +142,50 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
           </div>
         </section>
 
+        {/* Appearance */}
+        <section className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
+          <div className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-ohmlet-blue" />
+            <h2 className="text-lg font-black">Appearance</h2>
+          </div>
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-ohmlet-ink-soft">
+            System follows your device, so Ohmlet turns dark when your phone or laptop does.
+          </p>
+          <div
+            role="radiogroup"
+            aria-label="Colour theme"
+            className="mt-4 inline-flex rounded-full border-2 border-ohmlet-ink bg-ohmlet-canvas p-1"
+          >
+            {THEME_CHOICES.map(({ value, label, Icon }) => {
+              const on = mode === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setMode(value)}
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition-all ${
+                    on
+                      ? 'bg-ohmlet-ink text-ohmlet-on-ink'
+                      : 'text-ohmlet-ink-soft hover:bg-ohmlet-gold-soft hover:text-ohmlet-ink'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={2.5} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {mode === 'system' && (
+            <p className="mt-3 text-xs font-bold text-ohmlet-ink-mute">
+              Your device is currently set to {resolved}.
+            </p>
+          )}
+        </section>
+
         {/* Privacy & data */}
-        <section className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+        <section className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-ohmlet-green" />
             <h2 className="text-lg font-black">Your data &amp; privacy</h2>
@@ -159,7 +216,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
           </p>
           <button
             onClick={() => { setConfirmOpen(true); setConfirmText(''); setDeleteError(null); }}
-            className="mt-4 inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-red bg-white px-5 py-2.5 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-red bg-ohmlet-surface px-5 py-2.5 text-sm font-black text-ohmlet-red shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
           >
             <Trash2 className="h-4 w-4" /> Delete my account
           </button>
@@ -169,7 +226,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onBack, onUpgrade }) =
       {/* Confirmation modal */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ohmlet-ink/40 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-white p-7 shadow-press">
+          <div className="w-full max-w-md rounded-[1.6rem] border-[2.5px] border-ohmlet-ink bg-ohmlet-surface p-7 shadow-press">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-ohmlet-red" />
               <h3 className="text-xl font-black">Delete your account?</h3>

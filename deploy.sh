@@ -25,21 +25,89 @@ LIVE_BRIDGE_SOURCE="backend/live-bridge"
 # logging.logWriter, secretmanager.secretAccessor — NOT the editor-privileged
 # default compute SA. Override per-env if needed.
 LIVE_BRIDGE_SA="${OHMLET_LIVE_BRIDGE_SA:-ohmlet-live-bridge@${PROJECT_ID}.iam.gserviceaccount.com}"
+# Model pinning, checked against this project on 2026-08-27 rather than assumed.
+#
+#   probed europe-west1 : only gemini-2.5-* answer; every gemini-3.x is a 404
+#   probed global       : 2.5-flash, 3.5, 3.6 and 3.7-flash all answer 200
+#                         Pro: gemini-3.1-pro-preview answers, and it is the ONLY
+#                         3.x Pro that does. Every non-preview 3.x Pro name 404s
+#
+# OHMLET_TEXT_LOCATION lets the tool and text calls run in `global` and reach a
+# current model, while the live bidi session stays in the service's own region.
+# Sharing one location is what held the tool calls on 2.5.
+#
+# STILL TO DO: OHMLET_LIVE_MODEL is a 2.5 model and 2.5 retires 2026-10-16, which
+# is inside the Shipaton judging window. Its replacement id cannot be verified
+# without opening a bidi session, so it is migrated on a deployed revision and
+# checked, not guessed here. scripts/check-model-currency.mjs fails when this is
+# still unresolved.
+#
+# The minute caps and the token rates are set HERE as well as defaulted in code,
+# so the deployed numbers are visible in one place rather than only inside a
+# Python file. Both were changed on 2026-08-28: the caps came down from
+# 60/600/1800 because Pro and Max lost money at full utilisation, and the token
+# rates were set at all, having defaulted to ZERO, which made the Pro-model spend
+# that premium routing exists to protect invisible to the meter watching it.
+# The arithmetic is in backend/live-bridge/app/entitlements.py.
 LIVE_BRIDGE_ENV="GOOGLE_GENAI_USE_VERTEXAI=TRUE,\
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID},\
 GOOGLE_CLOUD_LOCATION=${REGION},\
 OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio,\
-OHMLET_FLASH_MODEL=gemini-2.5-flash,\
-OHMLET_PRO_MODEL=gemini-2.5-pro,\
-OHMLET_REASONING_MODEL=gemini-2.5-pro"
+OHMLET_TEXT_LOCATION=global,\
+OHMLET_FLASH_MODEL=gemini-3.7-flash,\
+OHMLET_PRO_MODEL=gemini-3.1-pro-preview,\
+OHMLET_REASONING_MODEL=gemini-3.1-pro-preview,\
+OHMLET_LIVE_MIN_FREE=60,\
+OHMLET_LIVE_MIN_PRO=150,\
+OHMLET_LIVE_MIN_MAX=300,\
+OHMLET_RATE_PROMPT_1K_USD=0.00125,\
+OHMLET_RATE_RESPONSE_1K_USD=0.010,\
+OHMLET_FILMS_BUCKET=ohmlet-app-lessons,\
+OHMLET_FILMS_VERSION=v1"
+
+# ── Sandbox billing: OFF unless asked for, on this invocation only ──
+#
+# An Apple sandbox purchase is free, so a handler that honours sandbox events
+# lets any sandbox tester grant themselves Max in production Firestore. It has to
+# be ON to verify the rail end to end, because "the webhook fired" is not the
+# same evidence as "the learner's plan changed", and it has to be OFF everywhere
+# else.
+#
+# It used to be a hardcoded `=true` above a comment saying REMOVE BEFORE LAUNCH.
+# That is not a gate, it is a note asking a human to remember something months
+# from now, on the day they are busiest. So the default flipped: the deploy is
+# safe when nobody is thinking about it, and testing costs one env var:
+#
+#     OHMLET_ACCEPT_SANDBOX_BILLING=true ./deploy.sh live-bridge
+#
+# Which is louder than editing a file, and cannot be left switched on by accident
+# because it lives for exactly one invocation.
+if [ "${OHMLET_ACCEPT_SANDBOX_BILLING:-}" = "true" ]; then
+  LIVE_BRIDGE_ENV="${LIVE_BRIDGE_ENV},OHMLET_ACCEPT_SANDBOX_BILLING=true"
+  echo -e "\033[1;31m[deploy]\033[0m SANDBOX BILLING IS ON for this deploy." >&2
+  echo -e "\033[1;31m[deploy]\033[0m Free Apple sandbox purchases will grant real plans." >&2
+  echo -e "\033[1;31m[deploy]\033[0m Redeploy without the env var to close it again." >&2
+fi
 # Stripe secrets + the metrics token, mounted by reference from Secret Manager
 # (same names across test/live; only the secret VERSION changes). Never a value
 # in code. OHMLET_METRICS_TOKEN guards /internal/metrics (#35).
-LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest"
+# RevenueCat joins Stripe here because the two webhooks are the only writers of a
+# paid plan, one per surface. Both handlers refuse with 503 when their secret is
+# absent rather than treating an empty string as a match, so a missing secret is
+# a dead endpoint and never an open one.
+LIVE_BRIDGE_SECRETS="STRIPE_SECRET_KEY=ohmlet-stripe-secret:latest,STRIPE_WEBHOOK_SECRET=ohmlet-stripe-webhook:latest,OHMLET_METRICS_TOKEN=ohmlet-metrics-token:latest,OHMLET_REVENUECAT_WEBHOOK_SECRET=ohmlet-revenuecat-webhook:latest"
 # Non-secret, mode-specific billing config (Stripe price IDs + app URL). Kept in
 # a gitignored file because the IDs differ between test and live mode. Each line
 # is KEY=VALUE; see backend/live-bridge/.deploy.env.example.
 LIVE_BRIDGE_ENV_FILE="${LIVE_BRIDGE_ENV_FILE:-backend/live-bridge/.deploy.env}"
+# Keep one instance warm. live-bridge was at 0, so it scaled to zero after a
+# quiet period and the NEXT thing anyone did paid a full container boot —
+# ADK, google-genai and a 700KB lesson store loading before a byte came back.
+# Warm requests are 30-450ms, so every 'community is slow' report was a cold
+# start, and the same tax landed on the live tutor, where a learner is waiting
+# to speak. One instance at 1 CPU / 512Mi is roughly $10-15 a month; set
+# OHMLET_LIVE_BRIDGE_MIN_INSTANCES=0 to trade it back for the latency.
+LIVE_BRIDGE_MIN_INSTANCES="${OHMLET_LIVE_BRIDGE_MIN_INSTANCES:-1}"
 
 QUIZ_ENGINE_SERVICE="ohmlet-quiz-engine"
 QUIZ_ENGINE_SOURCE="backend/quiz-engine"
@@ -165,7 +233,7 @@ deploy_live_bridge() {
   else
     info "No ${LIVE_BRIDGE_ENV_FILE} found; deploying without Stripe price IDs (billing inert)."
   fi
-  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$env_vars" "$LIVE_BRIDGE_SA" 0 "$LIVE_BRIDGE_SECRETS"
+  deploy_service "$LIVE_BRIDGE_SERVICE" "$LIVE_BRIDGE_SOURCE" "$env_vars" "$LIVE_BRIDGE_SA" "$LIVE_BRIDGE_MIN_INSTANCES" "$LIVE_BRIDGE_SECRETS"
 }
 
 deploy_quiz_engine() {
@@ -185,11 +253,36 @@ deploy_reporter() {
 }
 
 deploy_frontend() {
+  if ! command -v firebase >/dev/null 2>&1; then
+    err "firebase CLI not found. Install it with: npm i -g firebase-tools"
+    err "Then authenticate once with: firebase login"
+    exit 1
+  fi
+
   info "Building frontend..."
   ( cd frontend && npm run build )
 
-  info "Frontend built successfully in frontend/dist/"
-  ok "Deploy frontend/dist/ to your hosting provider (e.g. Firebase Hosting, Cloud Storage, Vercel)"
+  # The build must not silently ship a localhost service URL. The live tutor
+  # once went to production pointing at ws://localhost:8082 because one VITE_*
+  # key was missing from frontend/.env, and nothing caught it.
+  # A port is required: our dev fallbacks are all localhost:PORT, and they only
+  # survive minification when the corresponding VITE_* var is MISSING (otherwise
+  # the `||` short-circuits and the literal is dropped). A bare "http://localhost"
+  # is the Firebase Auth SDK's own popup constant, not ours, so it must not trip.
+  if grep -rqE "(ws|http)s?://localhost:[0-9]+" frontend/dist/assets/*.js 2>/dev/null; then
+    err "Refusing to deploy: the built bundle still contains a localhost URL."
+    err "A VITE_* service URL is missing from frontend/.env — fix it and rebuild."
+    exit 1
+  fi
+  ok "Build clean (no localhost URLs in the bundle)"
+
+  # Hosting AND the Firestore rules. The rules are the only thing standing
+  # between the client and the database, so they ship with the app that relies
+  # on them rather than drifting out of sync in git.
+  info "Deploying hosting + Firestore rules to ${PROJECT_ID}..."
+  ( cd frontend && firebase deploy --only hosting,firestore:rules --project "$PROJECT_ID" )
+
+  ok "Frontend and Firestore rules deployed"
 }
 
 verify_services() {

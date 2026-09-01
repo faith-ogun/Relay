@@ -37,9 +37,19 @@ export const auth = getAuth(firebaseApp);
  * out. Sent as `Authorization: Bearer <token>` on backend calls so the server
  * can verify identity itself (#44). The SDK caches and refreshes it.
  */
-export async function getIdToken(): Promise<string | null> {
+export async function getIdToken(forceRefresh = false): Promise<string | null> {
   const u = auth.currentUser;
-  return u ? u.getIdToken() : null;
+  if (!u) return null;
+  try {
+    return await u.getIdToken(forceRefresh);
+  } catch {
+    // Resolve null instead of rejecting. Every service client is written as
+    // "await the token, return null on failure", and awaits it OUTSIDE its own
+    // try/catch, so a rejection here (auth/network-request-failed, a disabled
+    // user, a clock skew) escaped as an unhandled rejection and left callers
+    // such as the community feed and the plan lookup spinning forever.
+    return null;
+  }
 }
 
 export const googleProvider = new GoogleAuthProvider();

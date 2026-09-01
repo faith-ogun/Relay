@@ -11,9 +11,16 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, Field
 
+import bosses as bosses_mod
+import career as career_mod
+import checkpoints as checkpoints_mod
+import labs as labs_mod
 import entitlements
+import hearts as hearts_mod
+import idempotency
 import obs
 from auth import is_admin, require_claims
 
@@ -41,6 +48,7 @@ def get_me(claims: dict = Depends(require_claims)) -> dict:
         "priorityModels": entitlements.has_priority_models(plan),
         "liveCapMinutes": _cap_for_json(plan),
         "liveSecondsUsedThisMonth": entitlements.live_seconds_used_this_period(uid),
+        "hearts": hearts_mod.status(uid, plan),
     }
 
 
@@ -52,7 +60,166 @@ def set_my_plan(payload: dict, claims: dict = Depends(require_claims)) -> dict:
     requested = payload.get("plan") if isinstance(payload, dict) else None
     if requested not in entitlements.VALID_PLANS:
         raise HTTPException(status_code=422, detail=f"plan must be one of {entitlements.VALID_PLANS}")
-    plan = entitlements.set_plan(claims["uid"], requested)
+    plan = entitlements.set_plan(claims["uid"], requested, source="admin-console")
     obs.audit("account.plan_set_admin", uid=claims["uid"], plan=plan, by=claims.get("email"))
     logger.info("Admin %s set their plan to %s", claims.get("email"), plan)
     return {"plan": plan}
+
+
+@router.get("/hearts")
+def get_hearts(claims: dict = Depends(require_claims)) -> dict:
+    """The learner's live heart balance and regen clock.
+
+    Separate from GET /v1/me because hearts move on their own: the lesson screen
+    re-reads this while a learner waits for the next one, and that should not
+    drag the whole entitlement payload along behind it.
+    """
+    uid = claims["uid"]
+    return hearts_mod.status(uid, entitlements.get_plan(uid))
+
+
+@router.post("/hearts/spend")
+def spend_heart(
+    claims: dict = Depends(require_claims),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict:
+    """Charge one heart for a wrong answer, and report what is left.
+
+    The client sends a key unique to (run, step). A flaky connection retrying
+    the same miss must not cost two hearts, and a claimed key returns the
+    current balance unchanged rather than an error, so the retry looks to the
+    learner exactly like the call that got lost.
+    """
+    uid = claims["uid"]
+    plan = entitlements.get_plan(uid)
+    if hearts_mod.is_unlimited(plan):
+        return hearts_mod.status(uid, plan)
+
+    if idempotency_key:
+        try:
+            if not idempotency.claim_event(f"heart:{uid}:{idempotency_key}"):
+                return hearts_mod.status(uid, plan)
+        except Exception as exc:
+            # The claim store being down must not make a wrong answer free, and
+            # must not fail the lesson either. Charge it: a duplicate charge on
+            # a rare retry is fairer to the business than a free pass on every
+            # miss for as long as the outage lasts.
+            logger.warning("heart idempotency claim failed for %s: %s", uid, exc)
+
+    return hearts_mod.spend(uid, plan)
+
+
+@router.get("/checkpoints")
+def get_checkpoints(claims: dict = Depends(require_claims)) -> dict:
+    """What the learner has claimed, and what is earned but unpaid."""
+    return checkpoints_mod.status(claims["uid"])
+
+
+@router.post("/checkpoints/claim")
+def claim_checkpoints(claims: dict = Depends(require_claims)) -> dict:
+    """Grant every checkpoint earned and not yet paid for.
+
+    No idempotency header needed: the transaction inside is the guard, and a
+    repeated call simply finds nothing left to grant. That is a stronger promise
+    than a key, which only protects against a retry of the SAME request.
+    """
+    uid = claims["uid"]
+    result = checkpoints_mod.claim_all(uid)
+    if result["granted"]:
+        obs.audit("checkpoint.granted", uid=uid, xp=result["xp"], count=len(result["granted"]))
+    return result
+
+
+class BossResult(BaseModel):
+    """What a client may say about an exam it has just sat.
+
+    Deliberately thin. The seed identifies WHICH exam, so the server re-composes
+    it and owns every derived number; `firstTryCorrect` is a list of question
+    indices, so a client cannot report a question it was never asked or claim a
+    longer exam than the one it was given. Anything out of range is discarded
+    rather than rejected: an off-by-one from a client bug should cost that
+    question, not the whole sitting.
+    """
+
+    seed: str = Field(min_length=8, max_length=64)
+    firstTryCorrect: list[int] = Field(default_factory=list, max_length=64)
+
+
+@router.get("/bosses")
+def get_bosses(claims: dict = Depends(require_claims)) -> dict:
+    """Every unit's boss: reachable, ready, cleared, best score."""
+    return bosses_mod.status(claims["uid"])
+
+
+@router.get("/bosses/{unit_id}/exam")
+def get_boss_exam(unit_id: str, claims: dict = Depends(require_claims)) -> dict:
+    """Compose a fresh exam for this unit.
+
+    Refused unless the learner has actually finished the unit and cleared the one
+    before it. The phone hides a locked boss anyway; this is the check that makes
+    the gate real rather than cosmetic.
+    """
+    uid = claims["uid"]
+    state = {u["unitId"]: u for u in bosses_mod.status(uid)["units"]}
+    row = state.get(unit_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="No such unit.")
+    if not row["ready"]:
+        raise HTTPException(status_code=409, detail="Finish this unit's lessons first.")
+    if not row["reachable"]:
+        raise HTTPException(status_code=409, detail="Clear the previous unit first.")
+    try:
+        return bosses_mod.exam(uid, unit_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="No such unit.")
+
+
+@router.post("/bosses/{unit_id}/result")
+def post_boss_result(unit_id: str, body: BossResult, claims: dict = Depends(require_claims)) -> dict:
+    """Grade a sat exam and pay for a first clear.
+
+    No idempotency header: the transaction is the guard. A resubmitted result
+    records another attempt and grants nothing further, because the grant is
+    conditioned on the stored `cleared` flag rather than on this request being
+    the first one to arrive.
+    """
+    uid = claims["uid"]
+    try:
+        result = bosses_mod.submit(uid, unit_id, body.seed, body.firstTryCorrect)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="No such unit.")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="That exam could not be graded.")
+    if result["firstClear"]:
+        obs.audit("boss.cleared", uid=uid, unitId=unit_id, xp=result["xp"], ratio=round(result["ratio"], 3))
+    return result
+
+
+@router.get("/labs")
+def get_labs(claims: dict = Depends(require_claims)) -> dict:
+    """Ohmlet Labs: unfinished features, switched on early for Max.
+
+    Returns what this plan can use AND what it cannot yet, because a learner on
+    Free or Pro opening this screen should see that Labs exists and what is in
+    it, rather than an empty page that reads as a bug.
+    """
+    return labs_mod.status(entitlements.get_plan(claims["uid"]))
+
+
+@router.get("/career")
+def get_career(claims: dict = Depends(require_claims)) -> dict:
+    """The verified build record: what Ohmlet can attest to about this learner.
+
+    Max only, because it is the substance behind the career coaching the tier
+    sells. Assembled entirely from server-owned records, so none of it is
+    self-reported and none of it can be inflated from a client.
+
+    Returned with its own caveat attached, deliberately. Every number is a
+    FLOOR: it is what Ohmlet observed, not everything the person has ever done,
+    and a coach or a CV that treats it as a complete history will overclaim.
+    """
+    uid = claims["uid"]
+    if entitlements.get_plan(uid) != "max":
+        raise HTTPException(status_code=402, detail="Career coaching is a Max-plan feature.")
+    ev = career_mod.evidence(uid)
+    return {**ev, "summary": career_mod.summary_line(ev)}

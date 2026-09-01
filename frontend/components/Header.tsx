@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {menuOpen && (
                     <div
                       role="menu"
-                      className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border-2 border-ohmlet-ink bg-white shadow-press"
+                      className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press"
                     >
                       {userLabel && (
                         <p className="truncate border-b border-ohmlet-line px-4 py-3 text-xs font-bold text-ohmlet-ink-soft">{userLabel}</p>
@@ -172,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={() => setMobileOpen((value) => !value)}
               className={`inline-flex h-10 w-10 items-center justify-center rounded-xl md:hidden ${
-                darkRoute ? 'border border-white/10 bg-white/5 text-white' : 'border border-ohmlet-line bg-white text-ohmlet-ink'
+                darkRoute ? 'border border-white/10 bg-white/5 text-white' : 'border border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink'
               }`}
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             >
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileOpen(false);
                 }}
                 className={`rounded-xl px-3 py-3 text-left text-sm font-extrabold ${
-                  activeRoute === 'landing' ? 'bg-ohmlet-gold text-ohmlet-ink' : 'border border-ohmlet-line bg-white text-ohmlet-ink'
+                  activeRoute === 'landing' ? 'bg-ohmlet-gold text-ohmlet-ink' : 'border border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink'
                 }`}
               >
                 Home
@@ -205,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setMobileOpen(false);
                   }}
                   className={`rounded-xl px-3 py-3 text-left text-sm font-extrabold ${
-                    activeRoute === item.route ? 'bg-ohmlet-gold text-ohmlet-ink' : 'border border-ohmlet-line bg-white text-ohmlet-ink'
+                    activeRoute === item.route ? 'bg-ohmlet-gold text-ohmlet-ink' : 'border border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink'
                   }`}
                 >
                   {item.label}
@@ -229,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onSignOut();
                       setMobileOpen(false);
                     }}
-                    className="flex items-center gap-2 rounded-xl border border-ohmlet-line bg-white px-3 py-3 text-left text-sm font-extrabold text-ohmlet-ink"
+                    className="flex items-center gap-2 rounded-xl border border-ohmlet-line bg-ohmlet-surface px-3 py-3 text-left text-sm font-extrabold text-ohmlet-ink"
                   >
                     <LogOut className="h-4 w-4" /> Sign out
                   </button>
@@ -242,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onLogin();
                       setMobileOpen(false);
                     }}
-                    className="rounded-xl border border-ohmlet-line bg-white px-3 py-3 text-left text-sm font-extrabold text-ohmlet-ink"
+                    className="rounded-xl border border-ohmlet-line bg-ohmlet-surface px-3 py-3 text-left text-sm font-extrabold text-ohmlet-ink"
                   >
                     Log in
                   </button>

@@ -76,9 +76,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
     setError(null);
     setBusy('google');
     try {
-      await signInGoogle();
-      track('login', { method: 'google' });
-      onAuthed(false);
+      const isNewUser = await signInGoogle();
+      track(isNewUser ? 'sign_up' : 'login', { method: 'google' });
+      onAuthed(isNewUser);
     } catch (err) {
       const msg = authErrorMessage(err);
       // A cancelled popup is not an error worth shouting about.
@@ -142,7 +142,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
                   type="button"
                   onClick={google}
                   disabled={!!busy}
-                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-white px-5 py-3.5 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-60"
+                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-3.5 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all enabled:hover:translate-y-[2px] enabled:hover:shadow-none disabled:opacity-60"
                   aria-busy={busy === 'google'}
                 >
                   {busy === 'google' ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <GoogleMark />}
@@ -215,12 +215,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login', onAut
               )}
 
               {error && (
-                <p role="alert" className="rounded-xl border-2 border-ohmlet-red/30 bg-[#fdece8] px-4 py-2.5 text-sm font-bold text-ohmlet-red">
+                <p role="alert" className="rounded-xl border-2 border-ohmlet-red/30 bg-ohmlet-tint-red px-4 py-2.5 text-sm font-bold text-ohmlet-red">
                   {error}
                 </p>
               )}
               {resetSent && (
-                <p role="status" className="rounded-xl border-2 border-ohmlet-green/40 bg-[#f1f9e6] px-4 py-2.5 text-sm font-bold text-ohmlet-ink">
+                <p role="status" className="rounded-xl border-2 border-ohmlet-green/40 bg-ohmlet-tint-green px-4 py-2.5 text-sm font-bold text-ohmlet-ink">
                   Check your inbox for a reset link.
                 </p>
               )}
@@ -296,7 +296,7 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(
           {label}
         </label>
         <div
-          className={`flex items-center gap-2.5 rounded-2xl border-2 bg-white px-4 py-3 transition-colors focus-within:border-ohmlet-ink ${
+          className={`flex items-center gap-2.5 rounded-2xl border-2 bg-ohmlet-surface px-4 py-3 transition-colors focus-within:border-ohmlet-ink ${
             invalid ? 'border-ohmlet-red/40' : 'border-ohmlet-line'
           }`}
         >

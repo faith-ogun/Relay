@@ -1,3 +1,17 @@
+import { getIdToken } from './firebase';
+
+/**
+ * The quiz-engine calls Vertex on our billing account, so both of its endpoints
+ * now require a verified Firebase identity. Every request carries the caller's
+ * ID token; the service derives the UID itself and rate-limits per identity.
+ */
+async function authedJsonHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = await getIdToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export type SkillProfilePayload = {
   voltage_basics: number;
   current_flow: number;
@@ -62,7 +76,7 @@ export async function assessDrawing(
   const root = normalizeUrl(apiBaseUrl);
   const response = await fetch(`${root}/assess-drawing`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authedJsonHeaders(),
     body: JSON.stringify(request),
   });
   if (!response.ok) {
@@ -79,7 +93,7 @@ export async function generateQuizQuestions(
   const root = normalizeUrl(apiBaseUrl);
   const response = await fetch(`${root}/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authedJsonHeaders(),
     body: JSON.stringify(request),
   });
   if (!response.ok) {

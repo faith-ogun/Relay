@@ -1,0 +1,153 @@
+{
+  "expo": {
+    "name": "Ohmlet",
+    "slug": "ohmlet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/app-icon.png",
+    "scheme": [
+      "ohmlet",
+      "com.googleusercontent.apps.182102811288-7s9pk39kbo8tjt1sf4flou49jim43o4b"
+    ],
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "org.ohmlet.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ohmlet uses your camera so the tutor can see your breadboard and check your wiring as you build.",
+        "NSMicrophoneUsageDescription": "Ohmlet streams your microphone to the live tutor so you can ask questions out loud while you build. It is only on while you turn it on in a session.",
+        "CADisableMinimumFrameDurationOnPhone": true
+      },
+      "usesAppleSignIn": true,
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeName",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeAudioData",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotosorVideos",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "org.ohmlet.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/android-foreground.png",
+        "backgroundColor": "#fdc90b"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#fcf8f5",
+          "ios": {
+            "backgroundColor": "#fcf8f5",
+            "image": "./assets/brand/splash-screen.png",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
+          },
+          "android": {
+            "backgroundColor": "#facc2e",
+            "image": "./assets/brand/mascot-wave.png",
+            "imageWidth": 132,
+            "resizeMode": "contain"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-audio",
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "Ohmlet streams your microphone to the live tutor so you can ask questions out loud while you build. It is only on while you turn it on in a session.",
+          "iosBackgroundMode": false,
+          "androidForegroundService": false,
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO"
+          ]
+        }
+      ],
+      "expo-asset",
+      "expo-localization",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

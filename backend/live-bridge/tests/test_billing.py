@@ -45,7 +45,7 @@ def test_return_base_falls_back_when_missing_or_bad():
 def test_subscription_active_sets_paid_plan(monkeypatch):
     monkeypatch.setenv("STRIPE_PRICE_PRO_MONTHLY", "price_pm")
     calls = {}
-    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan: calls.__setitem__("plan", (uid, plan)))
+    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan, **kw: calls.__setitem__("plan", (uid, plan, kw.get("source"))))
     monkeypatch.setattr(entitlements, "set_customer", lambda uid, c: calls.__setitem__("cust", (uid, c)))
     event = {
         "type": "customer.subscription.created",
@@ -57,14 +57,14 @@ def test_subscription_active_sets_paid_plan(monkeypatch):
         }},
     }
     billing._handle_event(event)
-    assert calls["plan"] == ("u1", "pro")
+    assert calls["plan"] == ("u1", "pro", "stripe"), "the write must name Stripe, not inherit a stale setBy"
     assert calls["cust"] == ("u1", "cus_1")
 
 
 def test_subscription_cancelled_status_downgrades_to_free(monkeypatch):
     monkeypatch.setenv("STRIPE_PRICE_PRO_MONTHLY", "price_pm")
     seen = {}
-    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan: seen.__setitem__("p", (uid, plan)))
+    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan, **kw: seen.__setitem__("p", (uid, plan, kw.get("source"))))
     monkeypatch.setattr(entitlements, "set_customer", lambda *a: None)
     event = {
         "type": "customer.subscription.updated",
@@ -76,17 +76,17 @@ def test_subscription_cancelled_status_downgrades_to_free(monkeypatch):
         }},
     }
     billing._handle_event(event)
-    assert seen["p"] == ("u3", "free")
+    assert seen["p"] == ("u3", "free", "stripe")
 
 
 def test_subscription_deleted_resolves_via_customer(monkeypatch):
     seen = {}
-    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan: seen.__setitem__("p", (uid, plan)))
+    monkeypatch.setattr(entitlements, "set_plan", lambda uid, plan, **kw: seen.__setitem__("p", (uid, plan, kw.get("source"))))
     monkeypatch.setattr(entitlements, "uid_for_customer", lambda c: "u9" if c == "cus_9" else None)
     event = {"type": "customer.subscription.deleted",
              "data": {"object": {"customer": "cus_9", "metadata": {}}}}
     billing._handle_event(event)
-    assert seen["p"] == ("u9", "free")
+    assert seen["p"] == ("u9", "free", "stripe")
 
 
 def test_checkout_completed_stores_customer_mapping(monkeypatch):

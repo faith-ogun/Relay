@@ -19,6 +19,21 @@ import { fetchMe, setMyPlan } from '../services/account';
 // share a plan or a daily live budget. When billing lands, the plan moves to the
 // user record (set by the Stripe webhook) and only the source here changes.
 const planKey = (userId: string) => `ohmlet.plan.${userId}`;
+
+/**
+ * Same-tab plan changes.
+ *
+ * usePlan is called independently by the sidebar, Interview Mode, the live tutor
+ * and others, and each call has its own useState. The only cross-instance signal
+ * was the `storage` event — which browsers do NOT fire in the document that wrote
+ * the value. So switching plan in the sidebar updated the sidebar and nothing
+ * else, and Interview Mode went on showing its paywall to a Max subscriber until
+ * a full reload. A plain event target fixes it without a state library.
+ */
+const planBus = new EventTarget();
+const broadcast = (userId: string, plan: Plan) => {
+  planBus.dispatchEvent(new CustomEvent('plan', { detail: { userId, plan } }));
+};
 const liveKey = (userId: string) => `ohmlet.live.${userId}`;
 
 // The live budget resets monthly (the caps are per month). This local value is
@@ -67,6 +82,7 @@ export function usePlan(userId = 'anon'): UsePlan {
     void fetchMe().then((me) => {
       if (cancelled || !me) return; // signed out / backend unreachable -> keep cache
       setPlanState(me.plan);
+      broadcast(userId, me.plan);
       try {
         localStorage.setItem(planKey(userId), me.plan);
       } catch {
@@ -79,31 +95,51 @@ export function usePlan(userId = 'anon'): UsePlan {
     };
   }, [userId]);
 
-  // Keep plan in sync across tabs / the dev switcher.
+  // Keep plan in sync across tabs (storage) and within this one (planBus).
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === planKey(userId)) setPlanState(readPlan(userId));
     };
+    const onBus = (e: Event) => {
+      const d = (e as CustomEvent<{ userId: string; plan: Plan }>).detail;
+      if (d?.userId === userId) setPlanState(d.plan);
+    };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    planBus.addEventListener('plan', onBus);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      planBus.removeEventListener('plan', onBus);
+    };
   }, [userId]);
 
   const setPlan = useCallback((next: Plan) => {
+    const previous = plan;
     localStorage.setItem(planKey(userId), next); // optimistic cache
     setPlanState(next);
+    broadcast(userId, next);
     // Persist server-side. The backend only honours this for an admin (the dev
-    // switcher); in production Stripe writes the plan. Reconcile with the result.
+    // switcher); in production Stripe writes the plan.
     void setMyPlan(next).then((confirmed) => {
-      if (confirmed && confirmed !== next) {
-        setPlanState(confirmed);
+      // A null here means the write was REFUSED or failed — a 403 for a
+      // non-admin, or a 5xx. Silently keeping the optimistic value is how the
+      // sidebar ended up reading "Max plan" while the server said "pro" and
+      // Interview Mode stayed locked: the switch looked like it worked, and the
+      // next page load quietly undid it. Roll back and say so instead.
+      const settled = confirmed ?? previous;
+      if (settled !== next) {
+        setPlanState(settled);
+        broadcast(userId, settled);
         try {
-          localStorage.setItem(planKey(userId), confirmed);
+          localStorage.setItem(planKey(userId), settled);
         } catch {
           /* ignore */
         }
+        if (!confirmed) {
+          console.warn(`[ohmlet] plan change to "${next}" was refused by the server; still on "${settled}".`);
+        }
       }
     });
-  }, [userId]);
+  }, [userId, plan]);
 
   const consumeLiveSeconds = useCallback((seconds: number) => {
     setLiveSecondsUsed((prev) => {
