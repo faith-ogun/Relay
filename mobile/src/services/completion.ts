@@ -17,7 +17,9 @@
 //                pays whatever the caller worked out for that level.
 //   level        never demoted: max(held, reached).
 //   streak       advances on the first completion of a calendar day, replay or
-//                not. Practice is the thing a streak is measuring.
+//                not. Practice is the thing a streak is measuring. It BREAKS by
+//                the passage of time rather than by any action, which is why
+//                reading it needs `currentStreak` and not the stored number.
 //   daily goal   DISTINCT lesson ids completed today. Replaying one easy lesson
 //                five times must not fill a five lesson goal.
 //   achievements not decided here. The once per lesson counters (perfect,
@@ -110,4 +112,88 @@ export function applyCompletion<T extends CompletionRecord>(
   // untouched. TypeScript cannot see that a T spread over a CompletionRecord is
   // still a T, which is what the assertion is for.
   return { ...current, ...next } as T;
+}
+
+/**
+ * The streak as it stands RIGHT NOW, which is not always the number stored.
+ *
+ * A streak is the only counter in the product that decreases while nobody is
+ * looking. Everything else changes because the learner did something; this
+ * changes because they did not. `applyCompletion` can only run on a completion,
+ * so it cannot be what breaks a streak: on the day the streak dies there is, by
+ * definition, no completion to trigger it.
+ *
+ * Left to the stored number, a learner who missed a day and simply opened the
+ * app saw the streak they used to have. It self-corrected the next time they
+ * finished a lesson, which is far too late, and it corrected DOWNWARD at the
+ * exact moment they had just done the work. A streak that cannot be broken is
+ * not a streak, it is a counter with a flame on it, and once a learner notices
+ * that, every other number in the app is worth less too.
+ *
+ * Today and yesterday both count as alive. Missing TODAY breaks nothing, because
+ * today is not over: a learner who worked yesterday has until midnight UTC to
+ * keep it. That is the at-risk state worth a nudge, not a reset. Anything older
+ * is gone, and returns 0.
+ */
+export function currentStreak(
+  record: Pick<CompletionRecord, 'streak' | 'lastActiveDate'>,
+  at: Date = new Date(),
+): number {
+  const held = Number.isFinite(record.streak) ? Math.trunc(record.streak) : 0;
+  if (held <= 0 || !record.lastActiveDate) return 0;
+  const today = isoDay(at);
+  const yesterday = isoDay(new Date(at.getTime() - DAY_MS));
+  return record.lastActiveDate === today || record.lastActiveDate === yesterday ? held : 0;
+}
+
+/**
+ * Whether the streak survives today only if the learner works today. True on the
+ * day AFTER their last completion, and it is the only honest moment to say "your
+ * streak ends tonight". Never true when the streak is already gone.
+ */
+export function streakAtRisk(
+  record: Pick<CompletionRecord, 'streak' | 'lastActiveDate'>,
+  at: Date = new Date(),
+): boolean {
+  return currentStreak(record, at) > 0 && record.lastActiveDate !== isoDay(at);
+}
+
+/**
+ * How many DISTINCT lessons count toward today's goal, right now.
+ *
+ * The same shape of defect as `currentStreak`, and it was shipped in the same
+ * place for the same reason: `completedToday` is written by a completion, so on
+ * a day with no completion nothing rewrites it and yesterday's count stands. A
+ * learner who did three lessons on Saturday opened the app on Monday to a daily
+ * goal already showing 3 of 3, complete, with no work done.
+ *
+ * Worse than the streak, in one way. A stale streak flatters the learner; a
+ * stale daily goal REMOVES the thing they were meant to do today. The ring is
+ * already full, so there is nothing to close, and the single clearest reason to
+ * open the app has quietly gone.
+ *
+ * The web workspace already guarded this inline while the phone did not, which
+ * is precisely the split the shared rule exists to prevent. Both now call this.
+ */
+export function completedTodayNow(
+  record: Pick<CompletionRecord, 'completedToday' | 'lastActiveDate' | 'todayLessonIds'>,
+  at: Date = new Date(),
+): number {
+  if (record.lastActiveDate !== isoDay(at)) return 0;
+  // `todayLessonIds` is the truth and `completedToday` is its length, so prefer
+  // the list where it exists. A record written before the list was introduced
+  // has the number alone.
+  const ids = record.todayLessonIds;
+  if (Array.isArray(ids)) return ids.length;
+  const n = record.completedToday;
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
+/** The lessons that have counted toward today's goal, or none if the day turned. */
+export function todayLessonIdsNow(
+  record: Pick<CompletionRecord, 'lastActiveDate' | 'todayLessonIds'>,
+  at: Date = new Date(),
+): string[] {
+  if (record.lastActiveDate !== isoDay(at)) return [];
+  return record.todayLessonIds ?? [];
 }

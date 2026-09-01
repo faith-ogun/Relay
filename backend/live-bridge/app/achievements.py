@@ -63,7 +63,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Iterable
 
@@ -253,6 +253,33 @@ def _community(uid: str) -> dict[str, int]:
         return {"likes": 0, "posts": 0, "comments": 0}
 
 
+
+def current_streak(progress: dict, at: datetime | None = None) -> int:
+    """The streak as it stands NOW, mirroring `currentStreak` in completion.ts.
+
+    A streak is the only counter here that decreases while nobody is looking.
+    The stored number is written by a completion, so it cannot be what breaks a
+    streak: on the day a streak dies there is, by definition, no completion to
+    trigger the write. Read raw, a learner who stopped three weeks ago still
+    reports the streak they had, which is enough to mint a streak medal they no
+    longer hold.
+
+    Today and yesterday both count as alive: missing today breaks nothing while
+    today is still running. Anything older is 0.
+
+    UTC on both sides, deliberately, matching `isoDay` on the clients. The three
+    copies of this rule must agree or the phone, the web and the medal ledger
+    will each believe a different streak.
+    """
+    raw = progress.get("streak")
+    held = int(raw) if isinstance(raw, (int, float)) and raw > 0 else 0
+    last = str(progress.get("lastActiveDate") or "")
+    if held <= 0 or not last:
+        return 0
+    now = at or datetime.now(timezone.utc)
+    today = now.date()
+    return held if last in (today.isoformat(), (today - timedelta(days=1)).isoformat()) else 0
+
 def compute_stats(uid: str, progress: dict[str, Any] | None = None) -> dict[str, int]:
     """Every metric an achievement can unlock against, derived server-side.
 
@@ -269,7 +296,7 @@ def compute_stats(uid: str, progress: dict[str, Any] | None = None) -> dict[str,
 
     return {
         "xp": whole(progress.get("xp")),
-        "streak": whole(progress.get("streak")),
+        "streak": current_streak(progress),
         # Both lesson-counted metrics are counted in AUTHORED lessons, so a
         # change to how sessions are packaged cannot move either one.
         "builds": len(authored_completions(done)),
