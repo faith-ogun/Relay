@@ -25,15 +25,23 @@ export type Feature =
 export interface PlanMeta {
   id: Plan;
   label: string;
-  /** Monthly price in the display currency, null = free. Provisional, see #19. */
+  /**
+   * Published monthly price in USD, null = free.
+   *
+   * MUST match PricingPage.tsx and mobile/src/services/entitlements.ts. It did
+   * not: this module said 12 and 29 while both other sources said 15.99 and
+   * 34.99, so the app and its own pricing page disagreed about what Ohmlet
+   * costs. frontend/scripts/check-prices.mjs now refuses a build where the
+   * three disagree.
+   */
   priceMonthly: number | null;
   blurb: string;
 }
 
 export const PLAN_META: Record<Plan, PlanMeta> = {
   free: { id: 'free', label: 'Free', priceMonthly: null, blurb: 'Learn the fundamentals and try a live session.' },
-  pro: { id: 'pro', label: 'Pro', priceMonthly: 12, blurb: 'Unlimited learning and real bench time.' },
-  max: { id: 'max', label: 'max', priceMonthly: 29, blurb: 'Everything in Pro, plus Interview Mode.' },
+  pro: { id: 'pro', label: 'Pro', priceMonthly: 12.99, blurb: 'Unlimited learning and real bench time.' },
+  max: { id: 'max', label: 'Max', priceMonthly: 24.99, blurb: 'Everything in Pro, plus Interview Mode.' },
 };
 
 // Which features each plan unlocks. Plans are additive (pro = free + extra).
@@ -51,15 +59,34 @@ export const FEATURES_BY_PLAN: Record<Plan, Feature[]> = {
 // available, but clearly flagged as in-progress so we set expectations.
 export const BETA_FEATURES: ReadonlySet<Feature> = new Set<Feature>(['sandbox', 'drawing']);
 
-// Monthly live-tutor budget per plan (minutes). These match the pricing page and
-// business brief (Free 60 min, Pro 10 hr, Max 30 hr) and the server-enforced caps
-// in backend/entitlements.py. No plan is unlimited: the live tutor has real
-// per-minute cost (~$3/active hr), so every tier is bounded. The server is the
-// real gate; this mirror is for UX. Provisional pending real cost data (#19).
+// Monthly live-tutor budget per plan (minutes). These match the pricing page,
+// the phone's plan cards, and the server-enforced caps in backend. No plan is
+// unlimited: the live tutor has real per-minute cost (~$3/active hr), so every
+// tier is bounded. The server is the real gate; this mirror is for UX.
+//
+// The comment here used to claim Pro 10 hr and Max 30 hr while the numbers below
+// said 4 and 9. A comment that contradicts the value under it is worse than no
+// comment, so the hours now come from the numbers: check-prices.mjs derives the
+// advertised hour copy from these and fails when the two drift apart.
 export const LIVE_MINUTES_PER_MONTH: Record<Plan, number> = {
   free: 60,
-  pro: 600, // 10 hours
-  max: 1800, // 30 hours
+  pro: 150,
+  max: 300,
+};
+
+/**
+ * A plan's live budget written the way a learner reads it: "2.5 hours", "5
+ * hours", "1 hour". Never minutes, and never rounded.
+ *
+ * `Math.round(minutes / 60)` was doing this job at the upgrade prompt, which was
+ * exact while every cap was a whole number of hours and became an overclaim the
+ * moment one was not: Pro's 150 minutes rounds up to 3, so the button offered an
+ * extra half hour nobody had bought.
+ */
+export const liveHoursLabel = (plan: Plan): string => {
+  const hours = LIVE_MINUTES_PER_MONTH[plan] / 60;
+  const figure = Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
+  return `${figure} ${hours === 1 ? 'hour' : 'hours'}`;
 };
 
 export const planHas = (plan: Plan, feature: Feature): boolean => FEATURES_BY_PLAN[plan].includes(feature);

@@ -12,6 +12,8 @@ import base64
 import json
 import logging
 import os
+import threading
+import time
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -23,18 +25,28 @@ from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from ohmlet_live_agent import agent
+from ohmlet_live_agent import agent, child_agent
+from ohmlet_live_agent.coach_agent import coach_agent, instruction_with as coach_instruction_with
 from ohmlet_live_agent.interview_agent import interview_agent
 from ohmlet_live_agent.tools import set_priority_models
 import interview as interview_mod
 from state_store import router as state_router
 from account import router as account_router
 from billing import router as billing_router
+from events import router as events_router
+from revenuecat import router as revenuecat_router
 from privacy import router as privacy_router
 from community import router as community_router
 from interview_router import router as interview_router
+
+import consent
+from consent import router as consent_router
+from curriculum import router as curriculum_router
+from achievements import router as achievements_router
+from builds import router as builds_router
 from usage_meter import UsageMeter, persist_usage
 from auth import require_uid, verify_id_token
+import career
 import entitlements
 import ratelimit
 from resilience import CircuitBreaker
@@ -43,6 +55,50 @@ from resilience import CircuitBreaker
 # Vertex fails fast with a friendly message instead of hanging the request (#50).
 _TEXT_CB = CircuitBreaker("text-chat", fail_max=4, reset_timeout=30.0)
 TEXT_TIMEOUT_MS = int(os.getenv("OHMLET_TEXT_TIMEOUT_MS", "20000"))
+
+# One client for the whole process. It used to be constructed per request, which
+# re-resolved credentials and built a new connection pool on every message the
+# learner sent. The client is thread-safe and owns the pooled transport.
+# Text and tool calls do NOT share the live session's location.
+#
+# The live bidi session runs in europe-west1 because that is where the service
+# is and where its native-audio model is served. Only 2.5-era models exist in
+# that region: probed 2026-08-27 against this project, every gemini-3.x id
+# returns 404 there and 200 on `global`. Pinning the tool calls to the same
+# region therefore held them on 2.5 for no reason of their own.
+#
+# So they get their own location, defaulting to `global`, which is what
+# quiz-engine and vision-verifier already use and why those two were on 3.x
+# while this service was not. The live model is migrated separately, because its
+# replacement id cannot be verified without opening a bidi session.
+
+_text_client_instance: "genai.Client | None" = None
+_text_client_lock = threading.Lock()
+
+
+def _text_client():
+    """The process-wide genai client used by the text fallback."""
+    global _text_client_instance
+    if _text_client_instance is None:
+        with _text_client_lock:
+            if _text_client_instance is None:
+                http_opts = genai.types.HttpOptions(timeout=TEXT_TIMEOUT_MS)
+                if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
+                    _text_client_instance = genai.Client(
+                        vertexai=True,
+                        project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
+                        # See TEXT_LOCATION below: not the live session's region.
+                        location=os.getenv(
+                            "OHMLET_TEXT_LOCATION",
+                            os.getenv("GOOGLE_CLOUD_LOCATION", "global"),
+                        ),
+                        http_options=http_opts,
+                    )
+                else:
+                    _text_client_instance = genai.Client(
+                        api_key=os.getenv("GOOGLE_API_KEY", ""), http_options=http_opts
+                    )
+    return _text_client_instance
 import validation
 import obs
 from cors import install_cors
@@ -92,12 +148,26 @@ app.include_router(state_router)
 app.include_router(account_router)
 # Stripe billing: Checkout, Customer Portal, and the plan-writing webhook.
 app.include_router(billing_router)
+app.include_router(revenuecat_router)
+app.include_router(events_router)
 # Privacy rights (GDPR/CCPA/...): data export + account deletion.
 app.include_router(privacy_router)
 # Community: feed, comments, reactions, challenges, weekly league (#63).
 app.include_router(community_router)
 # Interview Mode: the post-session feedback report (#21, Max-tier).
 app.include_router(interview_router)
+app.include_router(consent_router)
+# Curriculum served from the backend so a lesson fix reaches mobile without an
+# App Store review, and the authored lessons stay out of client bundles (#70).
+app.include_router(curriculum_router)
+# Achievements: the DURABLE record of what a learner has earned. Earning is an
+# event, so it is stamped once and never recomputed away by a later correction
+# to how a counter is derived.
+app.include_router(achievements_router)
+# The build library, served for the same reason: a parts list is what the kit
+# check measures a learner's bench against, so a correction must not wait on
+# an App Store review.
+app.include_router(builds_router)
 
 session_service = InMemorySessionService()
 runner = Runner(
@@ -111,17 +181,46 @@ interview_runner = Runner(
     agent=interview_agent,
     session_service=session_service,
 )
+# Career coaching: the same live spine again, on a coach rather than an
+# interviewer. Deliberately a different agent and not a mode of Quinn's: a mock
+# interview tests you and a coaching session tells you what to do next, and an
+# agent asked to do both does neither well.
+coach_runner = Runner(
+    app_name=APP_NAME,
+    agent=coach_agent,
+    session_service=session_service,
+)
+# Child mode (#94): the same live spine on the hardened agent (Vertex safety
+# tightened + a child-safe system prompt). Selected only for a verified minor's
+# session; adults never touch it.
+child_runner = Runner(
+    app_name=APP_NAME,
+    agent=child_agent,
+    session_service=session_service,
+)
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Liveness, plus the two facts you need to know WHICH build answered.
+
+    `curriculum` is the content hash the service is serving. Without it, the only
+    way to check whether a curriculum change actually reached production was to
+    mint a Firebase token and call the authenticated manifest, which is too much
+    friction for a question asked after every curriculum deploy. The stamp is a
+    hash of published lesson content, so exposing it discloses nothing that the
+    app does not already hand to every signed-in learner.
+    """
+    from curriculum import content_version
+
     return {
         "status": "ok",
         "service": "live-bridge",
         "runtime": "google-adk-bidi",
         "model": os.getenv("OHMLET_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
+        "curriculum": content_version(),
     }
 
 
@@ -200,7 +299,8 @@ async def websocket_endpoint(
         await _reject_ws(websocket, "auth_required", "Sign in to start a live session.")
         return
     try:
-        verified_uid = verify_id_token(auth_msg["token"])["uid"]
+        decoded = verify_id_token(auth_msg["token"])
+        verified_uid = decoded["uid"]
     except HTTPException:
         await _reject_ws(websocket, "auth_invalid", "Your session has expired. Sign in again.")
         return
@@ -216,24 +316,52 @@ async def websocket_endpoint(
         await _reject_ws(websocket, "rate_limited", "Too many sessions started. Please wait a minute.")
         return
 
-    logger.info("WS connected: user=%s session=%s", user_id, session_id)
+    # ── Child-safety gate (#94): a minor without verified parental consent may not
+    # open a live (camera + mic) session. Read straight off the verified token's
+    # custom claims; default-deny. Entirely inert unless OHMLET_CHILD_MODE is on, so
+    # adults and today's users are unaffected.
+    consent_block = consent.live_blocked(decoded)
+    if consent_block:
+        logger.info("Live session gated for user=%s reason=%s", user_id, consent_block)
+        await _reject_ws(
+            websocket,
+            consent_block,
+            "A parent or guardian needs to finish setting up Ohmlet before the live tutor can start."
+            if consent_block == "consent_required"
+            else "Let's confirm a couple of details before we start the live tutor.",
+        )
+        return
+    child_session = consent.is_child(decoded)
 
-    # ── Session mode: tutor (default) or interview (#21, Max-only) ──
-    mode = "interview" if (websocket.query_params.get("mode") == "interview") else "tutor"
+    logger.info("WS connected: user=%s session=%s child=%s", user_id, session_id, child_session)
+
+    # ── Session mode: tutor (default), interview or coach (both Max-only) ──
+    requested = websocket.query_params.get("mode")
+    mode = requested if requested in ("interview", "coach") else "tutor"
 
     # ── Entitlement gate: plan + daily live budget (the real, server-side cap) ──
     plan = entitlements.get_plan(user_id)
 
     # Interview Mode is a Max-tier feature; enforce it server-side (#56), never
     # trusting the client's UI gate.
-    if mode == "interview" and plan != "max":
-        logger.info("Interview mode refused for user=%s plan=%s", user_id, plan)
-        await _reject_ws(websocket, "upgrade_required", "Interview Mode is a Max-plan feature.")
+    if mode in ("interview", "coach") and plan != "max":
+        logger.info("%s mode refused for user=%s plan=%s", mode, user_id, plan)
+        await _reject_ws(
+            websocket,
+            "upgrade_required",
+            "Interview Mode is a Max-plan feature." if mode == "interview"
+            else "Career coaching is a Max-plan feature.",
+        )
         return
 
     remaining_seconds = entitlements.live_seconds_remaining(user_id, plan)
     if remaining_seconds <= 0:
         logger.info("Live budget exhausted for user=%s plan=%s; rejecting", user_id, plan)
+        # Audited, not just logged, because this is the number the whole free
+        # tier rests on. How often a learner is turned away, and on which plan,
+        # is the only evidence that will ever say whether the caps are set right.
+        # scripts/first_build.py reads these.
+        obs.audit("live.budget.refused", uid=user_id, plan=plan, mode=mode)
         await websocket.send_text(
             json.dumps(
                 {
@@ -269,6 +397,14 @@ async def websocket_endpoint(
         try:
             while True:
                 raw = await websocket.receive()
+
+                # Starlette RETURNS the disconnect frame rather than raising, so
+                # without this a clean hang-up falls through, the next receive()
+                # raises, and every normal close is logged as an ERROR (which
+                # buries real failures in the 5xx alerting).
+                if raw.get("type") == "websocket.disconnect":
+                    logger.info("WS client disconnected: %s", session_id)
+                    break
 
                 # Binary frame → audio PCM
                 if "bytes" in raw and raw["bytes"]:
@@ -309,6 +445,27 @@ async def websocket_endpoint(
                         live_queue.send_content(stage_content)
                         continue
 
+                    if msg_type == "coach_context" and mode == "coach":
+                        # The coach is primed from OUR records, not from anything
+                        # the client sends. That is the whole point: every
+                        # hardware CV claims bench experience and this is the one
+                        # that was watched. A client-supplied record would be
+                        # exactly the self-report the feature exists to replace.
+                        try:
+                            ev = await asyncio.to_thread(career.evidence, user_id)
+                            ctx = coach_instruction_with(
+                                career.summary_line(ev), json.dumps(ev, ensure_ascii=False)
+                            )
+                        except Exception as exc:
+                            logger.warning("career evidence unavailable for %s: %s", user_id, exc)
+                            ctx = coach_instruction_with(
+                                "No verified record could be loaded for this session.", "{}"
+                            )
+                        live_queue.send_content(
+                            types.Content(role="user", parts=[types.Part(text=ctx)])
+                        )
+                        continue
+
                     if msg_type == "interview_context" and mode == "interview":
                         # Prime the interviewer with the role + JD + (fenced) resume.
                         # Sanitised + injection-fenced in interview.build_context_message.
@@ -328,7 +485,9 @@ async def websocket_endpoint(
                         text = validation.validate_ws_text(msg.get("text", ""))  # capped length (#45)
                         if text:
                             # Interview mode has no tutor stages; send the turn as-is.
-                            prefixed = text if mode == "interview" else f"[stage={current_stage}] {text}"
+                            # Neither the interviewer nor the coach has tutor
+                            # stages, so the turn goes as-is.
+                            prefixed = text if mode in ("interview", "coach") else f"[stage={current_stage}] {text}"
                             content = types.Content(
                                 role="user",
                                 parts=[types.Part(text=prefixed)],
@@ -366,7 +525,12 @@ async def websocket_endpoint(
         # Select the model tier for this session's plan (Free → Flash, Pro/max → Pro).
         set_priority_models(entitlements.has_priority_models(plan))
         # Interview Mode swaps the persona (interviewer) but reuses the whole spine.
-        active_runner = interview_runner if mode == "interview" else runner
+        # Child safety wins over every other persona: a verified minor always runs
+        # on the hardened child agent, never the interview persona.
+        active_runner = child_runner if child_session else {
+            "interview": interview_runner,
+            "coach": coach_runner,
+        }.get(mode, runner)
         try:
             event_count = 0
             async for event in active_runner.run_live(
@@ -390,8 +554,34 @@ async def websocket_endpoint(
 
     # ── Idle guardrail: stop billing for an abandoned session ───────────────────
 
+    # Seconds of THIS session already written to the shared monthly counter.
+    # Flushing as we go (rather than once at close) is what stops two concurrent
+    # sessions from each spending the full remaining balance.
+    charged_seconds = 0.0
+
+    def _settle_budget() -> float:
+        """Settle usage so far and re-read what is left across ALL sessions.
+
+        Runs in a worker thread: Firestore's client is synchronous and this loop
+        also carries live audio.
+        """
+        nonlocal charged_seconds
+        charged_seconds, remaining = entitlements.settle_live_session(
+            user_id, plan, meter.duration_seconds(), charged_seconds
+        )
+        return remaining
+
     async def watchdog() -> None:
+        nonlocal remaining_seconds
         timeout = float(os.getenv("OHMLET_IDLE_TIMEOUT_SEC", "180"))
+        # How often this session's consumption is flushed to the shared monthly
+        # counter and the shared total re-read. This is what makes CONCURRENT
+        # sessions see each other: the connect-time snapshot alone let every tab
+        # or device spend the full remaining balance independently, multiplying
+        # live-tutor spend past the plan's margin. The exploitable window is now
+        # one sync interval instead of a whole session.
+        sync_every = float(os.getenv("OHMLET_BUDGET_SYNC_SEC", "30"))
+        last_sync = time.monotonic()
         while True:
             await asyncio.sleep(10)
             # Idle: stop billing for an abandoned session.
@@ -404,11 +594,35 @@ async def websocket_endpoint(
                 except Exception:
                     pass
                 return
-            # Budget: cut the session off when it runs past the plan's daily cap.
-            if remaining_seconds != float("inf") and meter.duration_seconds() >= remaining_seconds:
+
+            # Periodically settle usage against the shared counter. Firestore is
+            # sync, and this coroutine shares the loop with live audio, so it runs
+            # in a worker thread.
+            if remaining_seconds != float("inf") and time.monotonic() - last_sync >= sync_every:
+                last_sync = time.monotonic()
+                try:
+                    remaining_seconds = await asyncio.to_thread(_settle_budget)
+                except Exception as exc:  # never kill a session over a metering blip
+                    logger.warning("budget sync failed for %s: %s", user_id, exc)
+
+            # Budget: cut the session off when this plan's allowance is spent.
+            # `remaining_seconds` is refreshed above, and `charged_seconds` is
+            # already reflected in it, so compare only the not-yet-charged part.
+            if remaining_seconds != float("inf") and meter.duration_seconds() - charged_seconds >= remaining_seconds:
                 logger.info(
                     "Live budget reached (%.0fs) for user=%s session=%s; closing",
                     remaining_seconds, user_id, session_id,
+                )
+                # Distinct from a refusal at the door, and much worse: this
+                # learner was mid-build when the tutor stopped talking. If this
+                # fires often on the free plan, 60 minutes does not cover a first
+                # build and the cap is wrong.
+                obs.audit(
+                    "live.budget.cutoff",
+                    uid=user_id,
+                    plan=plan,
+                    sessionId=session_id,
+                    elapsedSeconds=round(meter.duration_seconds(), 1),
                 )
                 try:
                     await websocket.send_text(
@@ -440,81 +654,42 @@ async def websocket_endpoint(
         await asyncio.gather(*pending, return_exceptions=True)
     finally:
         live_queue.close()
-        persist_usage(meter)
-        # Charge this session's wall-clock time against today's live budget so the
-        # cap holds across reconnects and multiple sessions in a day.
-        entitlements.add_live_seconds(user_id, meter.duration_seconds())
-        logger.info("WS session closed: %s", session_id)
 
+        def _final_settle() -> None:
+            """Persist usage and charge the unbilled remainder.
 
-# ── REST fallback for text-only usage ──────────────────────────────────────────
-
-@app.post("/v1/live/text")
-async def text_fallback(payload: dict, user_id: str = Depends(require_uid)) -> dict:
-    """Simple REST endpoint for text-only interaction (non-streaming).
-
-    Useful for testing without WebSocket or when audio is unavailable. The user
-    is the verified token holder; any user_id in the payload is ignored (#44).
-    """
-    session_id = str(payload.get("session_id", ""))[:128]
-    text = validation.validate_ws_text(payload.get("text", ""))  # capped (#45)
-    stage = validation.normalize_stage(payload.get("stage"), "inventory")
-
-    if not text:
-        return {"error": "text is required"}
-
-    # Create session if needed
-    session = await session_service.get_session(
-        app_name=APP_NAME, user_id=user_id, session_id=session_id,
-    )
-    if not session:
-        await session_service.create_session(
-            app_name=APP_NAME, user_id=user_id, session_id=session_id,
-        )
-
-    # The live agent uses a native-audio model that only works with run_live().
-    # For text-only chat, call Gemini directly via google-genai SDK.
-    from google import genai
-    from ohmlet_live_agent.agent import OHMLET_INSTRUCTION
-
-    http_opts = genai.types.HttpOptions(timeout=TEXT_TIMEOUT_MS)
-    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
-    if use_vertex:
-        client = genai.Client(
-            vertexai=True,
-            project=os.getenv("GOOGLE_CLOUD_PROJECT", "ohmlet-app"),
-            location=os.getenv("GOOGLE_CLOUD_LOCATION", "europe-west1"),
-            http_options=http_opts,
-        )
-    else:
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""), http_options=http_opts)
-
-    text_model = os.getenv("OHMLET_FLASH_MODEL", "gemini-2.5-flash")
-
-    if not _TEXT_CB.allow():
-        reply = "The tutor is very busy right now. Please try again in a moment."
-    else:
-        try:
-            response = client.models.generate_content(
-                model=text_model,
-                contents=f"[stage={stage}] {text}",
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=OHMLET_INSTRUCTION,
-                ),
+            Both calls are synchronous Firestore, so they run in a worker thread
+            for the same reason the watchdog offloads them: this coroutine shares
+            its loop with every other live session on the instance, and blocking
+            here stalls their audio while one learner's session tears down.
+            """
+            persist_usage(meter)
+            # Charge only what the periodic sync has not already written, so a
+            # long session is never billed twice for the same seconds. The cap
+            # therefore holds across reconnects, concurrent sessions, and days.
+            entitlements.settle_live_session(
+                user_id, plan, meter.duration_seconds(), charged_seconds
             )
-            reply = response.text.strip() if response.text else "No response generated."
-            _TEXT_CB.record_success()
-        except Exception as e:
-            _TEXT_CB.record_failure()
-            logger.error("Text fallback failed: %s", e)
-            reply = "Sorry, the tutor hit a snag. Please try again in a moment."
 
-    return {
-        "session_id": session_id,
-        "stage": stage,
-        "reply": reply,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
+        try:
+            await asyncio.shield(asyncio.to_thread(_final_settle))
+        except Exception as exc:
+            # Billing must never be the reason a socket fails to close, but a
+            # miss here is lost revenue, so it is logged at error level.
+            logger.error("final settle failed for user=%s session=%s: %s", user_id, session_id, exc)
+
+        # Release the ADK session. Without this every live session's full
+        # transcript stayed resident for the life of the container: an unbounded
+        # leak on a long-running instance, and a signed-out learner's
+        # conversation sitting in memory long after they left.
+        try:
+            await session_service.delete_session(
+                app_name=APP_NAME, user_id=user_id, session_id=session_id,
+            )
+        except Exception as exc:
+            logger.warning("ADK session cleanup failed for %s: %s", session_id, exc)
+
+        logger.info("WS session closed: %s", session_id)
 
 
 # ── Observability + audit trail (#35) ──────────────────────────────────────────

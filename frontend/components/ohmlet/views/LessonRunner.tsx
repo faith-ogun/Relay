@@ -1,11 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, Eraser, Heart, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { recordMetric } from '../../../services/achievementEvents';
+import { ArrowRight, Check, CircleAlert, Eraser, Flame, Heart, Infinity as InfinityIcon, Pencil, RotateCcw, Trash2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import CircuitDiagram from '../../CircuitDiagram';
-import { LESSON_CONTENT, type LessonStep } from '../data/lessons';
-import { findLesson } from '../data/curriculum';
-import { LEVEL_META, buildLeveledSteps, heartsForLevel, xpForLevel } from '../data/levels';
+import { LESSON_CONTENT, type LessonEntry, type LessonStep } from '../data/lessons';
+import { findAuthoredLesson, findLesson } from '../data/curriculum';
+import { getLesson, peekLesson } from '../../../services/curriculum';
+import { LEVEL_META, buildLeveledSteps, xpForLevel } from '../data/levels';
+import { useHearts } from '../../../hooks/useHearts';
+import { HeartsWall } from './HeartsWall';
+import { usePlan } from '../../../hooks/usePlan';
+import { useIdentity } from '../../../hooks/useIdentity';
+import { readAgeProfile } from '../childmode/useAgeProfile';
+import { CHILD_MODE_ENABLED } from '../childmode/ageModel';
 import { assessDrawing } from '../../../services/quizEngineClient';
 import { playCorrect, playWrong, playComplete, isSfxMuted, setSfxMuted } from '../../../services/sfx';
+
+/**
+ * What an asynchronously graded step reports back.
+ *
+ * `true` and `false` are the grader's verdict. `'unassessed'` is the grader
+ * being unreachable, which is neither: see handleAsyncResult for why that has
+ * to be its own outcome rather than being folded into either of the others.
+ */
+type DrawOutcome = boolean | 'unassessed';
 
 const QUIZ_API_ROOT = (import.meta.env.VITE_OHMLET_QUIZ_API_BASE_URL as string) || 'http://localhost:8083';
 
@@ -26,11 +43,43 @@ interface LessonRunnerProps {
   accent: string;
   /** The level being attempted: 1 Bronze, 2 Silver, 3 Gold. Defaults to 1. */
   level?: number;
+  /**
+   * The level already on record for this lesson before this run started:
+   * 0 never completed, up to 3 Gold. Read before the run, because afterwards
+   * every lesson looks completed.
+   *
+   * Two things depend on it. It gates the once-per-lesson achievement counters:
+   * `perfect` and `drawings` used to be bumped on every clean run, replays
+   * included, while `builds` deduped by lesson id, so "Flawless, 25 flawless
+   * builds" was earned by replaying one easy lesson twenty-five times. And it
+   * decides whether this run pays XP at all, which the completion card has to
+   * state honestly: a learner at Gold replaying Gold earns none.
+   */
+  heldLevel?: number;
+  /**
+   * Has any session of this lesson's AUTHORED lesson already been cleared?
+   *
+   * Not the same question as heldLevel >= 1, which is about THIS session. One
+   * authored lesson can ship as two parts, and gating the once-per-lesson
+   * counters on the session paid them twice for the same work.
+   */
+  authoredCleared?: boolean;
   /** Review mode (the /author preview): adds a Skip control so a reviewer can step
    *  through every question without answering. Never set in the learner flow. */
   preview?: boolean;
+  /**
+   * Run the AUTHORED lesson whole rather than the session a learner sits
+   * through. Only the review console sets it: an author writes a 17-step lesson
+   * and needs to review all 17, while the app cuts that into two sessions and
+   * teaches them separately. Reading the authored map also keeps the console
+   * working with no backend, which is what a lesson reviewer has.
+   */
+  authored?: boolean;
   onExit: () => void;
   onComplete: (lessonId: string, xp: number, level: number) => void;
+  /** Route to pricing. Absent in the author preview, where hearts are never
+   *  spent and the upsell must not render as a control that does nothing. */
+  onUpgrade?: () => void;
 }
 
 const shuffle = <T,>(arr: T[]): T[] => {
@@ -55,9 +104,102 @@ const shuffledOrder = (n: number): number[] => {
 // Steps that just teach (no answer to check) advance straight to "Continue".
 const isTeach = (s: LessonStep) => s.type === 'teach';
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, level = 1, preview = false, onExit, onComplete }) => {
-  const lesson = findLesson(lessonId);
-  const content = LESSON_CONTENT[lessonId];
+/**
+ * The runner's dead ends: a lesson this client cannot show, and one it could
+ * not load. Deliberately NOT shaped like the completion card, which is a
+ * centred medal on a celebration disc: this is a left-aligned panel with a
+ * warning badge and its actions in a row, so the two are never mistaken for
+ * each other at a glance.
+ */
+const NoticeScreen: React.FC<{
+  title: string;
+  body: string;
+  onExit: () => void;
+  onRetry?: () => void;
+}> = ({ title, body, onExit, onRetry }) => (
+  <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
+    <div
+      role="alert"
+      className="ohmlet-rise w-full max-w-lg rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface p-8 shadow-soft"
+    >
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft">
+        <CircleAlert className="h-5 w-5 text-ohmlet-ink" strokeWidth={2.5} />
+      </span>
+      <h2 className="mt-5 text-2xl font-black tracking-[-0.02em] text-ohmlet-ink">{title}</h2>
+      <p className="mt-2 text-sm font-semibold leading-relaxed text-ohmlet-ink-soft">{body}</p>
+      <div className="mt-7 flex flex-wrap gap-3">
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-5 py-3 text-sm font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none motion-reduce:transition-none"
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={2.5} />
+            Try again
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onExit}
+          className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-3 text-sm font-black transition-colors hover:bg-ohmlet-cream"
+        >
+          Back to the path
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+export const LessonRunner: React.FC<LessonRunnerProps> = ({
+  lessonId, accent, level = 1, preview = false, authored = false, heldLevel = 0,
+  authoredCleared = false,
+  onExit, onComplete, onUpgrade,
+}) => {
+  const alreadyCompleted = heldLevel >= 1 || authoredCleared;
+  // A run pays only when it reaches a level ABOVE the one on record, which is
+  // the same condition services/completion.ts applies to the record itself.
+  const paysXp = level > heldLevel;
+  const lesson = authored ? findAuthoredLesson(lessonId) : findLesson(lessonId);
+
+  // Lesson bodies come from the curriculum service. It answers straight out of
+  // the bundled corpus, with no network at all, whenever the bundled version
+  // stamp matches what the backend serves: the ordinary case. `peekLesson` is
+  // that synchronous answer, so a lesson normally opens on the first frame with
+  // no loading state whatsoever. Only a client rendering a corpus newer than the
+  // one it shipped with has to wait, and it says so rather than showing nothing.
+  const [content, setContent] = useState<LessonEntry | null>(
+    () => (authored ? LESSON_CONTENT[lessonId] : peekLesson(lessonId)) ?? null,
+  );
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloads, setReloads] = useState(0);
+
+  useEffect(() => {
+    const held = (authored ? LESSON_CONTENT[lessonId] : peekLesson(lessonId)) ?? null;
+    setContent(held);
+    setLoadFailed(false);
+    if (held || authored) {
+      // The authored map is in this bundle: if it does not hold the lesson,
+      // no fetch is going to produce it.
+      setLoadFailed(!held);
+      return;
+    }
+
+    let alive = true;
+    void getLesson(lessonId).then((entry) => {
+      if (!alive) return;
+      setContent(entry);
+      setLoadFailed(!entry);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [lessonId, authored, reloads]);
+
+  const retryLoad = useCallback(() => {
+    setLoadFailed(false);
+    setReloads((n) => n + 1);
+  }, []);
   // Steps are transformed for the attempted level (Bronze = as authored;
   // Silver/Gold = teach dropped + shuffled). Rebuilt only when lesson/level change.
   const steps = useMemo(() => buildLeveledSteps(content?.steps ?? [], level), [content, level]);
@@ -70,7 +212,51 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   const [queue, setQueue] = useState<number[]>(() => steps.map((_, i) => i));
   const [pos, setPos] = useState(0);
   const [mastered, setMastered] = useState<Set<number>>(new Set());
-  const [hearts, setHearts] = useState(() => heartsForLevel(level));
+  // Hearts are an ACCOUNT resource, not a per-run allowance seeded from the
+  // level. They used to reset on every retry and on every page refresh, which
+  // made them a pacing device; they are now the free tier's real constraint and
+  // the thing Pro removes, so the server owns the balance and the regen clock.
+  const heartPool = useHearts();
+  // The author console renders lessons without a learner behind them. It must
+  // never spend a real person's hearts.
+  const unlimitedHearts = preview || heartPool.unlimited;
+  const misses = useRef(0);
+  // Tracks whether ANY graded answer came back wrong during this run, which is
+  // what makes a completion "perfect".
+  const anyWrongRef = useRef(false);
+  // Drawings the grader accepted during this run, credited once at completion.
+  const drawingsRef = useRef(0);
+  // Steps the grader could not reach. Suppresses `perfect` for the run.
+  const unassessedRef = useRef(0);
+  // Both live up here with the other hooks, ABOVE the loading and error returns.
+  // A lesson body can now arrive after the first render, so this component does
+  // move from an early return to the full run, and a hook declared below one of
+  // those returns would change the hook count between renders.
+  const [runId, setRunId] = useState(() => Date.now());
+
+  // Payment age gate (#96): under-18s cannot self-purchase, and Max is the top
+  // tier, so neither is shown an offer they could not act on.
+  const { userId } = useIdentity();
+  const { plan } = usePlan(userId);
+  const under18 = useMemo(() => {
+    const by = readAgeProfile(userId)?.birthYear;
+    return CHILD_MODE_ENABLED && !!by && new Date().getFullYear() - by < 18;
+  }, [userId]);
+  const canUpsell = !under18 && plan !== 'max';
+
+  // Latched so the wall survives the heart it is waiting for arriving. Left
+  // unlatched it would vanish the instant the balance ticked up, and the moment
+  // the learner is waiting for would be the one moment they never see.
+  const [wall, setWall] = useState(false);
+  useEffect(() => {
+    if (heartPool.empty && !unlimitedHearts) setWall(true);
+  }, [heartPool.empty, unlimitedHearts]);
+
+  const loseHeart = useCallback(() => {
+    if (unlimitedHearts) return;
+    misses.current += 1;
+    void heartPool.spend(`${lessonId}:${runId}:${misses.current}`);
+  }, [unlimitedHearts, heartPool, lessonId, runId]);
   const [muted, setMuted] = useState(isSfxMuted);
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
@@ -105,7 +291,10 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(heartsForLevel(level));
+    misses.current = 0;
+    anyWrongRef.current = false;
+    drawingsRef.current = 0;
+    unassessedRef.current = 0;
     setDone(false);
   }, [steps, level]);
 
@@ -143,13 +332,69 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   // raw position, so a wrong answer holds the bar until the requeued step is cleared.
   const progress = steps.length ? Math.round((mastered.size / steps.length) * 100) : 0;
 
-  if (!lesson || !content) {
+  // ── The lesson is not on this client's path at all ──
+  //
+  // Reachable when progress holds an id from a corpus this client is not
+  // rendering: finished on a phone against a newer curriculum, opened here
+  // before the refresh landed. Says so plainly rather than blaming the lesson.
+  if (!lesson) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ohmlet-cream px-6 text-center">
-        <p className="text-lg font-black text-ohmlet-ink">That lesson is not ready yet.</p>
-        <button onClick={onExit} className="rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3 font-black shadow-press-sm">
-          Back to the path
-        </button>
+      <NoticeScreen
+        title="This lesson is not on your path yet"
+        body="It may have arrived on another device first. Head back to the path and it will appear once this one catches up."
+        onExit={onExit}
+      />
+    );
+  }
+
+  // ── The body could not be fetched ──
+  //
+  // In the review console there is nothing to retry: the authored map ships in
+  // this bundle, so a lesson missing from it is missing content, not a network
+  // problem, and the linter will already be flagging it.
+  if (!content && loadFailed) {
+    return (
+      <NoticeScreen
+        title={authored ? 'This lesson has no authored content' : 'Could not load this lesson'}
+        body={
+          authored
+            ? 'Nothing is written under this id in LESSON_CONTENT, so there are no steps to review.'
+            : 'The steps live on the server and the connection did not hold. Nothing you have finished is affected.'
+        }
+        onExit={onExit}
+        onRetry={authored ? undefined : retryLoad}
+      />
+    );
+  }
+
+  // ── Waiting on the body ──
+  //
+  // Only a client rendering a curriculum newer than the one it shipped with
+  // ever gets here; normally the steps are already in hand and the lesson opens
+  // on the first frame. A skeleton of the real screen rather than a spinner, so
+  // the layout does not jump when the steps arrive.
+  if (!content) {
+    return (
+      <div className="flex min-h-screen flex-col bg-ohmlet-cream" aria-busy="true">
+        <div className="flex items-center gap-3 px-5 py-4" aria-hidden>
+          <span className="h-7 w-7 rounded-lg bg-ohmlet-line" />
+          <span className="h-3.5 flex-1 rounded-full border-2 border-ohmlet-ink/15 bg-ohmlet-surface" />
+          <span className="h-7 w-16 rounded-full bg-ohmlet-line" />
+        </div>
+        <div className="flex flex-1 items-start justify-center px-5 pt-6">
+          <div className="w-full max-w-2xl animate-pulse motion-reduce:animate-none">
+            <div className="h-5 w-40 rounded-full bg-ohmlet-line" />
+            <div className="mt-4 h-48 rounded-[1.6rem] border-2 border-ohmlet-line bg-ohmlet-surface" />
+            <div className="mt-5 space-y-3">
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
+              <div className="h-12 rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface" />
+            </div>
+          </div>
+        </div>
+        <p className="pb-10 text-center text-xs font-bold uppercase tracking-[0.16em] text-ohmlet-ink-soft">
+          Loading {lesson.title}
+        </p>
       </div>
     );
   }
@@ -178,7 +423,13 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       case 'identify_component':
         return region === step.correctComponent;
       case 'drag_order':
-        return order.every((v, i) => v === step.correctOrder[i]);
+        // Graded on the arrangement the learner can SEE, not on which of two
+        // identical rows they happened to grab. Blink's loop() legitimately holds
+        // two `delay(1000);` lines: comparing item indices marks half of the
+        // visually perfect answers wrong, and the learner is shown the same rows
+        // again with nothing to change. Same principle as match below, which
+        // pairs by value rather than by position.
+        return order.length === step.correctOrder.length && order.every((v, i) => step.items[v] === step.items[step.correctOrder[i]]);
       case 'match':
         return matched.size === step.pairs.length;
       case 'draw_connection': {
@@ -232,24 +483,48 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setCorrect(ok);
     setChecked(true);
     ok ? playCorrect() : playWrong();
-    if (!ok) setHearts((h) => Math.max(0, h - 1));
+    if (!ok) loseHeart();
   };
 
   // draw_circuit grades asynchronously (Vision call inside the step). The step reports
   // its result here so hearts + the Continue rhythm behave exactly like any other step.
-  const handleAsyncResult = (ok: boolean, message: string) => {
+  const handleAsyncResult = (ok: DrawOutcome, message: string) => {
     setAsyncMsg(message);
+    // 'unassessed' is the grader being unreachable, which is not the learner
+    // being wrong and is not the learner being right.
+    //
+    // The two surfaces used to disagree here, and both were wrong. The browser
+    // showed an error and left the step ungraded, so a quiz-engine outage made
+    // every drawing lesson unfinishable. The phone marked the attempt CORRECT,
+    // which let a network blip award a flawless run for a sketch nobody looked
+    // at. So: the learner is never blocked and never told they were right.
+    // No heart, because they were not wrong. No `drawings` credit, because
+    // nothing was assessed. And the run stops being eligible for `perfect`,
+    // because a run holding an unchecked step is not a proven-flawless run.
+    if (ok === 'unassessed') {
+      unassessedRef.current += 1;
+      setCorrect(true);
+      setChecked(true);
+      return;
+    }
     setCorrect(ok);
     setChecked(true);
     ok ? playCorrect() : playWrong();
-    if (!ok) setHearts((h) => Math.max(0, h - 1));
+    if (!ok) loseHeart();
+    // A drawing the grader accepted. TALLIED here and credited once the run
+    // completes (see handleContinue), never at grade time: crediting on the
+    // grade paid for a drawing in a run that was then abandoned, so leaving and
+    // re-entering the same lesson counted the same sketch again and again.
+    if (ok) drawingsRef.current += 1;
   };
 
   // An interactive teach step (with hotspots) gates Continue until every part is explored.
   const teachHotspots = step?.type === 'teach' ? step.hotspots : undefined;
   const teachGated = !!teachHotspots && teachHotspots.length > 0 && revealed.size < teachHotspots.length;
 
-  const earnedXp = content ? xpForLevel(content.xpReward, level) : 0;
+  // What this level is worth. The shared completion rule decides whether it is
+  // actually paid; `paysXp` is what the card shows the learner.
+  const levelXp = content ? xpForLevel(content.xpReward, level) : 0;
 
   // A wrong graded answer will be sent to the back of the queue to retry later.
   const willRequeue = checked && correct === false && !!step && !isTeach(step);
@@ -260,6 +535,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     let nextQueue = queue;
     if (willRequeue) {
       // Came up wrong: it returns at the end of the run until cleared.
+      anyWrongRef.current = true;
       nextQueue = [...queue, idx];
     } else {
       // Teach seen, or graded answer cleared: this step is done for good.
@@ -268,7 +544,16 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     if (pos + 1 >= nextQueue.length) {
       setDone(true);
       playComplete();
-      onComplete(lessonId, earnedXp, level);
+      // The once-per-lesson counters. Never in preview (the author console
+      // renders lessons with no learner behind them) and never on a REPLAY:
+      // `builds` counts distinct lessons, so a per-run `perfect` meant twenty
+      // five replays of one easy lesson earned "Flawless, 25 flawless builds".
+      // A replay still pays its level XP, which is what a replay is for.
+      if (!preview && !alreadyCompleted) {
+        if (!anyWrongRef.current && unassessedRef.current === 0) recordMetric('perfect');
+        if (drawingsRef.current > 0) recordMetric('drawings', drawingsRef.current);
+      }
+      onComplete(lessonId, levelXp, level);
       return;
     }
     if (nextQueue !== queue) setQueue(nextQueue);
@@ -279,7 +564,13 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
     setQueue(steps.map((_, i) => i));
     setPos(0);
     setMastered(new Set());
-    setHearts(heartsForLevel(level));
+    misses.current = 0;
+    anyWrongRef.current = false;
+    drawingsRef.current = 0;
+    unassessedRef.current = 0;
+    // A fresh run, so its first miss cannot reuse a spent idempotency key and
+    // come back refunded.
+    setRunId(Date.now());
     setDone(false);
     setChecked(false);
     setCorrect(null);
@@ -289,24 +580,40 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   if (done) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
-        <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
+        <div className="ohmlet-rise w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface p-10 text-center shadow-press">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ohmlet-ink shadow-press-sm" style={{ background: levelMeta.color }}>
             <img src="/mascot/celebrate.png" alt="" aria-hidden className="h-16 w-auto" draggable={false} />
           </div>
           <p className="mt-5 inline-block rounded-full border-2 border-ohmlet-ink px-3 py-1 text-xs font-black uppercase tracking-wide" style={{ background: levelMeta.soft }}>
-            {levelMeta.name} earned
+            {levelMeta.name} {paysXp ? 'earned' : 'held'}
           </p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight">{level >= 3 ? 'Mastered!' : 'Lesson complete!'}</h2>
+          <h2 className="mt-3 text-3xl font-black tracking-tight">
+            {paysXp ? (level >= 3 ? 'Mastered!' : 'Lesson complete!') : 'Practice logged!'}
+          </h2>
           <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">{lesson.title}</p>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
-            <Zap className="h-5 w-5 text-ohmlet-gold-deep" fill="currentColor" />
-            <span className="text-lg font-black">+{earnedXp} XP</span>
-          </div>
-          {level < 3 && (
-            <p className="mt-4 text-xs font-semibold text-ohmlet-ink-soft">
-              Replay this lesson to reach {LEVEL_META[(level + 1) as 1 | 2 | 3].name}.
-            </p>
+          {/* The reward, stated honestly. A run that reaches a level above the
+              one on record pays XP. A replay at or below it pays none, and used
+              to show the level's XP anyway, which was simply untrue. What a
+              replay DOES do is keep the streak and the daily goal moving, so
+              that is what it says instead. */}
+          {paysXp ? (
+            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-5 py-3">
+              <Zap className="h-5 w-5 text-ohmlet-gold-deep" fill="currentColor" />
+              <span className="text-lg font-black">+{levelXp} XP</span>
+            </div>
+          ) : (
+            <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-5 py-3 shadow-press-sm">
+              <Flame className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
+              <span className="text-lg font-black">Streak kept</span>
+            </div>
           )}
+          <p className="mt-4 text-xs font-semibold text-ohmlet-ink-soft">
+            {level < 3
+              ? `Replay this lesson to reach ${LEVEL_META[(level + 1) as 1 | 2 | 3].name}.`
+              : paysXp
+                ? 'Every level of this one is yours.'
+                : 'This one is already banked, so it pays no more XP. It still counts toward today.'}
+          </p>
           <button
             onClick={onExit}
             className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 text-base font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none"
@@ -320,23 +627,17 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
   }
 
   // ── Out of hearts ──
-  if (hearts === 0 && checked && correct === false) {
+  //
+  // Held back until the feedback for the last wrong answer has been read, so the
+  // wall never replaces an explanation the learner has not seen yet. The same
+  // condition refuses entry when someone opens a lesson already empty.
+  if (wall && !checked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ohmlet-cream px-6">
-        <div className="w-full max-w-md rounded-[2rem] border-[3px] border-ohmlet-ink bg-white p-10 text-center shadow-press">
-          <img src="/mascot/encourage.png" alt="" aria-hidden className="mx-auto h-24 w-auto" draggable={false} />
-          <h2 className="mt-4 text-2xl font-black tracking-tight">Out of hearts</h2>
-          <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">
-            Take a breath and run it again. Repetition is how the concepts stick.
-          </p>
-          <button onClick={retry} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-gold px-6 py-3.5 font-black shadow-press transition-all hover:translate-y-[3px] hover:shadow-none">
-            <RotateCcw className="h-4 w-4" /> Try again
-          </button>
-          <button onClick={onExit} className="mt-3 text-sm font-black text-ohmlet-ink-soft hover:text-ohmlet-ink">
-            Leave lesson
-          </button>
-        </div>
-      </div>
+      <HeartsWall
+        onResume={() => { setWall(false); retry(); }}
+        onExit={onExit}
+        onUpgrade={canUpsell ? onUpgrade : undefined}
+      />
     );
   }
 
@@ -363,9 +664,19 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
         >
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
-        <div className="flex shrink-0 items-center gap-1">
-          <Heart className="h-5 w-5 text-ohmlet-red" fill="currentColor" />
-          <span className="text-base font-black tabular-nums">{hearts}</span>
+        <div
+          className="flex shrink-0 items-center gap-1"
+          aria-label={unlimitedHearts ? 'Unlimited hearts' : `${heartPool.hearts ?? 0} hearts left`}
+        >
+          <Heart
+            className={heartPool.empty && !unlimitedHearts ? 'h-5 w-5 text-ohmlet-ink-mute' : 'h-5 w-5 text-ohmlet-red'}
+            fill={heartPool.empty && !unlimitedHearts ? 'none' : 'currentColor'}
+          />
+          {unlimitedHearts ? (
+            <InfinityIcon className="h-5 w-5 text-ohmlet-gold-text" strokeWidth={2.4} />
+          ) : (
+            <span className="text-base font-black tabular-nums">{heartPool.hearts ?? 0}</span>
+          )}
         </div>
       </div>
 
@@ -417,7 +728,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({ lessonId, accent, le
       {/* Footer: feedback + action */}
       <div
         className={`border-t-2 px-5 py-5 transition-colors md:px-8 ${
-          checked ? (correct ? 'border-ohmlet-green bg-[#f1f9e6]' : 'border-ohmlet-red bg-[#fdece8]') : 'border-ohmlet-line bg-white'
+          checked ? (correct ? 'border-ohmlet-green bg-ohmlet-tint-green' : 'border-ohmlet-red bg-ohmlet-tint-red') : 'border-ohmlet-line bg-ohmlet-surface'
         }`}
       >
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4">
@@ -531,7 +842,7 @@ interface StepViewProps {
   revealed: Set<string>;
   setRevealed: (s: Set<string>) => void;
   correct: boolean | null;
-  onAsyncResult: (ok: boolean, message: string) => void;
+  onAsyncResult: (ok: DrawOutcome, message: string) => void;
   tileSeq: number[];
   setTileSeq: (s: number[]) => void;
   meterVal: number | null;
@@ -551,7 +862,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
           <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
           <p className="mt-4 whitespace-pre-line text-lg font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
           {step.circuitDiagram && (
-            <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={step.showCurrentFlow} className="mx-auto w-full max-w-xl" />
             </div>
           )}
@@ -586,7 +897,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
             onChange={(e) => p.setFill(e.target.value)}
             disabled={checked}
             placeholder="Type your answer"
-            className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-white px-5 py-4 text-lg font-black text-ohmlet-ink shadow-press-sm outline-none focus:border-ohmlet-gold-deep disabled:opacity-70"
+            className="mt-6 w-full rounded-2xl border-[2.5px] border-ohmlet-ink bg-ohmlet-surface px-5 py-4 text-lg font-black text-ohmlet-ink shadow-press-sm outline-none focus:border-ohmlet-gold-deep disabled:opacity-70"
           />
           {/* Hints are disabled for now: the authored ones gave the answer away.
               Re-enable here once they're rewritten as method nudges. */}
@@ -604,7 +915,7 @@ const StepView: React.FC<StepViewProps> = (p) => {
       return (
         <div className="ohmlet-rise">
           <Prompt>{'question' in step ? step.question : ''}</Prompt>
-          <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <CircuitDiagram
               circuit={step.circuitDiagram}
               clickable={!checked}
@@ -647,7 +958,7 @@ const Prompt: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Diagram: React.FC<{ circuit: string; showCurrentFlow?: boolean }> = ({ circuit, showCurrentFlow }) => (
-  <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+  <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
     <CircuitDiagram circuit={circuit} showCurrentFlow={showCurrentFlow} className="mx-auto w-full max-w-xl" />
   </div>
 );
@@ -661,9 +972,9 @@ const Option: React.FC<{
   center?: boolean;
   onClick: () => void;
 }> = ({ children, selected, reveal, wrong, disabled, center, onClick }) => {
-  let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
-  if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
-  else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
+  let look = 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
+  if (reveal) look = 'border-ohmlet-green bg-ohmlet-tint-green';
+  else if (wrong) look = 'border-ohmlet-red bg-ohmlet-tint-red';
   else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
   return (
     <button
@@ -740,9 +1051,9 @@ const ImageChoice: React.FC<{
   onClick: () => void;
 }> = ({ src, label, showLabel, selected, reveal, wrong, disabled, onClick }) => {
   const [broken, setBroken] = useState(false);
-  let look = 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
-  if (reveal) look = 'border-ohmlet-green bg-[#f1f9e6]';
-  else if (wrong) look = 'border-ohmlet-red bg-[#fdece8]';
+  let look = 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
+  if (reveal) look = 'border-ohmlet-green bg-ohmlet-tint-green';
+  else if (wrong) look = 'border-ohmlet-red bg-ohmlet-tint-red';
   else if (selected) look = 'border-ohmlet-ink bg-ohmlet-gold-soft';
   // The label is the answer, so it stays hidden until checked (kept for screen
   // readers via aria-label). If the image is missing, fall back to showing the name.
@@ -785,7 +1096,7 @@ const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & S
     <div className="ohmlet-rise">
       <h2 className="text-3xl font-black tracking-[-0.02em]">{step.title}</h2>
       <p className="mt-3 whitespace-pre-line text-base font-medium leading-relaxed text-ohmlet-ink-soft">{step.body}</p>
-      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <CircuitDiagram circuit={step.circuitDiagram!} clickable onRegionClick={show} highlightRegion={selected} className="mx-auto w-full max-w-xl" />
       </div>
       {current ? (
@@ -810,8 +1121,8 @@ const ExploreStep: React.FC<{ step: Extract<LessonStep, { type: 'teach' }> } & S
                 active
                   ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink'
                   : explored
-                  ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
-                  : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+                  ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green-deep'
+                  : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
               }`}
             >
               {h.label}
@@ -856,13 +1167,13 @@ const TrueFalseStep: React.FC<{ step: Extract<LessonStep, { type: 'true_false' }
   };
   const tint = checked
     ? correct
-      ? 'border-ohmlet-green bg-[#f1f9e6]'
-      : 'border-ohmlet-red bg-[#fdece8]'
+      ? 'border-ohmlet-green bg-ohmlet-tint-green'
+      : 'border-ohmlet-red bg-ohmlet-tint-red'
     : dx > 24 || tf === true
-    ? 'border-ohmlet-green bg-[#f1f9e6]'
+    ? 'border-ohmlet-green bg-ohmlet-tint-green'
     : dx < -24 || tf === false
-    ? 'border-ohmlet-red bg-[#fdece8]'
-    : 'border-ohmlet-ink bg-white';
+    ? 'border-ohmlet-red bg-ohmlet-tint-red'
+    : 'border-ohmlet-ink bg-ohmlet-surface';
   return (
     <div className="ohmlet-rise">
       <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Swipe or tap — true or false?</p>
@@ -941,12 +1252,12 @@ const MatchStep: React.FC<{ step: Extract<LessonStep, { type: 'match' }> } & Ste
 
   const cls = (on: boolean, sel: boolean, isWrong: boolean) =>
     on
-      ? 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-green-deep'
+      ? 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-green-deep'
       : isWrong
-      ? 'border-ohmlet-red bg-[#fdece8] text-ohmlet-red'
+      ? 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-red'
       : sel
       ? 'border-ohmlet-ink bg-ohmlet-gold-soft'
-      : 'border-ohmlet-line bg-white hover:border-ohmlet-ink';
+      : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink';
 
   return (
     <div className="ohmlet-rise">
@@ -1015,16 +1326,20 @@ const OrderStep: React.FC<{ step: Extract<LessonStep, { type: 'drag_order' }> } 
       <Prompt>{step.instruction}</Prompt>
       <ol className="mt-6 space-y-3">
         {order.map((itemIdx, pos) => {
-          const correctHere = checked && step.correctOrder[pos] === itemIdx;
-          const wrongHere = checked && step.correctOrder[pos] !== itemIdx;
+          // Painted the same way the answer is graded: by what the row SAYS. Comparing
+          // indices here would flag two interchangeable rows (Blink's two `delay(1000);`
+          // lines) red under a "Correct" banner, with nothing on screen to change.
+          const rowRight = checked && step.items[step.correctOrder[pos]] === step.items[itemIdx];
+          const correctHere = rowRight;
+          const wrongHere = checked && !rowRight;
           return (
             <li
               key={itemIdx}
               className={`flex items-center gap-3 rounded-2xl border-2 px-4 py-3 shadow-soft transition-colors ${
-                correctHere ? 'border-ohmlet-green bg-[#f1f9e6]' : wrongHere ? 'border-ohmlet-red bg-[#fdece8]' : 'border-ohmlet-line bg-white'
+                correctHere ? 'border-ohmlet-green bg-ohmlet-tint-green' : wrongHere ? 'border-ohmlet-red bg-ohmlet-tint-red' : 'border-ohmlet-line bg-ohmlet-surface'
               }`}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-xs font-black text-white">{pos + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ohmlet-ink text-xs font-black text-ohmlet-on-ink">{pos + 1}</span>
               <span className="flex-1 text-sm font-bold text-ohmlet-ink">{step.items[itemIdx]}</span>
               {!checked && (
                 <span className="flex flex-col">
@@ -1059,7 +1374,7 @@ const FillTileStep: React.FC<{ step: Extract<LessonStep, { type: 'fill_blank' }>
       <Prompt>{step.prompt}</Prompt>
       {step.circuitDiagram && <Diagram circuit={step.circuitDiagram} />}
       {/* Assembled answer */}
-      <div className="mt-6 flex min-h-[60px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-line bg-white px-3 py-3">
+      <div className="mt-6 flex min-h-[60px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-ohmlet-line bg-ohmlet-surface px-3 py-3">
         {tileSeq.length === 0 ? (
           <span className="px-1 text-sm font-semibold text-ohmlet-ink-soft">Tap tiles to build your answer</span>
         ) : (
@@ -1087,7 +1402,7 @@ const FillTileStep: React.FC<{ step: Extract<LessonStep, { type: 'fill_blank' }>
               disabled={checked || used}
               onClick={() => place(i)}
               className={`rounded-xl border-2 px-3.5 py-2 text-sm font-bold shadow-soft transition-all ${
-                used ? 'border-ohmlet-line bg-ohmlet-line/30 text-transparent' : 'border-ohmlet-ink bg-white text-ohmlet-ink hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft'
+                used ? 'border-ohmlet-line bg-ohmlet-line/30 text-transparent' : 'border-ohmlet-ink bg-ohmlet-surface text-ohmlet-ink hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft'
               }`}
             >
               {tiles[i]}
@@ -1131,7 +1446,7 @@ const DrawStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_connection' }
   return (
     <div className="ohmlet-rise">
       <Prompt>{step.instruction}</Prompt>
-      <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-6 flex justify-center rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full max-w-md">
           {drawn.map(([a, b], i) => {
             const ta = term(a);
@@ -1143,8 +1458,8 @@ const DrawStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_connection' }
             const connected = drawn.some((c) => c.includes(t.id));
             return (
               <g key={t.id} onClick={() => tap(t.id)} className={checked ? '' : 'cursor-pointer'}>
-                <circle cx={t.x} cy={t.y} r={16} fill={sel ? '#facc2e' : connected ? '#14201e' : '#fff'} stroke="#14201e" strokeWidth={3} />
-                <text x={t.x} y={t.y + 4} textAnchor="middle" fontSize={11} fontWeight={800} fill={sel || connected ? (sel ? '#14201e' : '#fff') : '#14201e'}>
+                <circle cx={t.x} cy={t.y} r={16} fill={sel ? '#facc2e' : connected ? '#14181f' : '#fff'} stroke="#14181f" strokeWidth={3} />
+                <text x={t.x} y={t.y + 4} textAnchor="middle" fontSize={11} fontWeight={800} fill={sel || connected ? (sel ? '#14181f' : '#fff') : '#14181f'}>
                   {t.label}
                 </text>
               </g>
@@ -1178,7 +1493,7 @@ const TraceStep: React.FC<{ step: Extract<LessonStep, { type: 'trace_current' }>
   return (
     <div className="ohmlet-rise">
       <Prompt>{step.question}</Prompt>
-      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <CircuitDiagram
           circuit={step.circuitDiagram}
           clickable={!checked}
@@ -1195,7 +1510,7 @@ const TraceStep: React.FC<{ step: Extract<LessonStep, { type: 'trace_current' }>
             <React.Fragment key={`${id}-${i}`}>
               {i > 0 && <span className="text-ohmlet-ink-soft">→</span>}
               <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-gold-soft px-3 py-1 text-sm font-black text-ohmlet-ink">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ohmlet-ink text-[10px] text-white">{i + 1}</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ohmlet-ink text-[10px] text-ohmlet-on-ink">{i + 1}</span>
                 {id}
               </span>
             </React.Fragment>
@@ -1220,7 +1535,7 @@ const FixStep: React.FC<{ step: Extract<LessonStep, { type: 'fix_the_circuit' }>
 }) => (
   <div className="ohmlet-rise">
     <Prompt>{step.question}</Prompt>
-    <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+    <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
       <CircuitDiagram
         circuit={step.circuitDiagram}
         clickable={!checked}
@@ -1282,9 +1597,9 @@ const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }>
           const filled = pi !== undefined;
           const correctHere = checked && filled && pi === step.correct[i];
           const wrongHere = checked && filled && pi !== step.correct[i];
-          let look = 'border-dashed border-ohmlet-line bg-white text-ohmlet-ink-soft';
-          if (correctHere) look = 'border-ohmlet-green bg-[#f1f9e6] text-ohmlet-ink';
-          else if (wrongHere) look = 'border-ohmlet-red bg-[#fdece8] text-ohmlet-ink';
+          let look = 'border-dashed border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft';
+          if (correctHere) look = 'border-ohmlet-green bg-ohmlet-tint-green text-ohmlet-ink';
+          else if (wrongHere) look = 'border-ohmlet-red bg-ohmlet-tint-red text-ohmlet-ink';
           else if (filled) look = 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink';
           return (
             <React.Fragment key={i}>
@@ -1312,7 +1627,7 @@ const BuildStep: React.FC<{ step: Extract<LessonStep, { type: 'build_to_spec' }>
                   type="button"
                   disabled={placed.length >= step.slots}
                   onClick={() => addPart(i)}
-                  className="rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2.5 text-sm font-bold text-ohmlet-ink shadow-soft transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2.5 text-sm font-bold text-ohmlet-ink shadow-soft transition-all hover:-translate-y-0.5 hover:bg-ohmlet-gold-soft disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {part}
                 </button>
@@ -1341,6 +1656,9 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
   const [eraser, setEraser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The grader could not be reached, so offer a way onward that does not
+  // pretend the drawing was checked.
+  const [unreachable, setUnreachable] = useState(false);
   const [hasInk, setHasInk] = useState(false);
 
   const init = useCallback(() => {
@@ -1388,7 +1706,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
     const p = pointFrom(e);
     ctx.save();
     ctx.setTransform(2, 0, 0, 2, 0, 0);
-    ctx.strokeStyle = eraser ? '#ffffff' : '#14201e';
+    ctx.strokeStyle = eraser ? '#ffffff' : '#14181f';
     ctx.lineWidth = eraser ? 18 : 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1426,6 +1744,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
       onAsyncResult(res.correct, `${res.feedback}${found}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Check your connection and try again.');
+      setUnreachable(true);
     } finally {
       setLoading(false);
     }
@@ -1433,7 +1752,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
 
   const toolBtn = (on: boolean) =>
     `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
-      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
     }`;
 
   return (
@@ -1441,7 +1760,7 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw it yourself</p>
       <Prompt>{step.instruction}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
-      <div className="mt-5 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-white shadow-soft">
+      <div className="mt-5 overflow-hidden rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface shadow-soft">
         <canvas
           ref={canvasRef}
           className={`block h-[300px] w-full touch-none ${checked ? 'pointer-events-none opacity-90' : 'cursor-crosshair'}`}
@@ -1478,6 +1797,15 @@ const DrawCircuitStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_circui
         </div>
       )}
       {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+      {unreachable && !checked && (
+        <button
+          type="button"
+          onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+        >
+          Carry on without checking this one
+        </button>
+      )}
     </div>
   );
 };
@@ -1494,6 +1822,9 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
   const [eraser, setEraser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The grader could not be reached, so offer a way onward that does not
+  // pretend the drawing was checked.
+  const [unreachable, setUnreachable] = useState(false);
   const [hasInk, setHasInk] = useState(false);
 
   // Size the transparent drawing canvas to overlay the circuit box exactly.
@@ -1586,6 +1917,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
       onAsyncResult(res.correct, `${res.feedback}${found}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the drawing grader. Try again.');
+      setUnreachable(true);
     } finally {
       setLoading(false);
     }
@@ -1593,7 +1925,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
 
   const toolBtn = (on: boolean) =>
     `inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-sm font-black transition-all ${
-      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink'
+      on ? 'border-ohmlet-ink bg-ohmlet-gold-soft text-ohmlet-ink' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink'
     }`;
 
   return (
@@ -1601,7 +1933,7 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Draw the fix</p>
       <Prompt>{step.instruction}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">{step.hint}</p>
-      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+      <div className="mt-5 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
         <div ref={boxRef} className="relative mx-auto w-full max-w-xl">
           <CircuitDiagram circuit={step.circuitDiagram} className="w-full" />
           <canvas
@@ -1641,6 +1973,15 @@ const DrawFixStep: React.FC<{ step: Extract<LessonStep, { type: 'draw_fix' }> } 
         </div>
       )}
       {error && <p className="mt-3 text-sm font-bold text-ohmlet-red">{error}</p>}
+      {unreachable && !checked && (
+        <button
+          type="button"
+          onClick={() => onAsyncResult('unassessed', 'The grader could not be reached, so this drawing was not checked. It will not count against you.')}
+          className="mt-2 rounded-xl border-2 border-ohmlet-line bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink-soft transition-all hover:border-ohmlet-ink hover:text-ohmlet-ink"
+        >
+          Carry on without checking this one
+        </button>
+      )}
     </div>
   );
 };
@@ -1660,9 +2001,9 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
   const r = 92;
   const ang = Math.PI * (1 - frac);
   const angT = Math.PI * (1 - (m.target - m.min) / (m.max - m.min));
-  const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14201e';
+  const needle = checked ? (correct ? '#16a34a' : '#ef4444') : '#14181f';
   const gauge = (
-    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
       <svg viewBox="0 0 240 138" className="mx-auto w-full max-w-sm">
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={10} strokeLinecap="round" />
         {Array.from({ length: 5 }).map((_, i) => {
@@ -1701,7 +2042,7 @@ const MeterStep: React.FC<{ step: Extract<LessonStep, { type: 'predict_reading' 
       {step.circuitDiagram ? (
         // Circuit and gauge side by side on wider screens (no scroll); stacked on mobile.
         <div className="mt-5 grid items-center gap-4 md:grid-cols-2">
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <CircuitDiagram circuit={step.circuitDiagram} showCurrentFlow={checked} className="mx-auto w-full" />
           </div>
           {gauge}
@@ -1745,7 +2086,7 @@ const ResistorBandStep: React.FC<{ step: Extract<LessonStep, { type: 'choose_res
       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-ohmlet-gold-deep">Set the colour bands</p>
       <Prompt>{step.question}</Prompt>
       <p className="mt-2 text-sm font-semibold text-ohmlet-ink-soft">Tap a band to change its colour, until the value matches {fmtOhms(target)}.</p>
-      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-6 shadow-soft">
+      <div className="mt-6 rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-6 shadow-soft">
         <svg viewBox="0 0 220 90" className="mx-auto w-full max-w-sm">
           <line x1={6} y1={45} x2={48} y2={45} stroke="#94a3b8" strokeWidth={3} />
           <line x1={172} y1={45} x2={214} y2={45} stroke="#94a3b8" strokeWidth={3} />

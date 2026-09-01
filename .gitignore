@@ -55,9 +55,21 @@ design/
 content/Books/
 # Personal marketing drafts / screenshots
 content/LinkedIn/
-# Session handoff scratch doc (superseded by CLAUDE.md / AGENTS.md / curriculum plan)
+# Living cross-surface handoff (local only; grab-and-upload into the Claude app).
+# Dated archival copies live in metadata/handoffs/.
 HANDOFF.md
 
 
 # live-bridge billing config (mode-specific Stripe price IDs)
 backend/live-bridge/.deploy.env
+
+# Personal task tracker (local only, like HANDOFF.md)
+FAITH.md
+
+# Signing and store keys. mobile/.gitignore already covers these for that folder;
+# this covers the repo root, because a .p8 downloads from App Store Connect
+# exactly once and a stray copy in the wrong directory is the whole risk.
+*.p8
+*.pem
+*.mobileprovision
+*.p12

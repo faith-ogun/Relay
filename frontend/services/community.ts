@@ -9,6 +9,7 @@ const apiBase = () => (import.meta.env.VITE_OHMLET_API_BASE_URL || '').trim().re
 
 export interface CommunityPost {
   id: string;
+  uid: string;
   authorName: string;
   kind: 'build' | 'win' | 'question';
   title: string;
@@ -83,6 +84,22 @@ async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
   }
 }
 
+export interface CommunityStats {
+  /** Likes this user's own posts have received. Only the server can see this. */
+  likesReceived: number;
+  posts: number;
+  comments: number;
+}
+
+/**
+ * Social counters the client cannot observe about itself. Likes RECEIVED live
+ * on other people's screens, so they are summed server-side from the caller's
+ * own posts rather than guessed at from the feed.
+ */
+export async function fetchCommunityStats(): Promise<CommunityStats | null> {
+  return api<CommunityStats>('/v1/community/stats');
+}
+
 export async function fetchFeed(): Promise<CommunityPost[]> {
   const data = await api<{ posts: CommunityPost[] }>('/v1/community/posts');
   return data?.posts ?? [];
@@ -117,7 +134,9 @@ export async function fetchChallenges(): Promise<Challenge[]> {
   return data?.challenges ?? [];
 }
 
-export async function joinChallenge(id: string): Promise<{ joined: boolean; participantCount: number } | null> {
+export async function joinChallenge(
+  id: string,
+): Promise<{ joined: boolean; firstJoin: boolean; participantCount: number } | null> {
   return api(`/v1/community/challenges/${id}/join`, { method: 'POST' });
 }
 
@@ -133,6 +152,20 @@ export async function fetchLeaderboard(): Promise<Leaderboard | null> {
 export async function reportXp(amount: number): Promise<void> {
   if (amount <= 0) return;
   await api('/v1/community/xp', { method: 'POST', body: JSON.stringify({ amount }) });
+}
+
+/** Report a post (DSA notice-and-action + store UGC requirement). */
+export async function reportPost(postId: string): Promise<{ status: string } | null> {
+  return api(`/v1/community/posts/${postId}/report`, { method: 'POST' });
+}
+
+/** Block a user so their content is hidden from you. */
+export async function blockUser(targetUid: string): Promise<{ status: string } | null> {
+  return api('/v1/community/block', { method: 'POST', body: JSON.stringify({ targetUid }) });
+}
+
+export async function unblockUser(targetUid: string): Promise<{ status: string } | null> {
+  return api('/v1/community/unblock', { method: 'POST', body: JSON.stringify({ targetUid }) });
 }
 
 /** Compact relative time, e.g. "3m", "2h", "5d". */

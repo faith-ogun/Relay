@@ -9,6 +9,11 @@ type PersistEnvelope<T> = {
   updatedAt: string;
 };
 
+/**
+ * `key` names the record. It namespaces BOTH the local cache and the server
+ * document (`/v1/state/{userId}/{key}`): two callers with different keys are
+ * fully isolated and cannot overwrite each other, on this device or any other.
+ */
 type UseOhmletUserStateOptions<T extends Record<string, unknown>> = {
   userId: string;
   key: string;
@@ -44,8 +49,11 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
   const [persistError, setPersistError] = useState<string | null>(null);
   const hydratedRef = useRef(false);
 
-  const updateState = useCallback((patch: Partial<T>) => {
-    setState((prev) => mergeState(prev, patch));
+  // Accepts a patch, or an updater derived from the latest state. The updater
+  // form matters for counters: two increments dispatched in the same tick would
+  // otherwise both read the same stale value and one would be lost.
+  const updateState = useCallback((patch: Partial<T> | ((prev: T) => Partial<T>)) => {
+    setState((prev) => mergeState(prev, typeof patch === 'function' ? patch(prev) : patch));
   }, []);
 
   useEffect(() => {
@@ -68,7 +76,7 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
       }
 
       try {
-        const remote = await loadOhmletState<PersistEnvelope<T> | T>(userId);
+        const remote = await loadOhmletState<PersistEnvelope<T> | T>(userId, key);
         if (!cancelled && remote) {
           const remoteData = (isObject(remote) && 'data' in remote ? (remote as PersistEnvelope<T>).data : remote) as Partial<T>;
           setState((prev) => mergeState(prev, remoteData));
@@ -89,7 +97,7 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
     return () => {
       cancelled = true;
     };
-  }, [defaults, storageKey, userId]);
+  }, [defaults, storageKey, userId, key]);
 
   useEffect(() => {
     if (!hydratedRef.current) return;
@@ -104,7 +112,7 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
       } catch {
         // Local storage can fail in private mode/quota conditions; ignore.
       }
-      saveOhmletState(userId, envelope).catch((err) => {
+      saveOhmletState(userId, key, envelope).catch((err) => {
         setPersistError(err instanceof Error ? err.message : 'Failed to save persisted data.');
       });
     }, 700);
@@ -112,7 +120,7 @@ export function useOhmletUserState<T extends Record<string, unknown>>({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [state, storageKey, userId]);
+  }, [state, storageKey, userId, key]);
 
   return {
     state,

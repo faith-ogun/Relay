@@ -33,13 +33,16 @@ async function main() {
   });
 
   try {
-    const [{ LESSON_CONTENT }, { CURRICULUM }, { summarizeLint }] = await Promise.all([
+    const [{ LESSON_CONTENT }, { AUTHORED_CURRICULUM }, { summarizeLint }] = await Promise.all([
       server.ssrLoadModule('/components/ohmlet/data/lessons.ts'),
       server.ssrLoadModule('/components/ohmlet/data/curriculum.ts'),
       server.ssrLoadModule('/components/ohmlet/data/lessonSchema.ts'),
     ]);
 
-    const { problems, errorCount, warnCount, lessonsWithErrors, ok } = summarizeLint(LESSON_CONTENT, CURRICULUM);
+    // AUTHORED_CURRICULUM, not CURRICULUM: the linter checks what a human wrote
+    // (142 lessons of 15-20 steps), never the session cut the app renders, whose
+    // halves would trip every "a clean run is 15 questions" rule by construction.
+    const { problems, errorCount, warnCount, lessonsWithErrors, ok } = summarizeLint(LESSON_CONTENT, AUTHORED_CURRICULUM);
     const lessonCount = Object.keys(LESSON_CONTENT).length;
 
     // Group by lesson, errors first.

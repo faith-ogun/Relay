@@ -3,6 +3,7 @@ import { AlertTriangle, Cpu, Loader2, Play, Square, Zap } from 'lucide-react';
 import { AVRRunner, CYCLES_PER_MS } from '../sim/avr';
 import { solve, toMA } from '../sim/engine';
 import { compileSketch, compilerConfigured, CompilerError, type CompileDiagnostic } from '../../../services/arduinoCompiler';
+import { ArduinoScene } from '../../ArduinoScene';
 
 const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
 
@@ -59,7 +60,17 @@ export const CodeLabView: React.FC = () => {
   useEffect(() => { potRef.current = pot; }, [pot]);
 
   const stop = () => { cancelAnimationFrame(rafRef.current); runnerRef.current = null; setStatus((s) => (s === 'running' ? 'idle' : s)); setLed13(false); setBright9(0); };
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  // Mounted flag: a compile can still be in flight when the user leaves the tab.
+  // Cancelling only the CURRENT rAF is not enough, because the awaited compile
+  // then starts a fresh loop that nothing can reach (the Stop button is gone and
+  // the loop only exits when runnerRef is null), leaving a 16MHz emulator and
+  // five setState calls per frame running on a dead component for the session.
+  const aliveRef = useRef(true);
+  useEffect(() => () => {
+    aliveRef.current = false;
+    cancelAnimationFrame(rafRef.current);
+    runnerRef.current = null;
+  }, []);
 
   const run = async () => {
     if (status === 'running') { stop(); return; }
@@ -67,6 +78,7 @@ export const CodeLabView: React.FC = () => {
     setStatus('compiling'); setErrors([]); setMessage(''); setSerial('');
     try {
       const res = await compileSketch(code);
+      if (!aliveRef.current) return; // left the tab mid-compile: never start the loop
       if (!res.ok || !res.hex) { setStatus('error'); setErrors(res.errors || []); setMessage(res.errors?.length ? '' : 'Compile failed.'); return; }
       const runner = new AVRRunner(res.hex);
       runnerRef.current = runner;
@@ -88,6 +100,7 @@ export const CodeLabView: React.FC = () => {
       };
       rafRef.current = requestAnimationFrame(loop);
     } catch (e) {
+      if (!aliveRef.current) return; // no state updates on an unmounted component
       setStatus('error');
       setMessage(e instanceof CompilerError ? e.message : 'Something went wrong compiling your sketch.');
     }
@@ -117,9 +130,9 @@ export const CodeLabView: React.FC = () => {
               {status === 'compiling' ? <Loader2 className="h-4 w-4 animate-spin" /> : running ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               {status === 'compiling' ? 'Compiling…' : running ? 'Stop' : 'Compile & Run'}
             </button>
-            <span className="font-mono text-xs font-bold text-slate-400">sketch.ino</span>
+            <span className="font-mono text-xs font-bold text-ohmlet-ink-mute">sketch.ino</span>
           </div>
-          <Suspense fallback={<div className="flex h-[360px] items-center justify-center text-slate-500"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+          <Suspense fallback={<div className="flex h-[360px] items-center justify-center text-ohmlet-ink-mute"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
             <MonacoEditor height="360px" defaultLanguage="cpp" value={code} onChange={(v) => setCode(v ?? '')} theme="vs-dark"
               options={{ minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false, tabSize: 2, padding: { top: 12 } }} />
           </Suspense>
@@ -133,14 +146,17 @@ export const CodeLabView: React.FC = () => {
 
         {/* board + serial */}
         <div className="flex flex-col gap-4">
-          <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
-            <Board led13={led13} bright9={bright9} pressed={pressed} onPress={setPressed} pot={pot} />
+          <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
+            <ArduinoScene
+              led13={led13} bright9={bright9} pressed={pressed} onPress={setPressed} pot={pot}
+              powered={running} serialActive={running && serial.length > 0}
+            />
             <div className="flex items-center gap-3 border-t-2 border-ohmlet-line bg-ohmlet-cream px-4 py-2.5">
               <span className="whitespace-nowrap text-xs font-black uppercase tracking-wide text-ohmlet-ink-soft">A0 knob</span>
               <input type="range" min={0} max={1023} value={pot} onChange={(e) => setPot(+e.target.value)} className="w-full accent-ohmlet-gold-deep" />
               <span className="w-10 text-right text-xs font-black tabular-nums text-ohmlet-ink">{pot}</span>
             </div>
-            <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-white">
+            <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-3.5 text-ohmlet-on-ink">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-4 w-4 text-ohmlet-ink" /></span>
               <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">
                 {running ? <>Live. Pin 13 {led13 ? <>is <b>HIGH</b> ({ledMa.toFixed(1)} mA)</> : 'is LOW'}; pin 9 sits at <b>{Math.round(bright9 * 100)}%</b> brightness from the knob. Hold the button for pin 2.</>
@@ -148,55 +164,12 @@ export const CodeLabView: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
             <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Serial monitor</h3>
             <pre className="mt-2 h-28 overflow-auto whitespace-pre-wrap rounded-xl bg-ohmlet-ink px-3 py-2 font-mono text-xs leading-relaxed text-[#84cc30]">{serial || (running ? '' : '— nothing yet —')}</pre>
           </div>
         </div>
       </div>
     </div>
-  );
-};
-
-const Board: React.FC<{ led13: boolean; bright9: number; pressed: boolean; onPress: (p: boolean) => void; pot: number }> = ({ led13, bright9, pressed, onPress, pot }) => {
-  const a = (pot / 1023 - 0.5) * 1.5 * Math.PI; // knob wiper angle, ±135°
-  return (
-    <svg viewBox="0 0 480 260" className="block w-full"
-      style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.03) 1px,transparent 1px)', backgroundSize: '20px 20px' }}>
-      <rect x={40} y={70} width={400} height={120} rx={14} fill="#0c6b5e" stroke="#14201e" strokeWidth={2.5} />
-      <rect x={56} y={84} width={66} height={42} rx={5} fill="#0a4a41" stroke="#083c35" strokeWidth={2} />
-      <text x={89} y={109} textAnchor="middle" fontSize={11} fontWeight={800} fill="#cfe9e3">UNO</text>
-      {/* pin-13 LED (digital) */}
-      <g transform="translate(190,48)">
-        <circle cx={0} cy={0} r={20} fill="#facc2e" opacity={led13 ? 0.85 : 0} />
-        <circle cx={0} cy={0} r={11} fill={led13 ? '#ffe08a' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 13</text>
-      </g>
-      {/* pin-9 LED (PWM brightness) */}
-      <g transform="translate(290,48)">
-        <circle cx={0} cy={0} r={20} fill="#549cf0" opacity={(bright9 * 0.85).toFixed(2)} />
-        <circle cx={0} cy={0} r={11} fill={bright9 > 0.04 ? '#bcd8fb' : '#7c8b88'} stroke="#14201e" strokeWidth={2} />
-        <line x1={0} y1={11} x2={0} y2={68} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 9 · {Math.round(bright9 * 100)}%</text>
-      </g>
-      {/* A0 potentiometer */}
-      <g transform="translate(80,228)">
-        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">A0</text>
-        <circle cx={0} cy={0} r={20} fill="#f1f5f9" stroke="#14201e" strokeWidth={2.5} />
-        <line x1={0} y1={0} x2={Math.sin(a) * 14} y2={-Math.cos(a) * 14} stroke="#14201e" strokeWidth={3} strokeLinecap="round" />
-      </g>
-      {/* pin-2 button */}
-      <g transform="translate(400,228)">
-        <line x1={0} y1={-20} x2={0} y2={-58} stroke="#14201e" strokeWidth={3} />
-        <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14201e">pin 2</text>
-        <circle cx={0} cy={0} r={20} fill={pressed ? '#e8db11' : '#f1f5f9'} stroke="#14201e" strokeWidth={2.5} />
-        <circle cx={0} cy={0} r={12} fill={pressed ? '#cbb800' : '#cdd6d3'} stroke="#14201e" strokeWidth={2} />
-        <rect x={-24} y={-24} width={48} height={48} rx={10} fill="transparent" className="cursor-pointer"
-          onMouseDown={() => onPress(true)} onMouseUp={() => onPress(false)} onMouseLeave={() => onPress(false)}
-          onTouchStart={(e) => { e.preventDefault(); onPress(true); }} onTouchEnd={() => onPress(false)} />
-      </g>
-    </svg>
   );
 };

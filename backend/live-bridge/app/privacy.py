@@ -6,10 +6,21 @@ Art. 17 erasure), which in practice also satisfies CCPA/CPRA (California), LGPD
 rights. Both endpoints derive the UID from the verified token, never the client,
 so a user can only export or delete THEIR OWN data.
 
-Lawful-retention note (GDPR Art. 17(3)(b)): payment/tax records are exempt from
-erasure. Deletion cancels the subscription and removes our personal data + the
-Firebase Auth user; Stripe retains the transaction records it is legally required
-to keep. That is compliant, not a gap.
+Erasure covers: the plan, learning state, Stripe customer, live budget, usage
+records, every community artefact (posts, comments, reactions, challenge
+memberships, leaderboard rows, blocks both by and against the user), the consent
+record, interview reports, 3D twins and their files in Cloud Storage, and
+finally the Firebase Auth user, which revokes every session.
+
+Two things are deliberately kept:
+
+  - Payment and tax records (GDPR Art. 17(3)(b)). Deletion cancels the
+    subscription and deletes the Stripe customer; Stripe retains the invoices it
+    is legally required to keep. Compliant, not a gap.
+  - Moderation reports the user filed, with the reporter identity stripped. They
+    are the DSA notice-and-action audit trail, and deleting them outright would
+    let someone erase their reporting history by deleting an account. This is the
+    "or anonymise" half of what the privacy policy promises.
 """
 
 from __future__ import annotations
@@ -21,7 +32,11 @@ from datetime import datetime, timezone
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+import achievements as achievements_mod
+import checkpoints as checkpoints_mod
+import community as community_mod
 import entitlements
+import hearts as hearts_mod
 import obs
 from auth import _ensure_app, require_claims
 
@@ -30,7 +45,51 @@ logger = logging.getLogger("ohmlet.privacy")
 router = APIRouter(prefix="/v1/me", tags=["privacy"])
 
 STATE_COLLECTION = os.getenv("OHMLET_STATE_COLLECTION", "ohmlet_state")
+# Keyed state records hang off the state document as a subcollection. Firestore
+# neither returns them with their parent nor deletes them with it, so both the
+# export and the erasure have to reach them explicitly.
+STATE_KEYS_SUBCOLLECTION = os.getenv("OHMLET_STATE_KEYS_SUBCOLLECTION", "keys")
 USAGE_COLLECTION = os.getenv("OHMLET_USAGE_COLLECTION", "usage_sessions")
+
+# Everything else that carries a uid. Erasure previously covered only the plan,
+# state, Stripe customer, live budget and usage records, so a deleted account
+# left its community posts, comments, reactions, challenge memberships,
+# leaderboard rows, blocks, consent record, interview reports and 3D twins
+# behind, each still tagged with the uid. The policy says we "delete or
+# anonymise your personal data", and that was not being met.
+#
+# Each entry is (collection, uid-field). A None field means the uid is the
+# document id itself.
+_UID_FIELD_COLLECTIONS: tuple[tuple[str, str], ...] = (
+    (os.getenv("OHMLET_POSTS_COLLECTION", "community_posts"), "uid"),
+    (os.getenv("OHMLET_COMMENTS_COLLECTION", "community_comments"), "uid"),
+    (os.getenv("OHMLET_REACTIONS_COLLECTION", "community_reactions"), "uid"),
+    (os.getenv("OHMLET_CHALLENGE_MEMBERS_COLLECTION", "community_challenge_members"), "uid"),
+    (os.getenv("OHMLET_CHALLENGE_ENTRIES_COLLECTION", "community_challenge_entries"), "uid"),
+    (os.getenv("OHMLET_CHALLENGE_HISTORY_COLLECTION", "community_challenge_history"), "uid"),
+    (os.getenv("OHMLET_CHALLENGE_RECORDS_COLLECTION", "community_challenge_records"), "uid"),
+    (os.getenv("OHMLET_LEADERBOARD_COLLECTION", "community_leaderboard"), "uid"),
+    (os.getenv("OHMLET_BLOCKS_COLLECTION", "community_blocks"), "uid"),
+    (os.getenv("OHMLET_INTERVIEWS_COLLECTION", "ohmlet_interviews"), "uid"),
+    (os.getenv("OHMLET_TWINS_COLLECTION", "ohmlet_twins"), "uid"),
+    (os.getenv("OHMLET_TWIN_SHARES_COLLECTION", "ohmlet_twin_shares"), "uid"),
+    (os.getenv("OHMLET_EVENTS_COLLECTION", "ohmlet_events"), "uid"),
+)
+
+# Blocks the user is the TARGET of belong to the people who set them: those stay,
+# but the pointer to a person who no longer exists is scrubbed.
+_BLOCKS_COLLECTION = os.getenv("OHMLET_BLOCKS_COLLECTION", "community_blocks")
+
+# Consent records are keyed by the child's uid.
+_CONSENT_COLLECTION = os.getenv("OHMLET_CONSENT_COLLECTION", "ohmlet_consent")
+
+# Moderation reports are NOT deleted. They are the notice-and-action audit trail
+# the DSA requires us to keep, and deleting them would let someone erase their
+# own reporting history by deleting an account. The identity is removed instead,
+# which is the "or anonymise" half of what the policy promises.
+_REPORTS_COLLECTION = os.getenv("OHMLET_REPORTS_COLLECTION", "community_reports")
+
+TWINS_BUCKET = os.getenv("OHMLET_TWINS_BUCKET", "ohmlet-app-twins")
 
 if not stripe.api_key:
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
@@ -70,6 +129,118 @@ def _budget_docs(client, uid: str):
 
 
 # ── Export: everything we hold about the user (Art. 15 + 20) ──
+def _purge_by_field(client, collection: str, field: str, uid: str) -> int:
+    """Delete every document in `collection` where `field == uid`. Returns the count."""
+    from google.cloud.firestore_v1.base_query import FieldFilter
+
+    removed = 0
+    try:
+        for snap in client.collection(collection).where(filter=FieldFilter(field, "==", uid)).stream():
+            snap.reference.delete()
+            removed += 1
+    except Exception as exc:
+        # One collection failing must not abandon the rest of the erasure; the
+        # miss is logged loudly because it leaves personal data behind.
+        logger.error("erasure failed for %s.%s=%s: %s", collection, field, uid, exc)
+    return removed
+
+
+def _anonymise_reports(client, uid: str) -> int:
+    """Strip the reporter identity from moderation reports, keeping the record.
+
+    The report itself is a legal audit trail (DSA notice-and-action) and is
+    exempt from erasure under Art. 17(3). What is not needed is who filed it, so
+    the uid is replaced. The document id still contains the uid, so the row is
+    rewritten under a fresh id and the original removed.
+    """
+    changed = 0
+    try:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        col = client.collection(_REPORTS_COLLECTION)
+        for snap in col.where(filter=FieldFilter("reporterUid", "==", uid)).stream():
+            data = snap.to_dict() or {}
+            data["reporterUid"] = "deleted-account"
+            data["reporterErasedAt"] = _iso_now()
+            col.document().set(data)
+            snap.reference.delete()
+            changed += 1
+    except Exception as exc:
+        logger.error("report anonymisation failed for %s: %s", uid, exc)
+    return changed
+
+
+def _purge_blocks_targeting(client, uid: str) -> int:
+    """Remove block rows that POINT AT this user.
+
+    The block itself belongs to the person who set it, so it is not their data
+    to lose; but it names someone who no longer exists, so the row goes.
+    """
+    return _purge_by_field(client, _BLOCKS_COLLECTION, "targetUid", uid)
+
+
+def _state_keys(client, uid: str):
+    """The subcollection holding the learner's keyed state records."""
+    return client.collection(STATE_COLLECTION).document(uid).collection(STATE_KEYS_SUBCOLLECTION)
+
+
+def _export_state_keys(client, uid: str) -> dict:
+    """Every keyed state record, as `{key: envelope}`.
+
+    Firestore does not return a subcollection with its parent document, so
+    without this the export would show less than the erasure deletes.
+    """
+    try:
+        return {snap.id: (snap.to_dict() or {}) for snap in _state_keys(client, uid).stream()}
+    except Exception as exc:
+        logger.warning("keyed state export failed for %s: %s", uid, exc)
+        return {}
+
+
+def _purge_state_keys(client, uid: str) -> int:
+    """Delete every keyed state record. Returns the count.
+
+    A Firestore delete is not recursive: removing the parent state document on
+    its own would leave these readable by full path with nothing pointing at
+    them, which is personal data surviving an erasure request.
+    """
+    removed = 0
+    try:
+        for ref in _state_keys(client, uid).list_documents():
+            ref.delete()
+            removed += 1
+    except Exception as exc:
+        logger.error("keyed state delete failed for %s: %s", uid, exc)
+    return removed
+
+
+def _purge_twin_objects(uid: str) -> int:
+    """Delete the user's 3D twin files from Cloud Storage.
+
+    Twin GLBs are stored under `twins/<uid>/`, so erasure is a prefix delete.
+    Firestore rows alone are not enough: the models themselves are personal data
+    (they are a capture of the learner's own bench).
+    """
+    removed = 0
+    try:
+        from google.cloud import storage
+
+        bucket = storage.Client().bucket(TWINS_BUCKET)
+        for blob in bucket.list_blobs(prefix=f"twins/{uid}/"):
+            blob.delete()
+            removed += 1
+    except Exception as exc:
+        # The bucket may not exist yet in an environment where the reporter has
+        # never been deployed. That is not a reason to fail the deletion, but it
+        # is a reason to be loud about it.
+        logger.error("twin object purge failed for %s: %s", uid, exc)
+    return removed
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 @router.get("/export")
 def export_data(claims: dict = Depends(require_claims)) -> dict:
     uid = claims["uid"]
@@ -84,9 +255,14 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
         "usageSessions": [],
         "billing": {},
         "notice": (
-            "This is all personal data Ohmlet holds about you. Payment and tax "
-            "records held by our payment processor (Stripe) are retained as "
-            "required by law and are not included here."
+            "This is all personal data Ohmlet holds about you, including your "
+            "community posts and comments, challenge enrolments, challenge "
+            "results and rewards, league standings, interview reports and 3D "
+            "twins. Payment and tax records "
+            "held by our payment processor (Stripe) are retained as required by "
+            "law and are not included here. Moderation reports you filed are "
+            "also excluded: they are a legal audit trail, and your identity is "
+            "removed from them if you delete your account."
         ),
     }
 
@@ -101,6 +277,25 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
     if state_snap.exists:
         out["progress"] = state_snap.to_dict()
 
+    # The rest of the learner's state: one envelope per key (achievement
+    # counters today).
+    out["progressKeys"] = _export_state_keys(client, uid)
+
+    hearts_snap = client.collection(hearts_mod.HEARTS_COLLECTION).document(uid).get()
+    if hearts_snap.exists:
+        out["hearts"] = hearts_snap.to_dict()
+
+    cp_snap = client.collection(checkpoints_mod.CHECKPOINTS_COLLECTION).document(uid).get()
+    if cp_snap.exists:
+        out["checkpoints"] = cp_snap.to_dict()
+
+    # The durable record of what the learner has EARNED, with the instant each
+    # medal was stamped. Personal data, and the one copy of it: exported here and
+    # deleted below, so the access right and the erasure right see the same thing.
+    ach_snap = client.collection(achievements_mod.ACHIEVEMENTS_COLLECTION).document(uid).get()
+    if ach_snap.exists:
+        out["achievements"] = ach_snap.to_dict()
+
     for d in _budget_docs(client, uid):
         snap = d.get()
         if snap.exists:
@@ -111,6 +306,27 @@ def export_data(claims: dict = Depends(require_claims)) -> dict:
             out["usageSessions"].append(doc.to_dict())
     except Exception as exc:
         logger.warning("usage export failed for %s: %s", uid, exc)
+
+    # The export must cover the same ground the erasure does, or the two rights
+    # disagree: a user could delete data they were never shown. Everything the
+    # deletion reaches by uid is exported here under its collection name.
+    from google.cloud.firestore_v1.base_query import FieldFilter
+
+    for collection, field in _UID_FIELD_COLLECTIONS:
+        rows: list[dict] = []
+        try:
+            for snap in client.collection(collection).where(filter=FieldFilter(field, "==", uid)).stream():
+                rows.append({"id": snap.id, **(snap.to_dict() or {})})
+        except Exception as exc:
+            logger.warning("export failed for %s: %s", collection, exc)
+        out[collection] = rows
+
+    try:
+        consent_snap = client.collection(_CONSENT_COLLECTION).document(uid).get()
+        out[_CONSENT_COLLECTION] = consent_snap.to_dict() if consent_snap.exists else {}
+    except Exception as exc:
+        logger.warning("consent export failed for %s: %s", uid, exc)
+        out[_CONSENT_COLLECTION] = {}
 
     obs.audit("privacy.data_exported", uid=uid)
     return out
@@ -141,11 +357,17 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
         except Exception as exc:
             logger.warning("stripe cleanup failed for %s (continuing erasure): %s", uid, exc)
 
-    # 2) Erase our personal data across every collection.
+    # 2) Erase our personal data across every collection. Keyed state records
+    #    first: they are children of the state document, which is about to go.
+    state_keys_removed = _purge_state_keys(client, uid)
+
     deleted = []
     for coll, doc_id in (
         (entitlements.PLANS_COLLECTION, uid),
         (STATE_COLLECTION, uid),
+        (hearts_mod.HEARTS_COLLECTION, uid),
+        (checkpoints_mod.CHECKPOINTS_COLLECTION, uid),
+        (achievements_mod.ACHIEVEMENTS_COLLECTION, uid),
         (entitlements.CUSTOMERS_COLLECTION, customer),
     ):
         if doc_id:
@@ -167,6 +389,40 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
     except Exception as exc:
         logger.warning("usage delete failed for %s: %s", uid, exc)
 
+    # Everything the original erasure missed: the community footprint, the
+    # consent record, interview reports, and the 3D twins with their files.
+    # Must precede the purge loop: the entries below are the only index into
+    # which closed challenge instances copied this uid into their frozen
+    # standings, and once they are gone the standings cannot be found.
+    purged: dict[str, int] = {}
+    if state_keys_removed:
+        purged[f"{STATE_COLLECTION}/{STATE_KEYS_SUBCOLLECTION}"] = state_keys_removed
+    standings_scrubbed = community_mod.forget_uid(client, uid)
+    if standings_scrubbed:
+        purged["challenge_standings:anonymised"] = standings_scrubbed
+
+    for collection, field in _UID_FIELD_COLLECTIONS:
+        count = _purge_by_field(client, collection, field, uid)
+        if count:
+            purged[collection] = count
+
+    blocks_targeting = _purge_blocks_targeting(client, uid)
+    if blocks_targeting:
+        purged[f"{_BLOCKS_COLLECTION}:targeting"] = blocks_targeting
+
+    try:
+        client.collection(_CONSENT_COLLECTION).document(uid).delete()
+        deleted.append(_CONSENT_COLLECTION)
+    except Exception as exc:
+        logger.error("consent record delete failed for %s: %s", uid, exc)
+
+    twin_objects = _purge_twin_objects(uid)
+    if twin_objects:
+        purged["twin_objects"] = twin_objects
+
+    # Retained, with the identity stripped: see _anonymise_reports.
+    anonymised_reports = _anonymise_reports(client, uid)
+
     # 3) Remove the identity itself (revokes all sessions).
     try:
         _ensure_app()
@@ -178,6 +434,16 @@ async def delete_account(request: Request, claims: dict = Depends(require_claims
         logger.error("auth user delete failed for %s: %s", uid, exc)
         raise HTTPException(502, "Could not fully delete the account; please contact support.") from exc
 
-    obs.audit("privacy.account_deleted", uid=uid, collections=deleted, hadStripeCustomer=bool(customer))
-    logger.info("account erased: uid=%s collections=%s", uid, deleted)
-    return {"status": "deleted", "deletedAt": datetime.now(timezone.utc).isoformat()}
+    obs.audit(
+        "privacy.account_deleted",
+        uid=uid,
+        collections=deleted,
+        purged=purged,
+        anonymisedReports=anonymised_reports,
+        hadStripeCustomer=bool(customer),
+    )
+    logger.info(
+        "account erased: uid=%s collections=%s purged=%s anonymisedReports=%d",
+        uid, deleted, purged, anonymised_reports,
+    )
+    return {"status": "deleted", "deletedAt": _iso_now()}

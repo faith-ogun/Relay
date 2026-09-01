@@ -1,0 +1,89 @@
+import type { LessonScript } from '../types';
+
+/* Renamed from `time-constant` on 2026-08-29. Every file name in the pipeline comes
+ * from `id`, and films.py signs v1/<skillId>/ohmlet-lesson-<skillId>-...,
+ * so an id that is not the skill id publishes to an address the server
+ * never asks for. This film and one other 404ed in production for exactly
+ * that reason, and check-films.mjs now refuses the mismatch. */
+
+/**
+ * Unit 6, Capacitors, RC & Timing. Checkpoint for "Charging & the Time Constant".
+ *
+ * The clearest case in the whole curriculum for video: the subject IS time. A
+ * still diagram of a charging curve asks a learner to imagine the motion. Here
+ * the curve draws itself at the speed the narration describes, and the 63% mark
+ * arrives exactly when the words do.
+ */
+export const rcCharging: LessonScript = {
+  id: 'rc-charging',
+  title: 'Charging and the Time Constant',
+  unitTitle: 'Capacitors, RC & Timing',
+  unitId: 'capacitors-rc',
+  skillId: 'rc-charging',
+  skillTitle: 'Charging & the Time Constant',
+  accent: '#549cf0',
+  segments: [
+    { text: 'A capacitor does not fill up instantly. How long it takes is something you choose.',
+      scene: { kind: 'title' } },
+    { text: 'Here is the circuit. A supply, a resistor, and a capacitor to ground.',
+      scene: { kind: 'circuit', variant: 'rc', flow: false, label: 'Supply, resistor, capacitor' } },
+    { text: 'Close the switch and charge starts moving onto the capacitor through the resistor.',
+      scene: { kind: 'circuit', variant: 'rc', flow: true, label: 'Charging begins' } },
+    { text: 'The resistor is what makes this take time. It limits how fast charge can arrive.',
+      scene: { kind: 'circuit', variant: 'rc', flow: true, highlight: 'resistor', label: 'The resistor sets the pace' } },
+    { text: 'Watch the voltage across the capacitor as it fills.',
+      scene: { kind: 'plot', upTo: 0 } },
+    { text: 'It rises quickly at first, then slower, then slower still. It never quite gets a straight line.',
+      scene: { kind: 'plot', upTo: 0.6 } },
+    { text: 'That shape has a name. It is an exponential curve, and every capacitor charges this way.',
+      scene: { kind: 'plot', upTo: 1 } },
+    { text: 'Why does it slow down? Because the capacitor pushes back harder as it fills.',
+      scene: { kind: 'statement', lines: ['It pushes back', 'as it fills'] } },
+    { text: 'At the start there is a big difference between the supply and the capacitor, so charge rushes in.',
+      scene: { kind: 'plot', upTo: 0.2, marker: 'Big gap, fast flow' } },
+    { text: 'Near the end that difference is tiny, so barely any current flows and the last stretch crawls.',
+      scene: { kind: 'plot', upTo: 0.95, marker: 'Small gap, slow flow' } },
+    { text: 'Now the number that matters. Multiply the resistance by the capacitance.',
+      scene: { kind: 'formula', expr: 'T = R x C' } },
+    { text: 'Ohms times farads gives you seconds. That result is called the time constant, written as tau.',
+      scene: { kind: 'formula', expr: 'ohms x farads = seconds', note: 'This is tau' } },
+    { text: 'Ten kilohms and one hundred microfarads gives one second.',
+      scene: { kind: 'formula', expr: '10kΩ x 100µF = 1 second' } },
+    { text: 'After one time constant, the capacitor is not half charged. It is sixty three percent charged.',
+      scene: { kind: 'plot', upTo: 0.63, marker: '1 tau = 63%' } },
+    { text: 'Sixty three percent is not an arbitrary figure. It falls out of the mathematics of the curve.',
+      scene: { kind: 'statement', lines: ['63% is not', 'arbitrary'] } },
+    { text: 'After two time constants, eighty six percent.',
+      scene: { kind: 'plot', upTo: 0.86, marker: '2 tau = 86%' } },
+    { text: 'After three, ninety five. After five, over ninety nine, and we call that full.',
+      scene: { kind: 'plot', upTo: 0.993, marker: '5 tau = full' } },
+    { text: 'So the practical rule is five time constants to charge, and five to discharge again.',
+      scene: { kind: 'statement', lines: ['Five tau', 'to charge'] } },
+    { text: 'This is how you design a delay. Not by guessing at a capacitor, but by choosing tau.',
+      scene: { kind: 'statement', lines: ['Choose tau,', 'not a component'] } },
+    { text: 'Want half a second? Pick a resistor and a capacitor whose product is nought point five.',
+      scene: { kind: 'formula', expr: '47kΩ x 10µF = 0.47s', note: 'Close enough to half a second' } },
+    { text: 'Notice you have two dials for the same result. Big resistor and small capacitor, or the reverse.',
+      scene: { kind: 'compare', left: 'Big R, small C', right: 'Small R, big C', caption: 'Same tau, different circuit' } },
+    { text: 'They are not equivalent in practice. A larger resistor draws less current, which matters on a battery.',
+      scene: { kind: 'statement', lines: ['Larger R,', 'less current'] } },
+    { text: 'A larger capacitor is physically bigger, costs more, and leaks more. Real trade-offs, not maths.',
+      scene: { kind: 'compare', left: 'Cheaper, smaller', right: 'Bigger, leakier', caption: 'The trade you are actually making' } },
+    { text: 'One warning. Discharging follows the same curve downward, and it uses the same tau.',
+      scene: { kind: 'plot', upTo: 1, marker: 'Down is the same shape' } },
+    { text: 'A capacitor you charged through ten kilohms holds its charge after you remove power.',
+      scene: { kind: 'statement', lines: ['It still holds', 'charge'] } },
+    { text: 'At low voltages that is harmless. At high voltages it is how people get hurt by an unplugged device.',
+      scene: { kind: 'statement', lines: ['Unplugged', 'is not empty'] } },
+    { text: 'Three things to take with you.',
+      scene: { kind: 'recap', items: [] } },
+    { text: 'One. Tau equals R times C, and it comes out in seconds.',
+      scene: { kind: 'recap', items: ['Tau = R x C, in seconds'] } },
+    { text: 'Two. Sixty three percent after one tau, and effectively full after five.',
+      scene: { kind: 'recap', items: ['Tau = R x C, in seconds', '63% at one tau, full at five'] } },
+    { text: 'Three. To design a delay, choose tau first and then pick parts that multiply to it.',
+      scene: { kind: 'recap', items: ['Tau = R x C, in seconds', '63% at one tau, full at five', 'Choose tau, then choose parts'] } },
+    { text: 'Go and build one, and watch an LED fade up on its own.',
+      scene: { kind: 'outro' } },
+  ],
+};

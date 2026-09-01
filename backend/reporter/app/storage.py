@@ -21,6 +21,7 @@ logger = logging.getLogger("ohmlet.reporter.storage")
 
 TWINS_BUCKET = os.getenv("OHMLET_TWINS_BUCKET", "ohmlet-app-twins")
 TWINS_COLLECTION = os.getenv("OHMLET_TWINS_COLLECTION", "ohmlet_twins")
+SHARES_COLLECTION = os.getenv("OHMLET_TWIN_SHARES_COLLECTION", "ohmlet_twin_shares")
 GLB_CONTENT_TYPE = "model/gltf-binary"
 
 
@@ -103,6 +104,51 @@ def get_record(uid: str, twin_id: str) -> Optional[dict]:
     if data.get("uid") != uid:
         return None
     return data
+
+
+# ── Public sharing (#79) ──
+def create_share(uid: str, twin_id: str) -> str:
+    """Make a twin publicly shareable; returns a stable, unguessable share id.
+    Idempotent: re-sharing an already-shared twin returns the existing id."""
+    import secrets
+
+    rec = get_record(uid, twin_id)
+    if not rec:
+        raise ValueError("twin not found")
+    existing = rec.get("shareId")
+    if existing:
+        return existing
+    share_id = secrets.token_urlsafe(9)
+    _firestore().collection(SHARES_COLLECTION).document(share_id).set(
+        {"shareId": share_id, "uid": uid, "twinId": twin_id, "createdAt": _now()}
+    )
+    update_record(twin_id, {"shared": True, "shareId": share_id})
+    return share_id
+
+
+def resolve_share(share_id: str) -> Optional[dict]:
+    """Public lookup: a share id -> {uid, twinId}, or None. The unguessable id is the
+    access control; nothing about the owner is exposed to the caller."""
+    snap = _firestore().collection(SHARES_COLLECTION).document(share_id).get()
+    if not snap.exists:
+        return None
+    data = snap.to_dict() or {}
+    if data.get("uid") and data.get("twinId"):
+        return {"uid": data["uid"], "twinId": data["twinId"]}
+    return None
+
+
+def clear_share(uid: str, twin_id: str) -> None:
+    rec = get_record(uid, twin_id)
+    if not rec:
+        return
+    share_id = rec.get("shareId")
+    if share_id:
+        try:
+            _firestore().collection(SHARES_COLLECTION).document(share_id).delete()
+        except Exception as exc:
+            logger.info("share delete no-op for %s: %s", share_id, exc)
+    update_record(twin_id, {"shared": False, "shareId": None})
 
 
 def list_records(uid: str, limit: int = 50) -> list[dict]:

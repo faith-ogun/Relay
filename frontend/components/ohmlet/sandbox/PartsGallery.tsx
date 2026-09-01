@@ -54,7 +54,7 @@ const PARTS: Part[] = [
 ];
 
 const PartTile: React.FC<{ part: Part }> = ({ part }) => (
-  <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-ink bg-white shadow-press-sm">
+  <div className="overflow-hidden rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface shadow-press-sm">
     <div className="h-56 w-full bg-gradient-to-b from-[#f8fafc] to-[#e9eef5]">
       <Canvas
         shadows
@@ -98,7 +98,7 @@ export const PartsGallery: React.FC<{ onBack: () => void }> = ({ onBack }) => (
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-white px-3.5 py-1.5 text-sm font-extrabold text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
+        className="inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3.5 py-1.5 text-sm font-extrabold text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={2.5} /> Back
       </button>

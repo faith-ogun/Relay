@@ -61,9 +61,18 @@ def uid_from_bearer(authorization: str | None) -> str:
 
 
 def is_admin(decoded: dict) -> bool:
-    """Owner allowlist for now; hardens to a custom claim later (#56)."""
-    email = (decoded.get("email") or "").lower()
-    return bool(decoded.get("admin")) or email in ADMIN_EMAILS
+    """Admin via a trusted custom claim, or a VERIFIED owner-allowlist email.
+
+    The email path requires `email_verified`: without it, anyone could register
+    an unverified account on an allowlisted address that has no Firebase user
+    yet (a Workspace alias, say) and be handed admin. The custom claim is the
+    real mechanism; the allowlist is the bootstrap for the owner's own account.
+    """
+    if bool(decoded.get("admin")):
+        return True
+    if not decoded.get("email_verified"):
+        return False
+    return (decoded.get("email") or "").lower() in ADMIN_EMAILS
 
 
 # ── FastAPI dependencies ──

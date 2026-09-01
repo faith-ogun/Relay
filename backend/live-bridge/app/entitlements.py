@@ -26,20 +26,103 @@ logger = logging.getLogger("ohmlet.entitlements")
 
 VALID_PLANS = ("free", "pro", "max")
 
-# Monthly live-tutor budget per plan (minutes). These MATCH the public pricing
-# page and the business brief (Free 60 min, Pro 10 hr, Max 30 hr) and are the
-# real, server-enforced spend ceiling — no plan is unlimited.
+# Monthly live-tutor budget per plan (minutes).
 #
-# Cost basis (instrumented in usage_meter.py, #17): a blended ~$2.50-4.50 per
-# active tutor-hour (~$0.037/min audio + snapshot vision + routed Pro calls). At
-# ~$3/hr a full Free month is ~$3 (funnel cost), a capped Pro month ~$30 (the
-# heavy-user ceiling), a capped Max month ~$90 (priced to clear it). Deliberately
-# conservative until real billing data lands (#19); every value is env-tunable so
-# caps can be tightened without a deploy. Nothing here exceeds the page's promise.
+# REPRICED on 2026-09-01: Pro 240 -> 150 min ($15.99/$143.99 -> $12.99/$77.99),
+# Max 540 -> 300 min ($34.99/$324.99 -> $24.99/$149.99). Both annuals are now
+# sold at a flat 50% off the monthly price ($6.50/mo and $12.50/mo respectively).
+# Faith's call, on the arithmetic below.
+#
+# The cost of a paid minute (usage_meter.py's own rates):
+#
+#     audio      $0.037 / min
+#     video      $0.012 / min   (1 frame/sec at $0.0002)
+#     tokens     ~$0.004 / min amortised, from Pro-routed tool calls
+#     ---------------------------------
+#     TOTAL      ~$0.053 / min
+#
+# $0.053/min is a conservative PLANNING figure, not a measured one. Google's
+# published Live API rates imply closer to $0.0385/min, but the Live API
+# re-bills accumulated session context on every turn of a long session, so the
+# real cost could land above either number. Nobody has checked this against
+# actual Vertex AI billing yet — do that within the first months of real
+# traffic, and treat every margin below as provisional until it happens.
+#
+# Net revenue, after Apple's 15% under the Small Business Program (the worse
+# case is 30% off-programme, which tightens all of this further; Stripe on the
+# web keeps ~97%, comfortably ahead of either Apple figure, so App Store sales
+# are the pessimistic case this file prices against):
+#
+# MONTHLY, at 100% of cap — the worst case a hard-capped user can reach:
+#
+#     Pro   $12.99 -> $11.04 net,  150 min costs  $7.95 -> +$3.09
+#     Max   $24.99 -> $21.24 net,  300 min costs $15.90 -> +$5.34
+#
+# Monthly clears full cap. A learner who burns the entire monthly budget still
+# leaves us ahead, same as before the reprice.
+#
+# ANNUAL, at 100% of cap:
+#
+#     Pro   $77.99/yr, $5.52 net/mo,   150 min costs  $7.95 -> -$2.43/mo
+#     Max  $149.99/yr, $10.62 net/mo,  300 min costs $15.90 -> -$5.28/mo
+#
+# Annual does NOT clear full cap at these prices, and that is DELIBERATE, not
+# an oversight. Pricing every tier to survive 100% utilisation is double
+# insurance: the hard server-side minute cap (live_seconds_remaining,
+# settle_live_session below) already bounds the worst case per user, so a price
+# that ALSO has to survive 100% utilisation is paying twice for the protection
+# the cap already provides — and that second payment was the thing making the
+# 50%-off annual plans look barely discounted, which costs conversion.
+#
+# So annual is priced against EXPECTED utilisation instead of the ceiling,
+# modelled at ~37.5% of cap (NOT measured — instrument and revisit once
+# live_seconds_used_this_period has enough production history to model from):
+#
+#     Pro    56.25 min costs $2.98 against $5.52 net  -> +$2.54/mo
+#     Max   112.5  min costs $5.96 against $10.62 net -> +$4.66/mo
+#
+# The cap is what makes this safe. It is a ceiling on the tail the price no
+# longer insures against, not a suggestion. If the cap enforcement in this file
+# ever breaks (or a plan gets granted client-side without the server checking
+# it — see the module docstring), the annual tiers stop being a considered
+# pricing choice and become a straightforward, uncapped loss on every heavy
+# user, silently, because nothing else in the system is watching that line.
+#
+# The PREVIOUS version of this comment tested break-even against the MONTHLY
+# price only ($15.99 -> $13.59 net -> break-even at 256 min) and never checked
+# annual on its own per-month price. Annual was underwater at full cap this
+# entire time, while the comment claimed "everyone below the cap is
+# profitable," and nothing caught it because the test encoded the same
+# one-price assumption (see test_caps_do_not_lose_money_at_full_utilisation in
+# test_entitlements.py). Any future repricing must check monthly and annual
+# separately — a cadence that clears break-even says nothing about the other.
+#
+#     Free   60 min ->  $3.18 cost. Unchanged: this is CAC, and activation
+#                       depends on it. See the note below.
+#
+# The Pro to Max step is now 2x rather than 2.25x, and that is the right
+# direction: Max's reason to exist is Interview Mode and the career features,
+# not a bigger number of minutes. A tier differentiated only by quantity is one
+# most subscribers never have a reason to reach for.
+#
+# FREE IS DELIBERATELY UNCHANGED, and it rests on an assumption nobody has
+# tested: that 60 minutes covers one real first build including a beginner's
+# mis-wires. Session duration is instrumented (usage_meter.duration_seconds) but
+# there is no production data yet. If that assumption is wrong, the free tier is
+# stringent in the one place it must not be. Run scripts/first_build.py.
+#
+# Why the monthly cohort matters beyond its own margin: it is the one that can
+# safely absorb the $0.053-vs-$0.0385 uncertainty above, because it clears full
+# cap with room to spare (+$3.09 / +$5.34) even if real cost lands meaningfully
+# over plan. Annual has no such room by design. When production billing data
+# finally lands, recheck annual's expected-utilisation margin first — it is the
+# number with the least slack in this whole file.
+#
+# Every value is env-tunable, so a cap can be changed without a deploy.
 LIVE_MINUTES_PER_MONTH: dict[str, float] = {
     "free": float(os.getenv("OHMLET_LIVE_MIN_FREE", "60")),
-    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "600")),   # 10 hours
-    "max": float(os.getenv("OHMLET_LIVE_MIN_MAX", "1800")),  # 30 hours
+    "pro": float(os.getenv("OHMLET_LIVE_MIN_PRO", "150")),   # 2.5 hours
+    "max": float(os.getenv("OHMLET_LIVE_MIN_MAX", "300")),   # 5 hours
 }
 
 # Plans that get the premium models for code gen / deep reasoning tools.
@@ -90,15 +173,39 @@ def get_plan(user_id: str) -> str:
     return "free"
 
 
-def set_plan(user_id: str, plan: str) -> str:
+def set_plan(
+    user_id: str,
+    plan: str,
+    environment: str = "PRODUCTION",
+    source: str = "system",
+) -> str:
     """Write the user's plan to Firestore (the authoritative store). Returns the
-    normalised plan actually written. In production the Stripe webhook is the
-    real caller (#30); for now an admin-only endpoint uses this to test tiers."""
+    normalised plan actually written. The real callers are the Stripe webhook on
+    the web and the RevenueCat webhook on iOS; an admin-only endpoint can also
+    override a plan for testing the tiers.
+
+    `environment` is stamped so a plan granted by a free sandbox purchase is
+    distinguishable from one somebody paid for. Without it the two are the same
+    document and a test grant is indistinguishable from revenue.
+
+    `setBy` is stamped for the same reason, one level finer. Because these writes
+    MERGE, a field nobody rewrites survives forever: on 2026-08-30 a document
+    carried `setBy: admin-console` from a manual edit five days earlier while
+    RevenueCat was the one actually granting it. A provenance field that lies is
+    worse than no provenance field, because the pre-launch sweep for test grants
+    is going to read exactly this.
+    """
     plan = normalize_plan(plan)
     from state_store import get_client
 
     get_client().collection(PLANS_COLLECTION).document(user_id).set(
-        {"plan": plan, "updated_at": _today()}, merge=True
+        {
+            "plan": plan,
+            "updated_at": _today(),
+            "environment": environment,
+            "setBy": source,
+        },
+        merge=True,
     )
     return plan
 
@@ -160,6 +267,26 @@ def live_seconds_remaining(user_id: str, plan: str) -> float:
     if cap_min == float("inf"):
         return float("inf")
     return max(0.0, cap_min * 60.0 - live_seconds_used_this_period(user_id))
+
+
+def settle_live_session(user_id: str, plan: str, elapsed_seconds: float, charged_seconds: float) -> tuple[float, float]:
+    """Bill the not-yet-charged part of a live session, then report what is left.
+
+    Live sessions settle repeatedly while running, not once at close, so that two
+    concurrent sessions (two tabs, phone + laptop) can SEE each other's spend. A
+    connect-time snapshot alone let each one spend the whole remaining balance
+    independently, multiplying live-tutor cost past the plan's margin.
+
+    `charged_seconds` is what this session has already written. Only the delta is
+    added, so repeated calls never double-bill the same seconds.
+
+    Returns (charged_seconds, remaining_seconds), both refreshed.
+    """
+    delta = elapsed_seconds - charged_seconds
+    if delta > 0:
+        add_live_seconds(user_id, delta)
+        charged_seconds = elapsed_seconds
+    return charged_seconds, live_seconds_remaining(user_id, plan)
 
 
 def add_live_seconds(user_id: str, seconds: float) -> None:

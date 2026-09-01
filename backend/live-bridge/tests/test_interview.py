@@ -74,6 +74,35 @@ def test_report_prompt_fences_transcript_as_data():
 
 
 def test_report_schema_requires_core_sections():
-    props = ir._REPORT_SCHEMA["properties"]
+    # The schema became a FUNCTION when recommendedTopics gained a skillId enum
+    # read from the curriculum: a module-level literal cannot be evaluated
+    # before the curriculum loader exists.
+    props = ir._report_schema()["properties"]
     for key in ("overall", "readiness", "competencies", "answers", "delivery", "actions", "recommendedTopics"):
         assert key in props
+
+
+def test_recommended_topics_are_constrained_to_real_skills():
+    """Free text here was the defect: the report named a weakness and linked
+    nowhere, which is what every other AI interview product already does. The
+    model is given an enum rather than asked politely, because a model asked
+    politely invents `rtos-basics`."""
+    import interview_gaps
+
+    item = ir._report_schema()["properties"]["recommendedTopics"]["items"]
+    assert item["type"] == "object"
+    assert set(item["required"]) == {"topic", "why", "skillId"}
+
+    enum = item["properties"]["skillId"]["enum"]
+    assert "caps-at-work" in enum
+    # `none` is a first-class answer: the interviewer probes several things the
+    # curriculum does not teach, and saying so beats a near-miss lesson.
+    assert "none" in enum
+    assert set(enum) == set(interview_gaps.skill_ids()) | {"none"}
+
+
+def test_the_prompt_hands_over_the_catalogue():
+    """An id alone does not say what is in it. A model matching a weakness to
+    `opamp-real-world` needs the title."""
+    block = ir._catalogue_block()
+    assert "caps-at-work" in block and "Capacitors at Work" in block

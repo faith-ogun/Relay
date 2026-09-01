@@ -26,14 +26,29 @@ export const OhmletLogo: React.FC<OhmletLogoProps> = ({
 
   return (
     <div className={`inline-flex flex-col leading-none ${className}`}>
-      {/* Logo artwork is transparent, so it sits on any surface. */}
-      <img
-        src="/brand/ohmlet-logo.png"
-        alt="Ohmlet"
-        style={{ height }}
-        className="w-auto select-none"
-        draggable={false}
-      />
+      {/* Mascot as art, wordmark as text. The combined `ohmlet-logo.png` bakes
+          the lettering in as dark ink, which vanishes on a dark ground. Drawing
+          a second PNG would mean two assets to keep in sync forever; a text
+          wordmark themes itself and stays sharp at any size. */}
+      <span className="inline-flex items-center">
+        <img
+          src="/brand/ohmlet-mascot.png"
+          alt=""
+          aria-hidden
+          style={{ height }}
+          className="w-auto select-none"
+          draggable={false}
+        />
+        <span
+          className={`ml-1.5 font-display font-black lowercase leading-none tracking-[-0.04em] ${
+            onDark ? 'text-white' : 'text-ohmlet-ink'
+          }`}
+          style={{ fontSize: height * 0.78 }}
+        >
+          ohmlet
+        </span>
+      </span>
+      <span className="sr-only">Ohmlet</span>
       {showTagline && (
         <span
           className={`mt-1 text-[11px] font-extrabold uppercase tracking-[0.22em] ${

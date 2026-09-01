@@ -946,7 +946,7 @@ const CATEGORIES = ['Basics', 'Sensors', 'Inputs', 'Capacitors', 'Transistors', 
 type SimMode = 'library' | 'build' | 'code';
 const MODE_LABEL: Record<SimMode, string> = { library: 'Circuit library', build: 'Build your own', code: 'Arduino code' };
 const ModeBar: React.FC<{ mode: SimMode; setMode: (m: SimMode) => void }> = ({ mode, setMode }) => (
-  <div className="mb-4 inline-flex rounded-2xl border-2 border-ohmlet-ink bg-white p-1 shadow-press-sm">
+  <div className="mb-4 inline-flex rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface p-1 shadow-press-sm">
     {(['library', 'build', 'code'] as const).map((m) => (
       <button key={m} onClick={() => setMode(m)}
         className={`rounded-xl px-4 py-1.5 text-sm font-black transition-all ${mode === m ? 'bg-ohmlet-gold text-ohmlet-ink' : 'text-ohmlet-ink-soft hover:text-ohmlet-ink'}`}>
@@ -997,7 +997,7 @@ export const SimulatorView: React.FC = () => {
           const on = c === cat;
           return (
             <button key={c} onClick={() => setCat(c)}
-              className={`rounded-2xl border-2 px-4 py-2 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-white text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
+              className={`rounded-2xl border-2 px-4 py-2 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink-soft hover:border-ohmlet-ink hover:text-ohmlet-ink'}`}>
               {c}
             </button>
           );
@@ -1010,13 +1010,13 @@ export const SimulatorView: React.FC = () => {
           const on = c.id === circuitId;
           return (
             <button key={c.id} onClick={() => selectCircuit(c)}
-              className={`group flex flex-col items-start rounded-2xl border-2 p-3.5 text-left transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-white hover:border-ohmlet-ink hover:-translate-y-0.5'}`}>
+              className={`group flex flex-col items-start rounded-2xl border-2 p-3.5 text-left transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-surface hover:border-ohmlet-ink hover:-translate-y-0.5'}`}>
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="text-sm font-black text-ohmlet-ink">{c.name}</span>
                 <LevelDots level={c.level} />
               </div>
               <span className="mt-1 text-[11px] font-semibold leading-snug text-ohmlet-ink-soft">{c.blurb}</span>
-              {c.transient && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-ohmlet-ink px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white"><Play className="h-2.5 w-2.5" /> Time</span>}
+              {c.transient && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-ohmlet-ink px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-ohmlet-on-ink"><Play className="h-2.5 w-2.5" /> Time</span>}
             </button>
           );
         })}
@@ -1024,16 +1024,16 @@ export const SimulatorView: React.FC = () => {
 
       {/* bench */}
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-white shadow-press">
+        <div className="overflow-hidden rounded-[1.6rem] border-[3px] border-ohmlet-ink bg-ohmlet-surface shadow-press">
           <div className="relative">
             <Schematic scene={circuit.scene(params, res)} res={res} running={sim.playing} heat={heatOn} />
             <div className="absolute right-3 top-3 flex items-center gap-2">
               <button onClick={() => setHeatOn((h) => !h)} aria-pressed={heatOn}
-                className={`inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${heatOn ? 'bg-ohmlet-ink text-white' : 'bg-white text-ohmlet-ink'}`}>
+                className={`inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none ${heatOn ? 'bg-ohmlet-ink text-ohmlet-on-ink' : 'bg-ohmlet-surface text-ohmlet-ink'}`}>
                 <Flame className="h-4 w-4" /> Heat map
               </button>
               <button onClick={() => sim.setPlaying((r) => !r)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-white px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none">
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3 text-xs font-black shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none">
                 {sim.playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />} {sim.playing ? 'Pause' : 'Run'}
               </button>
             </div>
@@ -1044,7 +1044,7 @@ export const SimulatorView: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+          <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Components</h3>
               <div className="flex items-center gap-3">
@@ -1135,7 +1135,7 @@ const Control: React.FC<{ def: ParamDef; value: number; onChange: (v: number) =>
         <button onClick={() => onChange(on ? 0 : 1)} aria-pressed={on}
           className={`mt-1.5 flex w-full items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-black transition-all ${on ? 'border-ohmlet-ink bg-ohmlet-gold shadow-press-sm' : 'border-ohmlet-line bg-ohmlet-cream text-ohmlet-ink-soft hover:border-ohmlet-ink'}`}>
           <span>{on ? (d.onLabel ?? 'On') : (d.offLabel ?? 'Off')}</span>
-          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-all ${on ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`h-4 w-4 rounded-full bg-white transition-all ${on ? 'translate-x-4' : ''}`} /></span>
+          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-all ${on ? 'bg-ohmlet-ink' : 'bg-ohmlet-line'}`}><span className={`h-4 w-4 rounded-full bg-ohmlet-surface transition-all ${on ? 'translate-x-4' : ''}`} /></span>
         </button>
       </div>
     );
@@ -1157,16 +1157,16 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
   const totalPower = powered.reduce((s, r) => s + (r.power ?? 0), 0);
   const hottest = powered.length ? powered.reduce((a, b) => ((b.power ?? 0) > (a.power ?? 0) ? b : a)).label : undefined;
   return (
-    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 shadow-soft">
+    <div className="rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 shadow-soft">
       <h3 className="text-sm font-extrabold uppercase tracking-[0.16em] text-ohmlet-ink-soft">Live readings</h3>
       {warning && (
-        <div className="mt-3 flex items-start gap-2 rounded-xl border-2 border-ohmlet-red bg-[#fff1ee] px-3 py-2 text-xs font-bold text-ohmlet-red">
+        <div className="mt-3 flex items-start gap-2 rounded-xl border-2 border-ohmlet-red bg-ohmlet-tint-red px-3 py-2 text-xs font-bold text-ohmlet-red">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {warning}
         </div>
       )}
       <div className="mt-3 space-y-2">
         {rows.map((r) => (
-          <div key={r.label} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${r.over ? 'border-ohmlet-red/40 bg-[#fff1ee]' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
+          <div key={r.label} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${r.over ? 'border-ohmlet-red/40 bg-ohmlet-tint-red' : 'border-ohmlet-line bg-ohmlet-cream'}`}>
             <span className="flex items-center gap-1.5 text-sm font-bold text-ohmlet-ink">
               {r.label}
               {r.label === hottest && totalPower > 0.02 && <Flame className="h-3.5 w-3.5 text-ohmlet-red" />}
@@ -1178,7 +1178,7 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
         ))}
       </div>
       {totalPower > 0 && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-ohmlet-ink bg-ohmlet-ink px-3 py-2.5 text-white">
+        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-ohmlet-ink bg-ohmlet-ink px-3 py-2.5 text-ohmlet-on-ink">
           <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide"><Flame className="h-4 w-4 text-ohmlet-gold" /> Total power (heat)</span>
           <span className="text-base font-black tabular-nums">{fmtP(totalPower)}</span>
         </div>
@@ -1188,7 +1188,7 @@ const Readouts: React.FC<{ rows: Row[]; warning?: string }> = ({ rows, warning }
 };
 
 const Tutor: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-4 text-white">
+  <div className="flex items-start gap-3 border-t-2 border-ohmlet-line bg-ohmlet-ink px-5 py-4 text-ohmlet-on-ink">
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ohmlet-gold"><Cpu className="h-5 w-5 text-ohmlet-ink" /></span>
     <p className="text-sm font-semibold leading-snug [&_b]:text-ohmlet-gold">{children}</p>
   </div>
@@ -1201,7 +1201,7 @@ const LevelDots: React.FC<{ level: number }> = ({ level }) => (
 );
 
 const HeatLegend: React.FC = () => (
-  <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-press-sm backdrop-blur">
+  <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-press-sm backdrop-blur">
     <span className="text-ohmlet-ink-soft">Cool</span>
     <span className="h-2.5 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${heatRGB(0)}, ${heatRGB(0.5)}, ${heatRGB(1)})` }} />
     <span className="text-ohmlet-red">Hot</span>
@@ -1216,7 +1216,7 @@ const Scope: React.FC<{ trace: [number, number][]; duration: number; vmax: numbe
     : '';
   const last = trace.length ? trace[trace.length - 1][1] : 0;
   return (
-    <div className="pointer-events-none absolute bottom-3 right-3 rounded-2xl border-2 border-ohmlet-ink bg-white/95 p-2 shadow-press-sm backdrop-blur">
+    <div className="pointer-events-none absolute bottom-3 right-3 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface/95 p-2 shadow-press-sm backdrop-blur">
       <svg width={W} height={H} className="block">
         <line x1={8} y1={H - 8} x2={W - 8} y2={H - 8} stroke="#ece7db" strokeWidth={1.5} />
         <line x1={8} y1={8} x2={8} y2={H - 8} stroke="#ece7db" strokeWidth={1.5} />
@@ -1236,8 +1236,8 @@ const Schematic: React.FC<{ scene: Scene; res: SolveResult; running: boolean; he
   const hf = (p: Part) => (heat && 'heat' in p && typeof (p as any).heat === 'number' ? (p as any).heat / maxHeat : undefined);
   return (
     <svg viewBox="0 0 640 360" className="block w-full"
-      style={{ background: 'linear-gradient(0deg,rgba(20,32,30,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,32,30,.03) 1px,transparent 1px)', backgroundSize: '22px 22px' }}>
-      {scene.wires.map((w, k) => <path key={`w${k}`} d={w.d} fill="none" stroke="#14201e" strokeWidth={5} strokeLinejoin="round" strokeLinecap="round" />)}
+      style={{ background: 'linear-gradient(0deg,rgba(20,24,31,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,24,31,.03) 1px,transparent 1px)', backgroundSize: '22px 22px' }}>
+      {scene.wires.map((w, k) => <path key={`w${k}`} d={w.d} fill="none" stroke="#14181f" strokeWidth={5} strokeLinejoin="round" strokeLinecap="round" />)}
       {scene.wires.map((w, k) => w.i != null ? <Flow key={`f${k}`} d={w.d} mA={toMA(res.I[w.i] ?? 0)} running={running} id={`f${k}`} /> : null)}
       {scene.parts.map((p, k) => <PartView key={`p${k}`} p={p} heat={hf(p)} />)}
       {scene.chips.map((c, k) => <Vchip key={`c${k}`} x={c.x} y={c.y} v={c.v} kind={c.kind} />)}
@@ -1262,7 +1262,7 @@ const PartView: React.FC<{ p: Part; heat?: number }> = ({ p, heat }) => {
     case 'op': return <Opamp x={p.x} y={p.y} out={p.out} />;
     case 'ic555': return <IC555 x={p.x} y={p.y} active={p.active} />;
     case 'relay': return <Relay x={p.x} y={p.y} on={p.on} />;
-    case 'dot': return <circle cx={p.x} cy={p.y} r={6} fill="#14201e" />;
+    case 'dot': return <circle cx={p.x} cy={p.y} r={6} fill="#14181f" />;
     case 'gnd': return <Ground x={p.x} y={p.y} />;
   }
 };
@@ -1270,39 +1270,39 @@ const PartView: React.FC<{ p: Part; heat?: number }> = ({ p, heat }) => {
 /** Op-amp / comparator triangle. Inputs at (x-40, y±22): + top, − bottom. Output at (x+46, y). */
 const Opamp: React.FC<{ x: number; y: number; out?: boolean }> = ({ x, y, out }) => (
   <g transform={`translate(${x},${y})`}>
-    <path d="M-26 -34 L-26 34 L36 0 Z" fill={out ? '#f3fae9' : '#fff'} stroke={out ? '#6fb519' : '#14201e'} strokeWidth={2.5} strokeLinejoin="round" />
-    <line x1={-40} y1={-22} x2={-26} y2={-22} stroke="#14201e" strokeWidth={3} />
-    <line x1={-40} y1={22} x2={-26} y2={22} stroke="#14201e" strokeWidth={3} />
-    <line x1={36} y1={0} x2={48} y2={0} stroke="#14201e" strokeWidth={3} />
-    <text x={-20} y={-15} fontSize={14} fontWeight={900} fill="#14201e">+</text>
-    <text x={-20} y={30} fontSize={16} fontWeight={900} fill="#14201e">−</text>
+    <path d="M-26 -34 L-26 34 L36 0 Z" fill={out ? '#f3fae9' : '#fff'} stroke={out ? '#6fb519' : '#14181f'} strokeWidth={2.5} strokeLinejoin="round" />
+    <line x1={-40} y1={-22} x2={-26} y2={-22} stroke="#14181f" strokeWidth={3} />
+    <line x1={-40} y1={22} x2={-26} y2={22} stroke="#14181f" strokeWidth={3} />
+    <line x1={36} y1={0} x2={48} y2={0} stroke="#14181f" strokeWidth={3} />
+    <text x={-20} y={-15} fontSize={14} fontWeight={900} fill="#14181f">+</text>
+    <text x={-20} y={30} fontSize={16} fontWeight={900} fill="#14181f">−</text>
   </g>
 );
 
 /** Relay: a coil (pins top/bottom at y±26) plus a contact arm that closes when energised. */
 const Relay: React.FC<{ x: number; y: number; on?: boolean }> = ({ x, y, on }) => (
   <g transform={`translate(${x},${y})`}>
-    <rect x={-30} y={-26} width={42} height={52} rx={6} fill={on ? '#f3fae9' : '#fff'} stroke={on ? '#6fb519' : '#14201e'} strokeWidth={2} />
-    <path d="M-18 -18a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14201e" strokeWidth={2.5} transform="translate(0,2)" />
-    <path d="M-18 -6a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14201e" strokeWidth={2.5} transform="translate(0,8)" />
+    <rect x={-30} y={-26} width={42} height={52} rx={6} fill={on ? '#f3fae9' : '#fff'} stroke={on ? '#6fb519' : '#14181f'} strokeWidth={2} />
+    <path d="M-18 -18a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14181f" strokeWidth={2.5} transform="translate(0,2)" />
+    <path d="M-18 -6a6 6 0 0112 0a6 6 0 0112 0" fill="none" stroke="#14181f" strokeWidth={2.5} transform="translate(0,8)" />
     {/* contact: pivot + arm (closed when energised) */}
-    <circle cx={18} cy={16} r={2.5} fill="#14201e" />
-    <circle cx={34} cy={16} r={2.5} fill="#14201e" />
-    <line x1={18} y1={16} x2={34} y2={on ? 16 : 8} stroke={on ? '#6fb519' : '#14201e'} strokeWidth={2.5} strokeLinecap="round" />
-    <text x={-9} y={42} textAnchor="middle" fontSize={10} fontWeight={800} fill={on ? '#6fb519' : '#46514e'}>{on ? 'CLOSED' : 'RELAY'}</text>
+    <circle cx={18} cy={16} r={2.5} fill="#14181f" />
+    <circle cx={34} cy={16} r={2.5} fill="#14181f" />
+    <line x1={18} y1={16} x2={34} y2={on ? 16 : 8} stroke={on ? '#6fb519' : '#14181f'} strokeWidth={2.5} strokeLinecap="round" />
+    <text x={-9} y={42} textAnchor="middle" fontSize={10} fontWeight={800} fill={on ? '#6fb519' : '#474d57'}>{on ? 'CLOSED' : 'RELAY'}</text>
   </g>
 );
 
 /** 555 timer IC. Pins: VCC (top), GND (bottom), OUT (right), DIS (-40,-30), THR/TRG (-40,+30). */
 const IC555: React.FC<{ x: number; y: number; active?: boolean }> = ({ x, y, active }) => (
   <g transform={`translate(${x},${y})`}>
-    <line x1={0} y1={-60} x2={0} y2={-72} stroke="#14201e" strokeWidth={3} />
-    <line x1={0} y1={60} x2={0} y2={72} stroke="#14201e" strokeWidth={3} />
-    <line x1={40} y1={0} x2={52} y2={0} stroke="#14201e" strokeWidth={3} />
-    <line x1={-40} y1={-30} x2={-52} y2={-30} stroke="#14201e" strokeWidth={3} />
-    <line x1={-40} y1={30} x2={-52} y2={30} stroke="#14201e" strokeWidth={3} />
-    <rect x={-40} y={-60} width={80} height={120} rx={8} fill={active ? '#f3fae9' : '#fff'} stroke={active ? '#6fb519' : '#14201e'} strokeWidth={2.5} />
-    <text x={0} y={-2} textAnchor="middle" fontSize={22} fontWeight={900} fill="#14201e">555</text>
+    <line x1={0} y1={-60} x2={0} y2={-72} stroke="#14181f" strokeWidth={3} />
+    <line x1={0} y1={60} x2={0} y2={72} stroke="#14181f" strokeWidth={3} />
+    <line x1={40} y1={0} x2={52} y2={0} stroke="#14181f" strokeWidth={3} />
+    <line x1={-40} y1={-30} x2={-52} y2={-30} stroke="#14181f" strokeWidth={3} />
+    <line x1={-40} y1={30} x2={-52} y2={30} stroke="#14181f" strokeWidth={3} />
+    <rect x={-40} y={-60} width={80} height={120} rx={8} fill={active ? '#f3fae9' : '#fff'} stroke={active ? '#6fb519' : '#14181f'} strokeWidth={2.5} />
+    <text x={0} y={-2} textAnchor="middle" fontSize={22} fontWeight={900} fill="#14181f">555</text>
     <text x={0} y={16} textAnchor="middle" fontSize={9} fontWeight={800} fill="#9aa3a0">TIMER</text>
     <text x={-36} y={-44} fontSize={8} fontWeight={800} fill="#9aa3a0">VCC</text>
     <text x={-36} y={-24} fontSize={8} fontWeight={800} fill="#9aa3a0">DIS</text>
@@ -1318,58 +1318,58 @@ const wrap = (x: number, y: number, rot: number | undefined, children: React.Rea
 
 const Battery: React.FC<{ x: number; y: number; v: number; rot?: number }> = ({ x, y, v, rot }) => wrap(x, y, rot,
   <>
-    <rect x={-26} y={-26} width={52} height={52} rx={9} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-9 -12V12M0 -7V7M9 -12V12" stroke="#14201e" strokeWidth={3} />
-    <text x={0} y={42} textAnchor="middle" fontSize={12} fontWeight={800} fill="#46514e" transform={rot ? `rotate(${-rot})` : ''}>{fmt(v)}V</text>
+    <rect x={-26} y={-26} width={52} height={52} rx={9} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-9 -12V12M0 -7V7M9 -12V12" stroke="#14181f" strokeWidth={3} />
+    <text x={0} y={42} textAnchor="middle" fontSize={12} fontWeight={800} fill="#474d57" transform={rot ? `rotate(${-rot})` : ''}>{fmt(v)}V</text>
   </>);
 
 const Resistor: React.FC<{ x: number; y: number; label: string; rot?: number; heat?: number }> = ({ x, y, label, rot, heat }) => wrap(x, y, rot,
   <>
     {heat !== undefined && <ellipse cx={0} cy={0} rx={60} ry={28} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
-    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14201e" strokeWidth={2.5} fill="none" />
-    <text x={0} y={-24} textAnchor="middle" fontSize={12} fontWeight={800} fill="#46514e" transform={rot ? `rotate(${-rot}) translate(0 ${rot === 90 ? -8 : 0})` : ''}>{label}</text>
+    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14181f" strokeWidth={2.5} fill="none" />
+    <text x={0} y={-24} textAnchor="middle" fontSize={12} fontWeight={800} fill="#474d57" transform={rot ? `rotate(${-rot}) translate(0 ${rot === 90 ? -8 : 0})` : ''}>{label}</text>
   </>);
 
 const Led: React.FC<{ x: number; y: number; bright: number; over?: boolean; small?: boolean; heat?: number }> = ({ x, y, bright, over, small, heat }) => (
   <g transform={`translate(${x},${y})`}>
     {heat !== undefined && <circle cx={0} cy={0} r={small ? 34 : 40} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
     <circle cx={0} cy={0} r={small ? 26 : 32} fill={over ? '#ff6f5e' : '#facc2e'} opacity={(over ? 0.5 : bright * 0.85).toFixed(2)} />
-    <rect x={-22} y={-22} width={44} height={44} rx={9} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-11 -12v24l18 -12 -18 -12z" fill={over ? '#ff6f5e' : bright > 0.6 ? '#ffe08a' : bright > 0.25 ? '#facc2e' : '#e0c878'} stroke="#14201e" strokeWidth={1.5} />
-    <path d="M7 -12v24" stroke="#14201e" strokeWidth={3} />
+    <rect x={-22} y={-22} width={44} height={44} rx={9} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-11 -12v24l18 -12 -18 -12z" fill={over ? '#ff6f5e' : bright > 0.6 ? '#ffe08a' : bright > 0.25 ? '#facc2e' : '#e0c878'} stroke="#14181f" strokeWidth={1.5} />
+    <path d="M7 -12v24" stroke="#14181f" strokeWidth={3} />
   </g>
 );
 
 const Diode: React.FC<{ x: number; y: number; rot?: number; on?: boolean; label?: string; heat?: number }> = ({ x, y, rot, on, label, heat }) => wrap(x, y, rot,
   <>
     {heat !== undefined && <circle cx={0} cy={0} r={30} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
-    <rect x={-26} y={-20} width={52} height={40} rx={8} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-12 -12v24l18 -12z" fill={on ? '#84cc30' : '#14201e'} />
-    <path d="M6 -12v24" stroke="#14201e" strokeWidth={3} />
-    {label && <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#46514e" transform={rot ? `rotate(${-rot})` : ''}>{label}</text>}
+    <rect x={-26} y={-20} width={52} height={40} rx={8} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-12 -12v24l18 -12z" fill={on ? '#84cc30' : '#14181f'} />
+    <path d="M6 -12v24" stroke="#14181f" strokeWidth={3} />
+    {label && <text x={0} y={-26} textAnchor="middle" fontSize={11} fontWeight={800} fill="#474d57" transform={rot ? `rotate(${-rot})` : ''}>{label}</text>}
   </>);
 
 const Capacitor: React.FC<{ x: number; y: number; rot?: number; label: string; charge?: number; heat?: number }> = ({ x, y, rot, label, charge = 0 }) => wrap(x, y, rot,
   <>
-    <rect x={-30} y={-26} width={60} height={52} rx={8} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-9 -16V16" stroke="#14201e" strokeWidth={4} />
-    <path d="M9 -16V16" stroke={charge > 0.02 ? '#549cf0' : '#14201e'} strokeWidth={4} opacity={(0.4 + 0.6 * clamp01(charge)).toFixed(2)} />
+    <rect x={-30} y={-26} width={60} height={52} rx={8} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-9 -16V16" stroke="#14181f" strokeWidth={4} />
+    <path d="M9 -16V16" stroke={charge > 0.02 ? '#549cf0' : '#14181f'} strokeWidth={4} opacity={(0.4 + 0.6 * clamp01(charge)).toFixed(2)} />
     {charge > 0.02 && <rect x={-7} y={-15} width={14} height={30} fill="#549cf0" opacity={(0.18 * clamp01(charge)).toFixed(2)} />}
-    <text x={0} y={-32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#46514e" transform={rot ? `rotate(${-rot})` : ''}>{label}</text>
+    <text x={0} y={-32} textAnchor="middle" fontSize={11} fontWeight={800} fill="#474d57" transform={rot ? `rotate(${-rot})` : ''}>{label}</text>
   </>);
 
 const Npn: React.FC<{ x: number; y: number; on?: boolean; label?: string }> = ({ x, y, on, label }) => (
   <g transform={`translate(${x},${y})`}>
-    <circle cx={0} cy={0} r={26} fill={on ? '#f3fae9' : '#fff'} stroke={on ? '#6fb519' : '#14201e'} strokeWidth={2.5} />
-    <path d="M-12 -16V16" stroke="#14201e" strokeWidth={3.5} />
-    <path d="M-12 -8L12 -20" stroke="#14201e" strokeWidth={3} />
-    <path d="M-12 8L12 20" stroke="#14201e" strokeWidth={3} />
-    <path d="M12 20l-9 -1 4 -7z" fill="#14201e" />
-    <line x1={12} y1={-20} x2={12} y2={-30} stroke="#14201e" strokeWidth={3} />
-    <line x1={12} y1={20} x2={12} y2={30} stroke="#14201e" strokeWidth={3} />
-    <line x1={-12} y1={0} x2={-30} y2={0} stroke="#14201e" strokeWidth={3} />
-    {label && <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={on ? '#6fb519' : '#46514e'}>{on ? 'ON' : label}</text>}
+    <circle cx={0} cy={0} r={26} fill={on ? '#f3fae9' : '#fff'} stroke={on ? '#6fb519' : '#14181f'} strokeWidth={2.5} />
+    <path d="M-12 -16V16" stroke="#14181f" strokeWidth={3.5} />
+    <path d="M-12 -8L12 -20" stroke="#14181f" strokeWidth={3} />
+    <path d="M-12 8L12 20" stroke="#14181f" strokeWidth={3} />
+    <path d="M12 20l-9 -1 4 -7z" fill="#14181f" />
+    <line x1={12} y1={-20} x2={12} y2={-30} stroke="#14181f" strokeWidth={3} />
+    <line x1={12} y1={20} x2={12} y2={30} stroke="#14181f" strokeWidth={3} />
+    <line x1={-12} y1={0} x2={-30} y2={0} stroke="#14181f" strokeWidth={3} />
+    {label && <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={on ? '#6fb519' : '#474d57'}>{on ? 'ON' : label}</text>}
   </g>
 );
 
@@ -1377,13 +1377,13 @@ const Ldr: React.FC<{ x: number; y: number; label: string; lit: number; heat?: n
   <g transform={`translate(${x},${y})`}>
     {heat !== undefined && <circle cx={0} cy={0} r={38} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
     {heat === undefined && <circle cx={0} cy={0} r={30} fill="#ffe08a" opacity={(lit * 0.55).toFixed(2)} />}
-    <circle cx={0} cy={0} r={26} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-17 0h5l3-8 6 16 6-16 3 8h5" stroke="#14201e" strokeWidth={2.5} fill="none" />
+    <circle cx={0} cy={0} r={26} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-17 0h5l3-8 6 16 6-16 3 8h5" stroke="#14181f" strokeWidth={2.5} fill="none" />
     <g stroke="#f5b800" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none">
       <path d="M-44 -40 L-22 -18 M-22 -18 l-9 0 M-22 -18 l0 -9" />
       <path d="M-30 -46 L-10 -26 M-10 -26 l-9 0 M-10 -26 l0 -9" />
     </g>
-    <text x={0} y={42} textAnchor="middle" fontSize={12} fontWeight={800} fill="#46514e">LDR · {label}</text>
+    <text x={0} y={42} textAnchor="middle" fontSize={12} fontWeight={800} fill="#474d57">LDR · {label}</text>
   </g>
 );
 
@@ -1391,60 +1391,60 @@ const Ntc: React.FC<{ x: number; y: number; label: string; warm: number; rot?: n
   <>
     {heat !== undefined && <ellipse cx={0} cy={0} rx={58} ry={26} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
     {heat === undefined && <ellipse cx={0} cy={0} rx={52} ry={22} fill="#ff6f5e" opacity={(warm * 0.4).toFixed(2)} />}
-    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14201e" strokeWidth={2.5} fill="none" />
-    <path d="M-30 16 L30 -16" stroke="#14201e" strokeWidth={2} />
-    <path d="M30 -16 l-9 1 M30 -16 l-1 9" stroke="#14201e" strokeWidth={2} fill="none" />
-    <text x={0} y={-24} textAnchor="middle" fontSize={11} fontWeight={800} fill="#46514e" transform={rot ? `rotate(${-rot}) translate(0 ${rot === 90 ? -8 : 0})` : ''}>{label}</text>
+    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14181f" strokeWidth={2.5} fill="none" />
+    <path d="M-30 16 L30 -16" stroke="#14181f" strokeWidth={2} />
+    <path d="M30 -16 l-9 1 M30 -16 l-1 9" stroke="#14181f" strokeWidth={2} fill="none" />
+    <text x={0} y={-24} textAnchor="middle" fontSize={11} fontWeight={800} fill="#474d57" transform={rot ? `rotate(${-rot}) translate(0 ${rot === 90 ? -8 : 0})` : ''}>{label}</text>
   </>);
 
 const Pot: React.FC<{ x: number; y: number; label: string; frac: number; heat?: number }> = ({ x, y, label, frac, heat }) => (
   <g transform={`translate(${x},${y})`}>
     {heat !== undefined && <ellipse cx={0} cy={0} rx={60} ry={28} fill={heatRGB(heat)} opacity={heatAura(heat)} />}
-    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14201e" strokeWidth={2} />
-    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14201e" strokeWidth={2.5} fill="none" />
+    <rect x={-46} y={-16} width={92} height={32} rx={8} fill="#fff" stroke="#14181f" strokeWidth={2} />
+    <path d="M-34 0h7l4-9 7 18 7-18 7 18 7-18 4 9h7" stroke="#14181f" strokeWidth={2.5} fill="none" />
     <g transform={`translate(${(-34 + clamp01(frac) * 68).toFixed(1)},0)`}>
       <path d="M0 -24 L0 -3 M-5 -10 L0 -3 L5 -10" stroke="#f5b800" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </g>
-    <text x={0} y={-30} textAnchor="middle" fontSize={12} fontWeight={800} fill="#46514e">{label}</text>
+    <text x={0} y={-30} textAnchor="middle" fontSize={12} fontWeight={800} fill="#474d57">{label}</text>
   </g>
 );
 
 const Switch: React.FC<{ x: number; y: number; closed: boolean }> = ({ x, y, closed }) => (
   <g transform={`translate(${x},${y})`}>
     <rect x={-30} y={-8} width={60} height={16} fill="#fff" />
-    <circle cx={-26} cy={0} r={4.5} fill="#14201e" />
-    <circle cx={26} cy={0} r={4.5} fill="#14201e" />
-    <line x1={-26} y1={0} x2={closed ? 26 : 17} y2={closed ? 0 : -19} stroke="#14201e" strokeWidth={4.5} strokeLinecap="round" />
+    <circle cx={-26} cy={0} r={4.5} fill="#14181f" />
+    <circle cx={26} cy={0} r={4.5} fill="#14181f" />
+    <line x1={-26} y1={0} x2={closed ? 26 : 17} y2={closed ? 0 : -19} stroke="#14181f" strokeWidth={4.5} strokeLinecap="round" />
     <text x={0} y={-26} textAnchor="middle" fontSize={12} fontWeight={800} fill={closed ? '#6fb519' : '#9aa3a0'}>{closed ? 'CLOSED' : 'OPEN'}</text>
   </g>
 );
 
 const Buzzer: React.FC<{ x: number; y: number; on: boolean }> = ({ x, y, on }) => (
   <g transform={`translate(${x},${y})`}>
-    <circle cx={0} cy={0} r={26} fill={on ? '#fff6d6' : '#fff'} stroke={on ? '#f5b800' : '#14201e'} strokeWidth={2.5} />
-    <path d="M-9 -8h6l6 -6v28l-6 -6h-6z" fill="#14201e" />
+    <circle cx={0} cy={0} r={26} fill={on ? '#fff6d6' : '#fff'} stroke={on ? '#f5b800' : '#14181f'} strokeWidth={2.5} />
+    <path d="M-9 -8h6l6 -6v28l-6 -6h-6z" fill="#14181f" />
     {on && <g stroke="#f5b800" strokeWidth={2.5} fill="none" strokeLinecap="round"><path d="M11 -10a10 10 0 010 20" /><path d="M16 -16a18 18 0 010 32" /></g>}
-    <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={on ? '#f5b800' : '#46514e'}>{on ? 'SOUND' : 'buzzer'}</text>
+    <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={on ? '#f5b800' : '#474d57'}>{on ? 'SOUND' : 'buzzer'}</text>
   </g>
 );
 
 const Motor: React.FC<{ x: number; y: number; spin: number }> = ({ x, y, spin }) => (
   <g transform={`translate(${x},${y})`}>
-    <circle cx={0} cy={0} r={26} fill={spin > 0 ? '#eef6ff' : '#fff'} stroke={spin > 0 ? '#3e86e8' : '#14201e'} strokeWidth={2.5} />
-    <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight={900} fill="#14201e">M</text>
+    <circle cx={0} cy={0} r={26} fill={spin > 0 ? '#eef6ff' : '#fff'} stroke={spin > 0 ? '#3e86e8' : '#14181f'} strokeWidth={2.5} />
+    <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight={900} fill="#14181f">M</text>
     {spin > 0 && (
       <g stroke="#3e86e8" strokeWidth={2.5} fill="none" strokeLinecap="round">
         <path d="M0 -34a34 34 0 0110 3" /><path d="M0 34a34 34 0 01-10 -3" />
         <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur={`${(1.4 - spin).toFixed(2)}s`} repeatCount="indefinite" />
       </g>
     )}
-    <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={spin > 0 ? '#3e86e8' : '#46514e'}>{spin > 0 ? 'SPIN' : 'motor'}</text>
+    <text x={0} y={42} textAnchor="middle" fontSize={11} fontWeight={800} fill={spin > 0 ? '#3e86e8' : '#474d57'}>{spin > 0 ? 'SPIN' : 'motor'}</text>
   </g>
 );
 
 const Ground: React.FC<{ x: number; y: number }> = ({ x, y }) => (
-  <g transform={`translate(${x},${y})`} stroke="#14201e" strokeWidth={2.5}>
+  <g transform={`translate(${x},${y})`} stroke="#14181f" strokeWidth={2.5}>
     <line x1={0} y1={-8} x2={0} y2={0} /><line x1={-10} y1={0} x2={10} y2={0} /><line x1={-6} y1={5} x2={6} y2={5} /><line x1={-2} y1={10} x2={2} y2={10} />
   </g>
 );

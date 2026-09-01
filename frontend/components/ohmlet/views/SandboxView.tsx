@@ -25,7 +25,7 @@ export const SandboxView: React.FC = () => {
           </div>
           <button
             onClick={() => setLaunched(false)}
-            className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-white px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-ohmlet-ink bg-ohmlet-surface px-4 py-2 text-sm font-black text-ohmlet-ink shadow-press-sm transition-all hover:translate-y-[2px] hover:shadow-none"
           >
             <RotateCcw className="h-4 w-4" /> Exit sandbox
           </button>
@@ -66,7 +66,7 @@ export const SandboxView: React.FC = () => {
         ].map((f) => {
           const Icon = f.icon;
           return (
-            <div key={f.title} className="rounded-2xl border-2 border-ohmlet-line bg-white p-4 shadow-soft">
+            <div key={f.title} className="rounded-2xl border-2 border-ohmlet-line bg-ohmlet-surface p-4 shadow-soft">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ohmlet-ink bg-ohmlet-blue-soft text-ohmlet-blue-deep">
                 <Icon className="h-5 w-5" />
               </span>
@@ -109,7 +109,7 @@ export const SandboxView: React.FC = () => {
               setPreset(p);
               setLaunched(true);
             }}
-            className="group rounded-[1.4rem] border-2 border-ohmlet-line bg-white p-5 text-left shadow-soft transition-transform hover:-translate-y-1"
+            className="group rounded-[1.4rem] border-2 border-ohmlet-line bg-ohmlet-surface p-5 text-left shadow-soft transition-transform hover:-translate-y-1"
           >
             <p className="text-base font-black">{p.name}</p>
             <p className="mt-1 text-sm font-semibold text-ohmlet-ink-soft">Load this build pre-wired to explore it.</p>

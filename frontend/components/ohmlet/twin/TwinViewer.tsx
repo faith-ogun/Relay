@@ -10,12 +10,18 @@ import { Bounds, Center, Gltf, OrbitControls } from '@react-three/drei';
 // Lazy-loaded by callers (default export) so Three.js stays out of the main bundle.
 
 interface TwinViewerProps {
-  /** Object URL of the GLB (from reporter.fetchTwinModelUrl). */
+  /** Object URL of the GLB (from reporter.fetchTwinModelUrl), or a public URL. */
   src: string;
   className?: string;
+  /**
+   * How much room to leave around the model when auto-framing. Higher = the
+   * model sits further back. The default suits a small dialog; a full-width
+   * hero (and any narrow portrait viewport) needs more so nothing is clipped.
+   */
+  margin?: number;
 }
 
-const TwinViewer: React.FC<TwinViewerProps> = ({ src, className }) => (
+const TwinViewer: React.FC<TwinViewerProps> = ({ src, className, margin = 1.2 }) => (
   <div className={className}>
     <Canvas camera={{ position: [2.6, 1.9, 2.6], fov: 45 }} dpr={[1, 2]} gl={{ antialias: true }}>
       <color attach="background" args={['#0f172a']} />
@@ -23,7 +29,7 @@ const TwinViewer: React.FC<TwinViewerProps> = ({ src, className }) => (
       <directionalLight position={[6, 9, 6]} intensity={1.15} />
       <directionalLight position={[-6, 3, -4]} intensity={0.4} />
       <Suspense fallback={null}>
-        <Bounds fit clip observe margin={1.2}>
+        <Bounds fit clip observe margin={margin}>
           <Center>
             {/* Stable Fast 3D returns uncompressed GLB, so skip the Draco CDN. */}
             <Gltf src={src} useDraco={false} />

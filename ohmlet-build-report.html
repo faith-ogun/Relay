@@ -4,116 +4,135 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Ohmlet — Build Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --yellow:#f3e515; --yellow-soft:#fffde8; --yellow-deep:#b9a800;
-    --ink:#0a0a0a; --ink-soft:#475569;
-    --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0; --slate-300:#cbd5e1;
-    --green:#16a34a; --green-soft:#eafaf0;
-    --blue:#2563eb; --blue-soft:#eef2ff;
-    --amber:#d97706; --amber-soft:#fff7ed;
-    --line:#e6e9ef;
-    --shadow-card:0 1px 2px rgba(15,23,42,.06), 0 4px 12px rgba(15,23,42,.05);
-    --shadow-lift:0 8px 28px rgba(15,23,42,.12);
-    --shadow-press:4px 4px 0 var(--ink);
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+    /* Ohmlet app tokens (from frontend/styles.css) */
+    --gold:#facc2e; --gold-deep:#f5b800; --gold-soft:#fff6d6;
+    --ink:#14181f; --ink-soft:#474d57;
+    --red:#ff6f5e; --red-soft:#fff0ee;
+    --blue:#549cf0; --blue-deep:#3e86e8; --blue-soft:#eef6ff;
+    --green:#84cc30; --green-deep:#6fb519; --green-soft:#f1fae4;
+    --cream:#faf8f0; --line:#ece7db; --canvas:#ffffff;
+    --shadow-card:0 1px 2px rgba(20,24,31,.04), 0 6px 18px rgba(20,24,31,.06);
+    --shadow-lift:0 10px 30px rgba(20,24,31,.13);
+    --shadow-press-sm:0 3px 0 var(--ink);
+    --font:'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{
-    font-family:var(--font); color:var(--ink); background:var(--slate-50);
+    font-family:var(--font); color:var(--ink); background:var(--canvas);
     line-height:1.5; -webkit-font-smoothing:antialiased;
     background-image:
-      radial-gradient(900px 500px at 88% -8%, rgba(243,229,21,.22), transparent 60%),
-      radial-gradient(700px 480px at -6% 4%, rgba(37,99,235,.07), transparent 55%);
+      radial-gradient(820px 460px at 90% -10%, rgba(250,204,46,.20), transparent 60%),
+      radial-gradient(640px 440px at -8% 2%, rgba(84,156,240,.07), transparent 55%);
   }
   .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
 
   /* Header */
-  header{padding:54px 0 26px}
+  header{padding:54px 0 22px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.02em;font-size:15px;text-transform:uppercase}
   .bolt{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--ink)}
   .bolt svg{width:16px;height:16px}
-  h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.03em;margin:20px 0 8px;line-height:1.04}
-  .sub{font-size:17px;color:var(--ink-soft);font-weight:500;max-width:680px}
-  .meta{margin-top:14px;font-size:12.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.03em;margin:18px 0 8px;line-height:1.04}
+  .sub{font-size:17px;color:var(--ink-soft);font-weight:600;max-width:700px}
+  .meta{margin-top:14px;font-size:12.5px;color:var(--ink-soft);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 
   /* Stat tiles */
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:30px 0 8px}
-  .stat{background:#fff;border:2px solid var(--line);border-radius:18px;padding:18px 18px 16px;box-shadow:var(--shadow-card);position:relative;overflow:hidden}
-  .stat::after{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--yellow)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:28px 0 8px}
+  .stat{background:#fff;border:2px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-card);position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--gold)}
   .stat .num{font-size:34px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-  .stat .lab{font-size:12px;font-weight:700;color:var(--ink-soft);margin-top:2px;line-height:1.3}
+  .stat .lab{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-top:2px;line-height:1.3}
 
   /* Controls */
-  .controls{position:sticky;top:0;z-index:20;background:rgba(248,250,252,.86);backdrop-filter:blur(10px);padding:16px 0 10px;margin-top:26px;border-bottom:1px solid var(--line)}
-  .search{width:100%;border:2px solid var(--slate-200);background:#fff;border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;font-weight:600;outline:none;transition:border-color .15s,box-shadow .15s}
-  .search:focus{border-color:var(--ink);box-shadow:0 0 0 4px var(--yellow-soft)}
+  .controls{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);padding:16px 0 10px;margin-top:26px;border-bottom:1px solid var(--line)}
+  .search{width:100%;border:2px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;font-weight:700;outline:none;transition:border-color .15s,box-shadow .15s}
+  .search::placeholder{color:#9aa39f;font-weight:600}
+  .search:focus{border-color:var(--ink);box-shadow:0 0 0 4px var(--gold-soft)}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-  .chip{border:2px solid var(--slate-200);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:800;color:var(--ink-soft);cursor:pointer;transition:all .15s;white-space:nowrap}
+  .chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:800;color:var(--ink-soft);cursor:pointer;transition:all .15s;white-space:nowrap}
   .chip:hover{border-color:var(--ink);color:var(--ink);transform:translateY(-1px)}
-  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .chip .c{opacity:.6;font-variant-numeric:tabular-nums}
+  .chip.active{background:var(--ink);color:var(--gold);border-color:var(--ink)}
+  .chip .c{opacity:.55;font-variant-numeric:tabular-nums}
 
   /* Section labels */
-  .seclabel{font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin:34px 0 4px}
-  .secnote{font-size:14px;color:var(--ink-soft);margin-bottom:14px;font-weight:500}
+  .seclabel{font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);margin:36px 0 4px;display:flex;align-items:center;gap:9px}
+  .seclabel .dotmark{width:9px;height:9px;border-radius:3px;background:var(--gold)}
+  .secnote{font-size:14px;color:var(--ink-soft);margin-bottom:8px;font-weight:600}
 
   /* Cards */
   .grid{display:grid;gap:14px;margin-top:14px}
   .card{background:#fff;border:2px solid var(--line);border-radius:20px;box-shadow:var(--shadow-card);overflow:hidden;transition:box-shadow .18s,transform .18s,border-color .18s;opacity:0;transform:translateY(10px);animation:rise .5s forwards}
   @keyframes rise{to{opacity:1;transform:none}}
-  .card:hover{box-shadow:var(--shadow-lift);border-color:var(--slate-300)}
-  .card.session{border-color:var(--ink)}
-  .card.session::before{content:"";display:block;height:5px;background:linear-gradient(90deg,var(--yellow),var(--yellow-deep))}
+  .card:hover{box-shadow:var(--shadow-lift);border-color:#ddd6c6}
+  .card.hero{border-color:var(--ink)}
+  .card.hero::before{content:"";display:block;height:5px;background:linear-gradient(90deg,var(--gold),var(--gold-deep))}
   .chead{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;cursor:pointer;user-select:none}
-  .icon{flex:none;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--slate-100);border:1.5px solid var(--line)}
+  .icon{flex:none;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft);border:1.5px solid var(--line);color:var(--ink)}
   .icon svg{width:21px;height:21px}
   .ctop{flex:1;min-width:0}
   .ctitle{font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .cwhat{font-size:14.5px;color:var(--ink-soft);margin-top:4px;font-weight:500}
-  .badges{display:flex;gap:7px;align-items:center;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:170px}
+  .ctitle .play{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:900;color:var(--blue-deep);background:var(--blue-soft);padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+  .cwhat{font-size:14.5px;color:var(--ink-soft);margin-top:4px;font-weight:600}
+  .badges{display:flex;gap:7px;align-items:center;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:160px}
   .badge{font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:4px 9px;border-radius:999px;white-space:nowrap}
-  .b-live{background:var(--green-soft);color:var(--green)}
-  .b-shipped{background:var(--blue-soft);color:var(--blue)}
-  .b-next{background:var(--amber-soft);color:var(--amber)}
-  .b-date{background:var(--slate-100);color:var(--ink-soft)}
-  .b-session{background:var(--ink);color:var(--yellow)}
-  .chev{flex:none;align-self:center;transition:transform .25s;color:var(--slate-300)}
+  .b-live{background:var(--green-soft);color:var(--green-deep)}
+  .b-shipped{background:var(--blue-soft);color:var(--blue-deep)}
+  .b-partial{background:var(--gold-soft);color:var(--gold-deep)}
+  .b-next{background:#f3efe6;color:var(--ink-soft)}
+  .b-date{background:var(--cream);color:var(--ink-soft)}
+  .chev{flex:none;align-self:center;transition:transform .25s;color:#c7cdc4}
   .card.open .chev{transform:rotate(90deg);color:var(--ink)}
 
-  /* expandable details (grid-rows trick = smooth height) */
-  .details{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease}
+  /* expandable details */
+  .details{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
   .card.open .details{grid-template-rows:1fr}
   .dinner{overflow:hidden}
-  .dpad{padding:2px 20px 20px;border-top:1px dashed var(--line);margin-top:2px}
-  .row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--slate-100)}
+  .dpad{padding:2px 20px 20px}
+
+  /* animation stage */
+  .stage{margin:6px 0 14px;border:1.5px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fffdf6,#fbf7ea);padding:14px 16px;position:relative}
+  .stage .replay{position:absolute;top:9px;right:10px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:4px 9px;font:inherit;font-size:11px;font-weight:800;color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+  .stage .replay:hover{border-color:var(--ink);color:var(--ink)}
+  .stage .replay svg{width:11px;height:11px}
+  svg.scene{width:100%;height:auto;display:block;overflow:visible;max-width:420px;margin:0 auto}
+  .lab{font-weight:700;font-size:11px;fill:var(--ink-soft)}
+  .cap{font-weight:800;font-size:12px;fill:var(--ink)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;fill:var(--ink-soft)}
+  .num{font-variant-numeric:tabular-nums}
+
+  .row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--cream)}
   .row:last-child{border-bottom:0}
-  .rk{flex:none;width:104px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--ink);padding-top:2px}
-  .rk.why{color:var(--blue)} .rk.how{color:var(--green)}
-  .rv{font-size:14.5px;color:var(--ink-soft);font-weight:500}
+  .rk{flex:none;width:108px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--ink);padding-top:2px}
+  .rk.why{color:var(--blue-deep)} .rk.how{color:var(--green-deep)}
+  .rv{font-size:14.5px;color:var(--ink-soft);font-weight:600}
   .ev{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
-  .pill{font-size:12px;font-weight:700;color:var(--ink);background:var(--yellow-soft);border:1.5px solid var(--yellow);border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:6px}
-  .pill svg{width:13px;height:13px;color:var(--yellow-deep)}
+  .pill{font-size:12px;font-weight:700;color:var(--ink);background:var(--gold-soft);border:1.5px solid #f1e3a8;border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:6px}
+  .pill svg{width:13px;height:13px;color:var(--gold-deep);flex:none}
 
   /* progress */
   .progwrap{background:#fff;border:2px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow-card);margin-top:18px}
   .progtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
   .progtop h3{font-size:17px;font-weight:900}
   .progtop .pct{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
-  .bar{height:14px;background:var(--slate-100);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
-  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--yellow),var(--yellow-deep));border-radius:999px;transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  .bar{height:14px;background:var(--cream);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-deep));border-radius:999px;transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
   .leg{display:flex;gap:18px;margin-top:12px;font-size:13px;font-weight:700;color:var(--ink-soft);flex-wrap:wrap}
   .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle}
 
-  .empty{display:none;text-align:center;padding:50px 20px;color:var(--ink-soft);font-weight:600}
-  footer{padding:40px 0 60px;color:var(--ink-soft);font-size:13px;font-weight:500;text-align:center}
+  .empty{display:none;text-align:center;padding:50px 20px;color:var(--ink-soft);font-weight:700}
+  footer{padding:40px 0 60px;color:var(--ink-soft);font-size:13px;font-weight:600;text-align:center}
   footer b{color:var(--ink)}
 
+  @media(prefers-reduced-motion: reduce){ .card{animation:none;opacity:1;transform:none} .bar>i{transition:none} }
   @media(max-width:720px){
     .stats{grid-template-columns:repeat(2,1fr)}
     .badges{max-width:none}
-    .rk{width:72px}
+    .rk{width:78px}
   }
 </style>
 </head>
@@ -121,350 +140,725 @@
 <div class="wrap">
   <header>
     <div class="brand">
-      <span class="bolt"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13l0-8z" fill="#f3e515"/></svg></span>
+      <span class="bolt"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13l0-8z" fill="#facc2e"/></svg></span>
       Ohmlet
     </div>
     <h1>What I built, and why it matters.</h1>
-    <p class="sub">A plain-English tour of the work shipped recently, what each piece does for the product, and what comes next. Click any card to expand the detail. Filter or search to focus.</p>
+    <p class="sub">A plain-English, living tour of the engineering work behind Ohmlet. The bigger features carry a small animation that shows what they actually do. Click any card to open it. Search or filter to focus.</p>
     <p class="meta" id="genline">Build report</p>
 
     <div class="stats" id="stats"></div>
   </header>
 
   <div class="controls">
-    <input id="search" class="search" placeholder="Search the work (e.g. camera, billing, alerts, security)…" autocomplete="off" />
+    <input id="search" class="search" placeholder="Search the work (e.g. camera, billing, simulator, security)…" autocomplete="off" />
     <div class="chips" id="chips"></div>
   </div>
 
-  <div id="sessionSec">
-    <div class="seclabel">★ This session</div>
-    <div class="secnote">The headline work from right now: the camera kit check, the observability/hardening layer, the deploy, and the ops follow-ups.</div>
-    <div class="grid" id="grid-session"></div>
-  </div>
-
-  <div id="shippedSec">
-    <div class="seclabel">Recently shipped — the road to launch</div>
-    <div class="secnote">The commercial spine, security, reliability, and retention work already live in the product.</div>
-    <div class="grid" id="grid-shipped"></div>
-  </div>
-
-  <div id="nextSec">
-    <div class="seclabel">Up next</div>
-    <div class="secnote">What I'd tackle next, roughly in priority order.</div>
-    <div class="grid" id="grid-next"></div>
-
-    <div class="progwrap">
-      <div class="progtop">
-        <h3>Launch backlog progress</h3>
-        <div class="pct" id="pct">0%</div>
-      </div>
-      <div class="bar"><i id="barfill"></i></div>
-      <div class="leg">
-        <span><span class="dot" style="background:var(--yellow)"></span><b id="doneN">0</b>&nbsp;shipped</span>
-        <span><span class="dot" style="background:var(--slate-300)"></span><b id="nextN">0</b>&nbsp;remaining</span>
-        <span style="color:var(--ink-soft)">Tracked across the master roadmap (tasks #11–#66).</span>
-      </div>
-    </div>
-  </div>
+  <div id="sections"></div>
 
   <div class="empty" id="empty">No work matches that filter. Try another chip or clear the search.</div>
 
   <footer>
-    Generated for <b>Ohmlet</b> — a real-time multimodal lab tutor for hands-on electronics.<br>
-    This is a summary of engineering work, written to be read without a CS degree.
+    Generated for <b>Ohmlet</b>, a real-time multimodal lab tutor for hands-on electronics.<br>
+    A summary of engineering work, written to be read without a CS degree.
   </footer>
 </div>
 
-<script>
-// ── Icons (inline, no deps) ──
+<script type="module">
+// ── Motion engine (motion.dev), with a graceful static fallback ──
+let Motion=null;
+try{ Motion = await import('https://cdn.jsdelivr.net/npm/motion@10.18.0/+esm'); }catch(e){ console.warn('Motion unavailable, using static frames', e); }
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const A = (Motion && !reduceMotion) ? Motion.animate : null;
+const stagger = Motion ? Motion.stagger : (()=>0);
+const SPRING=[.34,1.56,.64,1];
+const qs=(svg,s)=>[...svg.querySelectorAll(s)];
+const show=els=>els.forEach(e=>{e.style.opacity=1;e.style.transform='none';});
+function originFill(el,o){el.style.transformBox='fill-box';el.style.transformOrigin=o||'center';}
+function loopRun(svg,fn,cycle){
+  let alive=true; svg.__stop=()=>{alive=false;};
+  (function r(){ if(!alive) return; try{fn();}catch(e){console.error(e);} svg.__t=setTimeout(r,cycle); })();
+}
+
+// ── Icons (inline, brand ink via currentColor) ──
 const I = {
-  camera:'<path d="M3 7h4l2-2h6l2 2h4v12H3z" stroke="#0a0a0a" stroke-width="2" fill="none"/><circle cx="12" cy="13" r="3.5" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#0a0a0a" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="#f3e515"/>',
-  rocket:'<path d="M5 15c-1 1-2 5-2 5s4-1 5-2m6.5-12.5C18 2 21 3 21 3s1 3-.5 6.5C19 13 13 18 13 18l-5-5s5-6 6.5-7.5z" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  bell:'<path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M10 21h4" stroke="#0a0a0a" stroke-width="2"/>',
-  broom:'<path d="M3 21l6-6m4-4l4-4m-9 14l9-9 1 1-9 9zM13 7l4 4" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  card:'<rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M2.5 9.5h19" stroke="#0a0a0a" stroke-width="2"/>',
-  shield:'<path d="M12 3l8 3v5c0 5-4 8-8 10-4-2-8-5-8-10V6z" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M9 12l2 2 4-4" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  lock:'<rect x="4.5" y="10" width="15" height="10" rx="2" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M8 10V7a4 4 0 118 0v3" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  check:'<path d="M4 13l5 5L20 6" stroke="#0a0a0a" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
-  bolt:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" stroke="#0a0a0a" stroke-width="2" fill="none" stroke-linejoin="round"/>',
-  users:'<circle cx="9" cy="8" r="3.2" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M16 5.5a3 3 0 010 6M21 20c0-2.6-1.4-4.2-3.5-4.8" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  trophy:'<path d="M7 4h10v3a5 5 0 01-10 0zM7 5H4v2a3 3 0 003 3m10-5h3v2a3 3 0 01-3 3M9 16h6M8 20h8M12 12v4" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  gauge:'<path d="M4 18a8 8 0 1116 0" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M12 18l4-5" stroke="#0a0a0a" stroke-width="2"/>',
-  speaker:'<path d="M4 9v6h4l5 4V5L8 9z" stroke="#0a0a0a" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 9a4 4 0 010 6" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  cube:'<path d="M12 2l9 5v10l-9 5-9-5V7z" stroke="#0a0a0a" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 12l9-5M12 12v10M12 12L3 7" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  mail:'<rect x="3" y="5" width="18" height="14" rx="2" stroke="#0a0a0a" stroke-width="2" fill="none"/><path d="M3 7l9 6 9-6" stroke="#0a0a0a" stroke-width="2" fill="none"/>',
-  spark:'<path d="M12 3v6m0 6v6m-9-9h6m6 0h6" stroke="#0a0a0a" stroke-width="2"/><path d="M6 6l3 3m6 6l3 3m0-12l-3 3m-6 6l-3 3" stroke="#0a0a0a" stroke-width="2"/>',
+  camera:'<path d="M3 7h4l2-2h6l2 2h4v12H3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="2" fill="none"/>',
+  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="currentColor"/>',
+  rocket:'<path d="M5 15c-1 1-2 5-2 5s4-1 5-2m6.5-12.5C18 2 21 3 21 3s1 3-.5 6.5C19 13 13 18 13 18l-5-5s5-6 6.5-7.5z" stroke="currentColor" stroke-width="2" fill="none"/>',
+  bell:'<path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M10 21h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  broom:'<path d="M3 21l6-6m4-4l4-4m-9 14l9-9 1 1-9 9zM13 7l4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  card:'<rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M2.5 9.5h19" stroke="currentColor" stroke-width="2"/>',
+  shield:'<path d="M12 3l8 3v5c0 5-4 8-8 10-4-2-8-5-8-10V6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  lock:'<rect x="4.5" y="10" width="15" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 10V7a4 4 0 118 0v3" stroke="currentColor" stroke-width="2" fill="none"/>',
+  check:'<path d="M4 13l5 5L20 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  bolt:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  users:'<circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 5.5a3 3 0 010 6M21 20c0-2.6-1.4-4.2-3.5-4.8" stroke="currentColor" stroke-width="2" fill="none"/>',
+  trophy:'<path d="M7 4h10v3a5 5 0 01-10 0zM7 5H4v2a3 3 0 003 3m10-5h3v2a3 3 0 01-3 3M9 16h6M8 20h8M12 12v4" stroke="currentColor" stroke-width="2" fill="none"/>',
+  gauge:'<path d="M4 18a8 8 0 1116 0" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 18l4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  speaker:'<path d="M4 9v6h4l5 4V5L8 9z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 9a4 4 0 010 6" stroke="currentColor" stroke-width="2" fill="none"/>',
+  cube:'<path d="M12 2l9 5v10l-9 5-9-5V7z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 12l9-5M12 12v10M12 12L3 7" stroke="currentColor" stroke-width="2" fill="none"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>',
+  chip:'<rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  book:'<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M19 17H6a2 2 0 00-2 2" stroke="currentColor" stroke-width="2" fill="none"/>',
+  pencil:'<path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  layers:'<path d="M12 3l9 5-9 5-9-5z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  flame:'<path d="M12 3c1 3 4 4 4 8a4 4 0 11-8 0c0-1 .5-2 1-2.5 0 2 1 2.5 1 2.5 0-3 1-5 2-6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  graph:'<circle cx="6" cy="6" r="2.5" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="18" cy="9" r="2.5" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="9" cy="18" r="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 7.5l8 1M8 16l8-5.5" stroke="currentColor" stroke-width="2"/>',
+  doc:'<path d="M6 3h8l4 4v14H6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M14 3v4h4M9 13h6M9 17h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  scale:'<path d="M12 4v16M7 8h10M5 8l-2 6h6zM19 8l2 6h-6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+  refresh:'<path d="M20 11a8 8 0 10-1 5m1-5V6m0 5h-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  database:'<ellipse cx="12" cy="5.5" rx="7" ry="2.8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M5 5.5v13c0 1.5 3 2.8 7 2.8s7-1.3 7-2.8v-13M5 12c0 1.5 3 2.8 7 2.8s7-1.3 7-2.8" stroke="currentColor" stroke-width="2" fill="none"/>',
+  cookie:'<path d="M12 3a9 9 0 109 9 4 4 0 01-4-4 4 4 0 01-5-5z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/><circle cx="13" cy="10" r="1" fill="currentColor"/>',
+  warning:'<path d="M12 4l9 16H3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 10v4M12 17v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  beaker:'<path d="M9 3v6l-5 9a2 2 0 002 3h12a2 2 0 002-3l-5-9V3" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M7.5 14h9M8 3h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
 };
-const tick = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+const tick='<svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+const replayIcon='<svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 10-1 5m1-5V6m0 5h-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-// ── The work ──
+// ════════════════════════ ANIMATION SCENES ════════════════════════
+const ANIM = {};
+
+// 1) Vision-Verifier
+ANIM.vision = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g><rect x="8" y="40" width="44" height="32" rx="7" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><circle cx="30" cy="56" r="8.5" fill="var(--gold-soft)" stroke="var(--ink)" stroke-width="2.5"/><circle cx="30" cy="56" r="3" fill="var(--ink)"/><rect x="37" y="36" width="9" height="6" rx="2" fill="var(--ink)"/></g>
+  <text class="lab" x="30" y="86" text-anchor="middle">camera</text>
+  <line class="beam" x1="70" y1="22" x2="70" y2="118" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" opacity="0"/>
+  <g class="chip" transform="translate(74,28)"><rect width="58" height="60" rx="11" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="29" cy="22" r="10" fill="var(--red)"/><text class="lab" x="29" y="49" text-anchor="middle">LED</text><g transform="translate(44,2)"><g class="mark"><circle r="10" fill="var(--green)"/><path d="M-4.5 0l3 3L5.5 -3.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></g></g></g>
+  <g class="chip" transform="translate(140,28)"><rect width="58" height="60" rx="11" fill="#fff" stroke="var(--line)" stroke-width="2"/><rect x="12" y="15" width="34" height="13" rx="3" fill="#d9a066"/><text class="lab" x="29" y="49" text-anchor="middle">Resistor</text><g transform="translate(44,2)"><g class="mark"><circle r="10" fill="var(--green)"/><path d="M-4.5 0l3 3L5.5 -3.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></g></g></g>
+  <g class="chip" transform="translate(206,28)"><rect width="58" height="60" rx="11" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="29" cy="22" r="10" fill="var(--blue)"/><text class="lab" x="29" y="49" text-anchor="middle">LDR</text><g transform="translate(44,2)"><g class="mark"><circle r="10" fill="var(--green)"/><path d="M-4.5 0l3 3L5.5 -3.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></g></g></g>
+  <g class="chip" transform="translate(272,28)"><rect width="58" height="60" rx="11" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="29" cy="22" r="10" fill="none" stroke="var(--ink-soft)" stroke-width="2" stroke-dasharray="3 3"/><text class="lab" x="29" y="49" text-anchor="middle">Buzzer</text><g transform="translate(44,2)"><g class="mark miss"><circle r="10" fill="var(--red)"/><path d="M-4 -4L4 4M4 -4L-4 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g></g></g>
+  <g class="cap2" transform="translate(74,108)" opacity="0"><rect width="172" height="22" rx="11" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="11" y="15">3 of 4 found, 1 missing</text></g>
+</svg>`, init(svg){
+  const marks=qs(svg,'.mark'),beam=svg.querySelector('.beam'),cap=svg.querySelector('.cap2');
+  marks.forEach(m=>originFill(m));
+  if(!A){show([...marks,cap]);return;}
+  loopRun(svg,()=>{[...marks,cap].forEach(e=>e.style.opacity=0);
+    A(beam,{opacity:[0,.9,.9,0],transform:['translateX(0px)','translateX(0px)','translateX(258px)','translateX(258px)']},{duration:1.8});
+    A(marks,{opacity:[0,1],transform:['scale(0)','scale(1.15)','scale(1)']},{duration:.42,delay:stagger(.36,{start:.5}),easing:SPRING});
+    A(cap,{opacity:[0,1]},{duration:.4,delay:2.05});},3600);
+}};
+
+// 2) Observability + hardening
+ANIM.observe = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <circle class="req" cx="14" cy="48" r="5" fill="var(--gold-deep)"/>
+  <g transform="translate(46,30)"><rect width="74" height="40" rx="9" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><text class="lab" x="37" y="24" text-anchor="middle">service</text></g>
+  <g transform="translate(150,18)"><g class="tag"><rect width="118" height="20" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5"/><circle cx="13" cy="10" r="4" fill="var(--blue)"/><text class="lab" x="24" y="14" fill="var(--blue-deep)">trace linked</text></g></g>
+  <g transform="translate(150,44)"><g class="tag"><rect width="118" height="20" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.5"/><circle cx="13" cy="10" r="4" fill="var(--green)"/><text class="lab" x="24" y="14" fill="var(--green-deep)">metrics +1</text></g></g>
+  <g transform="translate(150,70)"><g class="tag"><rect width="118" height="20" rx="10" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><circle cx="13" cy="10" r="4" fill="var(--gold-deep)"/><text class="lab" x="24" y="14">audit logged</text></g></g>
+  <g transform="translate(308,30)"><g class="bell"><path d="M-7 5a7 7 0 0114 0c0 5 2 5 2 5H-9s2 0 2-5z" fill="#fff" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/><path d="M-2 13h4" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/></g></g>
+  <g class="alert" transform="translate(150,108)" opacity="0"><rect width="180" height="22" rx="11" fill="var(--red-soft)" stroke="var(--red)" stroke-width="1.5"/><text class="cap" x="11" y="15" fill="var(--red)">slowdown, team emailed</text></g>
+</svg>`, init(svg){
+  const req=svg.querySelector('.req'),tags=qs(svg,'.tag'),bell=svg.querySelector('.bell'),alert=svg.querySelector('.alert');
+  tags.forEach(t=>originFill(t)); originFill(bell,'50% 0%');
+  if(!A){show(tags);alert.style.opacity=1;return;}
+  loopRun(svg,()=>{tags.forEach(e=>e.style.opacity=0);alert.style.opacity=0;
+    A(req,{transform:['translateX(0px)','translateX(30px)'],opacity:[1,1,0]},{duration:.8,easing:'ease-in'});
+    A(tags,{opacity:[0,1],transform:['scale(.8)','scale(1)']},{duration:.34,delay:stagger(.18,{start:.7}),easing:SPRING});
+    A(bell,{transform:['rotate(0deg)','rotate(14deg)','rotate(-12deg)','rotate(8deg)','rotate(0deg)']},{duration:.7,delay:1.5});
+    A(alert,{opacity:[0,1]},{duration:.4,delay:1.7});},4200);
+}};
+
+// 3) Simulator current flow
+ANIM.sim = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <path id="simwire" d="M60 40 H300 V112 H60 Z" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+  <g transform="translate(48,64)"><line x1="-10" y1="4" x2="10" y2="4" stroke="var(--ink)" stroke-width="3"/><line x1="-6" y1="14" x2="6" y2="14" stroke="var(--ink)" stroke-width="6"/><line x1="-10" y1="22" x2="10" y2="22" stroke="var(--ink)" stroke-width="3"/></g>
+  <g transform="translate(150,40)"><rect x="-22" y="-7" width="44" height="14" rx="3" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><path d="M-16 0l4-4 6 8 6-8 6 8 4-4" fill="none" stroke="var(--gold-deep)" stroke-width="2"/></g>
+  <g transform="translate(300,76)"><circle class="ledglow" r="17" fill="var(--gold)" opacity="0"/><circle class="led" r="9" fill="#ffe6a0" stroke="var(--ink)" stroke-width="2.5"/></g>
+  <text class="lab" x="300" y="104" text-anchor="middle">LED</text>
+  <circle class="dot" r="4" fill="var(--gold-deep)"/><circle class="dot" r="4" fill="var(--gold-deep)"/><circle class="dot" r="4" fill="var(--gold-deep)"/><circle class="dot" r="4" fill="var(--gold-deep)"/>
+  <g class="cap2" transform="translate(60,126)"><rect width="120" height="20" rx="10" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="14">I = 12.8 mA</text></g>
+</svg>`, init(svg){
+  const dots=qs(svg,'.dot'),led=svg.querySelector('.led'),glow=svg.querySelector('.ledglow'),cap=svg.querySelector('.cap2');
+  const path=svg.querySelector('#simwire'),len=path.getTotalLength();
+  if(!A){show([glow,cap]);glow.style.opacity=.4;led.setAttribute('fill','var(--gold)');dots.forEach((d,i)=>{const p=path.getPointAtLength(len*i/dots.length);d.setAttribute('cx',p.x);d.setAttribute('cy',p.y);});return;}
+  dots.forEach((dot,i)=>A((prog)=>{const p=path.getPointAtLength(((prog+i/dots.length)%1)*len);dot.setAttribute('cx',p.x);dot.setAttribute('cy',p.y);},{duration:2.6,easing:'linear',repeat:Infinity}));
+  A(glow,{opacity:[0,.5,.28,.5]},{duration:1.8,repeat:Infinity});
+  led.animate([{fill:'#ffe6a0'},{fill:'#facc2e'}],{duration:700,fill:'forwards'});
+  A(cap,{opacity:[0,1]},{duration:.5,delay:.6});
+}};
+
+// 4) Run real Arduino code
+ANIM.arduino = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(8,16)"><rect width="150" height="86" rx="9" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/>
+    <rect class="cl" x="14" y="16" width="80" height="7" rx="3.5" fill="var(--ink-soft)"/>
+    <rect class="cl" x="14" y="32" width="110" height="7" rx="3.5" fill="var(--green-deep)"/>
+    <rect class="cl" x="14" y="48" width="64" height="7" rx="3.5" fill="var(--blue-deep)"/>
+    <rect class="cl" x="14" y="64" width="96" height="7" rx="3.5" fill="var(--ink-soft)"/></g>
+  <g transform="translate(40,110)"><g class="btn"><rect width="86" height="26" rx="13" fill="var(--gold)" stroke="var(--ink)" stroke-width="2"/><text class="cap" x="43" y="17" text-anchor="middle">Compile</text></g></g>
+  <path class="arrow" d="M164 56 H206" stroke="var(--ink)" stroke-width="2.5" fill="none" marker-end="url(#ah)" stroke-dasharray="44" stroke-dashoffset="44"/>
+  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0l6 4-6 4z" fill="var(--ink)"/></marker></defs>
+  <g transform="translate(214,30)"><rect width="64" height="52" rx="7" fill="var(--ink)"/><text class="lab" x="32" y="20" text-anchor="middle" fill="#fff">chip</text>
+    <circle class="led13" cx="32" cy="36" r="7" fill="#4b5a4f"/><text class="lab" x="32" y="64" text-anchor="middle">pin 13</text></g>
+  <g transform="translate(290,30)"><rect width="62" height="52" rx="7" fill="#0f1714"/><text class="mono serial" x="8" y="18" fill="var(--green)"></text></g>
+  <g class="cap2" transform="translate(214,110)" opacity="0"><rect width="138" height="22" rx="11" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="15">924 bytes in 4s</text></g>
+</svg>`, init(svg){
+  const lines=qs(svg,'.cl'),btn=svg.querySelector('.btn'),arrow=svg.querySelector('.arrow'),led=svg.querySelector('.led13'),serial=svg.querySelector('.serial'),cap=svg.querySelector('.cap2');
+  originFill(btn);
+  if(!A){show([cap]);led.setAttribute('fill','var(--gold)');serial.textContent='blink ok';return;}
+  loopRun(svg,()=>{cap.style.opacity=0;arrow.style.strokeDashoffset=44;led.setAttribute('fill','#4b5a4f');serial.textContent='';lines.forEach(l=>l.style.opacity=0);
+    A(lines,{opacity:[0,1],transform:['translateX(-6px)','translateX(0px)']},{duration:.3,delay:stagger(.12)});
+    A(btn,{transform:['scale(1)','scale(.92)','scale(1)']},{duration:.3,delay:1.0});
+    A(arrow,{strokeDashoffset:[44,0]},{duration:.5,delay:1.3});
+    setTimeout(()=>{serial.textContent='> 924 bytes';},1900);
+    A(led,{fill:['#4b5a4f','var(--gold)','#4b5a4f','var(--gold)']},{duration:1.0,delay:2.0});
+    A(cap,{opacity:[0,1]},{duration:.4,delay:2.2});},4600);
+}};
+
+// 5) Build-your-own schematic editor
+ANIM.schematic = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g opacity="0.5">${Array.from({length:40}).map((_,i)=>`<circle cx="${40+(i%8)*38}" cy="${28+Math.floor(i/8)*24}" r="1.6" fill="#cfc9b8"/>`).join('')}</g>
+  <g class="palette" transform="translate(8,54)"><rect width="40" height="44" rx="8" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="20" cy="18" r="9" fill="var(--red)"/><text class="lab" x="20" y="38" text-anchor="middle">LED</text></g>
+  <g class="part" transform="translate(8,54)"><circle cx="20" cy="18" r="9" fill="var(--red)" stroke="var(--ink)" stroke-width="1.5"/></g>
+  <g transform="translate(40,100)"><line x1="-6" y1="-6" x2="6" y2="-6" stroke="var(--ink)" stroke-width="2.5"/><line x1="-3" y1="0" x2="3" y2="0" stroke="var(--ink)" stroke-width="5"/><text class="lab" x="0" y="20" text-anchor="middle">+</text></g>
+  <path class="wire" d="M40 100 H180 V72" fill="none" stroke="var(--gold-deep)" stroke-width="3" stroke-linecap="round" stroke-dasharray="172" stroke-dashoffset="172"/>
+  <g class="cap2" transform="translate(214,58)" opacity="0"><rect width="120" height="22" rx="11" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="15">12.77 mA</text></g>
+</svg>`, init(svg){
+  const part=svg.querySelector('.part'),wire=svg.querySelector('.wire'),cap=svg.querySelector('.cap2');
+  if(!A){part.setAttribute('transform','translate(160,54)');wire.style.strokeDashoffset=0;show([cap]);return;}
+  loopRun(svg,()=>{cap.style.opacity=0;wire.style.strokeDashoffset=172;
+    A(part,{transform:['translate(8px,54px)','translate(160px,54px)']},{duration:.7,delay:.3,easing:SPRING});
+    A(wire,{strokeDashoffset:[172,0]},{duration:.8,delay:1.2});
+    A(cap,{opacity:[0,1]},{duration:.4,delay:2.0});},4200);
+}};
+
+// 6) Achievements unlock
+ANIM.achieve = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(130,18)"><g class="lockcard">
+    <rect width="100" height="114" rx="16" fill="#fff" stroke="var(--line)" stroke-width="2.5"/>
+    <g class="lockface"><rect x="38" y="34" width="24" height="20" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="3"/><path d="M42 34v-5a8 8 0 0116 0v5" fill="none" stroke="var(--ink-soft)" stroke-width="3"/><text class="lab" x="50" y="78" text-anchor="middle">LOCKED</text><circle cx="50" cy="96" r="13" fill="none" stroke="var(--line)" stroke-width="4"/><circle class="ring" cx="50" cy="96" r="13" fill="none" stroke="var(--gold-deep)" stroke-width="4" stroke-linecap="round" transform="rotate(-90 50 96)" stroke-dasharray="81.7" stroke-dashoffset="81.7"/></g>
+    <g class="winface" opacity="0"><rect x="2" y="2" width="96" height="110" rx="14" fill="var(--gold-soft)" stroke="var(--gold-deep)" stroke-width="2.5"/><path class="star" d="M50 26l7 16 17 1-13 11 4 17-15-9-15 9 4-17-13-11 17-1z" fill="var(--gold)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><text class="cap" x="50" y="86" text-anchor="middle">First Build</text><text class="lab" x="50" y="102" text-anchor="middle">+50 XP</text></g>
+  </g></g>
+  <g transform="translate(180,75)"><g class="burst" opacity="0" stroke="var(--gold-deep)" stroke-width="3" stroke-linecap="round"><line x1="0" y1="-34" x2="0" y2="-46"/><line x1="30" y1="-17" x2="41" y2="-23"/><line x1="30" y1="17" x2="41" y2="23"/><line x1="0" y1="34" x2="0" y2="46"/><line x1="-30" y1="17" x2="-41" y2="23"/><line x1="-30" y1="-17" x2="-41" y2="-23"/></g></g>
+</svg>`, init(svg){
+  const lockface=svg.querySelector('.lockface'),winface=svg.querySelector('.winface'),ring=svg.querySelector('.ring'),burst=svg.querySelector('.burst'),star=svg.querySelector('.star'),card=svg.querySelector('.lockcard');
+  originFill(star);originFill(card);originFill(burst);
+  if(!A){lockface.style.opacity=0;show([winface,burst]);return;}
+  loopRun(svg,()=>{lockface.style.opacity=1;winface.style.opacity=0;burst.style.opacity=0;ring.style.strokeDashoffset=81.7;
+    A(ring,{strokeDashoffset:[81.7,0]},{duration:1.1,easing:'ease-out'});
+    A(lockface,{opacity:[1,0]},{duration:.25,delay:1.2});
+    A(winface,{opacity:[0,1]},{duration:.3,delay:1.25});
+    A(card,{transform:['scale(1)','scale(1.08)','scale(1)']},{duration:.5,delay:1.2,easing:SPRING});
+    A(star,{transform:['scale(0) rotate(-40deg)','scale(1.1) rotate(0deg)','scale(1) rotate(0deg)']},{duration:.55,easing:SPRING,delay:1.3});
+    A(burst,{opacity:[0,1,0],transform:['scale(.4)','scale(1.15)']},{duration:.6,delay:1.35});},4000);
+}};
+
+// 7) Weekly league climb
+ANIM.league = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(18,34)"><circle r="11" fill="var(--gold)" stroke="var(--ink)" stroke-width="1.5"/><text class="cap" x="0" y="4" text-anchor="middle">1</text></g>
+  <g transform="translate(18,66)"><circle r="11" fill="var(--line)"/><text class="cap" x="0" y="4" text-anchor="middle">2</text></g>
+  <g transform="translate(18,98)"><circle r="11" fill="var(--line)"/><text class="cap" x="0" y="4" text-anchor="middle">3</text></g>
+  <g class="pYou" transform="translate(40,98)"><rect width="302" height="26" rx="9" x="0" y="-13" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2"/><circle cx="16" cy="0" r="8" fill="var(--blue)"/><text class="cap" x="32" y="4">You</text><text class="num xpYou lab" x="288" y="4" text-anchor="end">820 XP</text></g>
+  <g class="pSam" transform="translate(40,34)"><rect width="302" height="26" rx="9" x="0" y="-13" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="16" cy="0" r="8" fill="var(--green)"/><text class="cap" x="32" y="4">Sam</text><text class="num lab" x="288" y="4" text-anchor="end">1040 XP</text></g>
+  <g class="pPriya" transform="translate(40,66)"><rect width="302" height="26" rx="9" x="0" y="-13" fill="#fff" stroke="var(--line)" stroke-width="2"/><circle cx="16" cy="0" r="8" fill="var(--red)"/><text class="cap" x="32" y="4">Priya</text><text class="num lab" x="288" y="4" text-anchor="end">910 XP</text></g>
+</svg>`, init(svg){
+  const you=svg.querySelector('.pYou'),sam=svg.querySelector('.pSam'),pri=svg.querySelector('.pPriya'),xpY=svg.querySelector('.xpYou');
+  const S={1:'translate(40px,34px)',2:'translate(40px,66px)',3:'translate(40px,98px)'};
+  if(!A){you.style.transform=S[1];sam.style.transform=S[2];pri.style.transform=S[3];xpY.textContent='1120 XP';return;}
+  loopRun(svg,()=>{you.style.transform=S[3];sam.style.transform=S[1];pri.style.transform=S[2];xpY.textContent='820 XP';
+    A(you,{transform:[S[3],S[1]]},{duration:1.0,delay:.6,easing:SPRING});
+    A(sam,{transform:[S[1],S[2]]},{duration:1.0,delay:.6,easing:'ease-in-out'});
+    A(pri,{transform:[S[2],S[3]]},{duration:1.0,delay:.6,easing:'ease-in-out'});
+    setTimeout(()=>{let v=820;const id=setInterval(()=>{v+=30;if(v>=1120){v=1120;clearInterval(id);}xpY.textContent=v+' XP';},26);},900);},4200);
+}};
+
+// 8) 3D digital twin
+ANIM.twin = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g class="photo" transform="translate(20,38)"><rect width="92" height="74" rx="9" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><rect x="12" y="14" width="68" height="34" rx="4" fill="var(--green-soft)"/><circle cx="26" cy="58" r="4" fill="var(--red)"/><circle cx="46" cy="58" r="4" fill="var(--blue)"/><circle cx="66" cy="58" r="4" fill="var(--gold-deep)"/><text class="lab" x="46" y="-6" text-anchor="middle">your build</text></g>
+  <path class="arrow" d="M122 75 H156" stroke="var(--ink)" stroke-width="2.5" fill="none" marker-end="url(#ah2)" stroke-dasharray="36" stroke-dashoffset="36"/>
+  <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0l6 4-6 4z" fill="var(--ink)"/></marker></defs>
+  <g transform="translate(180,40)"><g class="sparks" opacity="0" stroke="var(--gold-deep)" stroke-width="2.5" stroke-linecap="round"><line x1="0" y1="-6" x2="0" y2="-13"/><line x1="9" y1="0" x2="16" y2="0"/><line x1="-7" y1="5" x2="-12" y2="9"/></g></g>
+  <g transform="translate(262,76)"><g class="cube"><polygon class="f1" points="0,-34 30,-18 30,16 0,32 -30,16 -30,-18" fill="var(--gold-soft)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/><path d="M0,-34 V32 M-30,-18 L0,-1 L30,-18 M0,-1 V32" fill="none" stroke="var(--ink)" stroke-width="2" opacity="0.55"/></g></g>
+  <g class="cap2" transform="translate(214,114)" opacity="0"><rect width="118" height="22" rx="11" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="15">your 3D twin</text></g>
+</svg>`, init(svg){
+  const photo=svg.querySelector('.photo'),arrow=svg.querySelector('.arrow'),sparks=svg.querySelector('.sparks'),cube=svg.querySelector('.cube'),cap=svg.querySelector('.cap2');
+  originFill(cube);originFill(sparks);
+  if(!A){show([cap]);cube.style.transform='none';return;}
+  loopRun(svg,()=>{cap.style.opacity=0;sparks.style.opacity=0;arrow.style.strokeDashoffset=36;cube.style.opacity=0;
+    A(arrow,{strokeDashoffset:[36,0]},{duration:.5,delay:.4});
+    A(sparks,{opacity:[0,1,0],transform:['scale(.5) rotate(0deg)','scale(1.1) rotate(40deg)']},{duration:.6,delay:.9});
+    A(cube,{opacity:[0,1],transform:['scale(0) rotate(-30deg)','scale(1) rotate(0deg)']},{duration:.6,delay:1.2,easing:SPRING});
+    A(cube,{transform:['rotate(0deg)','rotate(-9deg)','rotate(9deg)','rotate(0deg)']},{duration:2.0,delay:1.8});
+    A(cap,{opacity:[0,1]},{duration:.4,delay:1.7});},4600);
+}};
+
+// 9) Stripe billing
+ANIM.billing = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(14,52)"><rect width="64" height="44" rx="8" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><rect x="0" y="12" width="64" height="7" fill="var(--ink)"/><text class="lab" x="32" y="38" text-anchor="middle">checkout</text></g>
+  <path class="a1" d="M82 74 H120" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#bh)" stroke-dasharray="40" stroke-dashoffset="40"/>
+  <defs><marker id="bh" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0l6 4-6 4z" fill="var(--ink)"/></marker></defs>
+  <g transform="translate(126,54)"><rect width="64" height="40" rx="8" fill="#635bff"/><text class="cap" x="32" y="24" text-anchor="middle" fill="#fff">Stripe</text></g>
+  <g transform="translate(204,58)"><g class="sig" opacity="0"><rect width="34" height="32" rx="7" fill="#fff" stroke="var(--green-deep)" stroke-width="2.5"/><rect x="11" y="14" width="12" height="10" rx="2" fill="none" stroke="var(--green-deep)" stroke-width="2"/><path d="M13 14v-3a4 4 0 018 0v3" fill="none" stroke="var(--green-deep)" stroke-width="2"/><g transform="translate(28,2)"><circle r="8" fill="var(--green)"/><path d="M-3.5 0l2.5 2.5L4 -3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></g></g></g>
+  <text class="lab" x="221" y="104" text-anchor="middle">signed webhook</text>
+  <g transform="translate(266,56)"><g class="planFree"><rect width="78" height="36" rx="18" fill="#f3efe6" stroke="var(--line)" stroke-width="2"/><text class="cap" x="39" y="23" text-anchor="middle" fill="var(--ink-soft)">Free</text></g></g>
+  <g transform="translate(266,56)"><g class="planPro" opacity="0"><rect width="78" height="36" rx="18" fill="var(--gold)" stroke="var(--ink)" stroke-width="2.5"/><text class="cap" x="39" y="23" text-anchor="middle">Pro</text></g></g>
+</svg>`, init(svg){
+  const a1=svg.querySelector('.a1'),sig=svg.querySelector('.sig'),free=svg.querySelector('.planFree'),pro=svg.querySelector('.planPro');
+  originFill(free);originFill(pro);originFill(sig);
+  if(!A){free.style.opacity=0;show([sig,pro]);return;}
+  loopRun(svg,()=>{a1.style.strokeDashoffset=40;sig.style.opacity=0;free.style.opacity=1;pro.style.opacity=0;
+    A(a1,{strokeDashoffset:[40,0]},{duration:.5,delay:.4});
+    A(sig,{opacity:[0,1],transform:['scale(.7)','scale(1)']},{duration:.4,delay:1.1,easing:SPRING});
+    A(free,{opacity:[1,0],transform:['scale(1)','scale(.85)']},{duration:.35,delay:1.8});
+    A(pro,{opacity:[0,1],transform:['scale(.7)','scale(1.1)','scale(1)']},{duration:.5,delay:1.9,easing:SPRING});},4200);
+}};
+
+// 10) GDPR export + delete
+ANIM.gdpr = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(150,40)"><g class="vault"><rect width="60" height="48" rx="9" fill="var(--gold-soft)" stroke="var(--ink)" stroke-width="2.5"/><path d="M24 22h12M24 28h12M24 16h12" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/><text class="lab" x="30" y="-8" text-anchor="middle">your data</text></g></g>
+  <path class="aE" d="M150 60 H92 V92" stroke="var(--blue-deep)" stroke-width="2.5" fill="none" stroke-dasharray="92" stroke-dashoffset="92"/>
+  <g transform="translate(72,96)"><g class="file" opacity="0"><rect width="40" height="46" rx="6" fill="#fff" stroke="var(--blue-deep)" stroke-width="2.5"/><path d="M10 14h20M10 22h20M10 30h12" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"/><g transform="translate(20,46)"><path d="M0 -4v8M-5 1l5 5 5-5" stroke="var(--blue-deep)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g></g></g>
+  <text class="lab" x="92" y="20" text-anchor="middle" fill="var(--blue-deep)">export</text>
+  <path class="aD" d="M210 60 H268 V92" stroke="var(--red)" stroke-width="2.5" fill="none" stroke-dasharray="92" stroke-dashoffset="92"/>
+  <text class="lab" x="268" y="20" text-anchor="middle" fill="var(--red)">delete</text>
+  <g transform="translate(268,108)"><g class="erased" opacity="0"><circle r="14" fill="var(--green)"/><path d="M-5 0l3.5 3.5L6 -4.5" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/></g></g>
+</svg>`, init(svg){
+  const vault=svg.querySelector('.vault'),aE=svg.querySelector('.aE'),file=svg.querySelector('.file'),aD=svg.querySelector('.aD'),erased=svg.querySelector('.erased');
+  originFill(vault);originFill(erased);originFill(file);
+  if(!A){vault.style.opacity=0;show([file,erased]);return;}
+  loopRun(svg,()=>{aE.style.strokeDashoffset=92;aD.style.strokeDashoffset=92;file.style.opacity=0;erased.style.opacity=0;vault.style.opacity=1;
+    A(aE,{strokeDashoffset:[92,0]},{duration:.5,delay:.4});
+    A(file,{opacity:[0,1],transform:['translateY(-6px) scale(.8)','translateY(0px) scale(1)']},{duration:.4,delay:.9,easing:SPRING});
+    A(aD,{strokeDashoffset:[92,0]},{duration:.5,delay:1.7});
+    A(vault,{opacity:[1,0],transform:['scale(1) rotate(0deg)','scale(0) rotate(20deg)']},{duration:.5,delay:2.2});
+    A(erased,{opacity:[0,1],transform:['scale(0)','scale(1.1)','scale(1)']},{duration:.45,delay:2.6,easing:SPRING});},4800);
+}};
+
+// 11) Per-user isolation
+ANIM.isolation = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(20,40)"><circle cx="20" cy="14" r="13" fill="var(--blue)"/><circle cx="20" cy="10" r="5" fill="#fff"/><path d="M9 24c0-6 5-9 11-9s11 3 11 9" fill="#fff"/><text class="lab" x="20" y="50" text-anchor="middle">You</text></g>
+  <g transform="translate(96,44)"><g class="token" opacity="0"><rect width="58" height="22" rx="11" fill="#fff" stroke="var(--green-deep)" stroke-width="2"/><circle cx="13" cy="11" r="6" fill="var(--green)"/><path d="M10 11l2 2 4-4" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/><text class="lab" x="22" y="15">token ok</text></g></g>
+  <g transform="translate(176,30)"><rect width="56" height="44" rx="9" fill="var(--gold-soft)" stroke="var(--ink)" stroke-width="2.5"/><rect x="22" y="18" width="12" height="10" rx="2" fill="none" stroke="var(--ink)" stroke-width="2.5"/><path d="M24 18v-3a4 4 0 018 0v3" fill="none" stroke="var(--ink)" stroke-width="2.5"/><text class="lab" x="28" y="56" text-anchor="middle">your data</text></g>
+  <g transform="translate(176,92)"><rect width="56" height="40" rx="9" fill="#fff" stroke="var(--line)" stroke-width="2.5"/><text class="lab" x="28" y="24" text-anchor="middle">other user</text></g>
+  <path class="cross" opacity="0" d="M150 96 C150 80 150 70 170 68" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-dasharray="4 4"/>
+  <g transform="translate(150,84)"><g class="block" opacity="0"><circle r="13" fill="var(--red)"/><path d="M-5 -5L5 5M5 -5L-5 5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g></g>
+</svg>`, init(svg){
+  const token=svg.querySelector('.token'),cross=svg.querySelector('.cross'),block=svg.querySelector('.block');
+  originFill(token,'0% 50%');originFill(block);
+  if(!A){show([token,cross,block]);return;}
+  loopRun(svg,()=>{[token,cross,block].forEach(e=>e.style.opacity=0);
+    A(token,{opacity:[0,1],transform:['scale(.6)','scale(1)']},{duration:.4,easing:SPRING,delay:.2});
+    A(cross,{opacity:[0,1]},{duration:.4,delay:1.0});
+    A(block,{opacity:[0,1],transform:['scale(0)','scale(1.15)','scale(1)']},{duration:.4,easing:SPRING,delay:1.2});},3800);
+}};
+
+// 12) Resilience circuit breaker
+ANIM.breaker = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <g transform="translate(16,58)"><rect width="60" height="34" rx="8" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><text class="lab" x="30" y="21" text-anchor="middle">Ohmlet</text></g>
+  <line x1="86" y1="75" x2="150" y2="75" stroke="var(--ink)" stroke-width="3"/>
+  <line class="lever" x1="150" y1="75" x2="208" y2="75" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="150" cy="75" r="4" fill="var(--ink)"/><circle cx="210" cy="75" r="4" fill="var(--ink)"/>
+  <text class="lab" x="160" y="60" text-anchor="middle">breaker</text>
+  <g transform="translate(220,54)"><rect class="up" width="70" height="42" rx="9" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><text class="lab" x="35" y="20" text-anchor="middle">AI model</text><text class="upstate lab" x="35" y="34" text-anchor="middle" fill="var(--green-deep)">healthy</text></g>
+  <circle class="req" r="5" fill="var(--gold-deep)" cx="80" cy="75"/>
+  <g class="fallback" opacity="0" transform="translate(86,104)"><rect width="184" height="22" rx="11" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="15">instant "try again in a moment"</text></g>
+</svg>`, init(svg){
+  const req=svg.querySelector('.req'),lever=svg.querySelector('.lever'),up=svg.querySelector('.up'),upstate=svg.querySelector('.upstate'),fb=svg.querySelector('.fallback');
+  originFill(lever,'0% 50%');
+  if(!A){show([fb]);lever.style.transform='rotate(-34deg)';up.setAttribute('stroke','var(--red)');upstate.textContent='down';upstate.setAttribute('fill','var(--red)');return;}
+  loopRun(svg,()=>{fb.style.opacity=0;lever.style.transform='rotate(0deg)';up.setAttribute('stroke','var(--ink)');upstate.textContent='healthy';upstate.setAttribute('fill','var(--green-deep)');
+    A(req,{transform:['translateX(0px)','translateX(130px)'],opacity:[1,1,0]},{duration:1.0,easing:'ease-in'});
+    setTimeout(()=>{up.setAttribute('stroke','var(--red)');upstate.textContent='down';upstate.setAttribute('fill','var(--red)');},1000);
+    A(lever,{transform:['rotate(0deg)','rotate(-34deg)']},{duration:.45,easing:SPRING,delay:1.3});
+    A(fb,{opacity:[0,1]},{duration:.4,delay:1.9});},4000);
+}};
+
+// 13) Interview Mode
+ANIM.interview = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <text class="lab" x="46" y="20" text-anchor="middle">upload</text>
+  <g class="exe" transform="translate(24,30)"><rect width="34" height="42" rx="5" fill="#fff" stroke="var(--red)" stroke-width="2.5"/><text class="lab" x="17" y="26" text-anchor="middle" fill="var(--red)">.exe</text></g>
+  <g transform="translate(64,34)"><g class="exeX" opacity="0"><circle r="9" fill="var(--red)"/><path d="M-4 -4L4 4M4 -4L-4 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></g></g>
+  <g class="cv" transform="translate(24,84)"><rect width="34" height="42" rx="5" fill="#fff" stroke="var(--green-deep)" stroke-width="2.5"/><text class="lab" x="17" y="26" text-anchor="middle" fill="var(--green-deep)">.pdf</text></g>
+  <g transform="translate(64,88)"><g class="cvOk" opacity="0"><circle r="9" fill="var(--green)"/><path d="M-4 0l3 3L5 -3.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/></g></g>
+  <g transform="translate(112,75)" stroke="var(--blue-deep)" stroke-width="3" stroke-linecap="round"><line class="w" x1="0" y1="-8" x2="0" y2="8"/><line class="w" x1="9" y1="-16" x2="9" y2="16"/><line class="w" x1="18" y1="-6" x2="18" y2="6"/><line class="w" x1="27" y1="-20" x2="27" y2="20"/><line class="w" x1="36" y1="-10" x2="36" y2="10"/><line class="w" x1="45" y1="-15" x2="45" y2="15"/></g>
+  <text class="lab" x="130" y="112" text-anchor="middle">mock interview</text>
+  <g transform="translate(294,72)"><path d="M-34 0a34 34 0 0168 0" fill="none" stroke="var(--line)" stroke-width="7"/><path class="gauge" d="M-34 0a34 34 0 0168 0" fill="none" stroke="var(--green)" stroke-width="7" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="107"/><text class="num scoreN cap" x="0" y="-4" text-anchor="middle" font-size="20">0</text><text class="lab" x="0" y="14" text-anchor="middle">score</text></g>
+</svg>`, init(svg){
+  const exeX=svg.querySelector('.exeX'),exe=svg.querySelector('.exe'),cvOk=svg.querySelector('.cvOk'),waves=qs(svg,'.w'),gauge=svg.querySelector('.gauge'),scoreN=svg.querySelector('.scoreN');
+  waves.forEach(w=>originFill(w));originFill(exeX);originFill(cvOk);
+  if(!A){show([exeX,cvOk]);gauge.style.strokeDashoffset=24;scoreN.textContent='82';return;}
+  loopRun(svg,()=>{exe.style.opacity=1;exeX.style.opacity=0;cvOk.style.opacity=0;gauge.style.strokeDashoffset=107;scoreN.textContent='0';
+    A(exe,{opacity:[1,1,0]},{duration:.7,delay:.3,easing:'ease-in'});
+    A(exeX,{opacity:[0,1],transform:['scale(0)','scale(1.1)','scale(1)']},{duration:.35,easing:SPRING,delay:.45});
+    A(cvOk,{opacity:[0,1],transform:['scale(0)','scale(1.1)','scale(1)']},{duration:.35,easing:SPRING,delay:1.0});
+    A(waves,{transform:['scaleY(.35)','scaleY(1)','scaleY(.35)']},{duration:.5,delay:stagger(.08,{start:1.3}),repeat:3});
+    A(gauge,{strokeDashoffset:[107,24]},{duration:.9,delay:2.4,easing:'ease-out'});
+    setTimeout(()=>{let v=0;const id=setInterval(()=>{v+=4;if(v>=82){v=82;clearInterval(id);}scoreN.textContent=v;},26);},2400);},4600);
+}};
+
+// 14) Curriculum path
+ANIM.curriculum = { svg:`<svg class="scene" viewBox="0 0 360 150">
+  <path id="curve" d="M24 120 C90 120 70 40 130 40 S210 120 250 80 S320 30 340 30" fill="none" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>
+  ${[[24,120],[88,68],[150,40],[206,92],[262,76],[340,30]].map((p,i)=>`<g class="node n${i}" transform="translate(${p[0]},${p[1]})"><circle r="13" fill="#fff" stroke="var(--line)" stroke-width="3"/><circle class="fill" r="13" fill="var(--gold)" stroke="var(--ink)" stroke-width="2.5" opacity="0"/></g>`).join('')}
+  <g class="cap2" transform="translate(120,128)"><rect width="150" height="20" rx="10" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1.5"/><text class="cap" x="10" y="14"><tspan class="cn">0</tspan> interactive lessons</text></g>
+</svg>`, init(svg){
+  const fills=qs(svg,'.fill'),cn=svg.querySelector('.cn');
+  fills.forEach(f=>originFill(f));
+  if(!A){show(fills);cn.textContent='142';return;}
+  loopRun(svg,()=>{fills.forEach(f=>f.style.opacity=0);cn.textContent='0';
+    A(fills,{opacity:[0,1],transform:['scale(0)','scale(1.2)','scale(1)']},{duration:.4,delay:stagger(.22,{start:.3}),easing:SPRING});
+    setTimeout(()=>{let v=0;const id=setInterval(()=>{v+=6;if(v>=142){v=142;clearInterval(id);}cn.textContent=v;},20);},700);},4200);
+}};
+
+// ════════════════════════ THE WORK ════════════════════════
+const SECTIONS = [
+  { key:'learn',     label:'The learning experience', note:'The authored course and the interactive lesson player that teaches it.' },
+  { key:'tutor',     label:'Live tutor and vision',   note:'The voice-and-camera heart of the product.' },
+  { key:'sim',       label:'The simulator',           note:'Learn by seeing electricity move, no hardware required.' },
+  { key:'game',      label:'Gamification, community, reward', note:'The retention engine and the post-build payoff.' },
+  { key:'commerce',  label:'The commercial spine',    note:'Accounts, payments, and the things that make Ohmlet a business.' },
+  { key:'security',  label:'Security and trust',      note:'Keeping each person’s data theirs, and the service safe.' },
+  { key:'ops',       label:'Reliability and operations', note:'Staying up, staying fast, and knowing when something breaks.' },
+  { key:'foundation',label:'Engineering foundations', note:'The docs and housekeeping that keep it maintainable.' },
+  { key:'next',      label:'Up next',                 note:'What I would build next, roughly in priority order.' },
+];
+
 const ITEMS = [
-  // THIS SESSION
-  { icon:'camera', session:true, status:'live', date:'Jun 24', groups:['services'],
-    title:'Vision-Verifier service — the camera “kit check”',
-    what:'A brand-new backend service: the learner lays their components out, the camera looks, and it confirms each expected part (present / missing / not sure), notices extras, and says whether they’re ready to wire. It can also identify a single part held up to the lens.',
-    why:'Step 2 of Ohmlet’s core loop is “verify components via camera.” Until now that step was just a spoken prompt — the button existed but did nothing real behind it.',
-    how:'Turns a hollow step into a working feature, kills the “do I even have the right parts?” friction before a first build, and stays camera-first and on-brand (no fake interactivity).',
-    ev:['Own Cloud Run service','Gemini 3.5 Flash, ~2–3s','15 automated tests','Deployed rev 00002','Live smoke test passed'] },
+  // ── LEARN ──
+  { sec:'learn', icon:'book', status:'shipped', anim:'curriculum',
+    title:'A real course: 142 lessons across 12 units',
+    what:'A structured electronics course of 12 themed units, broken into 57 modules, holding 142 fully written interactive lessons that run from physics basics through sensors, Arduino, analog, logic and robotics.',
+    why:'A deep, ordered course is what makes Ohmlet a genuine learning product rather than a single demo build.',
+    how:'Learners get a real progression with hundreds of authored questions, and every lesson is grounded in established textbooks with a provenance file recording the source.',
+    ev:['12 units, 57 modules, 142 lessons','Grounded in 5 named electronics books','lint:lessons validates every lesson vs schema'] },
+  { sec:'learn', icon:'pencil', status:'shipped',
+    title:'Duolingo-style lesson player with 17 exercise types',
+    what:'A lesson runs as a session of about 15 questions, mixing many kinds of exercise: multiple choice, true/false, a tappable word bank, matching, ordering steps, tapping the faulty part, dialing a meter, setting a resistor, and drawing circuits. A wrong answer goes to the back of the queue and returns until it is answered correctly.',
+    why:'Varied, hands-on question types and a retry loop keep practice active and make the knowledge actually stick.',
+    how:'Learners stay engaged and cannot finish a run until every graded question is right, so completion means real mastery.',
+    ev:['17 exercise types','15-question runs, wrong-answer requeue','Settable resistor + needle-meter widgets'] },
+  { sec:'learn', icon:'scale', status:'shipped',
+    title:'Difficulty gating: Bronze, Silver, Gold and gateway exams',
+    what:'Each lesson can be replayed at three rigor levels that progressively remove the teaching, shuffle the questions and allow fewer mistakes, plus per-unit checkpoints and two cumulative gateway exams between major sections.',
+    why:'Escalating rigor and gateway checkpoints make learners prove mastery before moving on, instead of clicking through.',
+    how:'Replays feel like fresh, harder challenges, and the big exams mark real milestones in the course.',
+    ev:['Bronze / Silver / Gold per lesson','Foundations + Analog Core gateway exams','Per-unit checkpoints'] },
+  { sec:'learn', icon:'layers', status:'shipped',
+    title:'Circuit diagrams as data',
+    what:'Circuit schematics can be written as plain data (a list of parts and where they sit) and drawn automatically by a renderer, instead of being hand-drawn one at a time. The clickable parts are derived automatically so the linter can check lessons point at parts that really exist.',
+    why:'Defining diagrams as data is the scalable way to add the dozens of schematics later units need without hand-coding each one.',
+    how:'Authors add a schematic by describing its parts, and tap-the-component exercises stay valid automatically.',
+    ev:['Data-driven DSL + renderer','6 data circuits, 8 curated SVG circuits','Clickable regions checked by the linter'] },
+  { sec:'learn', icon:'beaker', status:'shipped',
+    title:'Drawing assessment graded by AI vision',
+    what:'When a lesson asks the learner to draw or fix a circuit, their drawing is sent to a backend service that uses Google’s vision model to judge whether it is correct, which expected parts it can see, a confidence score and a short encouraging note.',
+    why:'Drawing a circuit is a far higher-value check than multiple choice, and automatic grading lets the lesson respond to a freehand answer.',
+    how:'The learner draws on a canvas, submits, and gets specific feedback on what is right and what is missing.',
+    ev:['/assess-drawing on the quiz-engine','Gemini 3.5 Flash vision, structured JSON','Circuit breaker degrades to a clean retry'] },
 
-  { icon:'eye', session:true, status:'live', date:'Jun 24', groups:['observability','security'],
-    title:'Production hardening + observability',
-    what:'A shared “see what’s happening and stay safe” layer across all three services: logs that link straight to a Google Cloud trace, a metrics endpoint (response times, error rates, dependency health), a catch-all that turns any crash into a clean error with an ID (never an internal stack trace to a user), security headers, tightened CORS, and an audit trail for sensitive actions.',
-    why:'Before this, a production problem meant guessing. CORS was wide-open (“allow everyone”) — a real security smell. Billing and privacy actions left no paper trail.',
-    how:'When a paying user reports an issue you find the exact request in seconds. Sensitive actions (plan changes, data export, deletion) are now provable for disputes/compliance. The whole surface is safer and ready to scale.',
-    ev:['Identical obs + CORS layer on all 3 services','Audit trail on 4 sensitive events','CORS scoped to ohmlet.org + Firebase + localhost','Verified live'] },
+  // ── TUTOR ──
+  { sec:'tutor', icon:'speaker', status:'shipped',
+    title:'Voice-first live tutor with snapshot vision',
+    what:'The core tutor is a continuous voice session that listens and talks, and looks at the learner’s bench through the phone or webcam to guide a build in real time.',
+    why:'This is the product. A live tutor that sees your breadboard and corrects you mid-wiring is the thing nothing else does.',
+    how:'It keeps the experience hands-free at the bench, where typing is impractical, and routes vision and reasoning to the right model behind one voice.',
+    ev:['Gemini Live bidirectional audio + video','Snapshot vision from a phone camera','One voice, multiple models behind it'] },
+  { sec:'tutor', icon:'camera', status:'live', anim:'vision', date:'Jun 24',
+    title:'Vision-Verifier: the camera kit check',
+    what:'A backend service where the learner lays their components out, the camera looks, and it confirms each expected part as present, missing or not sure, notices extras, and says whether they are ready to wire. It can also identify a single part held up to the lens.',
+    why:'Step 2 of the core loop is "verify components via camera." Until this, that step was just a spoken prompt with nothing real behind it.',
+    how:'It turns a hollow step into a working feature and kills the "do I even have the right parts?" friction before a first build.',
+    ev:['Own Cloud Run service','Gemini 3.5 Flash, about 2 to 3 seconds','15 automated tests, live smoke test passed'] },
+  { sec:'tutor', icon:'users', status:'shipped', anim:'interview',
+    title:'Interview Mode: a secure voice mock interview',
+    what:'A live, voice-driven mock interview for hardware, embedded and robotics roles. The learner uploads or pastes a job description and their CV, talks through a realistic adaptive interview with an AI interviewer, then gets a detailed scored coaching report.',
+    why:'It turns Ohmlet from a learning tool into interview preparation, giving the top-priced Max plan a flagship reason to exist.',
+    how:'Learners rehearse real interviews, build confidence, and are routed back into lessons on their weak topics, all inside the existing voice product.',
+    ev:['Max-gated server-side (402 otherwise)','CV upload rejects EXE, scripts, macro and JavaScript-laden files by content','Prompt-injection fenced with a per-session UUID','Gemini 2.5 Pro scored report, saved per user'] },
 
-  { icon:'rocket', session:true, status:'live', date:'Jun 24', groups:['services'],
-    title:'Shipped everything to production',
-    what:'Built and deployed all three backend services to Cloud Run and the frontend to Firebase Hosting, then health-checked every one.',
-    why:'Code on a laptop helps nobody — the value only lands when it’s live.',
-    how:'The new kit check and the hardening are actually serving users at ohmlet-app.web.app right now.',
-    ev:['live-bridge 00020','quiz-engine 00007','vision-verifier 00002','Frontend live + all /health green'] },
+  // ── SIM ──
+  { sec:'sim', icon:'bolt', status:'shipped', anim:'sim', date:'Jun 25',
+    title:'A real circuit simulator: see electricity move',
+    what:'A live simulator where you see current flow as moving dots and watch voltages and LEDs respond, built on our own physics engine. It carries a library of 22 circuits across 7 curriculum categories, each with difficulty, a one-line teach and an adaptive tutor note.',
+    why:'It is the number one thing electronics people rave about, it is pure intuition-first learning, and owning the engine means the tutor can narrate any circuit with zero licensing risk.',
+    how:'Circuits are data in one registry rendered by a generic schematic engine, so adding more is cheap, and every value was verified against hand calculations.',
+    ev:['Own engine: diodes, transient caps, transistors, op-amps, 555, logic','22 circuits, 7 categories','Live oscilloscope, verified vs hand calcs'] },
+  { sec:'sim', icon:'chip', status:'shipped', anim:'arduino', date:'Jun 25',
+    title:'Run real Arduino code on the simulated board',
+    what:'Write an Arduino sketch, hit Compile and Run, and watch the actual firmware drive the board: the pin-13 and pin-9 LEDs light, a button responds, and a serial monitor prints. This is the real chip, not a fake.',
+    why:'Units 4 and 5 are all about Arduino. Letting learners run their own code against a simulated board, no hardware needed, closes the loop between writing the sketch and seeing it work.',
+    how:'A sandboxed compile service turns the C++ into firmware; the browser runs that firmware cycle-accurately on AVR8js, proven end to end against the live service.',
+    ev:['New sandboxed ohmlet-compiler service (avr-gcc)','AVR8js runs the real hex in-browser','Blink compiles to 924 bytes in about 4 seconds'] },
+  { sec:'sim', icon:'pencil', status:'shipped', anim:'schematic', date:'Jun 25',
+    title:'Build-your-own schematic editor',
+    what:'A free-form canvas inside the simulator: pick components from a palette, drop them on a grid, wire the dots together, edit values, and watch the real currents and voltages appear instantly.',
+    why:'Curated boards teach a concept; a blank canvas lets people actually design. This is the difference between a worksheet and a workbench.',
+    how:'Connectivity is worked out with union-find over the wired grid, the netlist is handed to the same solver, and it auto-grounds the battery if you forget.',
+    ev:['Place, wire, value-edit, delete on a grid','Same engine solves it live','Example solves to 12.77 mA, verified'] },
+  { sec:'sim', icon:'flame', status:'live',
+    title:'Power heat-map analysis',
+    what:'A heat-map view that colors each component by how much power it is burning, from cool slate through amber to red, and flags the single hottest part, with live power readings per component.',
+    why:'Seeing where power turns into heat teaches which parts run hot and why one might fail, something a plain schematic cannot show.',
+    how:'Learners toggle the heat map and immediately see which component is overstressed as they change the circuit.',
+    ev:['Power = voltage times current per part','Slate to amber to red colour ramp','Hottest component flagged'] },
 
-  { icon:'bell', session:true, status:'live', date:'Jun 24', groups:['observability'],
-    title:'Alerting, metrics access & a live smoke test',
-    what:'Set up Cloud Monitoring (uptime checks + alerts for outages, error spikes and slowness, emailing hello@ohmlet.org), created and mounted the secret token that unlocks the metrics endpoint, and ran a real authenticated end-to-end test of the kit check against the live service.',
-    why:'You should never learn your site is down from a user — and new code should be proven in production, not only in tests.',
-    how:'You get emailed the moment a service degrades, can read live performance numbers any time, and the kit check is confirmed working against real Gemini vision in production.',
-    ev:['1 email channel, 3 uptime checks, 6 alert policies','Metrics: 200 with token, 404 without','Smoke test passed, test user auto-deleted'] },
-
-  { icon:'bolt', session:true, status:'partial', date:'Jun 24', groups:['gamification'],
-    title:'Circuit simulator — a real library, not one board',
-    what:'Turned the simulator from a few hand-built boards into a browsable library of 22 live circuits across 7 curriculum categories (Basics, Sensors, Inputs, Capacitors, Transistors, Op-Amps, Logic), each with difficulty, a one-line teach, and an adaptive tutor note. The physics engine grew to handle diodes, capacitors with real transient TIME (watch a cap charge on an oscilloscope trace, governed by τ = R·C), NPN transistors (off / saturated / active), op-amps / comparators, and a real 555 timer with an internal latch that actually oscillates. Highlights: the flagship Light-Activated Alarm (an LDR drives a transistor that sounds a buzzer in the dark), a transistor switch, a relay driver, a motor driver with flyback diode, a temperature sensor, RC charge/discharge on a live scope, a crisp comparator, op-amp follower + inverting/non-inverting amplifiers (with rail clipping), a 555 blinker, and NOT + AND logic gates.',
-    why:'We can’t launch with one build. The simulator is how someone with no parts still learns by seeing electricity move, and it now mirrors the curriculum the way the 140+ lessons do. Owning the engine means the tutor can narrate any circuit and there is zero licensing risk.',
-    how:'Circuits are DATA in one registry rendered by a generic schematic engine, so adding more is cheap. Every current, voltage, time-constant, transistor region, op-amp output and 555 cycle is solved live and was verified against hand calculations (diode 4.4 mA, Vce_sat 0.2 V, RC 63% at one τ, alarm trips in dark, comparator rails at threshold, amp gains exact, 555 oscillates at 4.8 Hz, logic gates correct). The engine also gained GMIN + bidirectional-diode robustness so circuits never go singular.',
-    ev:['22 circuits, 7 categories, data-driven','Engine: diodes, transient caps, transistors, op-amps, 555, logic','Live oscilloscope; heat map; adaptive tutor everywhere','All verified vs hand calcs; build green'] },
-
-  { icon:'cpu', session:true, status:'shipped', date:'Jun 25', groups:['gamification','services'],
-    title:'Simulator: run REAL Arduino code',
-    what:'Write an Arduino sketch in the editor, hit Compile & Run, and watch the actual firmware drive the board: pin-13 and pin-9 LEDs light (their current solved by our engine) and a pin-2 button you can press, with a live serial monitor. This is the real chip, not a fake.',
-    why:'Units 4–5 of the curriculum are all about Arduino. Letting learners run their own code against a simulated board — no hardware needed — closes the loop between "write the sketch" and "see it work", which is the entire point.',
-    how:'A new sandboxed compile service (arduino-cli + avr-gcc on Cloud Run) turns the C++ into firmware; the browser runs that firmware cycle-accurately on AVR8js (MIT). Proven end to end against the live service: Blink compiles to 924 bytes of real firmware in ~4s, and a typo returns a precise line-and-message error. Sandbox: auth + rate limit, non-root, timeout + CPU/RAM/file limits, board allow-list.',
-    ev:['New ohmlet-compiler service (avr-gcc, sandboxed)','AVR8js runs the real hex in-browser','Verified: Blink → 924B firmware in 4s, errors parsed'] },
-
-  { icon:'bolt', session:true, status:'shipped', date:'Jun 25', groups:['gamification'],
-    title:'Simulator: build-your-own schematic editor',
-    what:'A free-form canvas inside the simulator: pick components from a palette, drop them on a grid, wire the dots together, edit values, and watch the real currents and voltages appear instantly. A Circuit library / Build your own toggle sits at the top of the Simulator tab.',
-    why:'Curated boards teach a concept; a blank canvas lets people actually design. This is the difference between a worksheet and a workbench, and it’s the foundation for letting lessons hand learners a half-finished circuit to complete.',
-    how:'Connectivity is worked out with union-find over the wired grid points, the netlist is generated and handed to the same solver, and it auto-grounds the battery if you forget. Verified: the example LED circuit solves to 12.77 mA with correct node voltages; an open switch reads 0 mA.',
-    ev:['Place / wire / value-edit / delete on a grid','Same engine solves it live','Verified netlist-building vs hand calcs'] },
-
-  { icon:'broom', session:true, status:'shipped', date:'Jun 23', groups:['cleanup'],
-    title:'Dead-code cleanup',
-    what:'After an exhaustive “is this actually used anywhere?” sweep, removed ~4,550 lines of unused code (9 files deleted, 2 trimmed) — including a 3,400-line legacy screen fully replaced by the current one.',
-    why:'Dead code slows builds, confuses future work, and hides bugs.',
-    how:'A leaner, faster, more trustworthy codebase. Nothing users see changed — verified by a green build and a careful check that kept lazily-loaded files.',
-    ev:['~4,554 lines removed','Build still green','0 orphaned modules left'] },
-
-  // RECENTLY SHIPPED
-  { icon:'card', session:false, status:'partial', date:'Jun ~20', groups:['commercial'],
-    title:'Stripe billing — subscriptions live, more to add',
-    what:'The subscription core is built and tested: Checkout to subscribe, a signature-verified webhook as the single source of truth for a user’s plan, the Customer Portal to manage/cancel, and plan-aware “thanks for upgrading” pages. It is still in TEST mode.',
-    why:'Nothing monetizes without a reliable way to take money and grant exactly the right plan.',
-    how:'The spine works — but it is NOT finished. Still to do: flip to LIVE mode; the cancellation “save” flow with a 30% retention coupon; and in-app purchases / consumables (e.g. streak freezes, a gem economy) which need one-time payments, not just subscriptions.',
-    ev:['DONE: Checkout + Portal + webhook (idempotent, signed)','TODO: live-mode go-live','TODO: 30% retention coupon + cancel save-flow','TODO: in-app purchases / consumables'] },
-
-  { icon:'lock', session:false, status:'shipped', date:'Jun ~20', groups:['security','commercial'],
-    title:'Accounts, true per-user isolation & server-side tiers',
-    what:'Real accounts (Firebase Auth), with the backend deriving who you are from a verified token — so one user can never read another’s data or spend their live-tutor budget — and plan limits enforced on the server, not the easily-edited browser.',
-    why:'The old “user id from the URL” was a dev placeholder; without this, data isolation and paid limits are unenforceable.',
-    how:'The trustworthy foundation everything paid and personal sits on.',
-    ev:['Token-verified identity','Per-user data isolation','Server-authoritative plan'] },
-
-  { icon:'shield', session:false, status:'shipped', date:'Jun ~22', groups:['commercial','security'],
-    title:'GDPR data export + account deletion',
-    what:'Endpoints to download everything Ohmlet holds about you and to erase your account — canceling billing, deleting your data, and removing your login.',
-    why:'A legal must-have (GDPR/CCPA and friends) before taking real users’ data and money.',
-    how:'Ohmlet can open to real, paying users without a compliance gap.',
-    ev:['Art. 15/20 export','Art. 17 erasure','Lawful billing-record retention'] },
-
-  { icon:'check', session:false, status:'shipped', date:'Jun ~21', groups:['security','observability'],
-    title:'Automated tests + CI gate',
-    what:'A backend test suite plus a pipeline that runs tests, a dependency-vulnerability scan, and a secret-leak scan on every push — failing the build if something’s wrong.',
-    why:'Catch breakage and vulnerabilities before they ever reach users.',
-    how:'Every change is checked automatically; the new vision-verifier was wired into this same gate.',
-    ev:['49 backend tests','CI on every push','Dependency + secret scanning'] },
-
-  { icon:'gauge', session:false, status:'shipped', date:'Jun ~21', groups:['observability'],
-    title:'Resilience & graceful degradation',
-    what:'Circuit breakers and timeouts on every AI call: when Google’s models are slow or down, services fail fast with a friendly “try again in a moment” instead of hanging.',
-    why:'One slow dependency should never freeze the whole product.',
-    how:'The app stays responsive and honest under failure — and the same pattern is reused in the new service.',
-    ev:['Per-upstream circuit breakers','Hard request timeouts','Clean 503 fallbacks'] },
-
-  { icon:'users', session:false, status:'shipped', date:'Jun 23', groups:['gamification'],
-    title:'Community persistence + weekly league',
-    what:'A real social backend: posts, comments, likes, challenges, and a winnable weekly XP league/leaderboard.',
-    why:'Community and competition are the retention engine — and churn is the biggest problem in edtech.',
-    how:'Turns a static-looking feed into a living social layer that pulls people back.',
-    ev:['Posts / comments / likes','Challenges','Weekly ISO-week league'] },
-
-  { icon:'trophy', session:false, status:'shipped', date:'Jun 23', groups:['gamification'],
-    title:'50-achievement overhaul',
-    what:'Expanded from ~8 to 50 achievements across build counts, streaks, XP, drawings, community and more — earned from real stats, with honest progress shown on the locked ones.',
-    why:'Gamified milestones drive the “one more” habit Duolingo built its retention on.',
-    how:'Far more reasons to keep going — and no fake unlocks.',
-    ev:['50 achievements, 13 families','Computed from real stats','Progress on locked cards'] },
-
-  { icon:'spark', session:false, status:'shipped', date:'Jun ~22', groups:['observability'],
-    title:'Quiz speed + Gemini 3.5 migration',
-    what:'Cut drawing-assessment latency from 30–60s to a few seconds, and moved the vision/quiz models to the stable GA Gemini 3.5 Flash (the 2.5 family retires Oct 2026).',
-    why:'Slow grading kills the learning loop — and a deprecating model is a ticking clock.',
-    how:'Snappy feedback now, and no forced scramble when 2.5 is retired.',
-    ev:['~10–20× faster grading','GA, non-deprecating model'] },
-
-  { icon:'speaker', session:false, status:'shipped', date:'Jun 22', groups:['gamification'],
-    title:'Sound effects + mute',
-    what:'Duolingo-style correct / wrong / complete sounds with a mute control.',
+  // ── GAME ──
+  { sec:'game', icon:'trophy', status:'shipped', anim:'achieve', date:'Jun 23',
+    title:'50 achievements, earned from real stats',
+    what:'Expanded from about 8 to 50 achievements across build counts, streaks, XP, drawings, community and more, earned from real activity, with honest progress shown on the locked ones.',
+    why:'Gamified milestones drive the "one more" habit Duolingo built its retention on.',
+    how:'Far more reasons to keep going, and no fake unlocks.',
+    ev:['50 achievements, 13 families','Computed from real stats','Progress shown on locked cards'] },
+  { sec:'game', icon:'card', status:'shipped',
+    title:'Collectible mascot achievement cards',
+    what:'A premium, collectible card set featuring the Ohmlet mascot, replacing the generic crown and shape art, with a glossy finish and a browsable gallery.',
+    why:'Real, characterful collectibles deepen engagement and lower churn in a hard edtech market.',
+    how:'The same earned-from-real-stats system, but the art itself becomes a reason to keep playing.',
+    ev:['Named, illustrated card set','Gloss/foil treatment','Author preview gallery'] },
+  { sec:'game', icon:'users', status:'shipped', anim:'league', date:'Jun 23',
+    title:'Community persistence and a weekly league',
+    what:'A real social backend: posts, comments, likes, challenges, and a winnable weekly XP league and leaderboard.',
+    why:'Community and competition are the retention engine, and churn is the biggest problem in edtech.',
+    how:'It turns a static-looking feed into a living social layer that pulls people back each week.',
+    ev:['Posts, comments, likes, challenges','Weekly ISO-week league','Cached leaderboard, own row always fresh'] },
+  { sec:'game', icon:'cube', status:'shipped', anim:'twin',
+    title:'3D digital twin of the finished build',
+    what:'At the end of a build, Ohmlet turns the final camera photo of the real circuit into a 3D model the learner can spin, keep and share. It is the one keepsake artifact the product makes per session.',
+    why:'It is the rewarding finish to the core learning loop and a paid artifact, with a free first taste that acts as a strong upgrade hook.',
+    how:'Every completed build gets a tangible, shareable trophy, reinforcing progress and driving upgrades.',
+    ev:['Own reporter Cloud Run service','Real image-to-3D via Stability AI, returns glTF','Metered per plan: 1 free, 30 Pro, 100 Max'] },
+  { sec:'game', icon:'speaker', status:'shipped', date:'Jun 22',
+    title:'Sound effects and mute',
+    what:'Duolingo-style correct, wrong and complete sounds with a mute control, generated in the browser with no audio files.',
     why:'Audio feedback makes progress feel rewarding.',
-    how:'A small touch with real delight — and it respects people who want silence.',
+    how:'A small touch with real delight that still respects people who want silence.',
     ev:['Web Audio, no assets','Global mute'] },
 
-  // UP NEXT
-  { icon:'bolt', session:false, status:'shipped', date:'Jun 25', groups:['gamification'],
-    title:'Interactive circuit simulator (the “Falstad” feature)',
-    what:'A live simulator where you SEE current flow as moving dots and watch voltages/LEDs respond — the most-loved electronics learning tool, made our own and narrated by the tutor. SHIPPED, fully: our own physics engine (resistors, diodes, transient capacitors, NPN transistors, op-amps/comparators, 555 timer, logic), a library of 22 circuits across 7 curriculum categories, a free-form build-your-own editor, AND real Arduino-code execution (compile service + AVR8js) — all with live readings, an oscilloscope, a heat map, and adaptive tutor narration.',
-    why:'It’s the #1 thing electronics people rave about (“what’s your favourite simulator? Falstad”). It’s pure Ohmlet — intuition-first, see-it-move learning — and we own the engine, so the tutor can narrate it and it carries no licensing risk.',
-    how:'Built our own (Option C). Every planned phase is done: the curated library, the free-form editor, and real firmware execution (the AVR8js + compile-service path was chosen and shipped, proven end to end). See metadata/falstad-simulator-research.md.' },
+  // ── COMMERCE ──
+  { sec:'commerce', icon:'lock', status:'live', date:'Jun ~20',
+    title:'Accounts and login',
+    what:'People sign up, log in, sign in with Google and reset forgotten passwords, and stay signed in across visits.',
+    why:'Accounts are the foundation for saving progress, billing and keeping each person’s data private.',
+    how:'Firebase handles the secure login on the web, and the backend independently re-verifies every request so nobody can impersonate anyone.',
+    ev:['Email, Google, password reset','Backend verifies the ID token itself','Route guards redirect signed-out users'] },
+  { sec:'commerce', icon:'card', status:'partial', anim:'billing', date:'Jun ~20',
+    title:'Stripe billing: subscriptions live in test mode',
+    what:'Paid Pro and Max subscriptions. Learners check out through Stripe, and a signature-verified Stripe notification is the single source of truth that grants or removes their plan; they manage and cancel through Stripe’s own portal.',
+    why:'This is the commercial spine, and routing every plan change through Stripe keeps entitlements correct and tamper-proof.',
+    how:'It lets learners upgrade and unlocks paid features automatically, and ships safely because the endpoints are inert until keys are set.',
+    ev:['Checkout + Portal + signed, idempotent webhook','Clean 503 until configured','TODO: live-mode swap + 30% retention coupon'] },
+  { sec:'commerce', icon:'shield', status:'live',
+    title:'Plan limits enforced on the server',
+    what:'Premium limits (live-tutor minutes, 3D twin generation, premium AI models) are enforced on the backend, not just hidden in the interface.',
+    why:'A determined user can edit the browser, so the real paywall has to live on the server.',
+    how:'The server reads the user’s plan from the database and meters or blocks access independently of the UI.',
+    ev:['Live caps: Free 60, Pro 600, Max 1800 min/mo','Premium models limited to Pro/Max','Twin generation gated by plan quota'] },
+  { sec:'commerce', icon:'database', status:'shipped', anim:'gdpr', date:'Jun ~22',
+    title:'Data export and account deletion',
+    what:'Endpoints to download everything Ohmlet holds about you, and to erase your account: cancelling billing, deleting your data and removing your login.',
+    why:'A legal must-have under privacy law before taking real users’ data and money.',
+    how:'It lets Ohmlet open to real, paying users without a compliance gap.',
+    ev:['Full data export','Account erasure','Lawful billing-record retention'] },
+  { sec:'commerce', icon:'cookie', status:'live',
+    title:'Cookie consent that defaults to off',
+    what:'A first-visit banner that keeps non-essential analytics cookies switched off until the person opts in, with rejecting made exactly as easy as accepting, and re-openable from the footer.',
+    why:'It is a privacy-law requirement and a trust signal; analytics must not run without permission.',
+    how:'The choice is stored and respected everywhere; the analytics code does nothing until consent is given.',
+    ev:['Equal Reject / Accept buttons','Persisted, defaults to off','Analytics gated on consent'] },
 
-  { icon:'trophy', session:false, status:'next', date:'', groups:['next'],
-    title:'Collectible mascot achievement cards',
-    what:'Replace the generic crown/shape achievement art with collectible cards featuring the Ohmlet mascot — a premium, “gotta-collect-them” card set (think trading cards, branded as ours).',
-    why:'The current cards look placeholder-pretty. Real, characterful collectibles deepen engagement and lower churn — the whole point in a hard edtech market.',
-    how:'Same earned-from-real-stats system, but the art becomes a reason to keep playing. Needs mascot illustration per card.' },
+  // ── SECURITY ──
+  { sec:'security', icon:'shield', status:'live', anim:'isolation', date:'Jun ~20',
+    title:'True per-user data isolation',
+    what:'The backend works out who you are from a verified token, so one user can never read another’s data or spend their live-tutor budget. A mismatch is a hard refusal.',
+    why:'The old "user id from the URL" was a dev placeholder; without this, data isolation and paid limits are unenforceable.',
+    how:'It is the trustworthy foundation everything paid and personal sits on.',
+    ev:['Token-verified identity','One document per user, server-side only','Cross-user access returns 403'] },
+  { sec:'security', icon:'lock', status:'live',
+    title:'Input validation, secrets and rate limiting',
+    what:'The backend treats every request as hostile with size and shape checks, keeps all secret keys out of the code, and throttles anyone hammering the service.',
+    why:'This is the core defense against abuse, runaway costs and leaked credentials.',
+    how:'Oversized or malformed data is rejected, secrets are mounted from a managed vault, and excessive requests get a slow-down response.',
+    ev:['Body and image size caps, per-field limits','120 requests / 60s, 8 new sessions / 60s','Secrets by reference from Secret Manager'] },
+  { sec:'security', icon:'check', status:'shipped', date:'Jun ~21',
+    title:'Automated tests and a CI gate',
+    what:'A backend test suite plus a pipeline that runs the tests, a dependency-vulnerability scan and a secret-leak scan on every push, failing the build if something is wrong.',
+    why:'Catch breakage and vulnerabilities before they ever reach users.',
+    how:'Every change is checked automatically, and new services are wired into the same gate.',
+    ev:['49 backend tests','CI on every push','Dependency + secret scanning'] },
 
-  { icon:'card', session:false, status:'next', date:'', groups:['next'],
-    title:'In-app purchases / consumables (extend Stripe)',
-    what:'One-time purchases for consumables — streak freezes, a gem economy, cosmetic unlocks — on top of the subscription billing.',
-    why:'A second revenue stream and a retention lever (people pay to protect a streak). Stripe currently only does subscriptions.',
-    how:'Adds Stripe one-time payments + an entitlement/inventory ledger. Ties into streak freezes (#65).' },
+  // ── OPS ──
+  { sec:'ops', icon:'eye', status:'live', anim:'observe', date:'Jun 24',
+    title:'Production hardening and observability',
+    what:'A shared layer across every service: logs that link straight to a Google Cloud trace, a metrics endpoint, a catch-all that turns any crash into a clean error with an ID instead of a stack trace, security headers, tightened CORS, and an audit trail for sensitive actions.',
+    why:'Before this, a production problem meant guessing, CORS was wide open, and billing and privacy actions left no paper trail.',
+    how:'When a paying user reports an issue you find the exact request in seconds, and sensitive actions are now provable for disputes and compliance.',
+    ev:['Identical obs + CORS layer on all services','Audit trail on sensitive events','CORS scoped to ohmlet.org + Firebase'] },
+  { sec:'ops', icon:'gauge', status:'live', anim:'breaker', date:'Jun ~21',
+    title:'Resilience: circuit breakers and graceful degradation',
+    what:'Circuit breakers and timeouts on every AI call: when Google’s models are slow or down, services fail fast with a friendly "try again in a moment" instead of hanging.',
+    why:'One slow dependency should never freeze the whole product.',
+    how:'The app stays responsive and honest under failure, and the same pattern is reused in every service.',
+    ev:['Per-upstream circuit breakers','Hard request timeouts','Clean fallback messages'] },
+  { sec:'ops', icon:'refresh', status:'live',
+    title:'Caching strategy with safe invalidation',
+    what:'Heavy shared data like the weekly leaderboard is cached for a few seconds so the app stays fast, and the cache is cleared the moment the underlying data changes. Private and money-related data is never cached.',
+    why:'It cuts database load and latency without ever showing a user a stale version of their own data.',
+    how:'Shared lists are served briefly from memory while the caller’s own row is always computed fresh.',
+    ev:['Thread-safe TTL cache, 20s default','Invalidated on XP change','Content-hashed static assets cached long-term'] },
+  { sec:'ops', icon:'database', status:'shipped',
+    title:'Backups and disaster recovery',
+    what:'The system-of-record database is exported daily to separate storage, with a written, tested procedure to restore it after a mistake or outage.',
+    why:'Without recoverable backups, one bad migration or deletion could permanently lose user data.',
+    how:'A scheduled daily export plus a documented restore runbook with clear recovery targets.',
+    ev:['Daily export, 30-day retention','RPO 24h, RTO 2h','Guarded restore + quarterly drill'] },
+  { sec:'ops', icon:'layers', status:'live',
+    title:'Data integrity: concurrency and idempotency',
+    what:'Two browser tabs or a retried payment event cannot corrupt data or double-count; the newest save wins and repeated events are processed exactly once.',
+    why:'Racing writes and duplicate webhook deliveries are a real source of silent corruption and double charges.',
+    how:'Saves and one-time events run inside database transactions that detect staleness and duplicates.',
+    ev:['Claim-once event handling','Stale saves rejected, never clobbered','Atomic live-minute counting'] },
+  { sec:'ops', icon:'graph', status:'live',
+    title:'Product analytics, gated on consent',
+    what:'A typed set of product events tracks the signup-to-subscribe funnel, ongoing engagement and cancellation, firing only when the user has consented.',
+    why:'It is how the team learns what to improve and where people drop off, without guessing.',
+    how:'One named event catalogue fires into Firebase Analytics, and does nothing until consent is given.',
+    ev:['Typed funnel, retention and monetisation events','No-ops without consent','Server-side cost instrumentation too'] },
+  { sec:'ops', icon:'warning', status:'live',
+    title:'Branded error pages and route guards',
+    what:'Designed 404, 403 and 402 pages with their own mascot art instead of broken screens, plus guards that send signed-out users to login and block non-admins from admin areas.',
+    why:'Dead-ends and raw errors feel broken and unprofessional, and guards prevent unauthorized access.',
+    how:'Each error state has a clear next action, and the router checks auth before rendering protected pages.',
+    ev:['Designed 404 / 403 / 402','Admin routes return 403 for non-admins','Backend returns clean JSON errors'] },
+  { sec:'ops', icon:'rocket', status:'live', date:'Jun 24',
+    title:'Shipped to production with alerting',
+    what:'Built and deployed every backend service to Cloud Run and the frontend to Firebase Hosting, health-checked each one, and set up uptime checks and alerts that email the team on outages, error spikes or slowness.',
+    why:'Code on a laptop helps nobody, and you should never learn your site is down from a user.',
+    how:'The new features actually serve users at ohmlet-app.web.app, and degradation pages the team automatically.',
+    ev:['All services live, health green','Uptime checks + alert policies','Metrics endpoint token-guarded'] },
 
-  { icon:'bell', session:false, status:'next', date:'', groups:['next'],
-    title:'Streak notifications + home-screen widget',
-    what:'“Your streak is about to break” nudges via push + email, and a Duolingo-style home-screen widget showing your streak.',
-    why:'Re-engagement notifications are among the highest-leverage anti-churn mechanics there is.',
-    how:'Push/email (web first), with the widget arriving alongside the mobile app. Pairs with friend streaks (#66).' },
+  // ── FOUNDATION ──
+  { sec:'foundation', icon:'doc', status:'shipped',
+    title:'Engineering documentation',
+    what:'A living architecture document with a system diagram, recorded architecture-decision records explaining the "why," and a human-readable per-endpoint API contract.',
+    why:'It keeps the system understandable and maintainable as it grows and as new engineers join.',
+    how:'One map of how the pieces fit, dated decision records, and a contract kept in sync with the code.',
+    ev:['Architecture diagram + service table','5 ADRs','Per-service API contracts'] },
+  { sec:'foundation', icon:'broom', status:'shipped', date:'Jun 23',
+    title:'Dead-code cleanup',
+    what:'After an exhaustive "is this actually used anywhere?" sweep, removed about 4,550 lines of unused code, including a 3,400-line legacy screen fully replaced by the current one.',
+    why:'Dead code slows builds, confuses future work and hides bugs.',
+    how:'A leaner, faster, more trustworthy codebase, with nothing users see changed, verified by a green build.',
+    ev:['About 4,554 lines removed','Build still green','No orphaned modules left'] },
 
-  { icon:'cube', session:false, status:'next', date:'', groups:['next'],
-    title:'3D digital twin (reporter service)',
-    what:'A new service that generates a 3D model of the finished build — the one post-session artifact Ohmlet promises.',
-    why:'It’s the signature payoff of finishing a build, and a shareable, word-of-mouth moment.',
-    how:'Closes the final step of the core learning loop.' },
-
-  { icon:'card', session:false, status:'next', date:'', groups:['next'],
-    title:'Conversion engine + pricing',
+  // ── NEXT ──
+  { sec:'next', icon:'card', status:'next',
+    title:'Conversion engine and pricing',
     what:'A first-build paywall, the 7-day conversion arc, and re-cutting price caps once real cost data is in.',
-    why:'Turns free users into paying ones at exactly the right moment.',
+    why:'It turns free users into paying ones at exactly the right moment.',
     how:'The revenue engine that sits on top of the billing spine.' },
-
-  { icon:'mail', session:false, status:'next', date:'', groups:['next'],
+  { sec:'next', icon:'mail', status:'next',
     title:'Transactional email (Resend)',
-    what:'App-sent email — receipts, password resets, re-engagement — via Resend on ohmlet.org.',
+    what:'App-sent email for receipts, password resets and re-engagement, via Resend on ohmlet.org.',
     why:'Needed for billing receipts and for bringing lapsed users back.',
-    how:'Runbook is ready; it needs domain verification + an API key.' },
-
-  { icon:'users', session:false, status:'next', date:'', groups:['next'],
-    title:'Retention mechanics: streak freezes + friend streaks',
-    what:'Loss-aversion safety nets (streak freezes) plus social streaks and re-engagement push/email.',
-    why:'The highest-leverage retention moves from the Duolingo playbook.',
-    how:'Directly attacks churn — the #1 edtech problem.' },
-
-  { icon:'shield', session:false, status:'next', date:'', groups:['next'],
-    title:'Launch polish: cookies, accessibility, caching, backups',
-    what:'Cookie consent, a WCAG 2.2 AA accessibility pass, a caching strategy, and backups / disaster-recovery drills.',
-    why:'The “trustworthy on launch day” checklist.',
-    how:'Makes Ohmlet safe, inclusive, fast, and recoverable.' },
+    how:'The runbook is ready; it needs domain verification and an API key.' },
+  { sec:'next', icon:'users', status:'next',
+    title:'Streak freezes, friend streaks and nudges',
+    what:'Loss-aversion safety nets (streak freezes), social streaks, and "your streak is about to break" nudges by push and email.',
+    why:'Re-engagement notifications and streak protection are among the highest-leverage anti-churn mechanics there are.',
+    how:'Directly attacks churn, the number one edtech problem.' },
+  { sec:'next', icon:'card', status:'next',
+    title:'In-app purchases and consumables',
+    what:'One-time purchases for consumables (streak freezes, a gem economy, cosmetic unlocks) on top of the subscriptions.',
+    why:'A second revenue stream and a retention lever, since people pay to protect a streak.',
+    how:'Adds Stripe one-time payments and an entitlement ledger.' },
+  { sec:'next', icon:'camera', status:'next',
+    title:'Phone-as-bench-camera pairing',
+    what:'Pair a phone as a second camera by scanning a QR code, so the learner can point their phone at the bench while working on a laptop, with no app store.',
+    why:'A laptop webcam cannot see a breadboard well; the phone is the better bench camera everyone already owns.',
+    how:'Web-only device pairing, no native app required.' },
+  { sec:'next', icon:'chip', status:'next',
+    title:'Move the live tutor to Gemini 3 at GA',
+    what:'Migrate the live-bridge voice model from the current Gemini 2.5 family to Gemini 3 live and pro models once they reach general availability.',
+    why:'The 2.5 family retires in late 2026, and the newer models are better and cheaper.',
+    how:'A planned swap behind the existing multi-model dispatch.' },
 ];
 
 // ── Stats (count-up) ──
 const STATS = [
-  { n:4, lab:'Backend services live on Cloud Run' },
-  { n:49, lab:'Automated backend tests passing' },
-  { n:4554, lab:'Lines of dead code removed', fmt:v=>v.toLocaleString() },
-  { n:6, lab:'Production alert policies watching' },
+  { n:142, lab:'Interactive lessons authored' },
+  { n:5, lab:'Backend services live on Cloud Run' },
+  { n:22, lab:'Live simulator circuits' },
+  { n:50, lab:'Achievements to earn' },
 ];
 
 const STATUS = {
   live:{cls:'b-live', txt:'Live'},
   shipped:{cls:'b-shipped', txt:'Shipped'},
-  partial:{cls:'b-next', txt:'Partial'},
+  partial:{cls:'b-partial', txt:'In progress'},
   next:{cls:'b-next', txt:'Next'},
 };
 
-const CHIPS = [
-  {key:'all', label:'All work'},
-  {key:'session', label:'★ This session'},
-  {key:'services', label:'Backend services'},
-  {key:'security', label:'Security'},
-  {key:'observability', label:'Reliability & ops'},
-  {key:'commercial', label:'Commercial'},
-  {key:'gamification', label:'Gamification'},
-  {key:'cleanup', label:'Cleanup'},
-  {key:'next', label:'Up next'},
-];
+const CHIPS = [{key:'all', label:'All work'}, ...SECTIONS.map(s=>({key:s.key, label:s.label}))];
 
 let activeChip='all', query='';
-
 function matches(it){
-  if(query){
-    const hay=(it.title+' '+it.what+' '+it.why+' '+it.how).toLowerCase();
-    if(!hay.includes(query)) return false;
-  }
+  if(query){ const hay=(it.title+' '+it.what+' '+(it.why||'')+' '+(it.how||'')).toLowerCase(); if(!hay.includes(query)) return false; }
   if(activeChip==='all') return true;
-  if(activeChip==='session') return it.session;
-  if(activeChip==='next') return it.status==='next';
-  return it.groups.includes(activeChip);
+  return it.sec===activeChip;
 }
 
 function cardHTML(it,idx){
   const st=STATUS[it.status];
   const ev=(it.ev||[]).map(e=>`<span class="pill">${tick}${e}</span>`).join('');
-  return `<div class="card ${it.session?'session':''}" style="animation-delay:${Math.min(idx*45,400)}ms">
-    <div class="chead" onclick="this.parentNode.classList.toggle('open')">
+  const hasAnim = it.anim && ANIM[it.anim];
+  const stage = hasAnim ? `<div class="stage" data-anim="${it.anim}"><button class="replay" type="button" title="Replay">${replayIcon} Replay</button></div>` : '';
+  const playtag = hasAnim ? `<span class="play">${replayIcon}animated</span>` : '';
+  return `<div class="card ${it.status==='live'?'hero':''}" style="animation-delay:${Math.min(idx*40,360)}ms">
+    <div class="chead" onclick="this.parentNode.classList.toggle('open');window.__mount(this.parentNode)">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none">${I[it.icon]||I.bolt}</svg></span>
       <div class="ctop">
-        <div class="ctitle">${it.title}</div>
+        <div class="ctitle">${it.title} ${playtag}</div>
         <div class="cwhat">${it.what}</div>
       </div>
       <div class="badges">
-        ${it.session?'<span class="badge b-session">★ Session</span>':''}
         <span class="badge ${st.cls}">${st.txt}</span>
         ${it.date?`<span class="badge b-date">${it.date}</span>`:''}
       </div>
       <span class="chev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>
     </div>
     <div class="details"><div class="dinner"><div class="dpad">
+      ${stage}
       <div class="row"><div class="rk">What</div><div class="rv">${it.what}</div></div>
-      <div class="row"><div class="rk why">Why it matters</div><div class="rv">${it.why}</div></div>
-      <div class="row"><div class="rk how">How it helps</div><div class="rv">${it.how}</div></div>
+      <div class="row"><div class="rk why">Why it matters</div><div class="rv">${it.why||''}</div></div>
+      <div class="row"><div class="rk how">How it helps</div><div class="rv">${it.how||''}</div></div>
       ${ev?`<div class="ev">${ev}</div>`:''}
     </div></div></div>
   </div>`;
 }
 
 function render(){
-  const buckets={session:[],shipped:[],next:[]};
-  let shown=0;
-  ITEMS.forEach((it,i)=>{
-    if(!matches(it)) return;
-    shown++;
-    const key = it.session ? 'session' : (it.status==='next'?'next':'shipped');
-    buckets[key].push(cardHTML(it,buckets[key].length));
+  const host=document.getElementById('sections');
+  let shown=0, html='';
+  SECTIONS.forEach(sec=>{
+    const items=ITEMS.filter(it=>it.sec===sec.key && matches(it));
+    if(!items.length) return;
+    html+=`<div class="seclabel"><span class="dotmark"></span>${sec.label}</div><div class="secnote">${sec.note}</div><div class="grid">`;
+    items.forEach((it,i)=>{ html+=cardHTML(it,i); shown++; });
+    html+=`</div>`;
   });
-  document.getElementById('grid-session').innerHTML=buckets.session.join('');
-  document.getElementById('grid-shipped').innerHTML=buckets.shipped.join('');
-  document.getElementById('grid-next').innerHTML=buckets.next.join('');
-  // hide empty sections
-  document.getElementById('sessionSec').style.display=buckets.session.length?'':'none';
-  document.getElementById('shippedSec').style.display=buckets.shipped.length?'':'none';
-  document.getElementById('nextSec').style.display=buckets.next.length?'':'none';
+  host.innerHTML=html;
   document.getElementById('empty').style.display=shown?'none':'block';
+  // re-mount any open cards (none initially); expandall hook below
+  if(location.search.includes('expandall')){ document.querySelectorAll('.card').forEach(c=>{c.classList.add('open');window.__mount(c);}); }
 }
+
+// mount animations on first expand
+window.__mount=function(card){
+  if(!card.classList.contains('open')) return;
+  card.querySelectorAll('.stage[data-anim]').forEach(st=>{
+    if(st.dataset.mounted) return; st.dataset.mounted='1';
+    const id=st.dataset.anim, spec=ANIM[id]; if(!spec) return;
+    const holder=document.createElement('div'); holder.innerHTML=spec.svg;
+    const svg=holder.querySelector('svg'); st.appendChild(svg);
+    const replay=st.querySelector('.replay');
+    try{ spec.init(svg); }catch(e){ console.error(id,e); }
+    if(replay) replay.addEventListener('click',(e)=>{ e.stopPropagation(); if(svg.__stop)svg.__stop(); if(svg.__t)clearTimeout(svg.__t); const fresh=document.createElement('div'); fresh.innerHTML=spec.svg; const ns=fresh.querySelector('svg'); svg.replaceWith(ns); st.insertBefore(ns, replay); try{spec.init(ns);}catch(err){console.error(err);} });
+  });
+};
 
 // chips
 document.getElementById('chips').innerHTML=CHIPS.map(c=>{
-  const count = c.key==='all'?ITEMS.length : c.key==='session'?ITEMS.filter(i=>i.session).length : c.key==='next'?ITEMS.filter(i=>i.status==='next').length : ITEMS.filter(i=>i.groups.includes(c.key)).length;
+  const count = c.key==='all'?ITEMS.length : ITEMS.filter(i=>i.sec===c.key).length;
   return `<button class="chip ${c.key==='all'?'active':''}" data-k="${c.key}">${c.label} <span class="c">${count}</span></button>`;
 }).join('');
 document.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
@@ -474,31 +868,26 @@ document.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
 document.getElementById('search').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();render();});
 
 // stats count-up
-function countUp(el,target,fmt){
-  const dur=900, t0=performance.now();
-  function step(t){
-    const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3), v=Math.round(target*e);
-    el.textContent=fmt?fmt(v):v; if(p<1)requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
+function countUp(el,target,fmt){ const dur=900,t0=performance.now(); (function step(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=Math.round(target*e);el.textContent=fmt?fmt(v):v;if(p<1)requestAnimationFrame(step);})(performance.now()); requestAnimationFrame(()=>{}); }
 document.getElementById('stats').innerHTML=STATS.map((s,i)=>`<div class="stat"><div class="num" id="st${i}">0</div><div class="lab">${s.lab}</div></div>`).join('');
-STATS.forEach((s,i)=>countUp(document.getElementById('st'+i),s.n,s.fmt));
-
-// progress bar
-const doneN=ITEMS.filter(i=>i.status!=='next').length, nextN=ITEMS.filter(i=>i.status==='next').length;
-// Reflect the real roadmap, not just the cards shown here:
-const ROADMAP_DONE=37, ROADMAP_TOTAL=60; // tasks #11–#70, completed vs total tracked
-const pct=Math.round(ROADMAP_DONE/ROADMAP_TOTAL*100);
-document.getElementById('doneN').textContent=ROADMAP_DONE;
-document.getElementById('nextN').textContent=ROADMAP_TOTAL-ROADMAP_DONE;
-setTimeout(()=>{document.getElementById('barfill').style.width=pct+'%';},250);
-countUp(document.getElementById('pct'),pct,v=>v+'%');
+STATS.forEach((s,i)=>{ const el=document.getElementById('st'+i); const t0=performance.now(); (function step(t){const p=Math.min(1,(t-t0)/950),e=1-Math.pow(1-p,3);el.textContent=Math.round(s.n*e)+(s.suf||'');if(p<1)requestAnimationFrame(step);})(performance.now()); });
 
 // generated date
 document.getElementById('genline').textContent='Build report · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
 
 render();
+
+// progress (reflects the live roadmap: tasks #11–#75)
+const wrap=document.createElement('div'); wrap.className='progwrap';
+const DONE=54, TOTAL=65, pct=Math.round(DONE/TOTAL*100);
+wrap.innerHTML=`<div class="progtop"><h3>Roadmap progress</h3><div class="pct" id="pct">0%</div></div>
+  <div class="bar"><i id="barfill"></i></div>
+  <div class="leg"><span><span class="dot" style="background:var(--gold)"></span><b>${DONE}</b>&nbsp;shipped</span>
+  <span><span class="dot" style="background:#d9d3c4"></span><b>${TOTAL-DONE}</b>&nbsp;remaining</span>
+  <span style="color:var(--ink-soft)">Tracked across the master roadmap (tasks #11 to #75).</span></div>`;
+document.getElementById('sections').after(wrap);
+setTimeout(()=>{document.getElementById('barfill').style.width=pct+'%';},250);
+(function(){const el=document.getElementById('pct'),t0=performance.now();(function step(t){const p=Math.min(1,(t-t0)/950),e=1-Math.pow(1-p,3);el.textContent=Math.round(pct*e)+'%';if(p<1)requestAnimationFrame(step);})(performance.now());})();
 </script>
 </body>
 </html>

@@ -1,0 +1,93 @@
+import type { LessonScript } from '../types';
+
+/* Renamed from `closed-loop` on 2026-08-29. Every file name in the pipeline comes
+ * from `id`, and films.py signs v1/<skillId>/ohmlet-lesson-<skillId>-...,
+ * so an id that is not the skill id publishes to an address the server
+ * never asks for. This film and one other 404ed in production for exactly
+ * that reason, and check-films.mjs now refuses the mismatch. */
+
+/**
+ * Unit 1, Foundations. Sits at the checkpoint for the skill "Circuits & Current".
+ *
+ * Chosen for video because the whole idea is MOTION, and motion is exactly what
+ * the eight lessons in this skill cannot show. A learner can answer "current
+ * needs a complete loop" correctly on a quiz and still not picture it. Here they
+ * watch it stop.
+ */
+export const circuitsCurrent: LessonScript = {
+  id: 'circuits-current',
+  title: 'The Closed Loop',
+  unitTitle: 'Foundations',
+  unitId: 'foundations',
+  skillId: 'circuits-current',
+  skillTitle: 'Circuits & Current',
+  accent: '#f2b705',
+  segments: [
+    { text: 'Every circuit you will ever build obeys one rule. Current only flows around a complete loop.',
+      scene: { kind: 'title' } },
+    { text: 'Not most of the way around. All the way around, back to where it started.',
+      scene: { kind: 'statement', lines: ['All the way around.'] } },
+    { text: 'Here is the smallest circuit that does anything useful. A battery, two wires, and a lamp.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, label: 'Battery, wires, lamp' } },
+    { text: 'The battery is a pump. It pushes charge out of one terminal and pulls it back into the other.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, highlight: 'battery', label: 'The battery pushes' } },
+    { text: 'Watch what happens when we close the loop.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, label: 'Closing the loop' } },
+    { text: 'Charge moves. It leaves the battery, travels through the lamp, and returns. The lamp lights.',
+      scene: { kind: 'circuit', variant: 'loop', flow: true, label: 'Current flows' } },
+    { text: 'That flow is current. We measure it in amperes, and it is the same everywhere in this loop.',
+      scene: { kind: 'circuit', variant: 'loop', flow: true, highlight: 'wire', label: 'Current is the same everywhere' } },
+    { text: 'That last part surprises people. The current leaving the lamp is exactly the current entering it.',
+      scene: { kind: 'statement', lines: ['Current in', 'equals', 'current out'] } },
+    { text: 'The lamp does not use up current. It uses up energy. The charge that goes in comes out the other side.',
+      scene: { kind: 'compare', left: 'Uses energy', right: 'Not current', caption: 'What a lamp actually consumes' } },
+    { text: 'Put real numbers on it. A nine volt battery, a lamp and a four hundred and seventy ohm resistor.',
+      scene: { kind: 'circuit', variant: 'loop', flow: true, label: '9V, 470 ohms' } },
+    { text: 'Nine volts divided by four hundred and seventy ohms is about nineteen milliamps.',
+      scene: { kind: 'formula', expr: '9V / 470Ω = 19mA', note: 'Ohm\u2019s law, doing the work' } },
+    { text: 'Nineteen milliamps leaves the battery. Nineteen milliamps comes back. Not eighteen.',
+      scene: { kind: 'statement', lines: ['19mA out.', '19mA back.'] } },
+    { text: 'Now let us break it.',
+      scene: { kind: 'statement', lines: ['Now break it.'] } },
+    { text: 'Cut one wire. Anywhere. It does not matter where.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, broken: 'right', label: 'One break, anywhere' } },
+    { text: 'The lamp goes out. Not dimmer. Out. Because there is no longer a path back to the battery.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, broken: 'right', highlight: 'gap', label: 'No path back' } },
+    { text: 'This is the single most common reason a beginner circuit does nothing at all.',
+      scene: { kind: 'statement', lines: ['The most common', 'beginner fault'] } },
+    { text: 'And notice the lamp itself is perfectly fine. Nothing is broken. The path is.',
+      scene: { kind: 'circuit', variant: 'loop', flow: false, broken: 'right', label: 'The lamp is fine' } },
+    { text: 'A switch is just a break you control. Open, the loop is cut and nothing flows.',
+      scene: { kind: 'circuit', variant: 'switch', flow: false, label: 'Switch open' } },
+    { text: 'Closed, the loop is complete again and the lamp lights.',
+      scene: { kind: 'circuit', variant: 'switch', flow: true, label: 'Switch closed' } },
+    { text: 'That is all a switch is. Not a source of power. A deliberate gap.',
+      scene: { kind: 'statement', lines: ['A switch is', 'a deliberate gap'] } },
+    { text: 'So when your circuit does nothing, do not start by suspecting the component. Start by following the loop.',
+      scene: { kind: 'statement', lines: ['Follow the loop', 'before you blame', 'the component'] } },
+    { text: 'Put your finger on the positive terminal and trace. Through every wire, every leg, every joint.',
+      scene: { kind: 'circuit', variant: 'trace', flow: true, label: 'Trace with your finger' } },
+    { text: 'If your finger cannot get back to the negative terminal, neither can the current.',
+      scene: { kind: 'statement', lines: ['If your finger', 'cannot get back,', 'neither can current'] } },
+    { text: 'On a breadboard, the break is usually invisible. A leg in the wrong row. A wire one hole across.',
+      scene: { kind: 'compare', left: 'Right row', right: 'One hole off', caption: 'The break you cannot see' } },
+    { text: 'The circuit looks finished. It is not connected.',
+      scene: { kind: 'statement', lines: ['Looks finished.', 'Not connected.'] } },
+    { text: 'Your multimeter settles this in seconds. Set it to continuity and it beeps when a path exists.',
+      scene: { kind: 'statement', lines: ['Continuity mode', 'beeps on a path'] } },
+    { text: 'Probe both ends of a wire you believe is connected. Silence means you have found your break.',
+      scene: { kind: 'compare', left: 'Beeps', right: 'Silence', caption: 'Connected, or your fault found' } },
+    { text: 'Working through a dead circuit that way takes a minute. Guessing at it can take an evening.',
+      scene: { kind: 'statement', lines: ['A minute to test.', 'An evening to guess.'] } },
+    { text: 'Three things to carry with you.',
+      scene: { kind: 'recap', items: [] } },
+    { text: 'One. Current needs a complete path, out of the source and back into it.',
+      scene: { kind: 'recap', items: ['Current needs a complete path'] } },
+    { text: 'Two. Current is the same all the way around a single loop. Nothing consumes it.',
+      scene: { kind: 'recap', items: ['Current needs a complete path', 'It is the same all the way round'] } },
+    { text: 'Three. When nothing works, trace the loop before you replace anything.',
+      scene: { kind: 'recap', items: ['Current needs a complete path', 'It is the same all the way round', 'Trace before you replace'] } },
+    { text: 'Now go and build one. Then break it on purpose, and watch it stop.',
+      scene: { kind: 'outro' } },
+  ],
+};

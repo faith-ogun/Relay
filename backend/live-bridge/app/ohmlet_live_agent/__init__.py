@@ -1,3 +1,3 @@
-from .agent import agent
+from .agent import agent, child_agent
 
-__all__ = ["agent"]
+__all__ = ["agent", "child_agent"]

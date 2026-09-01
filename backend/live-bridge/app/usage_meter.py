@@ -30,7 +30,29 @@ _AUDIO_IN_BYTES_PER_SEC = 16000 * 2
 # below are the source of truth, the estimate is just a live signal.
 _RATE_AUDIO_MIN = float(os.getenv("OHMLET_RATE_AUDIO_MIN_USD", "0.037"))
 _RATE_VIDEO_FRAME = float(os.getenv("OHMLET_RATE_VIDEO_FRAME_USD", "0.0002"))
-_RATE_PER_1K_TOKENS = float(os.getenv("OHMLET_RATE_PER_1K_TOKENS_USD", "0.0"))
+
+# Token cost, split input from output, because output is roughly eight times
+# dearer and the meter already counts the two separately.
+#
+# This used to be ONE blended rate applied to total_tokens, and it defaulted to
+# ZERO. The consequence was specific and bad: `has_priority_models()` routes
+# code generation and deep debugging to gemini-3.1-pro-preview for Pro and Max,
+# which is the single most expensive thing a session does, and the meter valued
+# every one of those tokens at nothing. The dashboard the spend guardrail reads
+# was blind to the exact spend the guardrail exists to watch, on the exact tiers
+# where it happens.
+#
+# Defaults are Pro-class list prices per million tokens, converted to per
+# thousand: $1.25/M in, $10/M out. Deliberately the PRO rates rather than a
+# free/paid blend, because a Free session never routes to Pro, so using Pro
+# rates overstates Free slightly and is accurate for the tiers that cost money.
+# Wrong in the safe direction.
+#
+# Both are env-tunable and both should be replaced with real figures the first
+# time a Cloud Billing export exists. The raw counters remain the source of
+# truth; this is an internal signal, not an invoice.
+_RATE_PROMPT_1K = float(os.getenv("OHMLET_RATE_PROMPT_1K_USD", "0.00125"))
+_RATE_RESPONSE_1K = float(os.getenv("OHMLET_RATE_RESPONSE_1K_USD", "0.010"))
 
 
 @dataclass
@@ -87,7 +109,13 @@ class UsageMeter:
     def estimated_cost_usd(self) -> float:
         cost = (self.audio_in_seconds() / 60.0) * _RATE_AUDIO_MIN
         cost += self.image_frames * _RATE_VIDEO_FRAME
-        cost += (self.total_tokens / 1000.0) * _RATE_PER_1K_TOKENS
+        cost += (self.prompt_tokens / 1000.0) * _RATE_PROMPT_1K
+        cost += (self.response_tokens / 1000.0) * _RATE_RESPONSE_1K
+        # Some providers report only a total. Charging the remainder at the
+        # OUTPUT rate is the pessimistic reading, which is the right way to be
+        # wrong about a spend guardrail.
+        unattributed = max(0, self.total_tokens - self.prompt_tokens - self.response_tokens)
+        cost += (unattributed / 1000.0) * _RATE_RESPONSE_1K
         return round(cost, 6)
 
     def summary(self) -> dict[str, Any]:

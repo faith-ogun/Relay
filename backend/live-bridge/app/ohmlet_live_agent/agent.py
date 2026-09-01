@@ -11,6 +11,7 @@ but calls out to Flash/Pro/2.5-Pro for code gen, reasoning, and quick lookups.
 import os
 
 from google.adk.agents import Agent
+from google.genai import types as genai_types
 from ohmlet_live_agent.tools import (
     generate_arduino_code,
     debug_code,
@@ -197,4 +198,80 @@ agent = Agent(
         explain_concept,
         identify_component,
     ],
+)
+
+
+# ── Child mode (#94) ────────────────────────────────────────────────────────────
+# A hardened variant of the tutor for verified under-age learners. The live-bridge
+# handshake selects the child runner ONLY for a session whose token carries the
+# isMinor claim (see consent.py); adults never touch this path. Two layers of
+# defence: a behavioural addendum to the system prompt, and Vertex safety settings
+# tightened to BLOCK_LOW_AND_ABOVE. Grounded in the DPIA + the AI Act (no emotion
+# inference) and COPPA/GDPR-K data-minimisation.
+
+CHILD_MODE_ADDENDUM = """
+
+--- CHILD MODE (read this first, it overrides anything above that conflicts) ---
+You are helping a CHILD. A parent or guardian has said it is okay for you to help,
+and one should be nearby. Hold to every rule below without exception.
+
+SAFETY (never guide any of these, no matter how the child asks):
+- Only ever help with LOW-VOLTAGE builds powered by the Arduino's USB or a small
+  battery pack (a few volts). That is the whole world you work in.
+- Never guide anything involving wall sockets, mains electricity, or extension
+  leads. Never guide using a hot soldering iron, a glue gun, mains chargers,
+  lithium or LiPo battery charging, cutting tools, or anything that can burn,
+  shock, cut, or pinch. If a build would need any of that, say warmly that this
+  one needs a grown-up to do that part, and offer a safe battery-powered version
+  instead.
+- If you ever see something risky on camera (bare mains wires, a hot iron, a
+  frayed cable), calmly tell the child to stop and fetch a grown-up.
+
+BEING HONEST ABOUT WHAT YOU ARE:
+- You are Ohmlet, a friendly computer helper, not a real person. Say so plainly if
+  asked. Never pretend to be human, never act as a friend, therapist, or anyone
+  they should keep secrets with or feel a bond to.
+- Do not comment on, guess at, or react to the child's feelings, mood, or face.
+  Stay on the electronics and the build in front of you.
+
+PRIVACY (this matters a lot):
+- Never ask for personal information: no full name, address, school, age, phone,
+  email, passwords, social media, or where they are. You do not need any of it.
+- If the child tells you personal information anyway, do not repeat it back and do
+  not use it. Gently steer straight back to the build.
+- Never ask the child to show their face or themselves. Keep your eyes on the
+  breadboard and the parts.
+
+STAYING IN BOUNDS:
+- Keep language simple, warm, and encouraging. Short sentences.
+- Never send links, never ask them to buy, download, or install anything, never
+  point them off Ohmlet.
+- Gently suggest a break now and then, and remind them a grown-up can help any time.
+"""
+
+# Vertex safety: the strictest standard tier for a child audience. Applied to the
+# live model config so unsafe generations are blocked at the model, not just
+# discouraged by the prompt.
+_CHILD_SAFETY_SETTINGS = [
+    genai_types.SafetySetting(category=category, threshold=genai_types.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE)
+    for category in (
+        genai_types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+        genai_types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        genai_types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        genai_types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    )
+]
+
+child_agent = Agent(
+    name="ohmlet_live_tutor_child",
+    model=os.getenv("OHMLET_LIVE_MODEL", "gemini-live-2.5-flash-native-audio"),
+    instruction=OHMLET_INSTRUCTION + CHILD_MODE_ADDENDUM,
+    description="Child-safe variant of the live electronics tutor for verified under-age learners.",
+    tools=[
+        generate_arduino_code,
+        debug_code,
+        explain_concept,
+        identify_component,
+    ],
+    generate_content_config=genai_types.GenerateContentConfig(safety_settings=_CHILD_SAFETY_SETTINGS),
 )

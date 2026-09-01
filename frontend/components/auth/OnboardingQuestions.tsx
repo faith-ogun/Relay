@@ -133,7 +133,7 @@ export const OnboardingQuestions: React.FC<OnboardingQuestionsProps> = ({ userId
                 className={`flex items-center justify-between rounded-2xl border-2 px-5 py-4 text-left text-[15px] font-bold transition-all hover:translate-y-[2px] hover:shadow-none ${
                   selected
                     ? 'border-ohmlet-ink bg-ohmlet-gold-soft shadow-none'
-                    : 'border-ohmlet-line bg-white text-ohmlet-ink shadow-press-sm'
+                    : 'border-ohmlet-line bg-ohmlet-surface text-ohmlet-ink shadow-press-sm'
                 }`}
               >
                 {option}

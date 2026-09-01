@@ -78,6 +78,13 @@ def _return_base(request: Request) -> str:
 async def create_checkout(request: Request, claims: dict = Depends(require_claims)) -> dict:
     _require_configured()
     uid = claims["uid"]
+    # Payment age gate (#96): a user under 18 cannot self-purchase; a parent or
+    # guardian manages a child account's plan. Enforced server-side, never trusting
+    # the client UI. Inert unless child mode is on and we know the birth year.
+    from consent import purchase_blocked
+
+    if purchase_blocked(uid):
+        raise HTTPException(403, "For accounts under 18, a parent or guardian manages the subscription.")
     email = claims.get("email")
     try:
         payload = await request.json()
@@ -199,7 +206,7 @@ def _handle_event(event: dict) -> None:
             price_id = items[0].get("price", {}).get("id") if items else None
             plan = _price_plan_map().get(price_id, "free")
         if uid:
-            entitlements.set_plan(uid, plan)
+            entitlements.set_plan(uid, plan, source="stripe")
             obs.audit("billing.plan_changed", uid=uid, plan=plan, status=status, source="stripe_webhook", stripeEvent=etype)
             logger.info("subscription %s -> uid=%s plan=%s status=%s", etype, uid, plan, status)
         return
@@ -207,7 +214,7 @@ def _handle_event(event: dict) -> None:
     if etype == "customer.subscription.deleted":
         uid = _resolve_uid(obj)
         if uid:
-            entitlements.set_plan(uid, "free")
+            entitlements.set_plan(uid, "free", source="stripe")
             obs.audit("billing.plan_changed", uid=uid, plan="free", status="canceled", source="stripe_webhook", stripeEvent=etype)
             logger.info("subscription deleted -> uid=%s downgraded to free", uid)
         return

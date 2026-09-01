@@ -1,0 +1,10 @@
+node_modules/
+out/
+
+# Narration WAVs: 22MB of generated audio, reproducible with `npm run tts` for a
+# few pence of Cloud TTS. What is NOT reproducible is the LENGTH of each file,
+# because a re-synthesis can differ by milliseconds and the picture is laid out
+# from those lengths. So the audio is ignored and
+# src/lesson-film/timings/*.json IS committed: the films stay reproducible
+# frame for frame even if every WAV is regenerated.
+public/audio/

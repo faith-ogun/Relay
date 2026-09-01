@@ -54,7 +54,7 @@ export const AchievementsPreview: React.FC<PreviewProps> = ({ onBack }) => {
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-white px-3.5 py-1.5 text-sm font-extrabold text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
+          className="inline-flex items-center gap-2 rounded-full border-2 border-ohmlet-ink bg-ohmlet-surface px-3.5 py-1.5 text-sm font-extrabold text-ohmlet-ink shadow-press-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2.5} /> Back
         </button>
