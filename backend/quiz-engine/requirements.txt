@@ -3,5 +3,5 @@ uvicorn[standard]==0.35.0
 pydantic==2.11.7
 # Pinned to the version this service is built and tested against. It was
 # `>=1.0.0`, which let a new major land on the next deploy with no review.
-google-genai==2.8.0
+google-genai==2.20.0
 firebase-admin==6.5.0
