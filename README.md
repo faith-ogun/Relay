@@ -1,4 +1,17 @@
-# Ohmlet
+<p align="center">
+  <img src="frontend/public/brand/ohmlet-logo.png" width="360" alt="Ohmlet">
+</p>
+
+<p align="center">
+  <strong>Relay became Ohmlet.</strong><br>
+  Relay was entered into the Gemini Live Agent Challenge by Google and Devpost (Live Agents category, March to April 2026) and received an Honorable Mention from a field of about 12,000 participants.<br>
+  Ohmlet is the commercial product that grew out of it: a live tutor that watches your bench through the camera and talks you through the build, on the web and on iOS, at <strong><a href="https://ohmlet.org">ohmlet.org</a></strong>.<br>
+  This repository is Relay as it was entered into the challenge. It is kept as a record and is not developed further; the Ohmlet code lives in a private repository.
+</p>
+
+---
+
+# Relay
 
 ![React](https://img.shields.io/badge/React-18-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
@@ -10,57 +23,38 @@
 ![Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployed-4285F4)
 ![Gemini](https://img.shields.io/badge/Gemini-Live_API-8E75B2)
 ![Firestore](https://img.shields.io/badge/Firestore-Realtime-FFCA28)
+![ADK](https://img.shields.io/badge/ADK-Bidi_Streaming-4285F4)
 
-**Learn electronics by building, with a live AI tutor that watches your bench.**
+**A real-time multimodal lab assistant for learning electronics.**
 
-Ohmlet is a commercial, real-time multimodal lab tutor for learning electronics, mechatronics, and robotics by building. It uses the Gemini Live API (bidirectional audio + video streaming) to watch a learner's physical workspace — breadboard, Arduino, components — and guide them through builds with voice and vision, correcting mistakes mid-action.
+Built for the [Gemini Live Agent Challenge](https://devpost.com/software/relay-real-time-voice-vision-lab-tutor-for-electronics) by Google and Devpost, **Live Agents** category. Honorable Mention, from a field of about 12,000 participants.
 
-Think **Duolingo / Brilliant / Mimo, but for hands-on electronics**: a friendly mascot (the Ohmlet, an ohm-resistor egg), a gamified learning loop, a real social layer, and a live AI bench tutor that sees and talks.
+Relay watches your physical workspace through a webcam and guides you through electronics builds with live voice and vision. You talk to Relay while it sees your breadboard, components and wiring, and it corrects mistakes as they happen.
 
-- **Domain:** [ohmlet.org](https://ohmlet.org)
-- **GCP project:** `ohmlet-app`
+## How it works
 
-## The learning loop
+1. Pick a build from the library (for example the Light-Activated Alarm)
+2. Show your components: Relay verifies the inventory through the camera
+3. Wire step by step: Relay guides and corrects in real time
+4. Generate Arduino code: Relay writes and debugs the sketch
+5. Run and validate: Relay watches the serial output and confirms
+6. Get a 3D digital twin of the completed build in the sandbox
 
-1. Pick a build from the library (e.g. Light-Activated Alarm)
-2. Show your components, and Ohmlet verifies inventory via camera
-3. Wire step by step while Ohmlet guides and corrects in real time
-4. Generate and debug the Arduino sketch
-5. Run the circuit; Ohmlet validates via serial output and camera
-6. Earn XP, keep your streak, and share the build to the community
+**No hardware?** The live session still runs without an Arduino. Turn on your camera and hold up any object, and Relay identifies it in real time.
 
-**No hardware?** Simulation mode lets you learn without an Arduino. Turn on your camera and the tutor works with whatever is in view.
-
-## The product
-
-### Marketing site
-- **Landing** — the brand, the pitch, the mascot
-- **Learn** — the electronics curriculum: build paths and the topics you master
-- **Build** — community builds gallery and learner stories
-- **Blog** — plain-English electronics writing (SEO)
-- **Pricing** — Free, Pro, and Teams
-
-### App workspace (`/ohmlet-app`)
+## What's in the app
 
 | Tab | What it does |
 |-----|-------------|
 | **Build** | Live workspace: camera feed, voice interaction, step-by-step guidance |
-| **Learn** | Adaptive quizzes, interactive circuit diagrams, drawing exercises with Gemini Vision assessment, and review history |
-| **Sandbox** | 3D breadboard workspace: place components, edit wires, write Arduino in Monaco, run circuit validation and simulation |
-| **Community** | Share builds, react, comment |
-| **Library** | Starter projects with 3D Twin presets for the sandbox |
-
-### Pricing
-
-| Tier | Price | For |
-|------|-------|-----|
-| **Free** | $0 | First build path, 30 min/week of live tutor, core lessons |
-| **Pro** | $15.99/mo ($11.99 annual) | Unlimited paths, up to 15 hrs/mo live tutor, 3D twins, progress tracking |
-| **Teams** | $9.99/seat/mo | Classrooms and cohorts: educator dashboard, rosters, shared libraries |
+| **Learn** | AI-generated adaptive quizzes, drawing exercises assessed with Gemini vision, wrong-answer requeue and review history |
+| **Sandbox** | 3D breadboard workspace: place components, edit wires, write Arduino code in Monaco, run circuit validation and simulation with buzzer audio |
+| **Community** | Share builds, react and comment, persisted in Firestore |
+| **Library** | Starter projects with 3D twin presets for the sandbox |
 
 ## Multi-model architecture
 
-One voice session, multiple models working behind the scenes:
+One voice session, several models working behind the scenes:
 
 | Role | Model |
 |------|-------|
@@ -74,151 +68,190 @@ One voice session, multiple models working behind the scenes:
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                   Ohmlet Frontend                      │
-│         React + TypeScript + Three.js + Monaco         │
-│                                                        │
-│  Landing · Learn · Build · Blog · Pricing · /app       │
-│                                                        │
-│   WebSocket          HTTP            HTTP              │
-│       │               │               │               │
-└───────┼───────────────┼───────────────┼───────────────┘
-        │               │               │
-   ┌────▼────┐     ┌─────▼─────┐         │
-   │  Live   │     │   Quiz    │         │
-   │ Bridge  │     │  Engine   │         │
-   │(Cloud   │     │ (Cloud    │         │
-   │  Run)   │     │   Run)    │         │
-   └────┬────┘     └─────┬─────┘         │
-        │                │               │
-        │          ┌─────▼──────┐  ┌─────▼──────┐
-        │          │  /v1/state │  │  Firestore │
-        │          │ (service-  │──│ (ohmlet-   │
-        │          │  account)  │  │   app)     │
-        │          └────────────┘  └────────────┘
+│                    Relay Frontend                    │
+│        React + TypeScript + Three.js + Monaco        │
+│                                                      │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │  Build   │ │  Learn   │ │ Sandbox  │ │Community │ │
+│  │(Live AI) │ │(Quizzes) │ │  (3D)    │ │  (Feed)  │ │
+│  └────┬─────┘ └────┬─────┘ └──────────┘ └────┬─────┘ │
+│       │            │                         │       │
+│   WebSocket    HTTP POST              Firestore REST │
+│       │            │                         │       │
+└───────┼────────────┼─────────────────────────┼───────┘
+        │            │                         │
+   ┌────▼────┐  ┌────▼─────┐           ┌───────▼──────┐
+   │  Live   │  │  Quiz    │           │  Firestore   │
+   │ Bridge  │  │ Engine   │           └──────────────┘
+   │(Cloud   │  │(Cloud    │
+   │  Run)   │  │  Run)    │
+   └────┬────┘  └────┬─────┘
+        │            │
+   ┌────▼────┐  ┌────▼─────┐
+   │  ADK    │  │ Gemini   │
+   │  Bidi   │  │ Flash    │
+   │Streaming│  │(genai)   │
+   └────┬────┘  └──────────┘
         │
    ┌────▼──────────────────┐
-   │   Gemini (Vertex AI)  │
-   │  Live audio + Flash   │
-   │  + Pro models         │
+   │   Gemini Models       │
+   │  (Vertex AI)          │
+   │                       │
+   │  • Flash Native Audio │
+   │  • Flash 2.5          │
+   │  • Pro 2.5            │
    └───────────────────────┘
 ```
 
-Persistence is **backend-mediated**: the browser never touches Firestore directly. It calls `/v1/state/{user}` on the live-bridge service, which reads and writes Firestore with the service account, so Firestore client rules can deny all direct browser access.
-
 ## Tech stack
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Nunito
-- **3D:** Three.js via @react-three/fiber + @react-three/drei
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
+- **3D:** Three.js via @react-three/fiber and @react-three/drei
 - **Code editor:** Monaco Editor
 - **Live backend:** FastAPI + Google ADK (bidirectional WebSocket streaming)
 - **Quiz backend:** FastAPI + google-genai SDK
-- **Persistence:** Firestore (europe-west2), accessed via the backend service account
-- **Hosting:** Firebase Hosting (frontend), Cloud Run (services)
-- **GCP project:** `ohmlet-app`
+- **Persistence:** Firestore
+- **Deployment:** Google Cloud Run for the services, Firebase Hosting for the frontend
+
+## Google Cloud services used
+
+- **Cloud Run:** each backend service runs as its own Cloud Run service
+- **Vertex AI:** Gemini model access through the service account, with no API key
+- **Firestore:** user state, quiz history, community data
+- **Google ADK:** agent framework for bidirectional audio and video streaming
 
 ## Local development
 
 ### Prerequisites
-- Node.js 18+
-- Python 3.13 (not 3.14 — pydantic-core wheels are missing)
-- Google Cloud SDK (for deployment and local Firestore access)
 
-### Frontend
+- Node.js 20
+- Python 3.13 (not 3.14: pydantic-core wheels are missing)
+- Google Cloud SDK (for deployment)
+
+### 1. Frontend
+
+The web app lives in `frontend/`.
 
 ```bash
 cd frontend
 npm install
-npm run dev   # http://localhost:5173  (app workspace at /ohmlet-app)
+npm run dev
 ```
 
-Create `frontend/.env.local`:
+Opens at `http://localhost:5173`. The app workspace is at `/app`.
+
+Create `frontend/.env.local` with the service URLs and your own Firebase web app configuration:
 
 ```env
 VITE_OHMLET_API_BASE_URL=http://localhost:8082
 VITE_OHMLET_WS_URL=ws://localhost:8082
 VITE_OHMLET_QUIZ_API_BASE_URL=http://localhost:8083
-VITE_OHMLET_DEFAULT_USER_ID=faith
-VITE_OHMLET_GCP_PROJECT_ID=ohmlet-app
+VITE_OHMLET_VERIFIER_API_BASE_URL=http://localhost:8084
+VITE_OHMLET_REPORTER_API_BASE_URL=http://localhost:8085
+VITE_OHMLET_COMPILER_API_BASE_URL=http://localhost:<compiler-port>
+
+VITE_FIREBASE_API_KEY=<your-firebase-web-api-key>
+VITE_FIREBASE_AUTH_DOMAIN=<your-firebase-project>.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=<your-firebase-project>
+VITE_FIREBASE_STORAGE_BUCKET=<your-firebase-project>.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=<your-sender-id>
+VITE_FIREBASE_APP_ID=<your-firebase-web-app-id>
+VITE_FIREBASE_MEASUREMENT_ID=<your-measurement-id>
 ```
 
-### Live bridge backend (port 8082)
+### 2. Backend services
+
+Each folder under `backend/` is a FastAPI service with its own `requirements.txt` and Dockerfile.
+
+| Folder | Port | What it does |
+|--------|------|-------------|
+| `backend/live-bridge` | 8082 | WebSocket bridge between the browser and Gemini Live through ADK, plus the user state API |
+| `backend/quiz-engine` | 8083 | Adaptive quizzes and drawing assessment |
+| `backend/vision-verifier` | 8084 | Camera component inventory check |
+| `backend/reporter` | 8085 | 3D digital twin generation and storage |
+| `backend/compiler` | any free port | Compiles Arduino sketches with arduino-cli and avr-gcc, which must be installed locally (see its Dockerfile) |
+
+They all start the same way:
 
 ```bash
-cd backend/live-bridge
+cd backend/<service>
 python3.13 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
+PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port <port> --reload
 ```
+
+Live bridge environment variables (`backend/live-bridge/.env`, see `.env.example` in the same folder):
 
 ```env
 GOOGLE_GENAI_USE_VERTEXAI=TRUE
-GOOGLE_CLOUD_PROJECT=ohmlet-app
+GOOGLE_CLOUD_PROJECT=<your-gcp-project>
 GOOGLE_CLOUD_LOCATION=europe-west1
 OHMLET_LIVE_MODEL=gemini-live-2.5-flash-native-audio
 OHMLET_FLASH_MODEL=gemini-2.5-flash
 OHMLET_PRO_MODEL=gemini-2.5-pro
+OHMLET_REASONING_MODEL=gemini-2.5-pro
 ```
 
-Local Firestore access uses Application Default Credentials (`gcloud auth application-default login`).
+Without Vertex AI locally, set `GOOGLE_GENAI_USE_VERTEXAI=FALSE` and `GOOGLE_API_KEY=<your-google-ai-api-key>` instead. The quiz engine and the vision verifier read the same `GOOGLE_*` variables.
 
-### Quiz engine backend (port 8083)
+## Google Cloud deployment
+
+Deployment is automated by [`deploy.sh`](./deploy.sh):
 
 ```bash
-cd backend/quiz-engine
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload
+./deploy.sh                  # all services + frontend
+./deploy.sh live-bridge      # one service: live-bridge, quiz-engine, vision-verifier, compiler or reporter
+./deploy.sh frontend         # build and deploy the frontend
+./deploy.sh verify           # health-check the deployed services
 ```
 
-### Vision-verifier backend (port 8084)
+https://github.com/user-attachments/assets/63ae69ee-c304-4a5c-8503-d5791534aea4
 
-The camera component inventory check (step 2 of the core loop).
+The script deploys each backend service to Cloud Run from source, builds and deploys the frontend, and checks service health, all in one command. It reads the target project and region from the environment, so set them to your own before running:
 
 ```bash
-cd backend/vision-verifier
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-PYTHONPATH=app uvicorn app.main:app --host 0.0.0.0 --port 8084 --reload
+export GOOGLE_CLOUD_PROJECT=<your-gcp-project>
+export GOOGLE_CLOUD_REGION=europe-west1
 ```
 
-## Deployment
-
-```bash
-./deploy.sh                  # all services + frontend build
-./deploy.sh live-bridge      # one service
-./deploy.sh vision-verifier  # one service
-./deploy.sh verify           # health-check deployed services
-```
-
-## Observability & alerting
-
-All services emit structured JSON logs with Cloud Trace correlation, expose a
-token-guarded `/internal/metrics`, and keep a security audit trail. See
-[`ops/observability.md`](ops/observability.md). Provision Cloud Monitoring
-alerts (uptime, 5xx rate, latency) with `./ops/alerting.sh`.
-
-On Cloud Run with Vertex AI, no API key is needed — authentication uses the service account automatically.
+On Cloud Run the services authenticate to Vertex AI with their service account, so no API key is needed.
 
 ## Build verification
 
 ```bash
-cd frontend && npm run build                           # must pass before any merge
-python3 -m py_compile backend/live-bridge/app/*.py
-python3 -m py_compile backend/quiz-engine/app/*.py
-python3 -m py_compile backend/vision-verifier/app/*.py
+cd frontend && npm run build                       # frontend, must pass
+python3 -m compileall -q backend/live-bridge/app   # backend syntax check, repeat per service
+cd backend/live-bridge && python3 -m pytest        # unit tests, for services with a tests/ folder
 ```
 
 ## Gemini API session limits
 
-The Gemini Live API imposes per-session limits: **15 minutes** for audio-only and **2 minutes** with video active. These are hard API limits; ending a session and starting a new one gives fresh limits. The UI surfaces them so users understand disconnections are API-imposed, not bugs.
+The Gemini Live API imposes per-session limits:
+- **15 minutes** for audio-only sessions
+- **2 minutes** with video active
+
+These are hard API limits. Ending a session and starting a new one gives fresh limits. The UI shows these limits so that users know why a session ends.
+
+## Third-party libraries
+
+- React, Vite, Tailwind CSS (MIT)
+- Three.js, @react-three/fiber, @react-three/drei (MIT)
+- Monaco Editor (MIT)
+- avr8js (MIT)
+- Lucide React icons (ISC)
+- Firebase JS SDK (Apache 2.0)
+- FastAPI, Pydantic, Uvicorn (MIT/BSD)
+- Google ADK, google-genai, google-cloud-firestore, firebase-admin (Apache 2.0)
 
 ## Known limitations
 
-- The sandbox validates circuit structure (component presence, wiring, connections) but does not compute voltages/currents like a SPICE simulator
-- Drawing assessment is easiest on a touchscreen; trackpad drawing is harder
-- Gemini Live video sessions are capped at 2 minutes per the API
+- The sandbox validates circuit structure (component presence, wiring, connections) but does not compute voltages and currents like a SPICE simulator
+- Firestore persistence requires a configured Firebase web API key
+- The Gemini Live API imposes hard session limits (15 min audio, 2 min video)
 
 ## Links
 
+- **Devpost entry:** [Relay: Real-Time Voice & Vision Lab Tutor for Electronics](https://devpost.com/software/relay-real-time-voice-vision-lab-tutor-for-electronics)
 - **Blog:** [I Built a Real-Time AI Lab Partner for Electronics Learning with Gemini Live](https://medium.com/@faith-ogun/i-built-a-real-time-ai-lab-partner-for-electronics-learning-with-gemini-live-8b450a6b4f2a)
 - **GDG profile:** [developers.google.com/profile/u/faithogundimu](https://developers.google.com/profile/u/faithogundimu)
+- **Deployment automation:** [`deploy.sh`](./deploy.sh)
